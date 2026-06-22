@@ -1,45 +1,94 @@
 import React from 'react';
-import { Radio, Antenna, Cpu, Zap, Fan } from 'lucide-react';
-import { DiagramFrame, DiagramInfo, useReveal } from './_shared';
+import { DiagramFrame, DiagramInfo, useReveal, C } from './_shared';
 
 const nodes = [
-  { id: 'radio', label: 'Radio', sub: 'جهاز التحكم', Icon: Radio, info: 'جهاز التحكم: تحرّك العصا فيُرسل إشارة لاسلكية إلى الطائرة.' },
-  { id: 'rx', label: 'Receiver', sub: 'المستقبل', Icon: Antenna, info: 'Receiver: يستقبل الإشارة اللاسلكية ويحوّلها لبيانات رقمية (SBUS/CRSF) للـ FC.' },
-  { id: 'fc', label: 'FC', sub: 'المتحكم', Icon: Cpu, info: 'Flight Controller: الدماغ — يحلّل بيانات الجيروسكوب والتحكم ويحسب سرعة كل محرك.' },
-  { id: 'esc', label: 'ESC', sub: 'المنظّم', Icon: Zap, info: 'ESC: ينفّذ أوامر FC ويتحكم في سرعة كل محرك بدقة.' },
-  { id: 'motors', label: 'Motors', sub: 'المحركات', Icon: Fan, info: 'Motors: تدير المراوح وتولّد قوة الرفع والحركة.' },
+  {
+    id: 'radio', label: 'Radio / TX', sub: 'جهاز التحكم', color: C.purple,
+    signal: 'RF 2.4GHz',
+    info: 'جهاز التحكم: تحرّك العصا فيُرسل إشارة لاسلكية (RF) إلى الطائرة بتردد 2.4 GHz أو 900 MHz.',
+  },
+  {
+    id: 'rx', label: 'Receiver', sub: 'المستقبل', color: C.cyan,
+    signal: 'CRSF/SBUS',
+    info: 'Receiver: يستقبل الإشارة اللاسلكية ويحوّلها لبيانات رقمية (CRSF أو SBUS) يُرسلها للـ FC عبر UART.',
+  },
+  {
+    id: 'fc', label: 'FC', sub: 'Flight Controller', color: C.blue,
+    signal: 'DSHOT',
+    info: 'Flight Controller: الدماغ — يحلّل بيانات الجيروسكوب والتحكم ويحسب سرعة كل محرك ويُرسلها لـ ESC.',
+  },
+  {
+    id: 'esc', label: 'ESC', sub: 'المنظّم', color: C.amber,
+    signal: '3-phase PWM',
+    info: 'ESC (Electronic Speed Controller): ينفّذ أوامر FC ويتحكم في سرعة كل محرك بدقة عالية.',
+  },
+  {
+    id: 'motors', label: 'Motors', sub: 'المحركات', color: C.green,
+    signal: '→ رفع',
+    info: 'Motors: تدير المراوح Propellers وتولّد قوة الرفع Thrust والحركة في الاتجاهات المطلوبة.',
+  },
 ];
 
 export const SignalFlow: React.FC = () => {
   const { sel, toggle } = useReveal<string>();
   return (
-    <DiagramFrame title="مسار الإشارة" hint="اضغط أي مرحلة لمعرفة دورها — الأسهم تتحرك باتجاه التدفق">
-      <div className="flex flex-col gap-2">
+    <DiagramFrame title="مسار الإشارة" hint="اضغط أي مرحلة لمعرفة دورها">
+      {/* SVG flow diagram */}
+      <svg viewBox="0 0 300 340" className="w-full">
         {nodes.map((n, i) => {
+          const y = 20 + i * 64;
           const active = sel === n.id;
+          const nextN = nodes[i + 1];
           return (
-            <React.Fragment key={n.id}>
-              <button onClick={() => toggle(n.id)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-all press ${active ? 'bg-cyan-400/12 border-cyan-400/50' : 'bg-white/4 border-white/8 hover:border-cyan-400/30'}`}>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${active ? 'bg-cyan-400/25' : 'bg-cyan-400/10'}`}>
-                  <n.Icon size={18} className="text-cyan-400" />
-                </div>
-                <div className="text-right flex-1">
-                  <p className="text-sm font-bold text-white leading-tight">{n.label}</p>
-                  <p className="text-[11px] text-slate-400">{n.sub}</p>
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">{i + 1}</span>
-              </button>
-              {i < nodes.length - 1 && (
-                <svg viewBox="0 0 20 18" className="w-5 h-4 mx-auto -my-0.5" style={{ transform: 'rotate(0deg)' }}>
-                  <line x1="10" y1="0" x2="10" y2="12" stroke="#18E6E6" strokeWidth="2" className="flow-dash" />
-                  <path d="M10 17 l-4 -5 h8 z" fill="#18E6E6" />
-                </svg>
+            <g key={n.id}>
+              {/* Node box */}
+              <g onClick={() => toggle(n.id)} style={{ cursor: 'pointer' }}>
+                <rect
+                  x="40" y={y} width="220" height="46" rx="10"
+                  fill={active ? `${n.color}18` : 'rgba(15,23,42,0.7)'}
+                  stroke={active ? n.color : `${n.color}50`}
+                  strokeWidth={active ? 2 : 1.5}
+                />
+                {/* Icon circle */}
+                <circle cx="65" cy={y + 23} r="15" fill={`${n.color}20`} stroke={`${n.color}50`} strokeWidth="1"/>
+                <text x="65" y={y + 27} textAnchor="middle" fill={n.color} fontSize="10" fontWeight="bold">{i + 1}</text>
+                {/* Labels */}
+                <text x="88" y={y + 18} fill={active ? '#fff' : '#e2e8f0'} fontSize="12" fontWeight="bold">{n.label}</text>
+                <text x="88" y={y + 32} fill="#64748b" fontSize="9">{n.sub}</text>
+                {/* Active glow dot */}
+                {active && <circle cx="248" cy={y + 23} r="4" fill={n.color} className="glow-node"/>}
+              </g>
+
+              {/* Arrow to next node */}
+              {nextN && (
+                <g>
+                  {/* Arrow line */}
+                  <line
+                    x1="150" y1={y + 46} x2="150" y2={y + 58}
+                    stroke={n.color} strokeWidth="2" className="flow-dash"
+                  />
+                  {/* Signal label badge */}
+                  <rect x="112" y={y + 47} width="76" height="14" rx="7"
+                    fill={`${n.color}15`} stroke={`${n.color}40`} strokeWidth="1"/>
+                  <text x="150" y={y + 57} textAnchor="middle" fill={n.color} fontSize="8" fontWeight="bold">
+                    {n.signal}
+                  </text>
+                  {/* Arrow head */}
+                  <polygon points={`150,${y + 62} 145,${y + 55} 155,${y + 55}`} fill={nextN.color} opacity="0.8"/>
+                </g>
               )}
-            </React.Fragment>
+            </g>
           );
         })}
-      </div>
+
+        {/* Final arrow to lift */}
+        <g>
+          <line x1="150" y1="300" x2="150" y2="320" stroke={C.green} strokeWidth="2" className="flow-dash"/>
+          <polygon points="150,326 145,318 155,318" fill={C.green} opacity="0.8"/>
+          <text x="150" y="338" textAnchor="middle" fill={C.green} fontSize="9">🚁 رفع وحركة</text>
+        </g>
+      </svg>
+
       <DiagramInfo text={sel ? nodes.find(n => n.id === sel)!.info : null} />
     </DiagramFrame>
   );

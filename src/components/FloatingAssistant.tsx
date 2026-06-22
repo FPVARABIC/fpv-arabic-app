@@ -114,7 +114,7 @@ export const FloatingAssistant: React.FC = () => {
       {/* Floating Button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-[4.5rem] left-4 z-50 w-12 h-12 rounded-2xl flex items-center justify-center press transition-all"
+        className="fixed bottom-[4.5rem] right-4 z-50 w-12 h-12 rounded-2xl flex items-center justify-center press transition-all"
         style={{
           background: open
             ? 'linear-gradient(135deg, #0891b2, #06b6d4)'
