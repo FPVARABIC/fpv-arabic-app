@@ -8,10 +8,31 @@ export interface Lesson {
   objective: string;
   explanation: string;
   imagePlaceholder: string;
+  diagramType: DiagramType;
   importantPoints: string[];
   commonMistake: string;
   warning?: string;
 }
+
+export type DiagramType =
+  | 'quad-x-layout'
+  | 'signal-flow'
+  | 'parts-map'
+  | 'parts-compatibility'
+  | 'size-comparison'
+  | 'electricity-basics'
+  | 'lipo-cells'
+  | 'gnd-5v-vbat'
+  | 'tx-rx-cross'
+  | 'safety-before-battery'
+  | 'frame-assembly'
+  | 'motor-mount'
+  | 'esc-placement'
+  | 'fc-orientation'
+  | 'receiver-uart'
+  | 'camera-vtx'
+  | 'motor-test'
+  | 'first-flight';
 
 export interface RoadmapStep {
   id: string;

@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { botResponses } from '../data/botResponses';
 import type { BotResponse } from '../types';
-import { Bot, Send, ChevronLeft } from 'lucide-react';
+import { Bot, Send, ChevronLeft, Sparkles } from 'lucide-react';
 
 interface Message { id: string; from: 'user' | 'bot'; text?: string; response?: BotResponse; }
 
@@ -72,12 +72,14 @@ export const BotAssistantView: React.FC = () => {
         </div>
 
         <div className="px-4 py-3 border-t border-cyan-400/10">
-          <p className="text-xs text-slate-500 mb-2 text-center">اختر سؤالاً:</p>
-          <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+          <p className="text-xs text-cyan-400 mb-2.5 text-center font-semibold flex items-center justify-center gap-1.5">
+            <Sparkles size={13}/> اختر مشكلة وسأرشدك خطوة بخطوة
+          </p>
+          <div className="flex flex-wrap gap-2 max-h-44 overflow-y-auto no-scrollbar justify-center">
             {botResponses.map(response => (
-              <button key={response.id} className="text-right text-sm text-slate-300 bg-white/5 hover:bg-white/10 border border-cyan-400/10 hover:border-cyan-400/30 rounded-xl px-3 py-2 transition-all flex items-center justify-between gap-2" onClick={() => handleQuickOption(response)}>
-                <span>{response.label}</span>
-                <Send size={12} className="text-cyan-400 flex-shrink-0"/>
+              <button key={response.id} className="chip" onClick={() => handleQuickOption(response)}>
+                {response.label}
+                <Send size={11} className="flex-shrink-0"/>
               </button>
             ))}
           </div>

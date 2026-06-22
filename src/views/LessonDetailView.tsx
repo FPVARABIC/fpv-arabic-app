@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { SafetyWarning } from '../components/SafetyWarning';
-import { EducationalPlaceholder } from '../components/EducationalPlaceholder';
+import { EducationalDiagram } from '../components/EducationalDiagram';
 import { lessonsData } from '../data/lessonsData';
 import { useProgress } from '../hooks/useProgress';
 import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen } from 'lucide-react';
@@ -35,28 +35,41 @@ export const LessonDetailView: React.FC = () => {
         </div>
 
         <div className="px-4 py-4 space-y-4">
-          <div className="glass-card-sm p-3">
-            <p className="text-xs text-cyan-400 font-semibold mb-1">الهدف من الدرس</p>
+          <div className="flex items-center gap-2">
+            <span className="badge-cyan">{lesson.level}</span>
+            <span className="badge-cyan">⏱ {lesson.duration}</span>
+          </div>
+
+          <div className="glass-card-sm p-3 border-r-2 border-cyan-400/50">
+            <p className="text-xs text-cyan-400 font-semibold mb-1">🎯 الهدف من الدرس</p>
             <p className="text-sm text-slate-200">{lesson.objective}</p>
           </div>
 
-          <EducationalPlaceholder label={lesson.imagePlaceholder}/>
+          <div>
+            <div className="flex items-center justify-between mb-1 px-1">
+              <span className="text-xs font-semibold text-slate-400">الرسم التعليمي</span>
+              <span className="text-[10px] badge-cyan">تفاعلي</span>
+            </div>
+            <EducationalDiagram type={lesson.diagramType}/>
+          </div>
 
           <div className="glass-card p-4">
             <h2 className="text-sm font-semibold text-cyan-400 mb-2">الشرح</h2>
             <p className="text-sm text-slate-200 leading-relaxed">{lesson.explanation}</p>
           </div>
 
-          <div className="glass-card p-4 space-y-2">
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><Star size={14} className="text-cyan-400"/>نقاط مهمة</h2>
-            {lesson.importantPoints.map((point, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <div className="w-5 h-5 rounded-full bg-cyan-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-cyan-400 text-xs">{i+1}</span>
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2 px-1"><Star size={14} className="text-cyan-400"/>نقاط مهمة</h2>
+            <div className="grid gap-2">
+              {lesson.importantPoints.map((point, i) => (
+                <div key={i} className="card-elevated p-3 flex items-start gap-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-cyan-400/12 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-cyan-400 text-xs font-bold">{i+1}</span>
+                  </div>
+                  <p className="text-sm text-slate-200 leading-relaxed">{point}</p>
                 </div>
-                <p className="text-sm text-slate-300">{point}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="glass-card-sm p-3">

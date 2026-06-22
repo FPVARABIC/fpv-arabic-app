@@ -23,28 +23,32 @@ export const SplashView: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen tech-grid flex flex-col items-center justify-center px-6 py-12">
-      <div className="fade-in flex flex-col items-center gap-8 max-w-sm w-full">
-        <div className="flex flex-col items-center gap-4">
-          <Logo size="lg"/>
+    <div className="min-h-screen tech-grid ambient-glow flex flex-col items-center justify-center px-6 py-12">
+      <div className="fade-in flex flex-col items-center gap-7 max-w-sm w-full relative z-10">
+        <div className="flex flex-col items-center gap-5">
+          <div className="float-soft">
+            <Logo size="lg"/>
+          </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mt-2">من الصفر إلى أول كوادكابتر</h1>
+            <h1 className="text-2xl font-bold text-white mt-1 leading-snug">من الصفر إلى أول كوادكابتر</h1>
             <p className="text-slate-400 mt-2">تعلّم بناء درون FPV خطوة بخطوة وبأمان</p>
           </div>
         </div>
 
-        <div className="glass-card p-5 w-full text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 text-cyan-400 text-sm font-semibold">
-            <span>18 درسًا تعليميًا</span>
-            <span className="text-slate-600">•</span>
-            <span>8 مراحل بناء</span>
-            <span className="text-slate-600">•</span>
-            <span>مساعد ذكي</span>
+        <div className="hero-card p-5 w-full text-center space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {[['18', 'درسًا تفاعليًا'], ['8', 'مراحل بناء'], ['∞', 'مساعد ذكي']].map(([n, l]) => (
+              <div key={l} className="flex flex-col items-center">
+                <span className="text-2xl font-bold text-gradient">{n}</span>
+                <span className="text-[11px] text-slate-400 mt-0.5">{l}</span>
+              </div>
+            ))}
           </div>
-          <p className="text-slate-300 text-sm">دليلك العربي الشامل لبناء أول كوادكابتر FPV</p>
+          <div className="h-px bg-cyan-400/15"/>
+          <p className="text-slate-300 text-sm">دليلك العربي الشامل لبناء أول كوادكابتر FPV — برسوم تعليمية تفاعلية</p>
         </div>
 
-        <button className="btn-primary w-full text-lg py-4" onClick={handleStart}>
+        <button className="btn-primary w-full text-lg py-4 press" onClick={handleStart}>
           ابدأ رحلتك <ArrowLeft size={20}/>
         </button>
 

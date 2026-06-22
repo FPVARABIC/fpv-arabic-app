@@ -32,9 +32,17 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="px-4 py-5 space-y-5">
-          <div>
-            <h1 className="text-xl font-bold text-white">مرحبًا بك في FPV بالعربي</h1>
-            <p className="text-sm text-slate-400 mt-1">مساعدك العربي لبناء أول كوادكابتر FPV خطوة بخطوة</p>
+          <div className="hero-card p-5">
+            <div className="relative z-10 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <h1 className="text-xl font-bold text-white leading-snug">مرحبًا بك في<br/><span className="text-gradient">FPV بالعربي</span></h1>
+                <p className="text-sm text-slate-400 mt-2">مساعدك العربي لبناء أول كوادكابتر FPV خطوة بخطوة</p>
+                <button className="chip mt-3" onClick={() => navigate('/roadmap')}>
+                  ابدأ البناء <ArrowLeft size={14}/>
+                </button>
+              </div>
+              <ProgressRing progress={overallProgress} size={72} strokeWidth={6}/>
+            </div>
           </div>
 
           {(lastLesson || lastStep) && (
@@ -60,7 +68,6 @@ export const HomeView: React.FC = () => {
           <div className="glass-card p-4">
             <h2 className="text-sm font-semibold text-slate-300 mb-3">التقدم العام</h2>
             <div className="flex items-center gap-4">
-              <ProgressRing progress={overallProgress} size={72} strokeWidth={6} label="إجمالي"/>
               <div className="flex-1 space-y-2">
                 <div>
                   <div className="flex justify-between text-xs text-slate-400 mb-1">
@@ -86,8 +93,10 @@ export const HomeView: React.FC = () => {
             <h2 className="text-sm font-semibold text-slate-300 mb-3">الأقسام السريعة</h2>
             <div className="grid grid-cols-3 gap-3">
               {quickSections.map(s => (
-                <button key={s.path} onClick={() => navigate(s.path)} className="glass-card-sm p-3 flex flex-col items-center gap-2 hover:border-cyan-400/40 transition-all">
-                  <s.icon size={22} className={s.color}/>
+                <button key={s.path} onClick={() => navigate(s.path)} className="card-elevated p-3 flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-white/4 flex items-center justify-center">
+                    <s.icon size={20} className={s.color}/>
+                  </div>
                   <span className="text-xs text-slate-300 text-center leading-tight">{s.label}</span>
                 </button>
               ))}

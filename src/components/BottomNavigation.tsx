@@ -54,9 +54,10 @@ export const BottomNavigation: React.FC = () => {
             const active = item.path === '__more' ? showMore : isActive(item.path);
             return (
               <button key={item.path} onClick={() => item.path === '__more' ? setShowMore(!showMore) : navigate(item.path)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl press transition-all ${active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                {active && <span className="absolute -top-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 glow-node"/>}
                 <item.icon size={20}/>
-                <span className="text-xs">{item.label}</span>
+                <span className="text-[11px]">{item.label}</span>
               </button>
             );
           })}
