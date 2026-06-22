@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { SafetyWarning } from '../components/SafetyWarning';
 import { betaflightData } from '../data/betaflightData';
+import { BetaflightDetailVisual } from '../components/BetaflightDetailVisual';
 import { ArrowRight, Star } from 'lucide-react';
 
 export const BetaflightDetailView: React.FC = () => {
@@ -22,6 +23,7 @@ export const BetaflightDetailView: React.FC = () => {
         </div>
         <div className="px-4 py-4 space-y-4">
           <p className="text-sm text-slate-400">{section.description}</p>
+          <BetaflightDetailVisual id={section.id}/>
           <div className="glass-card p-4">
             <h2 className="text-sm font-semibold text-cyan-400 mb-2">الشرح</h2>
             <p className="text-sm text-slate-200 leading-relaxed">{section.explanation}</p>

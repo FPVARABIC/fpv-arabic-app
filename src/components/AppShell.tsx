@@ -1,5 +1,6 @@
 import React from 'react';
 import { BottomNavigation } from './BottomNavigation';
+import { FloatingAssistant } from './FloatingAssistant';
 
 interface AppShellProps { children: React.ReactNode; showNav?: boolean; }
 
@@ -10,6 +11,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true }) 
         {children}
       </main>
       {showNav && <BottomNavigation/>}
+      {showNav && <FloatingAssistant/>}
     </div>
   </div>
 );

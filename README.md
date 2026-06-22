@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# FPV بالعربي
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+تطبيق تعليمي شامل لتعلم طائرات FPV (First Person View) باللغة العربية — من الصفر حتى الطيران الأول.
 
-Currently, two official plugins are available:
+## المميزات
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **18 درسًا تفاعليًا** بمخططات SVG تعليمية قابلة للنقر
+- **مساعد FPV** — مساعد ذكي يرشدك خطوة بخطوة لحل المشكلات الشائعة
+- **مساعد عائم** — يظهر في كل صفحة للوصول السريع
+- **Betaflight بالعربي** — شرح كامل لكل أقسام البرنامج مع مخططات مرئية
+- **خريطة البناء** — خطوات مرتبة من الصفر حتى الطيران
+- **Checklists** — قوائم فحص قبل الشراء وقبل الطيران
+- **تتبع التقدم** — يحفظ دروسك المكتملة محليًا
+- **استكشاف الأعطال** — حلول للمشاكل الأكثر شيوعًا
+- **تصميم RTL** — واجهة عربية كاملة من اليمين إلى اليسار
 
-## React Compiler
+## التقنيات
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS v3
+- React Router v6
+- Lucide React Icons
+- localStorage للحفظ المحلي (بدون خادم)
 
-## Expanding the ESLint configuration
+## التشغيل المحلي
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+ثم افتح المتصفح على `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## البناء للنشر
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+الملفات الجاهزة ستكون في مجلد `dist/`
+
+## بنية المشروع
+
+```
+src/
+├── components/
+│   ├── diagrams/        # 18 مخطط SVG تعليمي تفاعلي
+│   ├── AppShell.tsx     # الهيكل الأساسي + مساعد عائم
+│   ├── FloatingAssistant.tsx
+│   └── BetaflightDetailVisual.tsx
+├── views/               # صفحات التطبيق
+├── data/                # البيانات الثابتة
+└── types/               # أنواع TypeScript
+```
+
+## ملاحظات
+
+- لا يستخدم شعار Betaflight الرسمي — المحتوى تعليمي مستقل
+- لا يستخدم صور خارجية — كل الرسوم SVG مخصصة
+- لا يتطلب اتصال بالإنترنت بعد التثبيت
