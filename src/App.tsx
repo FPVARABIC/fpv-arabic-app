@@ -1,0 +1,50 @@
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { STORAGE_KEYS } from './utils/storageKeys';
+import { SplashView } from './views/SplashView';
+import { SafetyGateView } from './views/SafetyGateView';
+import { HomeView } from './views/HomeView';
+import { BuildRoadmapView } from './views/BuildRoadmapView';
+import { LessonsView } from './views/LessonsView';
+import { LessonDetailView } from './views/LessonDetailView';
+import { ChecklistView } from './views/ChecklistView';
+import { BetaflightView } from './views/BetaflightView';
+import { BetaflightDetailView } from './views/BetaflightDetailView';
+import { TroubleshootingView } from './views/TroubleshootingView';
+import { BotAssistantView } from './views/BotAssistantView';
+import { ProgressView } from './views/ProgressView';
+import { SettingsView } from './views/SettingsView';
+import { AboutView } from './views/AboutView';
+import { ContactView } from './views/ContactView';
+import { NotFoundView } from './views/NotFoundView';
+
+const RedirectLogic: React.FC = () => {
+  const [hasStarted] = useLocalStorage<boolean>(STORAGE_KEYS.HAS_STARTED, false);
+  const [safetySeen] = useLocalStorage<boolean>(STORAGE_KEYS.SAFETY_SEEN, false);
+  if (!hasStarted) return <Navigate to="/welcome" replace/>;
+  if (!safetySeen) return <Navigate to="/safety" replace/>;
+  return <Navigate to="/home" replace/>;
+};
+
+export const App: React.FC = () => (
+  <Routes>
+    <Route path="/" element={<RedirectLogic/>}/>
+    <Route path="/welcome" element={<SplashView/>}/>
+    <Route path="/safety" element={<SafetyGateView/>}/>
+    <Route path="/home" element={<HomeView/>}/>
+    <Route path="/roadmap" element={<BuildRoadmapView/>}/>
+    <Route path="/lessons" element={<LessonsView/>}/>
+    <Route path="/lessons/:lessonId" element={<LessonDetailView/>}/>
+    <Route path="/checklists" element={<ChecklistView/>}/>
+    <Route path="/betaflight" element={<BetaflightView/>}/>
+    <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
+    <Route path="/troubleshooting" element={<TroubleshootingView/>}/>
+    <Route path="/bot" element={<BotAssistantView/>}/>
+    <Route path="/progress" element={<ProgressView/>}/>
+    <Route path="/settings" element={<SettingsView/>}/>
+    <Route path="/about" element={<AboutView/>}/>
+    <Route path="/contact" element={<ContactView/>}/>
+    <Route path="*" element={<NotFoundView/>}/>
+  </Routes>
+);
