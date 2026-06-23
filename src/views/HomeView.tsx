@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
-import { Logo } from '../components/Logo';
 import { ProgressRing } from '../components/ProgressRing';
 import { useProgress } from '../hooks/useProgress';
 import { lessonsData } from '../data/lessonsData';
@@ -32,9 +31,21 @@ export const HomeView: React.FC = () => {
   return (
     <AppShell tint="cyan">
       <div className="fade-in">
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-          <Logo size="sm"/>
-          <ProgressRing progress={overallProgress} size={56} strokeWidth={4}/>
+        {/* Brand block — centered logo, progress ring pinned to corner */}
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: 24, paddingBottom: 12 }}>
+          <img
+            src="/assets/logo.png"
+            alt="FPV بالعربي"
+            style={{
+              maxHeight: 200,
+              width: 'auto',
+              display: 'block',
+              filter: 'drop-shadow(0 0 18px rgba(24,230,230,0.55))',
+            }}
+          />
+          <div style={{ position: 'absolute', top: 24, right: 16 }}>
+            <ProgressRing progress={overallProgress} size={44} strokeWidth={4}/>
+          </div>
         </div>
 
         <div className="px-4 py-4 space-y-6">

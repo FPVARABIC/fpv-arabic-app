@@ -23,6 +23,7 @@ export const App: React.FC = () => (
   <Routes>
     <Route path="/" element={<RedirectLogic/>}/>
     <Route path="/welcome" element={<SplashView/>}/>
+    <Route path="/splash" element={<SplashView/>}/>
     <Route path="/safety" element={<SafetyGateView/>}/>
     <Route path="/home" element={<HomeView/>}/>
     <Route path="/roadmap" element={<BuildRoadmapView/>}/>

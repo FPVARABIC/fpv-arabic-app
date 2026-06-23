@@ -15,50 +15,56 @@ export const SplashView: React.FC = () => {
   }, []);
 
   return (
-    /* Same desktop frame as AppShell: dark surround, 390px column */
     <div
-      className="min-h-screen flex justify-center"
-      style={{ background: '#02080f' }}
+      style={{
+        background: '#02080f',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
     >
+      {/* Phone-frame column — matches AppShell frame */}
       <div
         style={{
           width: '100%',
           maxWidth: '390px',
-          minHeight: '100vh',
           position: 'relative',
-          overflow: 'hidden',
           boxShadow: '0 0 0 1px rgba(34,211,238,0.13), 0 0 70px rgba(24,230,230,0.08)',
         }}
       >
-        {/* full-bleed splash artwork, fitted to phone frame */}
+        {/*
+          In-flow image: width 100% + height auto means the image
+          scales to the container width and shows its full height.
+          At 390px wide, splash.png (853×1844) renders at ~390×844 —
+          the full artwork is visible with no crop.
+        */}
         <img
           src="/assets/splash.png"
           alt=""
           aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center top',
-          }}
+          style={{ width: '100%', height: 'auto', display: 'block' }}
         />
-        {/* bottom fade so the transition to home feels smooth */}
+
+        {/* Bottom gradient so the transition feels smooth */}
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, transparent 60%, rgba(4,16,30,0.9) 100%)',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '120px',
+            background: 'linear-gradient(to bottom, transparent, rgba(4,16,30,0.85))',
             pointerEvents: 'none',
           }}
           aria-hidden
         />
-        {/* loading dots */}
+
+        {/* Loading dots — absolute at bottom of image */}
         <div
           style={{
             position: 'absolute',
-            bottom: 48,
+            bottom: 36,
             left: 0,
             right: 0,
             display: 'flex',
