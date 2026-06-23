@@ -32,9 +32,9 @@ export const HomeView: React.FC = () => {
   return (
     <AppShell tint="cyan">
       <div className="fade-in">
-        <div className="px-4 pt-6 pb-3 flex items-center justify-between">
+        <div className="px-4 pt-5 pb-3 flex items-center justify-between">
           <Logo size="sm"/>
-          <ProgressRing progress={overallProgress} size={44} strokeWidth={4}/>
+          <ProgressRing progress={overallProgress} size={48} strokeWidth={4}/>
         </div>
 
         <div className="px-4 py-4 space-y-6">

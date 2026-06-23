@@ -5,11 +5,7 @@
 @layer base {
   * { box-sizing: border-box; }
   body {
-    background:
-      radial-gradient(120% 80% at 90% -5%, rgba(24,230,230,0.10) 0%, transparent 45%),
-      radial-gradient(90% 60% at 10% 105%, rgba(0,140,255,0.08) 0%, transparent 50%),
-      linear-gradient(160deg, #040d1a 0%, #061827 55%, #04101e 100%);
-    background-attachment: fixed;
+    background: #02080f;
     min-height: 100vh;
     color: #F8FAFC;
     font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
@@ -127,7 +123,7 @@
   }
 
   /* Floating ambient orbs (pure CSS) */
-  .orbs { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  .orbs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
   .orb { position: absolute; border-radius: 50%; filter: blur(48px); opacity: 0.5; }
   .orb-1 { width: 280px; height: 280px; top: -80px; right: -60px; background: radial-gradient(circle, rgba(24,230,230,0.30), transparent 70%); animation: orbFloat 16s ease-in-out infinite; }
   .orb-2 { width: 240px; height: 240px; bottom: 40px; left: -70px; background: radial-gradient(circle, rgba(0,160,255,0.26), transparent 70%); animation: orbFloat 20s ease-in-out infinite reverse; }
