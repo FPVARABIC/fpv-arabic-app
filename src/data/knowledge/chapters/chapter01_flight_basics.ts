@@ -1,4 +1,264 @@
 import type { KnowledgeEntry } from '../types';
 
-// Content will be populated in Phase K2 from the quadcopter engineering book.
-export const chapter01FlightBasics: KnowledgeEntry[] = [];
+export const chapter01FlightBasics: KnowledgeEntry[] = [
+  {
+    id: 'ch01-intro-flight-basics',
+    title: 'مدخل إلى المبادئ الأساسية لطيران الكوادكابتر',
+    chapter: '1',
+    section: 'مقدمة الباب الأول',
+    level: 'beginner',
+    safetyRisk: 'none',
+    category: 'flight_basics',
+    tags: ['كوادكابتر', 'فيزياء الطيران', 'مبتدئ', 'قوى', 'تحكم'],
+    summary:
+      'الكوادكابتر ليس مجرد محركات ومراوح، بل نظام ديناميكي تتفاعل فيه قوى وعزوم متعددة باستمرار. فهم هذه المبادئ هو الأساس لفهم التحكم، النمذجة، والفريموير لاحقاً.',
+    body:
+      'لفهم الكوادكابتر يجب أولاً فهم القوى الأساسية التي تتحكم في أي جسم طائر. الكوادكابتر يعتمد على توازن سريع ومستمر بين الدفع والوزن والسحب والعزوم الناتجة عن تغير سرعات المحركات. هذا الباب يشرح الأساس الفيزيائي الذي تُبنى عليه بقية مفاهيم التحكم، PID، الفلترة، Betaflight، واختيار المكونات.',
+    source: 'Chapter 01 - المبادئ الأساسية لطيران الكوادكابتر',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-basic-forces',
+    title: 'القوى الأساسية المؤثرة على الكوادكابتر',
+    chapter: '1',
+    section: '1.1',
+    level: 'beginner',
+    safetyRisk: 'none',
+    category: 'flight_physics',
+    tags: ['الدفع', 'الوزن', 'السحب الهوائي', 'القوى', 'Thrust', 'Weight', 'Drag'],
+    summary:
+      'يتأثر الكوادكابتر بأربع قوى رئيسية: الدفع للأعلى، الوزن للأسفل، السحب عكس الحركة، والمركبة الأفقية الناتجة عن ميل الطائرة.',
+    body:
+      'القوى الأساسية في الكوادكابتر هي: الدفع T الناتج عن دوران المراوح ويتجه غالباً للأعلى، الوزن W الناتج عن الجاذبية ويتجه للأسفل، السحب الهوائي D الذي يعاكس اتجاه الحركة، والمركبة الأفقية من الدفع عند ميل الطائرة. في الطائرات متعددة المراوح يُستخدم غالباً مفهوم الدفع بدلاً من الرفع التقليدي الموجود في الطائرات ذات الأجنحة.',
+    source: 'Chapter 01 - Section 1.1',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-thrust',
+    title: 'الدفع Thrust',
+    chapter: '1',
+    section: '1.1 - الدفع',
+    level: 'beginner',
+    safetyRisk: 'medium',
+    category: 'propulsion',
+    tags: ['Thrust', 'دفع', 'مروحة', 'محرك', 'RPM', 'omega'],
+    summary:
+      'الدفع هو القوة التي تولدها المراوح عندما تدفع الهواء إلى الأسفل، فينتج رد فعل يدفع الطائرة إلى الأعلى.',
+    body:
+      'الدفع هو القوة الأساسية التي تسمح للكوادكابتر بالإقلاع والبقاء في الهواء. عندما تدور المروحة بسرعة عالية فإنها تدفع الهواء إلى الأسفل، ووفق قانون نيوتن الثالث ينتج رد فعل معاكس يدفع الطائرة إلى الأعلى. في النماذج المبسطة يمكن تقريب دفع المروحة بالعلاقة: T = kT × ω². هذا يعني أن الدفع لا يزيد خطياً مع سرعة دوران المروحة، بل يتناسب تقريباً مع مربع السرعة الزاوية.',
+    safetyNote:
+      'لا تختبر المحركات أو المراوح قرب اليدين أو الوجه، ولا تستخدم تبويب Motors في Betaflight مع تركيب المراوح.',
+    source: 'Chapter 01 - Thrust',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-weight-hover',
+    title: 'الوزن والتحويم',
+    chapter: '1',
+    section: '1.1 - الوزن',
+    level: 'beginner',
+    safetyRisk: 'low',
+    category: 'flight_physics',
+    tags: ['Weight', 'وزن', 'Hover', 'تحويم', 'كتلة', 'جاذبية'],
+    summary:
+      'الوزن هو قوة الجاذبية على كتلة الطائرة. يحدث التحويم عندما يكون مجموع دفع المحركات قريباً من وزن الطائرة.',
+    body:
+      'الوزن W هو القوة التي تسحب الكوادكابتر إلى الأسفل بسبب الجاذبية، ويُحسب تقريباً بالعلاقة W = m × g، حيث m هي الكتلة الكلية للطائرة مع البطارية والحمولة، و g تساوي تقريباً 9.81 m/s². لكي يبقى الكوادكابتر في تحويم، يجب أن يكون مجموع دفع المحركات الأربعة قريباً من الوزن: T1 + T2 + T3 + T4 ≈ m × g. إذا كان الدفع الكلي أكبر من الوزن تصعد الطائرة، وإذا كان أقل تهبط.',
+    source: 'Chapter 01 - Weight and Hover',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-aerodynamic-drag',
+    title: 'السحب الهوائي Aerodynamic Drag',
+    chapter: '1',
+    section: '1.1 - السحب الهوائي',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'aerodynamics',
+    tags: ['Drag', 'سحب هوائي', 'مقاومة الهواء', 'سرعة', 'كثافة الهواء', 'رياح'],
+    summary:
+      'السحب الهوائي يعاكس حركة الطائرة ويزداد بقوة مع السرعة، ويصبح مهماً أكثر في الطيران السريع أو الرياح.',
+    body:
+      'السحب الهوائي هو مقاومة الهواء لحركة الكوادكابتر. يكون تأثيره محدوداً عند التحويم، لكنه يصبح مهماً عند الطيران الأمامي أو السرعات العالية. يمكن تقريب السحب بالعلاقة D = 1/2 × ρ × Cd × A × v². العوامل المؤثرة تشمل كثافة الهواء، شكل الهيكل، المساحة الأمامية، وسرعة الطائرة بالنسبة للهواء. الارتفاع، الحرارة، الرطوبة، والرياح يمكن أن تؤثر على الأداء واستهلاك الطاقة.',
+    source: 'Chapter 01 - Aerodynamic Drag',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-balance-motion-states',
+    title: 'مبدأ التوازن وحالات الحركة',
+    chapter: '1',
+    section: '1.2',
+    level: 'beginner',
+    safetyRisk: 'low',
+    category: 'flight_basics',
+    tags: ['تحويم', 'صعود', 'هبوط', 'توازن', 'TWR', 'Throttle'],
+    summary:
+      'حالة الطائرة تعتمد على العلاقة بين الدفع الكلي والوزن: دفع أكبر يعني صعود، دفع قريب من الوزن يعني تحويم، ودفع أقل يعني هبوط.',
+    body:
+      'تتحكم العلاقة بين الدفع الكلي والوزن في الحركة العمودية للكوادكابتر. إذا كان T_total > W فإن الطائرة تصعد. إذا كان T_total ≈ W فإنها تحوم. إذا كان T_total < W فإنها تهبط. في الواقع لا تبقى هذه القيم ثابتة تماماً، لأن وحدة التحكم تعدل سرعة المحركات باستمرار للحفاظ على التوازن. نسبة الدفع إلى الوزن TWR مهمة لأنها تحدد هامش المناورة والتحكم. للطيران العادي يُفضل وجود هامش دفع كافٍ، بينما تتطلب الأكروبات نسبة أعلى.',
+    source: 'Chapter 01 - Balance and Motion States',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-roll-pitch-yaw',
+    title: 'المحاور الثلاثة Roll / Pitch / Yaw',
+    chapter: '1',
+    section: '1.3',
+    level: 'beginner',
+    safetyRisk: 'none',
+    category: 'attitude_control',
+    tags: ['Roll', 'Pitch', 'Yaw', 'محاور', 'دوران', 'تحكم'],
+    summary:
+      'يتحرك الكوادكابتر دورانياً حول ثلاثة محاور: Roll للميل يميناً ويساراً، Pitch للميل للأمام والخلف، وYaw للدوران حول المحور العمودي.',
+    body:
+      'إلى جانب الصعود والهبوط، يتحكم الكوادكابتر في اتجاهه عبر ثلاث حركات دورانية. Roll هو الميل حول المحور الطولي X، Pitch هو الميل حول المحور الجانبي Y، وYaw هو الدوران حول المحور العمودي Z. يتم التحكم بهذه الحركات عن طريق تغيير سرعات المحركات بشكل غير متساوٍ، وليس عبر أسطح تحكم ميكانيكية مثل الطائرات التقليدية.',
+    source: 'Chapter 01 - Roll Pitch Yaw',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-motor-mixing-basics',
+    title: 'مبدأ التحكم في المحركات لتوليد الحركة',
+    chapter: '1',
+    section: '1.4',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'motor_control',
+    tags: ['Motor Mixing', 'محركات', 'Throttle', 'Roll', 'Pitch', 'Yaw', 'Quad X'],
+    summary:
+      'الحركة في الكوادكابتر تنتج من زيادة أو تقليل سرعة مجموعات مختلفة من المحركات حسب الحركة المطلوبة.',
+    body:
+      'يعتمد الكوادكابتر على مبدأ بسيط: تغيير سرعة المحركات بشكل غير متساوٍ لتوليد الحركة المطلوبة. زيادة أو تقليل سرعة جميع المحركات معاً تتحكم في Throttle. أما Roll وPitch فينتجان من فرق الدفع بين الجانبين أو بين الأمام والخلف. Yaw ينتج من عزم رد الفعل الناتج عن اتجاه دوران المراوح، ولذلك تدور بعض المراوح مع عقارب الساعة وبعضها عكس عقارب الساعة.',
+    safetyNote:
+      'أي خطأ في ترتيب المحركات أو اتجاه الدوران قد يؤدي إلى انقلاب الطائرة عند الإقلاع. يجب اختبار المحركات بدون مراوح أولاً.',
+    source: 'Chapter 01 - Motor Control Basics',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-center-of-gravity',
+    title: 'مركز الثقل CG',
+    chapter: '1',
+    section: '1.5',
+    level: 'beginner',
+    safetyRisk: 'medium',
+    category: 'mechanical_setup',
+    tags: ['CG', 'مركز الثقل', 'بطارية', 'توازن', 'استقرار'],
+    summary:
+      'مركز الثقل يجب أن يكون قريباً من مركز الإطار. انحرافه يجعل التحكم أصعب ويزيد استهلاك الطاقة.',
+    body:
+      'مركز الثقل هو النقطة التي يمكن اعتبار وزن الطائرة متمركزاً عندها. عندما يكون CG قريباً من مركز الإطار الهندسي تصبح الطائرة أكثر استقراراً وأسهل في الضبط. إذا ابتعد مركز الثقل عن المركز، سيحتاج نظام التحكم إلى تصحيح مستمر، وقد يزيد استهلاك الطاقة وتصبح الطائرة صعبة الضبط. البطارية غالباً هي أثقل مكون، لذلك يجب وضعها أقرب ما يمكن إلى مركز الإطار.',
+    safetyNote:
+      'لا تطِر بطائرة مركز ثقلها منحرف بوضوح، خصوصاً في أول اختبار.',
+    source: 'Chapter 01 - Center of Gravity',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-dynamic-stability',
+    title: 'الاستقرار الديناميكي وحلقة التحكم',
+    chapter: '1',
+    section: '1.6',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'control_loop',
+    tags: ['استقرار', 'حلقة تحكم', 'Gyroscope', 'Accelerometer', 'Flight Controller', 'ESC'],
+    summary:
+      'الكوادكابتر غير مستقر بطبيعته، ويبدو مستقراً فقط لأن وحدة التحكم تصحح وضعه بسرعة عالية جداً.',
+    body:
+      'الكوادكابتر بطبيعته غير مستقر ديناميكياً. بدون تدخل مستمر من وحدة التحكم سيبدأ في الميلان أو الدوران أو السقوط. يتحقق الاستقرار عبر حلقة تحكم مغلقة: تقرأ الحساسات مثل الجايروسكوب ومقياس التسارع حركة الطائرة، ترسل البيانات إلى Flight Controller، يحسب المتحكم التصحيح المطلوب، ثم يرسل أوامر إلى ESC لتعديل سرعة المحركات. تتكرر هذه العملية مئات أو آلاف المرات في الثانية.',
+    source: 'Chapter 01 - Dynamic Stability',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-propeller-aerodynamics',
+    title: 'الديناميكية الهوائية للمراوح',
+    chapter: '1',
+    section: '1.8',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'propellers',
+    tags: ['Propeller', 'مروحة', 'قطر', 'Pitch', 'عدد الريش', '5145', '3052'],
+    summary:
+      'خصائص المروحة مثل القطر والخطوة وعدد الريش والمادة تؤثر مباشرة على الدفع والكفاءة والاستجابة.',
+    body:
+      'المروحة هي القلب الهوائي للكوادكابتر. القطر الأكبر يعطي غالباً دفعاً أكبر عند نفس RPM. الخطوة Pitch تحدد المسافة النظرية التي تتحركها المروحة في دورة واحدة، وكلما زادت الخطوة زاد الدفع المحتمل لكن قد تقل الكفاءة ويزيد الحمل على المحرك. عدد الريش يؤثر على الضجيج والكفاءة والاستجابة. تُوصف المراوح غالباً بأرقام مثل 5145، حيث يشير أول رقمين تقريباً إلى القطر، والرقمان الأخيران إلى الخطوة.',
+    safetyNote:
+      'اختيار مروحة غير مناسبة للمحرك أو البطارية قد يسبب سخونة عالية أو سحب تيار زائد.',
+    source: 'Chapter 01 - Propeller Aerodynamics',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-six-degrees-of-freedom',
+    title: 'درجات الحرية الست 6DOF',
+    chapter: '1',
+    section: '1.9',
+    level: 'intermediate',
+    safetyRisk: 'none',
+    category: 'motion',
+    tags: ['6DOF', 'Degrees of Freedom', 'Roll', 'Pitch', 'Yaw', 'X', 'Y', 'Z'],
+    summary:
+      'يمتلك الكوادكابتر ست درجات حرية: ثلاث انتقالية وثلاث دورانية.',
+    body:
+      'الكوادكابتر يتحرك في الفضاء بثلاث حركات انتقالية وثلاث حركات دورانية. الحركات الانتقالية تكون على محاور X وY وZ، أما الحركات الدورانية فهي Roll حول X، وPitch حول Y، وYaw حول Z. الحركة الأفقية في الكوادكابتر لا تأتي من دفع أفقي مباشر، بل من ميل الطائرة بحيث يتحول جزء من الدفع إلى مركبة أفقية.',
+    source: 'Chapter 01 - 6 Degrees of Freedom',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-multirotor-comparison',
+    title: 'مقارنة بين أنواع الطائرات متعددة المراوح',
+    chapter: '1',
+    section: '1.10',
+    level: 'beginner',
+    safetyRisk: 'none',
+    category: 'multirotor_types',
+    tags: ['Quadcopter', 'Tricopter', 'Hexacopter', 'Octocopter', 'Multirotor'],
+    summary:
+      'الكوادكابتر هو الأكثر شيوعاً لأنه يحقق تحكماً كاملاً بأربع محركات فقط مع بساطة ووزن أقل.',
+    body:
+      'الطائرات متعددة المراوح يمكن أن تكون Tricopter بثلاث مراوح، Quadcopter بأربع مراوح، Hexacopter بست مراوح، أو Octocopter بثماني مراوح. الكوادكابتر هو الأكثر شيوعاً لأنه يحقق تحكماً كاملاً في المحاور الأساسية بدون آلية ميكانيكية معقدة، مع وزن وتكلفة وتعقيد أقل من الأنواع الأكبر. الأنواع ذات المحركات الأكثر قد توفر احتياطياً أعلى لكنها أثقل وأغلى وأكثر تعقيداً.',
+    source: 'Chapter 01 - Multirotor Comparison',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch01-summary',
+    title: 'خلاصة الباب الأول',
+    chapter: '1',
+    section: '1.11',
+    level: 'beginner',
+    safetyRisk: 'none',
+    category: 'chapter_summary',
+    tags: ['خلاصة', 'أساسيات', 'قوى', 'عزوم', 'استقرار', 'CG'],
+    summary:
+      'الباب الأول يضع أساس فهم الكوادكابتر كنظام قوى وعزوم وتحكم مستمر.',
+    body:
+      'الخلاصة أن الكوادكابتر يخضع لقوى أساسية هي الدفع والوزن والسحب والمركبة الأفقية الناتجة عن الميل. التحويم يتحقق عندما يكون الدفع الكلي قريباً من الوزن. التحكم في Roll وPitch وYaw يتم عبر تغيير سرعات المحركات. مركز الثقل القريب من مركز الإطار ضروري للاستقرار. الكوادكابتر غير مستقر بطبيعته ويحتاج إلى حلقة تحكم سريعة. هذه المبادئ هي الأساس لفهم النمذجة، التحكم، الفيرموير، واختيار المكونات في الأبواب التالية.',
+    source: 'Chapter 01 - Summary',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+];
