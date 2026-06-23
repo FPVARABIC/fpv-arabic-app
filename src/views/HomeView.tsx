@@ -82,43 +82,64 @@ export const HomeView: React.FC = () => {
         {menuOpen && (
           <>
             <div
-              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm fade-in"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm fade-in"
               onClick={() => setMenuOpen(false)}
             />
+            {/* pb-[76px] = nav height (64px) + 12px gap so the sheet clears BottomNavigation */}
             <div className="fixed bottom-0 left-0 right-0 z-50 fade-in" onClick={e => e.stopPropagation()}>
-              <div className="max-w-[390px] mx-auto px-3 pb-3">
+              <div className="max-w-[390px] mx-auto px-3" style={{ paddingBottom: 76 }}>
                 <div
-                  className="card-feature p-5"
                   style={{
-                    borderRadius: '24px 24px 18px 18px',
-                    boxShadow: '0 -8px 40px rgba(34,211,238,0.14), 0 8px 32px rgba(0,0,0,0.6)',
+                    borderRadius: '24px 24px 20px 20px',
+                    background: 'linear-gradient(160deg, #071828 0%, #050f1c 100%)',
+                    border: '1px solid rgba(34,211,238,0.28)',
+                    boxShadow: '0 -12px 48px rgba(34,211,238,0.18), 0 -2px 0 rgba(34,211,238,0.35), 0 16px 48px rgba(0,0,0,0.7)',
+                    padding: '20px 20px 24px',
                   }}
                 >
-                  <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                  {/* grabber */}
+                  <div className="w-10 h-1 rounded-full mx-auto mb-5"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.5), transparent)' }} />
                   <div className="flex items-center justify-between mb-5">
                     <p className="text-base font-bold text-white">الإعدادات والمزيد</p>
                     <button
                       onClick={() => setMenuOpen(false)}
-                      className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
+                      style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)' }}
                     >
-                      <X size={16} className="text-slate-400" />
+                      <X size={16} className="text-cyan-300" />
                     </button>
                   </div>
-                  <div className="space-y-2">
-                    {secondaryOptions.map(opt => (
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(34,211,238,0.12)',
+                    }}
+                  >
+                    {secondaryOptions.map((opt, idx) => (
                       <button
                         key={opt.path}
                         onClick={() => handleSecondaryNav(opt.path)}
-                        className="card-subtle w-full flex items-center gap-3 p-4 text-right press"
+                        className="w-full flex items-center gap-3 press"
+                        style={{
+                          padding: '14px 16px',
+                          background: idx % 2 === 0 ? 'rgba(34,211,238,0.04)' : 'rgba(255,255,255,0.02)',
+                          borderBottom: idx < secondaryOptions.length - 1 ? '1px solid rgba(34,211,238,0.10)' : 'none',
+                          textAlign: 'right',
+                        }}
                       >
                         <div
                           className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.20)' }}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(0,160,255,0.08))',
+                            border: '1px solid rgba(34,211,238,0.25)',
+                          }}
                         >
                           <opt.icon size={18} className={opt.color} />
                         </div>
                         <span className="text-sm font-bold text-slate-100 flex-1">{opt.label}</span>
-                        <ArrowLeft size={15} className="text-slate-500 flex-shrink-0" />
+                        <ArrowLeft size={15} className="text-cyan-500 flex-shrink-0" />
                       </button>
                     ))}
                   </div>
