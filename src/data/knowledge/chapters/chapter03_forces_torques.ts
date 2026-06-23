@@ -1,4 +1,290 @@
 import type { KnowledgeEntry } from '../types';
 
-// Content will be populated in Phase K2 from the quadcopter engineering book.
-export const chapter03ForcesTorques: KnowledgeEntry[] = [];
+export const chapter03ForcesTorques: KnowledgeEntry[] = [
+  {
+    id: 'ch03-intro-forces-torques',
+    title: 'مدخل إلى القوى والعزوم في الكوادكابتر',
+    chapter: '3',
+    section: 'مقدمة الباب الثالث',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'forces_torques',
+    tags: ['قوى', 'عزوم', 'كوادكابتر', 'تحكم', 'ديناميكا', 'Rigid Body'],
+    summary:
+      'هذا الباب يشرح كيف تتحول سرعات المحركات إلى قوى وعزوم تتحكم فعلياً في حركة الكوادكابتر.',
+    body:
+      'بعد فهم إطارات الإحداثيات، ننتقل إلى تحليل القوى والعزوم التي تتحكم فعلياً في حركة الكوادكابتر. الباب الثالث يوسع ما تم شرحه في الباب الأول، لكنه يركز على العلاقات الكمية والهندسية التي تُبنى عليها النمذجة الرياضية وأنظمة التحكم. الهدف هو فهم كيف تتحول أوامر التحكم إلى تغيرات في دفع المحركات، ثم إلى عزوم Roll وPitch وYaw وحركة فعلية للطائرة.',
+    source: 'Chapter 03 - القوى والعزوم: تحليل هندسي كامل',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-rigid-body-motion',
+    title: 'الكوادكابتر كجسم صلب',
+    chapter: '3',
+    section: '3.1',
+    level: 'advanced',
+    safetyRisk: 'none',
+    category: 'rigid_body_dynamics',
+    tags: ['Rigid Body', 'جسم صلب', 'حركة انتقالية', 'حركة دورانية', 'نيوتن', 'أويلر'],
+    summary:
+      'يمكن نمذجة الكوادكابتر كجسم صلب يخضع لقانونين: مجموع القوى للحركة الانتقالية، ومجموع العزوم للحركة الدورانية.',
+    body:
+      'في النماذج الهندسية المبسطة يُعامل الكوادكابتر كجسم صلب في الفضاء ثلاثي الأبعاد. الحركة الانتقالية توصف بالعلاقة: m · a_E = ΣF_E، حيث تمثل m كتلة الطائرة، وa_E تسارعها الخطي في إطار الأرض، وΣF_E مجموع القوى الخارجية. أما الحركة الدورانية فتُوصف بمعادلة أويلر: I · ω̇_B + ω_B × (I · ω_B) = Στ_B، حيث I مصفوفة عزم القصور الذاتي، وω_B السرعة الزاوية في إطار الجسم، وΣτ_B مجموع العزوم الخارجية.',
+    source: 'Chapter 03 - Section 3.1',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-translational-forces',
+    title: 'القوى المؤثرة على الحركة الانتقالية',
+    chapter: '3',
+    section: '3.1 - القوى',
+    level: 'intermediate',
+    safetyRisk: 'none',
+    category: 'forces',
+    tags: ['Thrust', 'Gravity', 'Drag', 'قوة', 'دفع', 'جاذبية', 'سحب هوائي'],
+    summary:
+      'الحركة الانتقالية للكوادكابتر تنتج من مجموع القوى الخارجية مثل الدفع والجاذبية والسحب الهوائي.',
+    body:
+      'الحركة الانتقالية للكوادكابتر تعتمد على مجموع القوى الخارجية. أهم هذه القوى هي قوة الدفع الناتجة عن المراوح، قوة الجاذبية التي تسحب الطائرة للأسفل، وقوة السحب الهوائي التي تعاكس الحركة. عند التحويم يكون مجموع الدفع قريباً من وزن الطائرة، أما عند الصعود أو الهبوط أو الحركة الأفقية فيتغير اتجاه ومقدار القوة الكلية بسبب تغير الدفع وميل الطائرة.',
+    source: 'Chapter 03 - Translational Forces',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-thrust-vector',
+    title: 'متجه الدفع واتجاهه',
+    chapter: '3',
+    section: '3.2',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'thrust',
+    tags: ['متجه الدفع', 'Thrust Vector', 'Body Frame', 'Earth Frame', 'ميلان'],
+    summary:
+      'الدفع ينتج في إطار جسم الطائرة، لكن تأثيره على الحركة يجب فهمه بالنسبة لإطار الأرض.',
+    body:
+      'قوة الدفع التي تنتجها المراوح تكون مرتبطة بإطار جسم الطائرة. عندما تكون الطائرة مستوية يكون الدفع غالباً عكس اتجاه الجاذبية تقريباً. لكن عندما تميل الطائرة Roll أو Pitch، يميل متجه الدفع معها، فيتحول جزء من الدفع إلى مركبة أفقية تسبب الحركة الأمامية أو الجانبية. لهذا لا يتحرك الكوادكابتر أفقياً لأنه يملك محركاً أفقياً، بل لأنه يميل متجه الدفع.',
+    source: 'Chapter 03 - Thrust Vector',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-motor-thrust-model',
+    title: 'نموذج دفع المحرك والمروحة',
+    chapter: '3',
+    section: '3.3',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'propulsion',
+    tags: ['kT', 'Thrust', 'omega', 'مروحة', 'محرك', 'دفع'],
+    summary:
+      'في النموذج المبسط يكون دفع كل محرك متناسباً تقريباً مع مربع السرعة الزاوية للمروحة.',
+    body:
+      'يمكن تقريب دفع كل محرك ومروحة بالعلاقة: T_i = kT · ω_i². هنا T_i هو دفع المحرك، وkT معامل الدفع، وω_i السرعة الزاوية للمروحة. هذه علاقة مبسطة لكنها مفيدة جداً في فهم التحكم، لأن زيادة سرعة المحرك لا تزيد الدفع خطياً، بل يزيد الدفع تقريباً مع مربع السرعة. في الواقع يتغير kT حسب نوع المروحة، الجهد، كثافة الهواء، وحالة المكونات.',
+    safetyNote:
+      'لا تختبر دفع المحركات أو سرعة المراوح مع تركيب المراوح داخل مكان ضيق أو قرب اليدين. اختبارات Betaflight Motors يجب أن تكون بدون مراوح.',
+    source: 'Chapter 03 - Motor Thrust Model',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-reaction-torque',
+    title: 'عزم رد الفعل من المراوح',
+    chapter: '3',
+    section: '3.4',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'torque',
+    tags: ['Reaction Torque', 'Yaw', 'kM', 'عزم', 'CW', 'CCW'],
+    summary:
+      'كل مروحة تولد عزم رد فعل على الهيكل بعكس اتجاه دورانها، وهذا العزم هو أساس التحكم في Yaw.',
+    body:
+      'عندما تدور المروحة في اتجاه معين، تؤثر على الهيكل بعزم رد فعل في الاتجاه المعاكس. لهذا لا تدور كل مراوح الكوادكابتر في نفس الاتجاه؛ بعض المراوح تدور CW وبعضها CCW حتى تتوازن عزوم رد الفعل عند التحويم. عند تغيير الفرق بين عزوم المراوح المتعاكسة يمكن توليد دوران حول المحور العمودي، أي Yaw. يمكن تقريب عزم المروحة بالعلاقة: τ_i = kM · ω_i².',
+    safetyNote:
+      'اتجاه دوران المحركات وترتيب المراوح أمر حساس. خطأ واحد قد يسبب دوراناً عنيفاً أو انقلاباً عند الإقلاع. اختبر الاتجاهات بدون مراوح أولاً.',
+    source: 'Chapter 03 - Reaction Torque',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-roll-torque',
+    title: 'عزم Roll',
+    chapter: '3',
+    section: '3.5 - Roll',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'attitude_control',
+    tags: ['Roll', 'عزم Roll', 'Torque', 'ذراع العزم', 'Motor Mixing'],
+    summary:
+      'عزم Roll ينتج من فرق الدفع بين جانبي الطائرة، ويعتمد على الدفع وذراع العزم.',
+    body:
+      'عزم Roll هو العزم الذي يجعل الكوادكابتر يميل يميناً أو يساراً حول محوره الطولي. ينتج هذا العزم من فرق الدفع بين المحركات الواقعة على جانبي الطائرة. إذا زاد الدفع في جانب وانخفض في الجانب المقابل، يتولد عزم حول مركز الثقل. مقدار العزم يعتمد على قوة الدفع وعلى المسافة بين المحرك ومركز الثقل، أي ذراع العزم.',
+    safetyNote:
+      'إذا كان ترتيب المحركات أو اتجاهاتها غير صحيح، فإن أمر Roll قد ينتج حركة عكسية أو انقلاباً. يجب اختبار ترتيب المحركات بدون مراوح.',
+    source: 'Chapter 03 - Roll Torque',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-pitch-torque',
+    title: 'عزم Pitch',
+    chapter: '3',
+    section: '3.5 - Pitch',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'attitude_control',
+    tags: ['Pitch', 'عزم Pitch', 'Torque', 'أمام', 'خلف', 'Motor Mixing'],
+    summary:
+      'عزم Pitch ينتج من فرق الدفع بين مقدمة الطائرة ومؤخرتها.',
+    body:
+      'عزم Pitch هو العزم الذي يجعل الكوادكابتر يميل للأمام أو للخلف حول المحور الجانبي. عندما يزيد دفع المحركات الخلفية مقارنة بالأمامية تميل الطائرة للأمام، وعندما يزيد دفع المحركات الأمامية مقارنة بالخلفية تميل للخلف. كما في Roll، يعتمد مقدار العزم على فرق الدفع وعلى ذراع العزم بالنسبة لمركز الثقل.',
+    safetyNote:
+      'خطأ اتجاه Flight Controller أو ترتيب المحركات قد يجعل Pitch يعمل بعكس المتوقع. لا تطِر قبل التأكد من اتجاه النموذج والمحركات بدون مراوح.',
+    source: 'Chapter 03 - Pitch Torque',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-yaw-torque',
+    title: 'عزم Yaw',
+    chapter: '3',
+    section: '3.5 - Yaw',
+    level: 'intermediate',
+    safetyRisk: 'medium',
+    category: 'attitude_control',
+    tags: ['Yaw', 'عزم Yaw', 'kM', 'CW', 'CCW', 'Motor Direction'],
+    summary:
+      'عزم Yaw ينتج من عدم التوازن المقصود بين عزوم رد الفعل للمراوح التي تدور باتجاهات متعاكسة.',
+    body:
+      'عزم Yaw هو الدوران حول المحور العمودي. ينتج من الفرق بين عزوم رد الفعل للمراوح التي تدور مع عقارب الساعة وتلك التي تدور عكس عقارب الساعة. عند التحويم تكون هذه العزوم متوازنة تقريباً. أما عند طلب Yaw، يزيد النظام سرعة مجموعة ويقلل الأخرى لتوليد عزم دوران صافي حول المحور العمودي. غالباً تكون سلطة Yaw أضعف من Roll وPitch لأن معامل عزم المروحة kM أصغر من معامل الدفع kT.',
+    safetyNote:
+      'إشارات Yaw تعتمد على ترقيم المحركات واتجاهاتها في الفيرموير. تحقق دائماً من توثيق Betaflight أو الفيرموير المستخدم، واختبر بدون مراوح.',
+    source: 'Chapter 03 - Yaw Torque',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-lever-arm-cg',
+    title: 'ذراع العزم ومركز الثقل',
+    chapter: '3',
+    section: '3.6',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'mechanical_setup',
+    tags: ['Lever Arm', 'ذراع العزم', 'CG', 'مركز الثقل', 'Torque'],
+    summary:
+      'العزم لا يعتمد على القوة فقط، بل على بعدها عن مركز الثقل أيضاً.',
+    body:
+      'العزم يساوي تقريباً القوة مضروبة في ذراع العزم، أي المسافة العمودية بين خط تأثير القوة ومركز الدوران. في الكوادكابتر يكون مركز الدوران قريباً من مركز الثقل. لذلك يؤثر توزيع الوزن ومكان البطارية ومكان الحمولة على الاستجابة. إذا كان مركز الثقل منحرفاً، فإن نفس قوى المحركات قد تنتج سلوكاً غير متوازن وتحتاج وحدة التحكم إلى تصحيحات أكبر.',
+    safetyNote:
+      'لا تعتبر الطائرة جاهزة للطيران إذا كان مركز الثقل منحرفاً بوضوح أو إذا كانت البطارية مثبتة بشكل غير آمن.',
+    source: 'Chapter 03 - Lever Arm and CG',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-allocation-matrix',
+    title: 'مصفوفة التخصيص بين سرعات المحركات والقوى والعزوم',
+    chapter: '3',
+    section: '3.7',
+    level: 'advanced',
+    safetyRisk: 'low',
+    category: 'control_math',
+    tags: ['Allocation Matrix', 'Mixer', 'Motor Mixing', 'T_total', 'Roll', 'Pitch', 'Yaw'],
+    summary:
+      'مصفوفة التخصيص تربط مربعات سرعات المحركات بالدفع الكلي وعزوم Roll وPitch وYaw.',
+    body:
+      'يمكن كتابة العلاقة بين سرعات المحركات ومخرجات التحكم في شكل مصفوفي. المدخلات تكون مربعات سرعات المحركات، والمخرجات تكون الدفع الكلي T_total وعزوم Roll وPitch وYaw. هذه العلاقة تسمى مصفوفة التخصيص Allocation Matrix. أما المازج Mixer فهو العملية العكسية تقريباً: يأخذ الدفع والعزوم المطلوبة من نظام التحكم ويحولها إلى أوامر لكل محرك. الإشارات الدقيقة تعتمد على ترتيب المحركات واتجاه دورانها في الفيرموير.',
+    safetyNote:
+      'لا تغيّر إعدادات ترتيب المحركات أو اتجاهاتها عشوائياً. أي خطأ في المازج أو الاتجاهات قد يؤدي إلى انقلاب فوري عند الإقلاع.',
+    source: 'Chapter 03 - Allocation Matrix',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-real-world-coefficients',
+    title: 'معاملات الدفع والعزم في الواقع العملي',
+    chapter: '3',
+    section: '3.8',
+    level: 'advanced',
+    safetyRisk: 'low',
+    category: 'modeling_limits',
+    tags: ['kT', 'kM', 'Thrust Stand', 'نموذج مبسط', 'معاملات'],
+    summary:
+      'معاملات kT وkM ليست ثابتة تماماً في الواقع، وتتغير حسب المروحة والجهد والهواء والحالة الميكانيكية.',
+    body:
+      'النماذج المبسطة تفترض غالباً أن معامل الدفع kT ومعامل العزم kM ثابتان، وهذا مفيد قرب حالة التحويم. لكن في الواقع العملي يتغيران حسب نوع المروحة، الجهد، كثافة الهواء، درجة الحرارة، سرعة الدوران، وتآكل المكونات. لذلك لا يمكن الاعتماد على الحساب النظري وحده بدقة كاملة. غالباً يُقاس kT باستخدام Thrust Stand، بينما يكون تقدير kM أصعب ويُقرب تجريبياً.',
+    source: 'Chapter 03 - Real World Coefficients',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-control-bridge',
+    title: 'العلاقة بين التحكم والقوى والعزوم',
+    chapter: '3',
+    section: '3.9',
+    level: 'intermediate',
+    safetyRisk: 'low',
+    category: 'control_loop',
+    tags: ['PID', 'Mixer', 'ESC', 'Motor Commands', 'Control Loop', 'قوى', 'عزوم'],
+    summary:
+      'نظام التحكم يحول أمر الطيار إلى عزوم مطلوبة، ثم يحولها المازج إلى سرعات محركات تنتج قوى وعزوم فعلية.',
+    body:
+      'مسار التحكم في الكوادكابتر يمكن فهمه كسلسلة مترابطة: أمر الطيار أو الطيار الآلي يدخل إلى المتحكم، ثم يحسب PID العزوم المطلوبة، ثم يحول Mixer هذه العزوم والدفع المطلوب إلى أوامر محركات، ثم تنفذ ESC هذه الأوامر، فتنتج المحركات والمراوح قوى وعزوم فعلية تحرك الطائرة. هذا الباب يربط بين عالم التحكم النظري وعالم التنفيذ الفيزيائي.',
+    source: 'Chapter 03 - Control Bridge',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-common-forces-torques-mistakes',
+    title: 'أخطاء شائعة في فهم القوى والعزوم',
+    chapter: '3',
+    section: 'أخطاء شائعة',
+    level: 'beginner',
+    safetyRisk: 'high',
+    category: 'common_mistakes',
+    tags: ['أخطاء شائعة', 'Motor Order', 'Motor Direction', 'Props', 'Betaflight', 'Safety'],
+    summary:
+      'أكثر الأخطاء خطورة هي خلط ترتيب المحركات، اتجاه الدوران، اتجاه المراوح، أو اتجاه Flight Controller.',
+    body:
+      'من الأخطاء الشائعة الاعتقاد أن كل مشكلة ميلان أو انقلاب سببها PID، بينما قد يكون السبب أبسط وأخطر: ترتيب محركات خاطئ، اتجاه دوران خاطئ، مروحة في الاتجاه الخطأ، أو اتجاه Flight Controller غير مضبوط. كذلك من الخطأ اختبار المحركات مع تركيب المراوح أثناء الإعداد. قبل أي طيران يجب التأكد من ترتيب المحركات، اتجاه الدوران، اتجاه المراوح، واتجاه النموذج في Betaflight أو الفيرموير المستخدم.',
+    safetyNote:
+      'لا تختبر تبويب Motors مع تركيب المراوح. لا تحاول الإقلاع إذا كان اتجاه المحركات أو المراوح أو نموذج Betaflight غير صحيح.',
+    source: 'Chapter 03 - Common Mistakes',
+    sourceType: 'educational_addition',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+  {
+    id: 'ch03-summary',
+    title: 'خلاصة الباب الثالث',
+    chapter: '3',
+    section: 'خلاصة الباب الثالث',
+    level: 'intermediate',
+    safetyRisk: 'none',
+    category: 'chapter_summary',
+    tags: ['خلاصة', 'قوى', 'عزوم', 'Mixer', 'Allocation Matrix', 'PID'],
+    summary:
+      'الباب الثالث يوضح كيف تتحول سرعات المحركات إلى دفع وعزوم، وكيف تربط هذه العلاقات بين الفيزياء والتحكم.',
+    body:
+      'خلاصة الباب الثالث أن الكوادكابتر يمكن فهمه كجسم صلب يخضع لمجموع قوى ومجموع عزوم. الدفع والجاذبية والسحب تحدد الحركة الانتقالية، بينما فروق الدفع وعزوم رد الفعل تحدد Roll وPitch وYaw. معاملات الدفع والعزم تساعد في بناء نموذج مبسط، لكنها ليست مثالية في الواقع. مصفوفة التخصيص تربط سرعات المحركات بالقوى والعزوم، والمازج يستخدم هذه العلاقة لتحويل أوامر التحكم إلى أوامر محركات.',
+    source: 'Chapter 03 - Summary',
+    sourceType: 'explicit_from_book',
+    relatedLessonIds: [],
+    relatedChecklistIds: [],
+  },
+];
