@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Map, BookOpen, CheckSquare, MoreHorizontal, X, Settings, Cpu, Wrench, Bot, BarChart2, Info, Mail } from 'lucide-react';
+import { Home, Map, BookOpen, CheckSquare, MoreHorizontal, X, Cpu, Wrench, Bot, BarChart2 } from 'lucide-react';
 
 const mainNav = [
   { icon: Home, label: 'الرئيسية', path: '/home' },
@@ -15,9 +15,6 @@ const moreNav = [
   { icon: Wrench, label: 'المشاكل', path: '/troubleshooting' },
   { icon: Bot, label: 'مساعد FPV', path: '/bot' },
   { icon: BarChart2, label: 'التقدم', path: '/progress' },
-  { icon: Settings, label: 'الإعدادات', path: '/settings' },
-  { icon: Info, label: 'حول التطبيق', path: '/about' },
-  { icon: Mail, label: 'اتصل بنا', path: '/contact' },
 ];
 
 export const BottomNavigation: React.FC = () => {

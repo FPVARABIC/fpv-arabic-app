@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { ProgressRing } from '../components/ProgressRing';
 import { useProgress } from '../hooks/useProgress';
 import { lessonsData } from '../data/lessonsData';
 import { roadmapData } from '../data/roadmapData';
-import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Bot, Shield } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Bot, Shield, MoreVertical, X, Settings, Mail, Info } from 'lucide-react';
 
 const quickSections = [
   { icon: Map, label: 'خريطة البناء', path: '/roadmap', grad: 'linear-gradient(135deg, rgba(24,230,230,0.22), rgba(0,160,255,0.12))', color: 'text-cyan-300' },
@@ -16,8 +16,15 @@ const quickSections = [
   { icon: Bot, label: 'مساعد FPV', path: '/bot', grad: 'linear-gradient(135deg, rgba(236,72,153,0.24), rgba(244,114,182,0.12))', color: 'text-pink-300' },
 ];
 
+const secondaryOptions = [
+  { icon: Settings, label: 'الإعدادات', path: '/settings', color: 'text-cyan-300' },
+  { icon: Mail, label: 'اتصل بنا', path: '/contact', color: 'text-blue-300' },
+  { icon: Info, label: 'حول التطبيق', path: '/about', color: 'text-purple-300' },
+];
+
 export const HomeView: React.FC = () => {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const { lastOpened, overallProgress, completedLessons, completedRoadmapSteps, totalLessons, totalRoadmapSteps } = useProgress();
   const lastLesson = lastOpened.lessonId ? lessonsData.find(l => l.id === lastOpened.lessonId) : null;
   const lastStep = lastOpened.roadmapStepId ? roadmapData.find(s => s.id === lastOpened.roadmapStepId) : null;
@@ -28,10 +35,15 @@ export const HomeView: React.FC = () => {
     [`${overallProgress}%`, 'التقدم العام'],
   ];
 
+  const handleSecondaryNav = (path: string) => {
+    setMenuOpen(false);
+    navigate(path);
+  };
+
   return (
     <AppShell tint="cyan">
       <div className="fade-in">
-        {/* Brand block — centered logo, progress ring pinned to corner */}
+        {/* Brand block — centered logo, progress ring pinned to right corner, menu button pinned to left corner */}
         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: 24, paddingBottom: 12 }}>
           <img
             src="/assets/logo.png"
@@ -46,7 +58,78 @@ export const HomeView: React.FC = () => {
           <div style={{ position: 'absolute', top: 24, right: 16 }}>
             <ProgressRing progress={overallProgress} size={44} strokeWidth={4}/>
           </div>
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="قائمة الإعدادات"
+            style={{
+              position: 'absolute',
+              top: 24,
+              left: 16,
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(34,211,238,0.08)',
+              border: '1px solid rgba(34,211,238,0.18)',
+              cursor: 'pointer',
+            }}
+            className="press"
+          >
+            <MoreVertical size={20} className="text-slate-400" />
+          </button>
         </div>
+
+        {/* Secondary options half-screen sheet */}
+        {menuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm fade-in"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="fixed bottom-0 left-0 right-0 z-50 fade-in" onClick={e => e.stopPropagation()}>
+              <div className="max-w-[390px] mx-auto px-3 pb-3">
+                <div
+                  className="card-feature p-5"
+                  style={{
+                    borderRadius: '24px 24px 18px 18px',
+                    boxShadow: '0 -8px 40px rgba(34,211,238,0.14), 0 8px 32px rgba(0,0,0,0.6)',
+                  }}
+                >
+                  <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                  <div className="flex items-center justify-between mb-5">
+                    <p className="text-base font-bold text-white">الإعدادات والمزيد</p>
+                    <button
+                      onClick={() => setMenuOpen(false)}
+                      className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+                    >
+                      <X size={16} className="text-slate-400" />
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {secondaryOptions.map(opt => (
+                      <button
+                        key={opt.path}
+                        onClick={() => handleSecondaryNav(opt.path)}
+                        className="card-subtle w-full flex items-center gap-3 p-4 text-right press"
+                      >
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.20)' }}
+                        >
+                          <opt.icon size={18} className={opt.color} />
+                        </div>
+                        <span className="text-sm font-bold text-slate-100 flex-1">{opt.label}</span>
+                        <ArrowLeft size={15} className="text-slate-500 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="px-4 py-4 space-y-6">
           {/* Hero */}
