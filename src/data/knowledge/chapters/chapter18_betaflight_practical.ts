@@ -1,4 +1,4 @@
-import { KnowledgeEntry } from '../types';
+import type { KnowledgeEntry } from '../types';
 
 export const chapter18BetaflightPractical: KnowledgeEntry[] = [
   {
