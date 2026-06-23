@@ -43,7 +43,7 @@ export const HomeView: React.FC = () => {
   return (
     <AppShell tint="cyan">
       <div className="fade-in">
-        {/* Brand block — centered logo, progress ring pinned to right corner, menu button pinned to left corner */}
+        {/* Brand block — centered logo, menu button pinned to top-right corner */}
         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: 24, paddingBottom: 12 }}>
           <img
             src="/assets/logo.png"
@@ -55,16 +55,13 @@ export const HomeView: React.FC = () => {
               filter: 'drop-shadow(0 0 18px rgba(24,230,230,0.55))',
             }}
           />
-          <div style={{ position: 'absolute', top: 24, right: 16 }}>
-            <ProgressRing progress={overallProgress} size={44} strokeWidth={4}/>
-          </div>
           <button
             onClick={() => setMenuOpen(true)}
             aria-label="قائمة الإعدادات"
             style={{
               position: 'absolute',
               top: 24,
-              left: 16,
+              right: 16,
               width: 44,
               height: 44,
               borderRadius: 14,
