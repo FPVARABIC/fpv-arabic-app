@@ -21,13 +21,13 @@ export const BuildRoadmapView: React.FC = () => {
   };
 
   return (
-    <AppShell>
+    <AppShell tint="cyan">
       <Header title="خريطة البناء"/>
       <div className="px-4 py-4 fade-in">
-        <p className="text-sm text-slate-400 mb-4">{completedRoadmapSteps.length} من {roadmapData.length} مراحل مكتملة</p>
-        <div className="relative space-y-3">
-          {/* Timeline line */}
-          <div className="absolute right-7 top-0 bottom-0 w-0.5 bg-gradient-to-b from-cyan-400/30 to-transparent -z-10"/>
+        <p className="text-sm text-slate-400 mb-5"><span className="text-cyan-300 font-bold">{completedRoadmapSteps.length}</span> من {roadmapData.length} مراحل مكتملة</p>
+        <div className="relative space-y-3 pr-10">
+          {/* dashed timeline line */}
+          <div className="absolute right-[18px] top-3 bottom-3 w-0.5 border-r-2 border-dashed border-cyan-400/35"/>
           {roadmapData.map(step => {
             const Icon = iconMap[step.icon] || Package;
             const done = completedRoadmapSteps.includes(step.id);
@@ -35,7 +35,12 @@ export const BuildRoadmapView: React.FC = () => {
             const active = openStep === step.id;
             const checklistDoneCount = step.checklist.filter((_, i) => isRoadmapItemDone(step.id, i)).length;
             return (
-              <div key={step.id} className={`glass-card transition-all ${done ? 'border-green-400/30' : active ? 'border-cyan-400/40 pulse-glow' : ''}`}>
+              <div key={step.id} className="relative">
+                {/* timeline node */}
+                <div className={`absolute right-[-30px] top-4 z-10 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-extrabold text-sm ${done ? 'bg-green-400/25 border border-green-400/50 text-green-300' : active ? 'bg-cyan-400/25 border border-cyan-400/55 text-cyan-200 pulse-glow' : 'bg-slate-800 border border-cyan-400/30 text-cyan-300'}`}>
+                  {done ? <CheckCircle2 size={18} className="text-green-300"/> : step.number}
+                </div>
+                <div className={`card-feature transition-all ${done ? 'border-green-400/30' : active ? 'border-cyan-400/50' : ''}`}>
                 <button className="w-full p-4 flex items-center gap-3 text-right" onClick={() => toggleStep(step.id)}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-green-400/20' : 'bg-cyan-400/10'}`}>
                     {done ? <CheckCircle2 size={20} className="text-green-400"/> : <Icon size={20} className="text-cyan-400"/>}
@@ -80,6 +85,7 @@ export const BuildRoadmapView: React.FC = () => {
                     {done && <div className="success-card text-center text-sm text-green-400 font-semibold flex items-center justify-center gap-2"><CheckCircle2 size={16}/>المرحلة مكتملة</div>}
                   </div>
                 )}
+                </div>
               </div>
             );
           })}

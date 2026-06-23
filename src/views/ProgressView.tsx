@@ -26,10 +26,10 @@ export const ProgressView: React.FC = () => {
   const lastStep = lastOpened.roadmapStepId ? roadmapData.find(s => s.id === lastOpened.roadmapStepId) : null;
 
   return (
-    <AppShell>
+    <AppShell tint="green">
       <Header title="التقدم"/>
       <div className="px-4 py-4 space-y-5 fade-in">
-        <div className="glass-card p-5 flex items-center gap-5">
+        <div className="card-hero p-5 flex items-center gap-5">
           <ProgressRing progress={overallProgress} size={88} strokeWidth={7}/>
           <div className="flex-1 space-y-2">
             <div>
@@ -48,7 +48,7 @@ export const ProgressView: React.FC = () => {
         </div>
 
         {(lastLesson || lastStep) && (
-          <div className="glass-card p-4 space-y-2">
+          <div className="card-feature p-4 space-y-2">
             <h2 className="text-sm font-semibold text-slate-300">آخر نشاط</h2>
             {lastLesson && <p className="text-sm text-slate-400">درس: <span className="text-white">درس {lastLesson.number}: {lastLesson.title}</span></p>}
             {lastStep && <p className="text-sm text-slate-400">مرحلة بناء: <span className="text-white">المرحلة {lastStep.number}: {lastStep.title}</span></p>}
@@ -57,18 +57,26 @@ export const ProgressView: React.FC = () => {
         )}
 
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><Trophy size={16} className="text-amber-400"/>الإنجازات</h2>
-          <div className="grid grid-cols-1 gap-3">
-            {achievements.map(a => (
-              <div key={a.id} className={`glass-card-sm p-3 flex items-center gap-3 transition-all ${a.unlocked ? 'border-amber-400/30' : 'opacity-50'}`}>
-                <span className="text-2xl">{a.icon}</span>
-                <div className="flex-1">
-                  <p className={`font-semibold text-sm ${a.unlocked ? 'text-white' : 'text-slate-500'}`}>{a.title}</p>
-                  <p className="text-xs text-slate-500">{a.unlocked ? 'مفتوح' : 'مقفل'}</p>
+          <h2 className="text-sm font-bold text-slate-300 mb-3 accent-head flex items-center gap-2"><Trophy size={16} className="text-amber-400"/>الإنجازات</h2>
+          <div className="relative pr-4">
+            {/* timeline line */}
+            <div className="absolute right-[10px] top-2 bottom-2 w-0.5 border-r-2 border-dashed border-cyan-400/30"/>
+            <div className="space-y-3">
+              {achievements.map(a => (
+                <div key={a.id} className="relative flex items-center gap-3">
+                  <div className={`relative z-10 w-7 h-7 -mr-[26px] ml-1 rounded-full flex items-center justify-center flex-shrink-0 ${a.unlocked ? 'bg-amber-400/25 border border-amber-400/50' : 'bg-slate-800 border border-slate-700'}`}>
+                    {a.unlocked ? <CheckCircle2 size={15} className="text-amber-300"/> : <Lock size={13} className="text-slate-600"/>}
+                  </div>
+                  <div className={`card-subtle p-3 flex items-center gap-3 flex-1 ${a.unlocked ? '' : 'opacity-55'}`}>
+                    <span className="text-2xl">{a.icon}</span>
+                    <div className="flex-1">
+                      <p className={`font-bold text-sm ${a.unlocked ? 'text-white' : 'text-slate-500'}`}>{a.title}</p>
+                      <p className="text-xs text-slate-500">{a.unlocked ? 'مفتوح' : 'مقفل'}</p>
+                    </div>
+                  </div>
                 </div>
-                {a.unlocked ? <CheckCircle2 size={18} className="text-amber-400"/> : <Lock size={16} className="text-slate-600"/>}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

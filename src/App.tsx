@@ -21,9 +21,7 @@ import { NotFoundView } from './views/NotFoundView';
 
 const RedirectLogic: React.FC = () => {
   const [hasStarted] = useLocalStorage<boolean>(STORAGE_KEYS.HAS_STARTED, false);
-  const [safetySeen] = useLocalStorage<boolean>(STORAGE_KEYS.SAFETY_SEEN, false);
   if (!hasStarted) return <Navigate to="/welcome" replace/>;
-  if (!safetySeen) return <Navigate to="/safety" replace/>;
   return <Navigate to="/home" replace/>;
 };
 

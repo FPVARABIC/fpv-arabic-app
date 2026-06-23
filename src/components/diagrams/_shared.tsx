@@ -22,15 +22,16 @@ interface FrameProps {
 
 /** Card wrapper that frames every educational diagram consistently. */
 export const DiagramFrame: React.FC<FrameProps> = ({ children, hint, title }) => (
-  <div className="card-elevated p-4 my-2 relative ambient-glow">
-    <div className="relative z-10">
+  <div className="card-feature relative ambient-glow overflow-hidden">
+    <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #18E6E6, #00B4FF, #7c5aff)' }} />
+    <div className="relative z-10 p-4">
       {title && (
         <div className="flex items-center gap-2 mb-1">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 glow-node" />
-          <span className="text-xs font-semibold text-cyan-400">{title}</span>
+          <span className="text-sm font-bold text-cyan-300">{title}</span>
         </div>
       )}
-      {hint && <p className="text-[11px] text-slate-500 mb-2">{hint}</p>}
+      {hint && <p className="text-[10px] text-slate-500 mb-2">{hint}</p>}
       {children}
     </div>
   </div>
