@@ -16,6 +16,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
   >
     {/* Phone-frame column: 390px, app gradient, glowing edge */}
     <div
+      data-app-frame="true"
       className="relative flex flex-col"
       style={{
         width: '100%',
