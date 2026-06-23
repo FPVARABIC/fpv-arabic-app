@@ -10,7 +10,7 @@ export const SplashView: React.FC = () => {
     const t = setTimeout(() => {
       setHasStarted(true);
       navigate('/home', { replace: true });
-    }, 2500);
+    }, 4000);
     return () => clearTimeout(t);
   }, []);
 

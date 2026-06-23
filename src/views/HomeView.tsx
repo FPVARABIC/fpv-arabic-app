@@ -85,9 +85,9 @@ export const HomeView: React.FC = () => {
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm fade-in"
               onClick={() => setMenuOpen(false)}
             />
-            {/* pb-[76px] = nav height (64px) + 12px gap so the sheet clears BottomNavigation */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 fade-in" onClick={e => e.stopPropagation()}>
-              <div className="max-w-[390px] mx-auto px-3" style={{ paddingBottom: 76 }}>
+            {/* Centered modal — stays inside 390px frame, clear of BottomNavigation */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center fade-in" onClick={e => e.stopPropagation()}>
+              <div className="w-full max-w-[390px] px-5">
                 <div
                   style={{
                     borderRadius: '24px 24px 20px 20px',
