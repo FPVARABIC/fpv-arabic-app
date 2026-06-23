@@ -1,7 +1,5 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { STORAGE_KEYS } from './utils/storageKeys';
 import { SplashView } from './views/SplashView';
 import { SafetyGateView } from './views/SafetyGateView';
 import { HomeView } from './views/HomeView';
@@ -19,11 +17,7 @@ import { AboutView } from './views/AboutView';
 import { ContactView } from './views/ContactView';
 import { NotFoundView } from './views/NotFoundView';
 
-const RedirectLogic: React.FC = () => {
-  const [hasStarted] = useLocalStorage<boolean>(STORAGE_KEYS.HAS_STARTED, false);
-  if (!hasStarted) return <Navigate to="/welcome" replace/>;
-  return <Navigate to="/home" replace/>;
-};
+const RedirectLogic: React.FC = () => <Navigate to="/welcome" replace/>;
 
 export const App: React.FC = () => (
   <Routes>

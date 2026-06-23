@@ -4,13 +4,9 @@ import { useProgress } from '../hooks/useProgress';
 
 export const SplashView: React.FC = () => {
   const navigate = useNavigate();
-  const { hasStarted, setHasStarted } = useProgress();
+  const { setHasStarted } = useProgress();
 
   React.useEffect(() => {
-    if (hasStarted) {
-      navigate('/home', { replace: true });
-      return;
-    }
     const t = setTimeout(() => {
       setHasStarted(true);
       navigate('/home', { replace: true });
