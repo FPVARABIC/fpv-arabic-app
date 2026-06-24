@@ -24,15 +24,15 @@ export const LessonDetailView: React.FC = () => {
   React.useEffect(() => { setLastOpenedLesson(lesson.id); }, [lesson.id]);
 
   return (
-    <AppShell tint="blue">
-      <div className="fade-in">
-        <div className="px-4 pt-4 pb-3 flex items-center gap-3 border-b border-cyan-400/10">
+    <AppShell>
+      <div className="fade-in" style={{ background: 'linear-gradient(180deg, #0E2A36 0%, #123A46 100%)', minHeight: '100%' }}>
+        <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(94,234,212,0.1)' }}>
           <button onClick={() => navigate('/lessons')} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center press">
             <ArrowRight size={18} className="text-slate-400"/>
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-slate-500">درس {lesson.number} من {lessonsData.length}</p>
-            <h1 className="text-lg font-extrabold text-white truncate">{lesson.title}</h1>
+            <h1 className="text-lg font-extrabold truncate" style={{ color: '#F8FAFC' }}>{lesson.title}</h1>
           </div>
           {isDone && <span className="badge-green flex-shrink-0">مكتمل</span>}
         </div>
@@ -40,36 +40,40 @@ export const LessonDetailView: React.FC = () => {
         <div className="px-4 py-4 space-y-5">
           {/* large prominent badges */}
           <div className="flex items-center gap-2.5">
-            <span className="pill-stat text-sm"><Star size={14} className="text-cyan-300"/> {lesson.level}</span>
-            <span className="pill-stat text-sm"><Clock size={14} className="text-cyan-300"/> {lesson.duration}</span>
+            <span className="pill-stat text-sm"><Star size={14} style={{ color: '#5EEAD4' }}/> {lesson.level}</span>
+            <span className="pill-stat text-sm"><Clock size={14} style={{ color: '#5EEAD4' }}/> {lesson.duration}</span>
           </div>
 
           {/* Diagram FIRST, edge-to-edge inside feature card */}
           <EducationalDiagram type={lesson.diagramType}/>
 
           {/* objective */}
-          <div className="card-subtle p-4 border-r-2 border-cyan-400/50">
-            <p className="text-xs text-cyan-300 font-bold mb-1">🎯 الهدف من الدرس</p>
-            <p className="text-sm text-slate-200 leading-relaxed">{lesson.objective}</p>
+          <div className="card-subtle p-4 border-r-2" style={{ background: '#173F4D', borderColor: 'rgba(94,234,212,0.45)' }}>
+            <p className="text-xs font-bold mb-1" style={{ color: '#5EEAD4' }}>🎯 الهدف من الدرس</p>
+            <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{lesson.objective}</p>
           </div>
 
           {/* explanation as pull-quote */}
-          <div className="pull-quote">
-            <h2 className="text-xs font-bold text-cyan-300 mb-2">الشرح</h2>
-            <p className="text-[15px] text-slate-100 leading-loose">{lesson.explanation}</p>
+          <div className="pull-quote" style={{ background: '#173F4D' }}>
+            <h2 className="text-xs font-bold mb-2" style={{ color: '#5EEAD4' }}>الشرح</h2>
+            <p className="text-[15px] leading-loose" style={{ color: '#F8FAFC' }}>{lesson.explanation}</p>
           </div>
 
           {/* important points: numbered colored circles */}
           <div className="space-y-2.5">
-            <h2 className="text-sm font-bold text-white accent-head flex items-center gap-2"><Star size={15} className="text-cyan-300"/>نقاط مهمة</h2>
+            <h2 className="text-sm font-bold accent-head flex items-center gap-2" style={{ color: '#F8FAFC' }}>
+              <Star size={15} style={{ color: '#5EEAD4' }}/>نقاط مهمة
+            </h2>
             <div className="grid gap-2.5">
               {lesson.importantPoints.map((point, i) => (
-                <div key={i} className="card-subtle p-3.5 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, rgba(24,230,230,0.25), rgba(0,160,255,0.15))', border: '1px solid rgba(34,211,238,0.35)' }}>
-                    <span className="text-cyan-200 text-sm font-extrabold">{i+1}</span>
+                <div key={i} className="card-subtle p-3.5 flex items-start gap-3" style={{ background: '#173F4D' }}>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg, rgba(94,234,212,0.22), rgba(167,243,208,0.1))', border: '1px solid rgba(94,234,212,0.35)' }}
+                  >
+                    <span className="text-sm font-extrabold" style={{ color: '#A7F3D0' }}>{i+1}</span>
                   </div>
-                  <p className="text-sm text-slate-200 leading-relaxed pt-1">{point}</p>
+                  <p className="text-sm leading-relaxed pt-1" style={{ color: '#CBD5E1' }}>{point}</p>
                 </div>
               ))}
             </div>
@@ -88,7 +92,7 @@ export const LessonDetailView: React.FC = () => {
               <ul className="space-y-1">
                 <li className="text-sm text-slate-300">• راجع الدرس السابق مرة أخرى</li>
                 <li className="text-sm text-slate-300">• افتح Checklist المتعلق بهذه المرحلة</li>
-                <li><button className="text-sm text-cyan-300 underline" onClick={() => navigate('/bot')}>• اسأل مساعد FPV</button></li>
+                <li><button className="text-sm underline" style={{ color: '#5EEAD4' }} onClick={() => navigate('/bot')}>• اسأل مساعد FPV</button></li>
               </ul>
             </div>
           )}
@@ -120,13 +124,14 @@ export const LessonDetailView: React.FC = () => {
                 {nextLesson ? (
                   <button
                     onClick={() => navigate(`/lessons/${nextLesson.id}`)}
-                    className="flex-1 flex items-center gap-2 rounded-xl px-3 py-3 bg-cyan-400/8 border border-cyan-400/25 hover:bg-cyan-400/14 transition-all press"
+                    className="flex-1 flex items-center gap-2 rounded-xl px-3 py-3 transition-all press"
+                    style={{ background: 'rgba(94,234,212,0.08)', border: '1px solid rgba(94,234,212,0.25)' }}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-cyan-400/70 leading-none mb-0.5">التالي</p>
-                      <p className="text-xs text-cyan-200 font-semibold truncate leading-tight">{nextLesson.title}</p>
+                      <p className="text-[10px] leading-none mb-0.5" style={{ color: 'rgba(94,234,212,0.65)' }}>التالي</p>
+                      <p className="text-xs font-semibold truncate leading-tight" style={{ color: '#A7F3D0' }}>{nextLesson.title}</p>
                     </div>
-                    <ChevronLeft size={15} className="text-cyan-400 flex-shrink-0"/>
+                    <ChevronLeft size={15} style={{ color: '#5EEAD4' }} className="flex-shrink-0"/>
                   </button>
                 ) : <div className="flex-1"/>}
               </div>
