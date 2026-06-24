@@ -12,6 +12,8 @@ import {
   correctionTriggers,
   correctionMessages,
   outOfDomainMessage,
+  advancedTerms,
+  followUpQuestions,
 } from './botKnowledgeRules';
 
 export interface KnowledgeSearchResult {
@@ -137,9 +139,19 @@ export function searchKnowledge(query: string, limit = 3): KnowledgeSearchResult
 // ── Domain guard ─────────────────────────────────────────────────────────────
 
 const _normalizedDomainKeywords = domainKeywords.map(k => normalizeQuery(k));
+const _normalizedAdvancedTerms = advancedTerms.map(t => normalizeQuery(t));
 
 function isDomainQuery(normalized: string): boolean {
   return _normalizedDomainKeywords.some(k => k.length >= 2 && (normalized.includes(k) || k.includes(normalized.slice(0, 6))));
+}
+
+// Returns true when query is about filter cutoff frequency, not drone components.
+function isFilterCutoffQuery(normalized: string): boolean {
+  const cutoffTerms = [
+    'تردد', 'فلتر', 'filter', 'cutoff', 'frequency', 'hz', 'd-term',
+    'gyro filter', 'notch', 'biquad',
+  ].map(t => normalizeQuery(t));
+  return cutoffTerms.some(t => normalized.includes(t));
 }
 
 // ── Intent detection ─────────────────────────────────────────────────────────
@@ -342,36 +354,132 @@ function formatCorrectionStyle(
   };
 }
 
+// ── K4.3 mode formatters ────────────────────────────────────────────────────
+
+function formatConceptMode(results: KnowledgeSearchResult[], normalized: string): KnowledgeBotAnswer {
+  if (results.length === 0) {
+    return { answer: mentorPhrases.no_match, steps: [], sources: [], confidence: 'low' };
+  }
+  const topEntry = results[0].entry;
+  const topScore = results[0].score;
+  const safetyNote = buildSafetyNote(normalized, results);
+  const sources = results.map(r => ({ id: r.entry.id, title: r.entry.title, chapter: r.entry.chapter }));
+  const bodyLines = topEntry.body.split(/[.\n]/).map(l => l.trim()).filter(l => l.length > 10);
+  const steps = [...bodyLines.slice(0, 4), followUpQuestions.concept_explanation];
+  return {
+    answer: topEntry.summary,
+    steps: steps.filter(s => s.length > 0).slice(0, 5),
+    safetyNote,
+    sources,
+    confidence: topScore >= 15 ? 'high' : topScore >= 7 ? 'medium' : 'low',
+  };
+}
+
+function formatTroubleshootingMode(results: KnowledgeSearchResult[], normalized: string): KnowledgeBotAnswer {
+  const safetyNote = buildSafetyNote(normalized, results);
+  const sources = results.map(r => ({ id: r.entry.id, title: r.entry.title, chapter: r.entry.chapter }));
+  const steps: string[] = [];
+  for (const r of results) {
+    if (steps.length >= 5) break;
+    const bodyLines = r.entry.body.split(/[.\n]/).map(l => l.trim()).filter(l => l.length > 10);
+    steps.push(...bodyLines.slice(0, 2));
+  }
+  const hasMotorContext =
+    normalized.includes('محرك') || normalized.includes('motor') ||
+    normalized.includes('موتور') || normalized.includes('مروح') || normalized.includes('prop');
+  if (hasMotorContext) steps.push('تأكد أن المراوح مفكوكة قبل أي اختبار كهربائي.');
+  steps.push(followUpQuestions.troubleshooting);
+  const topScore = results.length > 0 ? results[0].score : 0;
+  return {
+    answer: mentorPhrases.troubleshoot_intro,
+    steps: steps.filter(s => s.length > 0).slice(0, 7),
+    safetyNote,
+    sources,
+    confidence: topScore >= 7 ? 'high' : 'medium',
+  };
+}
+
+function formatGeneralGuidanceMode(results: KnowledgeSearchResult[], normalized: string): KnowledgeBotAnswer {
+  if (results.length === 0) {
+    return { answer: mentorPhrases.no_match, steps: [], sources: [], confidence: 'low' };
+  }
+  const topEntry = results[0].entry;
+  const topScore = results[0].score;
+  const safetyNote = buildSafetyNote(normalized, results);
+  const sources = results.map(r => ({ id: r.entry.id, title: r.entry.title, chapter: r.entry.chapter }));
+  const bodyLines = topEntry.body.split(/[.\n]/).map(l => l.trim()).filter(l => l.length > 10);
+  const numbered = bodyLines.filter(l => /^\(?\d+\)?\s*[-–:]?/.test(l) || /^[١٢٣٤٥٦٧٨٩]/.test(l));
+  const steps: string[] = numbered.length >= 2
+    ? numbered.slice(0, 5).map(l => l.replace(/^\(?\d+\)?\s*[-–:.]?\s*/, '').trim())
+    : bodyLines.slice(0, 4);
+  if (results.length > 1) {
+    const second = results[1].entry;
+    if (second.summary && second.summary !== topEntry.summary) steps.push(`أيضاً — ${second.summary}`);
+  }
+  steps.push(followUpQuestions.general_guidance);
+  return {
+    answer: topEntry.summary,
+    steps: steps.filter(s => s.length > 0).slice(0, 6),
+    safetyNote,
+    sources,
+    confidence: topScore >= 15 ? 'high' : topScore >= 7 ? 'medium' : 'low',
+  };
+}
+
+function formatAdvancedMode(results: KnowledgeSearchResult[], normalized: string): KnowledgeBotAnswer {
+  if (results.length === 0) {
+    return { answer: mentorPhrases.no_match, steps: [], sources: [], confidence: 'low' };
+  }
+  const topEntry = results[0].entry;
+  const topScore = results[0].score;
+  const safetyNote = buildSafetyNote(normalized, results);
+  const sources = results.map(r => ({ id: r.entry.id, title: r.entry.title, chapter: r.entry.chapter }));
+  const bodyLines = topEntry.body.split(/[.\n]/).map(l => l.trim()).filter(l => l.length > 10);
+  const steps: string[] = [...bodyLines.slice(0, 5)];
+  if (results.length > 1) {
+    const second = results[1].entry;
+    if (second.summary && second.summary !== topEntry.summary) steps.push(`أيضاً — ${second.summary}`);
+  }
+  steps.push(followUpQuestions.advanced_technical);
+  return {
+    answer: topEntry.summary,
+    steps: steps.filter(s => s.length > 0).slice(0, 6),
+    safetyNote,
+    sources,
+    confidence: topScore >= 15 ? 'high' : topScore >= 7 ? 'medium' : 'low',
+  };
+}
+
 // ── Answer builder ───────────────────────────────────────────────────────────
 
 export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
   const normalized = normalizeQuery(query);
 
-  // ── Correction detection (highest priority) ───────────────────────────────
+  // 1. Correction detection (highest priority, unchanged from K4.2)
   const correctionKey = detectCorrection(normalized);
   if (correctionKey) {
-    const corrResults = searchKnowledge(query, 2);
-    return formatCorrectionStyle(correctionKey, corrResults);
+    return formatCorrectionStyle(correctionKey, searchKnowledge(query, 2));
   }
 
   const intent = detectIntent(normalized);
 
-  // ── Beginner / build guidance — search KB first ───────────────────────────
+  // 2. Beginner broad / build guidance with specificity escape hatch
   if (intent === 'beginner_start' || intent === 'build_guidance') {
     if (!hasSpecificProblem(normalized)) {
       let results = searchKnowledge(query, 3);
       if (results.length < 2) {
-        // Supplement with build-related search when query is too vague to match directly
         const supplement = searchKnowledge('بناء كواد', 3);
         const seen = new Set(results.map(r => r.entry.id));
         results = [...results, ...supplement.filter(r => !seen.has(r.entry.id))].slice(0, 3);
       }
-      return buildBeginnerResponse(results, normalized);
+      return intent === 'beginner_start'
+        ? buildBeginnerResponse(results, normalized)
+        : formatGeneralGuidanceMode(results, normalized);
     }
-    // hasSpecificProblem — fall through to normal KB search path
+    // hasSpecificProblem → fall through to troubleshooting routing below
   }
 
-  // ── Broad Betaflight query — search KB first ──────────────────────────────
+  // 3. Broad Betaflight query (unchanged from K4.2)
   if (intent === 'betaflight_setup') {
     const betaflightNameNorm = new Set(
       ['betaflight', 'بيتافلايت', 'بتافلاي', 'بيتفلايت', 'بيدفلايت', 'bf', 'بيتا فلايت']
@@ -381,121 +489,71 @@ export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
       .split(' ')
       .filter(w => w.length >= 2 && !stopwords.has(w) && !betaflightNameNorm.has(w));
     if (meaningfulNonBeta.length === 0) {
-      const bfResults = searchKnowledge(query, 3);
-      return buildBetaflightBroadResponse(bfResults, normalized);
+      return buildBetaflightBroadResponse(searchKnowledge(query, 3), normalized);
     }
-    // Has specific sub-topic — fall through to normal search
   }
 
-  // ── Vague/troubleshooting with no domain component terms → clarification ──
+  // 4. Vague/troubleshooting without domain context → clarification
   if (intent === 'troubleshooting' || intent === 'vague_problem') {
-    if (!isDomainQuery(normalized)) {
-      return buildVagueProblemResponse();
-    }
+    if (!isDomainQuery(normalized)) return buildVagueProblemResponse();
   }
 
-  // ── Domain guard ──────────────────────────────────────────────────────────
+  // 5. Domain guard for null intent
   if (intent === null) {
-    const hasResults = searchKnowledge(query, 1);
-    if (hasResults.length === 0 && !isDomainQuery(normalized)) {
-      return buildOutOfDomainResponse();
-    }
+    const probeResults = searchKnowledge(query, 1);
+    if (probeResults.length === 0 && !isDomainQuery(normalized)) return buildOutOfDomainResponse();
   }
 
+  // 6. KB search
   const results = searchKnowledge(query, 3);
 
-  // No results
   if (results.length === 0 || results[0].score < 3) {
-    if (intent === 'vague_problem' || intent === 'troubleshooting') {
-      return buildVagueProblemResponse();
-    }
+    if (intent === 'vague_problem' || intent === 'troubleshooting') return buildVagueProblemResponse();
     if (isDomainQuery(normalized)) {
-      return {
-        answer: mentorPhrases.no_match,
-        steps: [],
-        sources: [],
-        confidence: 'low',
-      };
+      return { answer: mentorPhrases.no_match, steps: [], sources: [], confidence: 'low' };
     }
     return buildOutOfDomainResponse();
   }
 
-  const topEntry = results[0].entry;
   const topScore = results[0].score;
-  const confidence: 'high' | 'medium' | 'low' =
-    topScore >= 15 ? 'high' : topScore >= 7 ? 'medium' : 'low';
 
-  const safetyNote = buildSafetyNote(normalized, results);
-  const sources = results.map(r => ({
-    id: r.entry.id,
-    title: r.entry.title,
-    chapter: r.entry.chapter,
-  }));
-  const matchedCategories = [...new Set(results.map(r => r.entry.category))];
-
-  // Build answer text from the top entry
-  let answer = '';
-  let steps: string[] = [];
-
-  if (confidence === 'high') {
-    answer = topEntry.summary;
-
-    // Extract steps from body: numbered lines or bullet points
-    const bodyLines = topEntry.body
-      .split(/[.\n]/)
-      .map(l => l.trim())
-      .filter(l => l.length > 10);
-
-    // Try to pull numbered steps from the body
-    const numbered = bodyLines.filter(l => /^\(?\d+\)?\s*[-–:]?/.test(l) || /^[١٢٣٤٥٦٧٨٩]/.test(l));
-    if (numbered.length >= 2) {
-      steps = numbered.slice(0, 5).map(l => l.replace(/^\(?\d+\)?\s*[-–:.]?\s*/, '').trim());
-    } else {
-      // Use first few meaningful sentences as steps
-      steps = bodyLines.slice(0, 4);
-    }
-
-    // If multiple results, add insight from second entry
-    if (results.length > 1) {
-      const second = results[1].entry;
-      if (second.summary && second.summary !== topEntry.summary) {
-        steps.push(`أيضاً — ${second.summary}`);
-      }
-    }
-  } else if (confidence === 'medium') {
-    answer = `${mentorPhrases.medium_prefix}: ${topEntry.title}. هذا ما وجدته في المرجع:`;
-    const bodyLines = topEntry.body
-      .split(/[.\n]/)
-      .map(l => l.trim())
-      .filter(l => l.length > 10);
-    steps = bodyLines.slice(0, 3);
-    if (results.length > 1) {
-      steps.push(`موضوع ذو صلة: ${results[1].entry.title}`);
-    }
-    steps.push('هل يمكنك توضيح المشكلة أكثر حتى أساعدك بشكل أدق؟');
-  } else {
-    answer = mentorPhrases.no_match;
-    steps = [];
-  }
-
-  // Override/enhance based on intent
-  if (intent === 'troubleshooting' && confidence !== 'low') {
-    if (!steps.some(s => s.includes('تحقق') || s.includes('افحص'))) {
-      steps.unshift('ابدأ بالتحقق من التوصيلات الكهربائية والبرمجية.');
-    }
-  }
-
-  // Vague troubleshooting with low-confidence result → clarification
-  if ((intent === 'vague_problem' || intent === 'troubleshooting') && confidence === 'low') {
+  // Low-confidence troubleshooting/vague → clarification
+  if ((intent === 'vague_problem' || intent === 'troubleshooting') && topScore < 7) {
     return buildVagueProblemResponse();
   }
 
-  return {
-    answer,
-    steps: steps.filter(s => s.length > 0),
-    safetyNote,
-    sources,
-    confidence,
-    matchedCategories,
-  };
+  // 7. Mode-based routing (K4.3)
+  const matchedCategories = [...new Set(results.map(r => r.entry.category))];
+  const isAdvanced = _normalizedAdvancedTerms.some(t => normalized.includes(t));
+
+  // "ما هو / ما هي / what is" → always concept mode, even for advanced topics
+  const pureDefPhrases = ['ما هو', 'ما هي', 'what is', 'what are'].map(k => normalizeQuery(k));
+  const isPureDefinition = pureDefPhrases.some(k => normalized.includes(k));
+
+  // Troubleshooting signal words that bypass intent detection (e.g. betaflight_setup fires first)
+  const troubleshootSignals = [
+    'لا يعمل', 'لا تعمل', 'لا يحفظ', 'لا يدور', 'لا تدور',
+    'ينقلب', 'يسخن', 'تسخن', 'لا يستجيب', 'لا يرد', 'لا يتصل', 'مشكله',
+  ].map(t => normalizeQuery(t));
+  const hasTroubleshootTerms = troubleshootSignals.some(t => normalized.includes(t));
+
+  if (intent === 'definition' || isPureDefinition) {
+    return { ...formatConceptMode(results, normalized), matchedCategories };
+  }
+  if (
+    intent === 'troubleshooting' ||
+    intent === 'motors_props' ||
+    hasSpecificProblem(normalized) ||
+    hasTroubleshootTerms
+  ) {
+    return { ...formatTroubleshootingMode(results, normalized), matchedCategories };
+  }
+  if (intent === 'component_selection' && !isFilterCutoffQuery(normalized)) {
+    return { ...formatGeneralGuidanceMode(results, normalized), matchedCategories };
+  }
+  if (isAdvanced) {
+    return { ...formatAdvancedMode(results, normalized), matchedCategories };
+  }
+
+  return { ...formatGeneralGuidanceMode(results, normalized), matchedCategories };
 }

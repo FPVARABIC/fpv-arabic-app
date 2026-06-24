@@ -40,6 +40,10 @@ export const mentorPhrases: Record<string, string> = {
   betaflight_broad_followup: 'ما الجانب الذي تريد تفاصيل أكثر عنه؟ (الاتصال / المنافذ / المحركات / Failsafe / PID)',
   medium_prefix: 'يبدو سؤالك متعلقاً بـ',
   no_match: 'لا أجد إجابة مؤكدة في المرجع الحالي، لكن أستطيع مساعدتك بخطوات فحص آمنة إذا وصفت المشكلة أكثر.',
+  troubleshoot_intro: 'دعنا نفحص هذا معاً.',
+  concept_followup: 'هل تريد مثالاً عملياً أو شرحاً أعمق؟',
+  general_followup: 'هل تريد تفاصيل عن جزء معين؟',
+  advanced_followup: 'هل تريد تفاصيل إضافية عن هذا الموضوع؟',
 };
 
 // Clarification question menus — behavior only, not technical content.
@@ -69,7 +73,12 @@ export const correctionTriggers: { anyPhrase: string[]; key: string }[] = [
     key: 'receiver_on_vbat',
   },
   {
-    anyPhrase: ['مراوح مركبة motors tab', 'اختبار محركات مراوح مركبة', 'props on motors tab', 'motors tab مراوح مركبة'],
+    anyPhrase: [
+      'مراوح مركبة motors tab', 'اختبار محركات مراوح مركبة',
+      'props on motors tab', 'motors tab مراوح مركبة',
+      'اختبر المحركات والمراوح', 'اختبر المحرك والمراوح',
+      'اختبار المحركات والمراوح', 'هل اختبر المراوح مركبه',
+    ],
     key: 'props_on_test',
   },
 ];
@@ -97,6 +106,23 @@ export const correctionMessages: Record<string, { answer: string; safetyNote: st
 
 export const outOfDomainMessage =
   'أنا مخصص فقط لأسئلة الطائرات FPV والكواد — البناء، التوصيل، Betaflight، المحركات، والطيران. هل عندك سؤال عن هذه المواضيع؟';
+
+// Technical/advanced terms — presence signals advanced_technical mode.
+export const advancedTerms: string[] = [
+  'pid', 'filter', 'cutoff', 'frequency', 'تردد', 'فلتر', 'd-term', 'gyro filter',
+  'blackbox', 'cli', 'dshot', 'notch', 'biquad', 'rates', 'expo',
+  'rpm filter', 'dynamic filter', 'p term', 'i term', 'anti gravity',
+];
+
+// Follow-up questions keyed by response mode.
+export const followUpQuestions: Record<string, string> = {
+  beginner_guidance: 'ما الجانب الذي تريد تفاصيل أكثر عنه؟ (القطع / التوصيل / Betaflight / الطيران)',
+  general_guidance: 'هل تريد تفاصيل عن جزء معين من هذا الموضوع؟',
+  concept_explanation: 'هل تريد مثالاً عملياً أو شرحاً أعمق؟',
+  troubleshooting: 'هل المشكلة مستمرة بعد هذه الخطوات؟ أخبرني ماذا يحصل.',
+  advanced_technical: 'هل تريد تفاصيل إضافية أو مقارنة بين الخيارات؟',
+  betaflight_broad: 'ما الجانب الذي تريد تفاصيل أكثر عنه؟ (الاتصال / المنافذ / المحركات / Failsafe / PID)',
+};
 
 export const safetyKeywords: string[] = [
   'بطارية', 'battery', 'lipo',
@@ -191,14 +217,16 @@ export const intentKeywords: Record<string, string[]> = {
   beginner_start: [
     'من أين أبدأ', 'من اين ابدا', 'كيف أبدأ', 'كيف ابدا', 'أبدأ من', 'ابدا من',
     'مبتدئ', 'مبتدي', 'جديد', 'أول مرة', 'اول مره', 'للمبتدئين', 'للمبتدئ',
-    'أريد أبني', 'ابني طائره', 'ابدا المشروع',
+    'ابدا المشروع',
+    'أريد أن أتعلم', 'تعلم بناء', 'علمني من الصفر', 'علمني',
     'beginner', 'start', 'first time', 'new to fpv',
   ],
   // General build guidance
   build_guidance: [
     'كيف أبني', 'كيف ابني', 'خطوات البناء', 'خطوات التجميع',
     'بناء كواد', 'تجميع طائره', 'تجميع كواد', 'بناء درون',
-    'ابني كواد', 'ابني درون', 'ابني الكواد',
+    'ابني كواد', 'ابني درون', 'ابني الكواد', 'ابني طائره',
+    'أريد أبني', 'أريد ابني',
     'ما أحتاج', 'ما احتاج', 'قائمة القطع', 'قائمه القطع',
     'how to build', 'build guide', 'build steps', 'parts list',
   ],
@@ -208,6 +236,10 @@ export const intentKeywords: Record<string, string[]> = {
     'أفضل حجم', 'أنصح', 'choose', 'selection', 'buy', 'recommend',
     'ما الذي', 'أي نوع', 'أي حجم', 'ما هو أفضل', 'أنصح بـ',
     'توصيتك', 'توصيه', 'اقترح',
+    // القطع in component context (not filter/cutoff)
+    'القطع المناسبة', 'قطع مناسبة', 'اختيار القطع', 'شراء القطع',
+    'قطع الدرون', 'قطع الكواد', 'أجزاء الدرون', 'مكونات الكواد',
+    'أحتاجها لبناء', 'ما هي القطع', 'أي قطع',
   ],
   // UART / wiring
   wiring_uart: [
@@ -241,6 +273,7 @@ export const intentKeywords: Record<string, string[]> = {
     'لا تستجيب', 'خطأ', 'error', 'problem', 'not working', 'overheating',
     'يدور بشكل خاطئ', 'يرتجف', 'اهتزاز', 'vibration',
     'لا يرد', 'غير مستجيب', 'لم يعمل',
+    'لا يتصل', 'لا تتصل', 'غير متصل',
   ],
   // Motors and props specific
   motors_props: [
