@@ -28,10 +28,29 @@ export const criticalSafetyTerms: string[] = [
   'arm', 'تشغيل المحركات',
 ];
 
+// Words too common/generic to carry scoring signal — filtered from query word matching.
+// Applied after normalization (أإآ→ا, ة→ه, ى→ي).
+export const stopwords = new Set<string>([
+  // Question words
+  'ما', 'هو', 'هي', 'هل', 'كيف', 'لماذا', 'ماذا', 'متي', 'اين',
+  // Conjunctions / prepositions
+  'او', 'في', 'من', 'الي', 'علي', 'عن', 'مع', 'عند',
+  // Common particles
+  'ان', 'اذا', 'حتي', 'قد', 'لا', 'لم', 'لن', 'ثم',
+  // Demonstratives / relatives
+  'هذا', 'هذه', 'ذلك', 'تلك', 'الذي', 'التي', 'هناك', 'هنا',
+  // Copulas / pronouns
+  'كان', 'يكون', 'هم', 'انت', 'انا', 'نحن',
+  // Generic filler that causes false-positive matches
+  'سوال', 'غير', 'معروف', 'تماما', 'مجهول', 'بعض', 'جميع',
+]);
+
 export const synonymGroups: Record<string, string[]> = {
   battery: ['بطارية', 'بطاريه', 'battery', 'lipo', 'ليبو', 'خلية', 'خلايا', 'cells', 'cell'],
   motor: ['محرك', 'محركات', 'محركه', 'motor', 'motors', 'موتور', 'موتورات'],
   propeller: ['مروحة', 'مراوح', 'مروحه', 'prop', 'props', 'propeller', 'propellers', 'جناح', 'أجنحة'],
+  // Flipping / takeoff — maps query forms (ينقلب) to entry forms (انقلاب) and related topics
+  flip: ['ينقلب', 'انقلب', 'انقلاب', 'يقلب', 'تقلب', 'flip', 'flips', 'flipped', 'roll over', 'اقلاع', 'اول طيران', 'takeoff'],
   receiver: ['ريسيفر', 'receiver', 'rx', 'جهاز الاستقبال', 'استقبال'],
   betaflight: ['بيتافلايت', 'betaflight', 'bf', 'فيرموير', 'firmware'],
   failsafe: ['فيل سيف', 'failsafe', 'fail safe', 'فقدان الإشارة', 'signal loss'],

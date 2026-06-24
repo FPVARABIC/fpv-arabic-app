@@ -5,6 +5,7 @@ import {
   synonymGroups,
   intentKeywords,
   criticalSafetyTerms,
+  stopwords,
 } from './botKnowledgeRules';
 
 export interface KnowledgeSearchResult {
@@ -27,9 +28,13 @@ export function normalizeQuery(query: string): string {
   return query
     .trim()
     .toLowerCase()
+    .replace(/[ً-ٟ]/g, '')   // strip Arabic tashkeel/diacritics
     .replace(/[أإآ]/g, 'ا')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
+    .replace(/[؟?!.,،؛;:]/g, '')
     .replace(/\s+/g, ' ');
 }
 
@@ -67,8 +72,8 @@ function scoreEntry(entry: KnowledgeEntry, terms: string[]): number {
 
     // Title — highest weight
     if (title.includes(term)) score += 10;
-    // Tags — high weight
-    if (tags.some(tag => tag.includes(term) || term.includes(tag))) score += 8;
+    // Tags — high weight (require tag.length>=2 to block single-char false matches like 'p','q','r')
+    if (tags.some(tag => tag.length >= 2 && (tag.includes(term) || term.includes(tag)))) score += 8;
     // Summary — medium weight
     if (summary.includes(term)) score += 5;
     // Section
@@ -109,9 +114,11 @@ export function searchKnowledge(query: string, limit = 3): KnowledgeSearchResult
   const normalized = normalizeQuery(query);
   const terms = expandQueryTerms(normalized);
 
-  // Also add individual words as terms
-  const words = normalized.split(' ').filter(w => w.length >= 2);
-  const allTerms = Array.from(new Set([...terms, ...words]));
+  // Add individual words, filtering stopwords to prevent false-positive matches
+  const meaningfulWords = normalized.split(' ').filter(w => w.length >= 2 && !stopwords.has(w));
+  const hasExpansion = terms.length > 1;
+  if (meaningfulWords.length === 0 && !hasExpansion) return [];
+  const allTerms = Array.from(new Set([...terms, ...meaningfulWords]));
 
   const scored: KnowledgeSearchResult[] = allKnowledgeEntries
     .map(entry => ({ entry, score: scoreEntry(entry, allTerms) }))
