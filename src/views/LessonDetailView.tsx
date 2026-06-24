@@ -5,7 +5,7 @@ import { SafetyWarning } from '../components/SafetyWarning';
 import { EducationalDiagram } from '../components/EducationalDiagram';
 import { lessonsData } from '../data/lessonsData';
 import { useProgress } from '../hooks/useProgress';
-import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock } from 'lucide-react';
+import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const LessonDetailView: React.FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -17,6 +17,9 @@ export const LessonDetailView: React.FC = () => {
   if (!lesson) return <div className="p-8 text-center text-slate-400">الدرس غير موجود</div>;
 
   const isDone = completedLessons.includes(lesson.id);
+  const lessonIndex = lessonsData.findIndex(l => l.id === lesson.id);
+  const prevLesson = lessonIndex > 0 ? lessonsData[lessonIndex - 1] : null;
+  const nextLesson = lessonIndex < lessonsData.length - 1 ? lessonsData[lessonIndex + 1] : null;
 
   React.useEffect(() => { setLastOpenedLesson(lesson.id); }, [lesson.id]);
 
@@ -98,6 +101,34 @@ export const LessonDetailView: React.FC = () => {
             ) : (
               <div className="success-card flex items-center gap-2 justify-center">
                 <CheckCircle2 size={18} className="text-green-400"/><span className="text-green-400 font-bold">تم إكمال هذا الدرس</span>
+              </div>
+            )}
+            {(prevLesson || nextLesson) && (
+              <div className="flex gap-2">
+                {prevLesson ? (
+                  <button
+                    onClick={() => navigate(`/lessons/${prevLesson.id}`)}
+                    className="flex-1 flex items-center gap-2 rounded-xl px-3 py-3 bg-white/3 border border-white/8 hover:bg-white/6 transition-all press"
+                  >
+                    <ChevronRight size={15} className="text-slate-400 flex-shrink-0"/>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-slate-500 leading-none mb-0.5">السابق</p>
+                      <p className="text-xs text-slate-300 truncate leading-tight">{prevLesson.title}</p>
+                    </div>
+                  </button>
+                ) : <div className="flex-1"/>}
+                {nextLesson ? (
+                  <button
+                    onClick={() => navigate(`/lessons/${nextLesson.id}`)}
+                    className="flex-1 flex items-center gap-2 rounded-xl px-3 py-3 bg-cyan-400/8 border border-cyan-400/25 hover:bg-cyan-400/14 transition-all press"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-cyan-400/70 leading-none mb-0.5">التالي</p>
+                      <p className="text-xs text-cyan-200 font-semibold truncate leading-tight">{nextLesson.title}</p>
+                    </div>
+                    <ChevronLeft size={15} className="text-cyan-400 flex-shrink-0"/>
+                  </button>
+                ) : <div className="flex-1"/>}
               </div>
             )}
             <button className="btn-secondary w-full" onClick={() => setShowNotUnderstood(!showNotUnderstood)}>
