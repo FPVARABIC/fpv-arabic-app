@@ -27,6 +27,6 @@ export const PartsCompatibility: React.FC = () => (
         </React.Fragment>
       ))}
     </div>
-    <DiagramWarn tone="warning">⚠ قطع غير متوافقة قد تحترق فور التشغيل</DiagramWarn>
+    <DiagramWarn tone="danger">⚠ قطع غير متوافقة قد تحترق فور التشغيل</DiagramWarn>
   </DiagramFrame>
 );
