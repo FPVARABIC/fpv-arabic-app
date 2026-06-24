@@ -28,6 +28,29 @@ const confidenceColor: Record<KnowledgeBotAnswer['confidence'], string> = {
   low: 'text-slate-500',
 };
 
+const SAFETY_TITLE_WORDS = ['سلامة', 'خطر', 'معايرة', 'تحذير', 'أمان'];
+function getSuggestionPrefix(id: string, title: string): string {
+  if (SAFETY_TITLE_WORDS.some(w => title.includes(w))) return 'مهم للسلامة';
+  const m = id.match(/^ch(\d+)/);
+  const n = m ? parseInt(m[1]) : 10;
+  if (n <= 2) return 'ابدأ هنا';
+  if (n === 18) return 'خطوة لاحقة';
+  return 'اقرأ أيضاً';
+}
+
+const CHAPTER_DISPLAY_MAP: [RegExp, string][] = [
+  [/في هذا الباب/g, 'في هذا الجزء'],
+  [/هذا الباب/g, 'هذا الجزء'],
+  [/الأبواب/g, 'الأجزاء'],
+  [/الباب/g, 'الجزء'],
+  // Only replace standalone "باب" — not when embedded inside Arabic words (e.g. أسباب, شباب).
+  // Lookbehind/lookahead on the full Arabic unicode block ؀-ۿ prevents false matches.
+  [/(?<![؀-ۿ])باب(?![؀-ۿ])/g, 'جزء'],
+];
+function formatBotDisplayText(text: string): string {
+  return CHAPTER_DISPLAY_MAP.reduce((t, [re, rep]) => t.replace(re, rep), text);
+}
+
 export const BotAssistantView: React.FC = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -80,11 +103,11 @@ export const BotAssistantView: React.FC = () => {
         )}
         {msg.response && (
           <div className="glass-card-sm p-3 space-y-2">
-            <p className="text-sm text-slate-200">{msg.response.answer}</p>
+            <p className="text-sm text-slate-200">{formatBotDisplayText(msg.response.answer)}</p>
             <ol className="space-y-1">
               {msg.response.steps.map((s, i) => (
                 <li key={i} className="text-xs text-slate-400 flex gap-1">
-                  <span className="text-cyan-400 flex-shrink-0">{i + 1}.</span>{s}
+                  <span className="text-cyan-400 flex-shrink-0">{i + 1}.</span>{formatBotDisplayText(s)}
                 </li>
               ))}
             </ol>
@@ -105,12 +128,12 @@ export const BotAssistantView: React.FC = () => {
             <span className={`text-xs font-semibold ${confidenceColor[msg.knowledgeAnswer.confidence]}`}>
               {confidenceLabel[msg.knowledgeAnswer.confidence]}
             </span>
-            <p className="text-sm text-slate-200">{msg.knowledgeAnswer.answer}</p>
+            <p className="text-sm text-slate-200">{formatBotDisplayText(msg.knowledgeAnswer.answer)}</p>
             {msg.knowledgeAnswer.steps.length > 0 && (
               <ol className="space-y-1">
                 {msg.knowledgeAnswer.steps.map((s, i) => (
                   <li key={i} className="text-xs text-slate-400 flex gap-1">
-                    <span className="text-cyan-400 flex-shrink-0">{i + 1}.</span>{s}
+                    <span className="text-cyan-400 flex-shrink-0">{i + 1}.</span>{formatBotDisplayText(s)}
                   </li>
                 ))}
               </ol>
@@ -119,16 +142,18 @@ export const BotAssistantView: React.FC = () => {
               <div className="flex gap-2 rounded-xl p-2.5"
                 style={{ background: 'rgba(251,146,60,0.10)', border: '1px solid rgba(251,146,60,0.35)' }}>
                 <AlertTriangle size={13} className="text-orange-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-300 leading-relaxed">{msg.knowledgeAnswer.safetyNote}</p>
+                <p className="text-xs text-orange-300 leading-relaxed">{formatBotDisplayText(msg.knowledgeAnswer.safetyNote)}</p>
               </div>
             )}
             {msg.knowledgeAnswer.sources.length > 0 && (
-              <div className="pt-0.5 space-y-0.5">
-                {msg.knowledgeAnswer.sources.map(src => (
-                  <div key={src.id} className="flex items-center gap-1.5">
-                    <BookOpen size={10} className="text-slate-500 flex-shrink-0" />
-                    <span className="text-xs text-slate-500">
-                      الباب {src.chapter} — {src.title}
+              <div className="pt-1 space-y-1">
+                <p className="text-xs text-slate-600 font-medium">اقتراحات داخل التطبيق</p>
+                {msg.knowledgeAnswer.sources.slice(0, 3).map(src => (
+                  <div key={src.id} className="flex items-start gap-1.5">
+                    <BookOpen size={10} className="text-slate-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-xs text-slate-400 leading-snug">
+                      <span className="text-cyan-500/70">{getSuggestionPrefix(src.id, src.title)}:</span>
+                      {' '}{formatBotDisplayText(src.title)}
                     </span>
                   </div>
                 ))}
