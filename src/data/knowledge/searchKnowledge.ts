@@ -1,5 +1,6 @@
 import type { KnowledgeEntry } from './types';
 import { allKnowledgeEntries } from './chapters';
+import { botKnowledgeBank, type BotKnowledgeBankEntry } from './botKnowledgeBank';
 import {
   safetyKeywords,
   synonymGroups,
@@ -450,6 +451,113 @@ function formatAdvancedMode(results: KnowledgeSearchResult[], normalized: string
   };
 }
 
+// ── Bot Knowledge Bank search ────────────────────────────────────────────────
+// Returns the single best-matching bank entry when confidence is strong enough,
+// or null to fall through to the encyclopedia.
+
+function searchBotBank(normalized: string): BotKnowledgeBankEntry | null {
+  const queryWords = normalized.split(' ').filter(w => w.length >= 2 && !stopwords.has(w));
+
+  let bestEntry: BotKnowledgeBankEntry | null = null;
+  let bestScore = 0;
+
+  for (const entry of botKnowledgeBank) {
+    let entryBestScore = 0;
+
+    for (const pattern of entry.questionPatterns) {
+      const normPattern = normalizeQuery(pattern);
+      const rawParts = normPattern.split(' ').filter(w => w.length >= 1);
+
+      // Require at least 2 raw words — single-word patterns are too broad
+      if (rawParts.length < 2) continue;
+
+      const patternWords = rawParts.filter(w => w.length >= 2 && !stopwords.has(w));
+      if (patternWords.length === 0) continue;
+
+      // How many pattern meaningful-words appear in the normalized query
+      const patternWordsInQuery = patternWords.filter(pw => normalized.includes(pw));
+      const patternCoverage = patternWordsInQuery.length / patternWords.length;
+
+      // How many query meaningful-words appear in the pattern
+      const queryWordsInPattern = queryWords.filter(qw => normPattern.includes(qw));
+      const queryCoverage = queryWords.length > 0
+        ? queryWordsInPattern.length / queryWords.length
+        : 0;
+
+      let patternScore = 0;
+      if (patternCoverage >= 0.8) {
+        patternScore = 2.0;
+        if (queryCoverage >= 0.5) patternScore += 0.5; // bonus: query is well-covered
+      } else if (patternCoverage >= 0.6) {
+        patternScore = 1.2;
+      } else {
+        patternScore = patternCoverage * 0.8;
+      }
+
+      // Broad-pattern guard: if only 1 meaningful pattern word and query has many more words,
+      // heavily penalise to prevent "كيف أبدأ" from swallowing specific queries.
+      if (patternWords.length === 1 && queryWords.length > 2) {
+        patternScore *= 0.4;
+      }
+
+      entryBestScore = Math.max(entryBestScore, patternScore);
+    }
+
+    if (entryBestScore === 0) continue;
+
+    // Priority is a tie-breaker only — a small fraction that never overrides pattern score
+    const combined = entryBestScore + entry.priority / 1000;
+    if (combined > bestScore) {
+      bestScore = combined;
+      bestEntry = entry;
+    }
+  }
+
+  // Minimum confidence threshold to prevent weak bank matches hijacking encyclopedia
+  return bestScore >= 1.5 ? bestEntry : null;
+}
+
+// Resolve relatedKnowledgeTopics (semantic hint strings, NOT real entry IDs)
+// into actual encyclopedia sources. Returns [] rather than fake sources.
+function findRelatedSources(
+  topics: string[],
+  limit: number,
+): { id: string; title: string; chapter: string }[] {
+  if (topics.length === 0) return [];
+  // Split hyphenated topics so "uart-wiring" → "uart wiring" matches more entries
+  const query = topics
+    .slice(0, 3)
+    .flatMap(t => t.split('-'))
+    .join(' ');
+  const results = searchKnowledge(query, limit * 2);
+  return results
+    .filter(r => r.score >= 5)
+    .slice(0, limit)
+    .map(r => ({ id: r.entry.id, title: r.entry.title, chapter: r.entry.chapter }));
+}
+
+function formatBankAnswer(entry: BotKnowledgeBankEntry, normalized: string): KnowledgeBotAnswer {
+  // Merge bank safetyNote with any query-triggered safety note
+  const querySafetyNote = buildSafetyNote(normalized, []);
+  const safetyNote = entry.safetyNote && querySafetyNote
+    ? `${entry.safetyNote} | ${querySafetyNote}`
+    : entry.safetyNote ?? querySafetyNote;
+
+  // answerMode drives tone:
+  // troubleshooting → classic "دعنا نفحص" intro, shortAnswer becomes first step
+  // all others → shortAnswer is the answer directly
+  const isTroubleshoot = entry.answerMode === 'troubleshooting';
+  const answer = isTroubleshoot ? mentorPhrases.troubleshoot_intro : entry.shortAnswer;
+  const steps = isTroubleshoot
+    ? [entry.shortAnswer, ...entry.steps].slice(0, 7)
+    : entry.steps;
+
+  // Sources resolved from topic hints — 0 sources is valid, no fake entries
+  const sources = findRelatedSources(entry.relatedKnowledgeTopics, 3);
+
+  return { answer, steps, safetyNote, sources, confidence: 'high' };
+}
+
 // ── Answer builder ───────────────────────────────────────────────────────────
 
 export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
@@ -463,7 +571,22 @@ export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
 
   const intent = detectIntent(normalized);
 
-  // 2. Beginner broad / build guidance with specificity escape hatch
+  // Pre-compute flags used by both the bank guard and mode routing below
+  const pureDefPhrases = ['ما هو', 'ما هي', 'what is', 'what are'].map(k => normalizeQuery(k));
+  const isPureDefinition = pureDefPhrases.some(k => normalized.includes(k));
+  const isAdvanced = _normalizedAdvancedTerms.some(t => normalized.includes(t));
+
+  // 2. Bank search — practical Q&A, troubleshooting, buying, safety, beginner
+  // Skipped for pure conceptual definitions, advanced-tuning queries, and filter-cutoff.
+  // Corrections (step 1) always win; bank never sees those queries.
+  if (!isPureDefinition && !isAdvanced && !isFilterCutoffQuery(normalized)) {
+    const bankHit = searchBotBank(normalized);
+    if (bankHit !== null) {
+      return formatBankAnswer(bankHit, normalized);
+    }
+  }
+
+  // 3. Beginner broad / build guidance with specificity escape hatch
   if (intent === 'beginner_start' || intent === 'build_guidance') {
     if (!hasSpecificProblem(normalized)) {
       let results = searchKnowledge(query, 3);
@@ -523,12 +646,8 @@ export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
   }
 
   // 7. Mode-based routing (K4.3)
+  // isPureDefinition, isAdvanced already computed near the top of this function
   const matchedCategories = [...new Set(results.map(r => r.entry.category))];
-  const isAdvanced = _normalizedAdvancedTerms.some(t => normalized.includes(t));
-
-  // "ما هو / ما هي / what is" → always concept mode, even for advanced topics
-  const pureDefPhrases = ['ما هو', 'ما هي', 'what is', 'what are'].map(k => normalizeQuery(k));
-  const isPureDefinition = pureDefPhrases.some(k => normalized.includes(k));
 
   // Troubleshooting signal words that bypass intent detection (e.g. betaflight_setup fires first)
   const troubleshootSignals = [

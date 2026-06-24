@@ -521,6 +521,8 @@ export const botKnowledgeBank: BotKnowledgeBankEntry[] = [
       "راقب أي ارتفاع في الحرارة.",
       "استبدلها إذا كان الانتفاخ واضحاً.",
     ],
+    safetyNote:
+      "بطارية LiPo المنتفخة خطر حريق. لا تشحنها ولا تستخدمها، وضعها في مكان آمن بعيداً عن المواد القابلة للاشتعال.",
     relatedKnowledgeTopics: ["lipo-safety", "battery-care"],
   },
   {
