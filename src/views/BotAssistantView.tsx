@@ -168,7 +168,13 @@ export const BotAssistantView: React.FC = () => {
   return (
     <AppShell>
       <Header title="مساعد FPV" />
-      <div className="flex flex-col h-[calc(100vh-9rem)]">
+      <div className="flex flex-col h-[calc(100vh-9rem)]"
+        style={{ background: [
+          'radial-gradient(ellipse 70% 38% at 50% 0%, rgba(6,182,212,0.13) 0%, transparent 70%)',
+          'radial-gradient(ellipse 38% 22% at 12% 96%, rgba(34,211,238,0.07) 0%, transparent 60%)',
+          'repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(34,211,238,0.035) 40px)',
+          'repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(34,211,238,0.035) 40px)',
+        ].join(', ') }}>
 
         {isWelcome ? (
           /* ── Welcome state: input is the main focus ─────────── */
