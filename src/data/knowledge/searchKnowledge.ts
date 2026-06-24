@@ -169,9 +169,18 @@ function buildSafetyNote(normalized: string, results: KnowledgeSearchResult[]): 
     notes.push('اختبر Failsafe بدون مراوح قبل الطيران.');
   }
 
+  const hasBothTxRx = normalized.includes('tx') && normalized.includes('rx');
   const hasUart =
-    (normalized.includes('tx') || normalized.includes('rx')) &&
-    (normalized.includes('توصيل') || normalized.includes('اتصال') || normalized.includes('uart') || normalized.includes('serial'));
+    hasBothTxRx ||
+    (
+      (normalized.includes('tx') || normalized.includes('rx')) &&
+      (
+        normalized.includes('توصيل') || normalized.includes('اتصال') ||
+        normalized.includes('uart') || normalized.includes('serial') ||
+        normalized.includes('اوصل') || normalized.includes('وصل') ||
+        normalized.includes('اربط') || normalized.includes('ربط')
+      )
+    );
   if (hasUart) {
     notes.push('قاعدة UART: TX من طرف يذهب إلى RX في الطرف الآخر، وليس TX إلى TX.');
   }
