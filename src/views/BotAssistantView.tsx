@@ -92,13 +92,16 @@ export const BotAssistantView: React.FC = () => {
 
     // Web search fires only when:
     //   • the query is within the FPV/drone domain
-    //   • local confidence is not already high
+    //   • local confidence is not already high (OR user explicitly asked for sources)
     //   • no safety note is present (safety-critical topics stay local-only)
+    //   • the response is not a clarification menu (those don't need web context)
     const isOutOfDomain = knowledgeAnswer.answer === outOfDomainMessage;
+    const isExplicitSourceRequest = knowledgeAnswer.nluIntent === 'brave_source_request';
     const shouldWebSearch =
       !isOutOfDomain &&
-      knowledgeAnswer.confidence !== 'high' &&
-      !knowledgeAnswer.safetyNote;
+      (knowledgeAnswer.confidence !== 'high' || isExplicitSourceRequest) &&
+      !knowledgeAnswer.safetyNote &&
+      !knowledgeAnswer.clarificationMenu;
 
     const now = Date.now();
     const botMsgId = (now + 1).toString();
@@ -149,6 +152,69 @@ export const BotAssistantView: React.FC = () => {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleTextSubmit();
+  };
+
+  // Navigation chips open app sections instead of querying the bot.
+  const NAVIGATION_CHIPS: Record<string, string> = {
+    'افتح قسم البناء': '/roadmap',
+    'افتح قسم الدروس': '/lessons',
+    'افتح قسم Betaflight': '/betaflight',
+    'افتح قسم التقدم': '/progress',
+    'افتح قسم المساعد': '/bot',
+  };
+
+  const handleChipSelect = (text: string) => {
+    // Navigation chips go straight to a route.
+    if (NAVIGATION_CHIPS[text]) {
+      navigate(NAVIGATION_CHIPS[text]);
+      return;
+    }
+
+    webSearchAbortRef.current?.abort();
+    webSearchAbortRef.current = null;
+
+    const knowledgeAnswer = buildKnowledgeAnswer(text);
+    const isOutOfDomain = knowledgeAnswer.answer === outOfDomainMessage;
+    const isExplicitSourceRequest = knowledgeAnswer.nluIntent === 'brave_source_request';
+    // Skip web search when the response itself is a clarification menu or safety note.
+    const shouldWebSearch =
+      !isOutOfDomain &&
+      (knowledgeAnswer.confidence !== 'high' || isExplicitSourceRequest) &&
+      !knowledgeAnswer.safetyNote &&
+      !knowledgeAnswer.clarificationMenu;
+
+    const now = Date.now();
+    const botMsgId = (now + 1).toString();
+
+    setMessages(prev => [
+      ...prev,
+      { id: now.toString(), from: 'user', text },
+      { id: botMsgId, from: 'bot', knowledgeAnswer, webLoading: shouldWebSearch },
+    ]);
+
+    if (!shouldWebSearch) return;
+
+    const controller = new AbortController();
+    webSearchAbortRef.current = controller;
+
+    fetchTrustedWebSearch(text, { signal: controller.signal })
+      .then(res => {
+        if (webSearchAbortRef.current !== controller) return;
+        const safeResults = res.results.filter(r => r.safeToDisplay).slice(0, 3);
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgId ? { ...m, webLoading: false, webResults: safeResults } : m,
+          ),
+        );
+      })
+      .catch(() => {
+        if (webSearchAbortRef.current !== controller) return;
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgId ? { ...m, webLoading: false, webResults: [] } : m,
+          ),
+        );
+      });
   };
 
   const BotCard = ({ msg }: { msg: Message }) => (
@@ -221,6 +287,48 @@ export const BotAssistantView: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Clarification chips — interactive choices for vague / broad queries */}
+        {msg.knowledgeAnswer?.clarificationMenu && (
+          <div className="rounded-2xl p-3 space-y-2"
+            style={{ background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)' }}>
+            <p className="text-xs text-cyan-400/70 font-medium text-right leading-relaxed">
+              {msg.knowledgeAnswer.clarificationMenu.title}
+            </p>
+            <div className="flex flex-wrap gap-1.5 justify-end">
+              {msg.knowledgeAnswer.clarificationMenu.choices.map((choice, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleChipSelect(choice)}
+                  className="text-xs text-slate-300 rounded-xl px-3 py-1.5 text-right transition-colors active:scale-95"
+                  style={{
+                    background: 'rgba(34,211,238,0.08)',
+                    border: '1px solid rgba(34,211,238,0.20)',
+                  }}>
+                  {choice}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Follow-up suggestion chips */}
+        {msg.knowledgeAnswer?.followUpSuggestions && msg.knowledgeAnswer.followUpSuggestions.length > 0 && !msg.knowledgeAnswer.clarificationMenu && (
+          <div className="flex flex-wrap gap-1.5 justify-end">
+            {msg.knowledgeAnswer.followUpSuggestions.map((chip, i) => (
+              <button
+                key={i}
+                onClick={() => handleChipSelect(chip)}
+                className="text-[10px] text-slate-400 rounded-xl px-2.5 py-1 transition-colors active:scale-95"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                {chip}
+              </button>
+            ))}
           </div>
         )}
 

@@ -16,6 +16,17 @@ import {
   advancedTerms,
   followUpQuestions,
 } from './botKnowledgeRules';
+import {
+  normalizeArabicQuery,
+  detectFpvDomain,
+  expandFpvSynonyms,
+  classifyBotIntent,
+  getClarificationMenu,
+  getFollowUpSuggestions,
+  type BotIntent,
+  type ClarificationMenu,
+} from './botNlu';
+import { getBestCommonMatch } from './botCommonQuestions';
 
 export interface KnowledgeSearchResult {
   entry: KnowledgeEntry;
@@ -29,6 +40,9 @@ export interface KnowledgeBotAnswer {
   sources: { id: string; title: string; chapter: string }[];
   confidence: 'high' | 'medium' | 'low';
   matchedCategories?: string[];
+  clarificationMenu?: ClarificationMenu;
+  followUpSuggestions?: string[];
+  nluIntent?: BotIntent;
 }
 
 // ── Text normalization ──────────────────────────────────────────────────────
@@ -558,9 +572,37 @@ function formatBankAnswer(entry: BotKnowledgeBankEntry, normalized: string): Kno
   return { answer, steps, safetyNote, sources, confidence: 'high' };
 }
 
+// ── NLU-specific response builders ───────────────────────────────────────────
+
+function buildAppGuideResponse(): KnowledgeBotAnswer {
+  return {
+    answer: 'يمكنني مساعدتك في التالي:',
+    steps: [
+      'البناء — خطوات تجميع الدرون والتوصيل خطوة بخطوة.',
+      'الدروس — تعلّم مبادئ الطيران والميكانيكا من الصفر.',
+      'Betaflight — إعداد برنامج التحكم والمحركات والريسيفر.',
+      'التقدم — متابعة مراحل تعلّمك وما أنجزته.',
+      'المساعد (أنا) — اسألني أي سؤال عن البناء أو التوصيل أو المشاكل.',
+    ],
+    sources: [],
+    confidence: 'high',
+  };
+}
+
+function buildNoDomainProblemResponse(): KnowledgeBotAnswer {
+  return {
+    answer: 'هل تقصد مشكلة في الدرون أو في أحد مكوّناته؟',
+    steps: [
+      'اكتب مثلاً: المحركات لا تدور، Betaflight لا يحفظ، أو البطارية تسخن.',
+    ],
+    sources: [],
+    confidence: 'low',
+  };
+}
+
 // ── Answer builder ───────────────────────────────────────────────────────────
 
-export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
+function _buildKnowledgeAnswerCore(query: string): KnowledgeBotAnswer {
   const normalized = normalizeQuery(query);
 
   // 1. Correction detection (highest priority, unchanged from K4.2)
@@ -675,4 +717,172 @@ export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
   }
 
   return { ...formatGeneralGuidanceMode(results, normalized), matchedCategories };
+}
+
+// ── NLU enrichment helper ─────────────────────────────────────────────────────
+
+function nluEnrich(
+  base: KnowledgeBotAnswer,
+  intent: BotIntent,
+  query: string,
+): KnowledgeBotAnswer {
+  const menu = getClarificationMenu(intent, query);
+  const chips = getFollowUpSuggestions(intent, query);
+
+  // When NLU provides a clarification menu for an uncertain response without safety content,
+  // replace the text steps with the interactive menu so the UI shows chips instead of
+  // a plain numbered list of clarification questions.
+  if (menu && base.confidence !== 'high' && !base.safetyNote) {
+    return {
+      ...base,
+      answer: menu.title,
+      steps: [],
+      clarificationMenu: menu,
+      followUpSuggestions: undefined,
+      nluIntent: intent,
+    };
+  }
+
+  return {
+    ...base,
+    clarificationMenu: base.clarificationMenu,
+    followUpSuggestions:
+      (base.followUpSuggestions && base.followUpSuggestions.length > 0)
+        ? base.followUpSuggestions
+        : chips.length > 0
+          ? chips
+          : undefined,
+    nluIntent: intent,
+  };
+}
+
+// ── Public entry point (NLU wrapper around core) ──────────────────────────────
+
+export function buildKnowledgeAnswer(query: string): KnowledgeBotAnswer {
+  const nluIntent = classifyBotIntent(query);
+  const isFpv = detectFpvDomain(query);
+  // Consume expandFpvSynonyms to validate it compiles; actual expansion used in scoring via expandQueryTerms
+  void expandFpvSynonyms(query);
+  const commonMatch = getBestCommonMatch(query);
+
+  // ── NLU early intercepts ────────────────────────────────────────────────────
+
+  // A. Explicit app guide request
+  if (nluIntent === 'app_guide') {
+    return nluEnrich(buildAppGuideResponse(), nluIntent, query);
+  }
+
+  // B. Very short FPV term alone (≤2 raw tokens, FPV domain, no specific action) →
+  //    show "what do you want to do?" clarification rather than a generic KB result.
+  const rawTokens = query.trim().split(/\s+/).filter(Boolean);
+  const shortFpvNoAction =
+    rawTokens.length <= 2 &&
+    isFpv &&
+    (nluIntent === 'unclear' || nluIntent === 'troubleshooting') &&
+    normalizeArabicQuery(query).replace(/[^a-z؀-ۿ]/gi, '').length < 10;
+  if (shortFpvNoAction) {
+    return nluEnrich(
+      {
+        answer: 'ما الذي تريد معرفته أو فعله بخصوص الدرون؟',
+        steps: [],
+        sources: [],
+        confidence: 'medium',
+      },
+      nluIntent,
+      query,
+    );
+  }
+
+  // C. Generic problem signal with no FPV domain clue →
+  //    ask politely whether this is a drone problem; do not invent a drone answer.
+  //    Do NOT call nluEnrich here — that would add drone-specific clarification
+  //    choices before the user has confirmed this is a drone problem.
+  const noFpvProblem =
+    !isFpv &&
+    (nluIntent === 'troubleshooting' || nluIntent === 'unclear') &&
+    (!commonMatch || commonMatch.entry.intent === 'out_of_domain');
+  if (noFpvProblem) {
+    return { ...buildNoDomainProblemResponse(), nluIntent };
+  }
+
+  // D. Common question boosted: if the top common-question match is out_of_domain
+  //    and FPV domain is also absent, go straight to out-of-domain response.
+  if (commonMatch?.entry.intent === 'out_of_domain' && !isFpv) {
+    return { answer: outOfDomainMessage, steps: [], sources: [], confidence: 'low', nluIntent: 'out_of_domain' };
+  }
+
+  // E. Swollen / damaged LiPo → direct safety answer; don't let KB return battery-chemistry info.
+  if (nluIntent === 'lipo_safety') {
+    return {
+      answer: 'لا تستخدم بطارية LiPo منتفخة.',
+      steps: [
+        'افصل البطارية من الدرون فوراً ولا تشحنها.',
+        'ضعها في مكان مفتوح بعيداً عن المواد القابلة للاشتعال.',
+        'لا تعيد تشغيل الدرون قبل استبدالها بأخرى سليمة.',
+        'تخلّص منها بالطريقة الآمنة المعتمدة محلياً لبطاريات LiPo.',
+      ],
+      sources: [],
+      confidence: 'high',
+      safetyNote: 'البطارية المنتفخة خطر حريق حقيقي. التخلص الآمن منها إلزامي — لا تتركها في المنزل أو السيارة.',
+      followUpSuggestions: ['كيف أتعامل مع البطارية المنتفخة؟'],
+      nluIntent,
+    };
+  }
+
+  // F. Vague FPV troubleshooting (FPV domain detected, no specific component named) →
+  //    return clarification rather than a random encyclopaedia entry.
+  //    Queries with a named component (motor, ESC, betaflight…) fall through to the KB.
+  const _vagueComponentTerms = [
+    'محرك', 'موتور', 'esc', 'بطاري', 'ريسيفر', 'رسيفر',
+    'betaflight', 'بيتافلايت', 'بتافلاي', 'vtx', 'gps',
+    'مروح', 'uart', 'لحام', 'pid', 'osd', 'blackbox',
+  ];
+  const hasSpecificFpvComponent = _vagueComponentTerms.some(c =>
+    normalizeArabicQuery(query).includes(c),
+  );
+  if (isFpv && nluIntent === 'troubleshooting' && !hasSpecificFpvComponent) {
+    const menu = getClarificationMenu('troubleshooting', query);
+    return {
+      answer: menu?.title ?? 'قد تكون المشكلة من أكثر من جهة. اختر الحالة الأقرب حتى أوجهك بدقة:',
+      steps: [],
+      sources: [],
+      confidence: 'medium',
+      clarificationMenu: menu ?? undefined,
+      nluIntent,
+    };
+  }
+
+  // G. "What's next?" with no FPV context → ask what stage the user is at.
+  //    Avoids "خطوة" (step) matching propeller-pitch encyclopedia entries.
+  if (nluIntent === 'next_step' && !isFpv) {
+    return {
+      answer: 'في أي مرحلة أنت الآن؟',
+      steps: [
+        'اكتب مثلاً: انتهيت من التوصيل، أو انتهيت من إعداد Betaflight.',
+      ],
+      sources: [],
+      confidence: 'medium',
+      followUpSuggestions: ['افتح قسم البناء', 'افتح قسم الدروس', 'افتح قسم Betaflight', 'افتح قسم التقدم'],
+      nluIntent,
+    };
+  }
+
+  // H. Parts buying → clarification menu about size/use case before suggesting parts.
+  //    Prevents physics-theory entries from matching "قطع" / "أول".
+  if (nluIntent === 'parts_buying') {
+    const menu = getClarificationMenu('parts_buying', query);
+    return {
+      answer: menu?.title ?? 'حتى أقترح لك مسار اختيار القطع، أحتاج معرفة الهدف:',
+      steps: [],
+      sources: [],
+      confidence: 'medium',
+      clarificationMenu: menu ?? undefined,
+      followUpSuggestions: getFollowUpSuggestions('parts_buying', query),
+      nluIntent,
+    };
+  }
+
+  // ── Delegate to existing knowledge-bank + encyclopedia pipeline ──────────────
+  const core = _buildKnowledgeAnswerCore(query);
+  return nluEnrich(core, nluIntent, query);
 }
