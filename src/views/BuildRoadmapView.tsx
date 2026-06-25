@@ -14,77 +14,87 @@ interface StageSafety { level: 'warning' | 'danger'; text: string; }
 interface StageLearningLink { label: string; lessonId: string; }
 
 const stageGoals: Record<string, string> = {
-  'step-1': 'قبل أن تبدأ، تأكد أن كل القطع والأدوات الأساسية أمامك حتى لا تتوقف أثناء البناء.',
-  'step-2': 'تثبيت الهيكل والمحركات بشكل صحيح دون ضغط زائد أو براغي خاطئة.',
-  'step-3': 'وضع الإلكترونيات الأساسية في مكانها الصحيح مع مراعاة الاتجاه والعزل.',
-  'step-4': 'تجهيز التوصيلات الأساسية بهدوء ونظافة قبل أي توصيل للبطارية.',
-  'step-5': 'التأكد من عدم وجود قصر أو خطأ خطير قبل أول تشغيل.',
-  'step-6': 'ضبط الإعدادات الأساسية فقط حتى يتعرف الدرون على الريسيفر والموتورات بأمان.',
-  'step-7': 'اختبار اتجاه واستجابة المحركات بدون مراوح وبأقل خطر ممكن.',
-  'step-8': 'تنفيذ أول Hover بسيط في مكان آمن دون استعجال أو مخاطرة.',
+  'build-soldering-basics': 'قبل أن تلمس أي سلك، فهم أساسيات اللحام الآمن هو ما يمنع الأخطاء الكهربائية طوال عملية البناء.',
+  'build-parts-tools': 'تأكد أن كل القطع والأدوات أمامك قبل البدء — التوقف لشراء قطعة ناقصة يكسر التركيز ويطيل وقت البناء.',
+  'build-frame': 'الفريم هو أساس كل شيء — أي تركيب مرخي هنا يؤثر على استقرار الدرون في الهواء.',
+  'build-motors': 'اتجاه دوران كل محرك وطول براغيه يُحدَّدان الآن — الخطأ هنا يتلف الموتور أو يُعطل الطيران.',
+  'build-esc': 'تهوية ESC وإدارة الأسلاك يحددان عمر المنظّم وسهولة اللحام لاحقاً.',
+  'build-fc': 'اتجاه FC وعزله عن الاهتزاز يحددان دقة الجيروسكوب وجودة الطيران.',
+  'build-receiver': 'التوصيل الصحيح لـ TX/RX وموقع الهوائي يحددان قوة الإشارة وسلامة الاتصال.',
+  'build-gps': 'ارتفاع GPS وبُعده عن التشويش يحددان دقة الإشارة وسرعة Lock.',
+  'build-vtx': 'جهد VTX الصحيح وتهويته يمنعان الاحتراق ويضمنان وضوح الصورة.',
+  'build-pre-battery': 'هذه آخر بوابة أمان — لا تتجاوزها قبل إكمال جميع الفحوصات.',
 };
 
 const stageMaterials: Record<string, { parts: string[]; tools: string[] }> = {
-  'step-1': { parts: ['الفريم', 'محركات (4x)', 'ESC', 'Flight Controller', 'Receiver', 'LiPo'], tools: ['Smoke Stopper', 'Multimeter', 'كاوي لحام', 'قصدير / Flux', 'مفكات'] },
-  'step-2': { parts: ['الفريم', 'محركات (4x)', 'براغي التثبيت'], tools: ['مفكات', 'مفتاح ربط'] },
-  'step-3': { parts: ['Flight Controller', 'ESC', 'Grommets'], tools: ['مفكات', 'أسلاك توصيل'] },
-  'step-4': { parts: ['ESC', 'Flight Controller', 'Receiver', 'موصل البطارية'], tools: ['كاوي لحام', 'قصدير / Flux', 'Multimeter'] },
-  'step-5': { parts: ['Smoke Stopper', 'LiPo'], tools: ['Multimeter'] },
-  'step-6': { parts: ['Flight Controller', 'Receiver', 'كابل USB'], tools: ['Betaflight Configurator'] },
-  'step-7': { parts: ['FC', 'ESC', 'محركات', 'LiPo'], tools: [] },
-  'step-8': { parts: ['الدرون الكاملة', 'LiPo مشحونة', 'المراوح'], tools: ['جهاز التحكم (TX)'] },
+  'build-soldering-basics': { parts: ['قصدير (Solder)', 'Flux', 'أسلاك للتدريب'], tools: ['كاوي لحام', 'Multimeter', 'قاطع أسلاك', 'ملقط'] },
+  'build-parts-tools': { parts: ['الفريم', 'محركات (4x)', 'ESC', 'Flight Controller', 'Receiver', 'LiPo', 'VTX/كاميرا'], tools: ['Smoke Stopper', 'Multimeter', 'كاوي لحام', 'مفكات', 'قصدير / Flux'] },
+  'build-frame': { parts: ['هيكل الفريم', 'الأذرع', 'براغي التثبيت'], tools: ['مفك Allen', 'مفتاح ربط'] },
+  'build-motors': { parts: ['محركات (4x)', 'براغي الموتور (M3)'], tools: ['مفك Allen صغير'] },
+  'build-esc': { parts: ['ESC', 'cable ties', 'Grommets (إن كان 4-in-1)'], tools: ['مفك', 'قاطع cable ties'] },
+  'build-fc': { parts: ['Flight Controller', 'Grommets مطاطية', 'standoffs'], tools: ['مفك صغير'] },
+  'build-receiver': { parts: ['Receiver', 'هوائيات', 'أسلاك توصيل'], tools: ['كاوي لحام', 'قصدير / Flux', 'قاطع أسلاك'] },
+  'build-gps': { parts: ['GPS module', 'حامل GPS', 'كابل GPS'], tools: ['مفك', 'cable ties'] },
+  'build-vtx': { parts: ['FPV كاميرا', 'VTX', 'هوائي VTX', 'كابل توصيل'], tools: ['مفك صغير', 'كاوي لحام', 'قصدير / Flux', 'cable ties'] },
+  'build-pre-battery': { parts: ['Smoke Stopper', 'LiPo'], tools: ['Multimeter'] },
 };
 
 const stageGuidance: Record<string, string> = {
-  'step-1': 'تأكد أن كل القطع أمامك قبل البدء. التوقف لشراء قطعة ناقصة يُعطّل تركيزك ويُطيل وقت البناء.',
-  'step-2': 'ركّب الأذرع أولاً ثم ثبّت المحركات. تأكد أن مسامير الموتور لا تلمس ملفاته الداخلية — ذلك يتلف الموتور فوراً.',
-  'step-3': 'ثبّت ESC مع توفير تهوية جيدة. ثبّت FC باستخدام Grommets لعزل الاهتزاز عن الجيروسكوب — بدونها تتأثر جودة الطيران.',
-  'step-4': 'اعمل ببطء وهدوء. تأكد من كل وصلة قبل الانتقال للتالية. الوصلة السيئة تسبب عطلاً يصعب تتبعه لاحقاً.',
-  'step-5': 'لا توصل البطارية مباشرة. افحص القطبية بالـ Multimeter أولاً، ثم استخدم Smoke Stopper في أول توصيل لتجنب الضرر.',
-  'step-6': 'وصّل FC بالكمبيوتر فقط — بدون بطارية. فعّل الإعدادات المطلوبة فقط ولا تغيّر ما لا تفهمه. اضغط Save بعد كل تغيير.',
-  'step-7': 'تأكد أن لا مراوح مركّبة قبل الاختبار. أدر المحركات عبر Betaflight واحداً واحداً للتحقق من الترتيب والاتجاه.',
-  'step-8': 'ابدأ بارتفاع نصف متر في مكان مفتوح. تعوّد على ردة فعل الدرون قبل أي مناورة أو رفع في الارتفاع.',
+  'build-soldering-basics': 'نقطة اللحام الجيدة لامعة وملساء كالتلة الصغيرة. نقطة اللحام الباهتة أو الحبيبية سيئة — درّب نفسك على لوح احتياطي قبل اللحام على القطع الحقيقية.',
+  'build-parts-tools': 'افتح الكراتين وتحقق من كل قطعة. القطعة المكسورة أو الناقصة اكتشفها الآن لا في منتصف البناء.',
+  'build-frame': 'ركّب الأذرع بالترتيب الصحيح حسب تعليمات الفريم. لا تشد البراغي نهائياً حتى تتأكد من محاذاة كل الأذرع — تغيير الاتجاه لاحقاً أصعب.',
+  'build-motors': 'تأكد من اتجاه دوران كل محرك (CW/CCW) قبل التثبيت. مسامير الموتور لا يجب أن تدخل أعمق من المحدد — إذا لمست الملفات تتلف الموتور فوراً.',
+  'build-esc': 'اترك الأسلاك بطول كافٍ للوصول للمحركات والـ FC دون شد. الأسلاك المشدودة تنكسر عند أول اهتزاز.',
+  'build-fc': 'سهم FC يشير للأمام دائماً — هذا يحدد كيف يفهم Betaflight اتجاهات الطيران. الجيروسكوب حساس للاهتزاز لذلك Grommets ليست اختيارية.',
+  'build-receiver': 'TX من طرف يذهب إلى RX في الطرف الآخر — هذا التقاطع ضروري وأكثر خطأ شائع للمبتدئين. هوائي داخل الفريم يضعف الإشارة بشكل كبير.',
+  'build-gps': 'GPS في أعلى نقطة ممكنة بعيداً عن ESC والأسلاك الرئيسية. الحرارة والتشويش الإلكتروني من ESC يضعفان دقة GPS.',
+  'build-vtx': 'تحقق من الجهد المطلوب للـ VTX قبل التوصيل — 5V أو 9V أو 12V. جهد خاطئ يحرق VTX فوراً ولا يمكن إصلاحه.',
+  'build-pre-battery': 'لا توصل LiPo مباشرة في أول مرة — الـ Smoke Stopper يحميك من القصر غير المرئي. إذا اشتعل الضوء الأحمر افصل فوراً وابحث عن الخطأ.',
 };
 
 const stageSafety: Record<string, StageSafety> = {
-  'step-4': { level: 'warning', text: 'لا توصل البطارية أثناء اللحام. افصل الطاقة كلياً قبل لحام أي سلك جديد.' },
-  'step-5': { level: 'danger', text: 'لا توصل LiPo قبل فحص القطبية والتأكد من عدم وجود قصر. القصر مع LiPo قد يسبب حريقاً فورياً.' },
-  'step-7': { level: 'danger', text: 'لا تركّب المراوح أبداً أثناء اختبار المحركات. المحرك بمروحة متحرك أداة قطع خطيرة.' },
-  'step-8': { level: 'danger', text: 'لا تطر فوق الناس أو بالقرب منهم. تأكد من Failsafe ومن أن Angle Mode مفعّل قبل الـ Arm.' },
+  'build-soldering-basics': { level: 'warning', text: 'لا توصل أي سلك بالبطارية أثناء التدريب على اللحام. احرص على أن مكان العمل خالٍ من المواد القابلة للاشتعال.' },
+  'build-receiver': { level: 'warning', text: 'TX يُوصل بـ RX والعكس — التوصيل المعكوس شائع جداً ويمنع عمل Receiver كلياً.' },
+  'build-gps': { level: 'warning', text: 'تأكد من جهد GPS المناسب (3.3V أو 5V) قبل التوصيل. الجهد الخاطئ يتلف GPS فوراً.' },
+  'build-vtx': { level: 'warning', text: 'جهد VTX ثلاثة خيارات (5V/9V/12V) — وصّل للـ pad الصحيح. VTX بجهد خاطئ يحترق في ثوانٍ.' },
+  'build-pre-battery': { level: 'danger', text: 'لا توصل LiPo قبل فحص القطبية والتأكد من عدم وجود قصر. القصر مع LiPo يسبب حريقاً فورياً.' },
 };
 
 const stageLearningLinks: Record<string, StageLearningLink[]> = {
-  'step-1': [
-    { label: 'ESC', lessonId: 'lesson-13' },
-    { label: 'Flight Controller', lessonId: 'lesson-14' },
-    { label: 'LiPo', lessonId: 'lesson-7' },
-    { label: 'Smoke Stopper', lessonId: 'lesson-10' },
-  ],
-  'step-3': [
-    { label: 'Flight Controller', lessonId: 'lesson-14' },
-    { label: 'ESC', lessonId: 'lesson-13' },
-  ],
-  'step-4': [
+  'build-soldering-basics': [
     { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
     { label: 'TX/RX', lessonId: 'lesson-9' },
+    { label: 'السلامة قبل البطارية', lessonId: 'lesson-10' },
   ],
-  'step-5': [
+  'build-parts-tools': [
+    { label: 'ESC', lessonId: 'lesson-13' },
+    { label: 'Flight Controller', lessonId: 'lesson-14' },
     { label: 'LiPo', lessonId: 'lesson-7' },
-    { label: 'Smoke Stopper', lessonId: 'lesson-10' },
-    { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
+    { label: 'Receiver', lessonId: 'lesson-15' },
   ],
-  'step-6': [
+  'build-frame': [
+    { label: 'تركيب الفريم', lessonId: 'lesson-11' },
+  ],
+  'build-motors': [
+    { label: 'تركيب المحركات', lessonId: 'lesson-12' },
+  ],
+  'build-esc': [
+    { label: 'ESC', lessonId: 'lesson-13' },
+  ],
+  'build-fc': [
+    { label: 'Flight Controller', lessonId: 'lesson-14' },
+  ],
+  'build-receiver': [
     { label: 'Receiver', lessonId: 'lesson-15' },
     { label: 'TX/RX', lessonId: 'lesson-9' },
-    { label: 'Flight Controller', lessonId: 'lesson-14' },
   ],
-  'step-7': [
-    { label: 'Motor Test', lessonId: 'lesson-17' },
-    { label: 'ESC', lessonId: 'lesson-13' },
+  'build-vtx': [
+    { label: 'نظام الفيديو', lessonId: 'lesson-16' },
   ],
-  'step-8': [
-    { label: 'First Flight', lessonId: 'lesson-18' },
-    { label: 'TX/RX', lessonId: 'lesson-9' },
+  'build-pre-battery': [
+    { label: 'LiPo', lessonId: 'lesson-7' },
+    { label: 'السلامة قبل البطارية', lessonId: 'lesson-10' },
+    { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
   ],
 };
 

@@ -2,7 +2,7 @@ import { useLocalStorage } from './useLocalStorage';
 import { STORAGE_KEYS } from '../utils/storageKeys';
 import type { LastOpenedState } from '../types';
 import { TOTAL_LESSONS } from '../data/lessonsData';
-import { TOTAL_ROADMAP_STEPS } from '../data/roadmapData';
+import { TOTAL_ROADMAP_STEPS, ROADMAP_STEP_IDS } from '../data/roadmapData';
 import { TOTAL_CHECKLIST_ITEMS } from '../data/checklistsData';
 
 export function useProgress() {
@@ -13,8 +13,9 @@ export function useProgress() {
   const [safetySeen, setSafetySeen] = useLocalStorage<boolean>(STORAGE_KEYS.SAFETY_SEEN, false);
   const [hasStarted, setHasStarted] = useLocalStorage<boolean>(STORAGE_KEYS.HAS_STARTED, false);
 
+  const validCompletedRoadmapSteps = completedRoadmapSteps.filter(id => ROADMAP_STEP_IDS.has(id));
   const lessonPct = TOTAL_LESSONS > 0 ? (completedLessons.length / TOTAL_LESSONS) * 100 : 0;
-  const roadmapPct = TOTAL_ROADMAP_STEPS > 0 ? (completedRoadmapSteps.length / TOTAL_ROADMAP_STEPS) * 100 : 0;
+  const roadmapPct = TOTAL_ROADMAP_STEPS > 0 ? (validCompletedRoadmapSteps.length / TOTAL_ROADMAP_STEPS) * 100 : 0;
   const completedChecklistItems = Object.values(checklists).reduce((s, items) => s + items.length, 0);
   const checklistPct = TOTAL_CHECKLIST_ITEMS > 0 ? (completedChecklistItems / TOTAL_CHECKLIST_ITEMS) * 100 : 0;
   const overallProgress = Math.round(lessonPct * 0.4 + roadmapPct * 0.4 + checklistPct * 0.2);
@@ -56,7 +57,7 @@ export function useProgress() {
   const resetAll = () => { setCompletedLessons([]); setCompletedRoadmapSteps([]); setChecklists({}); setLastOpened({}); };
 
   return {
-    completedLessons, completedRoadmapSteps, checklists, lastOpened,
+    completedLessons, completedRoadmapSteps: validCompletedRoadmapSteps, checklists, lastOpened,
     safetySeen, hasStarted,
     overallProgress,
     lessonProgress: Math.round(lessonPct), roadmapProgress: Math.round(roadmapPct), checklistProgress: Math.round(checklistPct),
