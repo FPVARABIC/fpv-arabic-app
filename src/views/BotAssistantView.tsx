@@ -6,7 +6,10 @@ import { botResponses } from '../data/botResponses';
 import type { BotResponse } from '../types';
 import { buildKnowledgeAnswer } from '../data/knowledge/searchKnowledge';
 import type { KnowledgeBotAnswer } from '../data/knowledge/searchKnowledge';
-import { Bot, Send, ChevronLeft, AlertTriangle, BookOpen } from 'lucide-react';
+import { outOfDomainMessage } from '../data/knowledge/botKnowledgeRules';
+import { fetchTrustedWebSearch } from '../services/webSearch';
+import type { WebSearchResult } from '../services/webSearch';
+import { Bot, Send, ChevronLeft, AlertTriangle, BookOpen, Globe, ExternalLink } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -14,6 +17,8 @@ interface Message {
   text?: string;
   response?: BotResponse;
   knowledgeAnswer?: KnowledgeBotAnswer;
+  webResults?: WebSearchResult[];
+  webLoading?: boolean;
 }
 
 const confidenceLabel: Record<KnowledgeBotAnswer['confidence'], string> = {
@@ -57,6 +62,7 @@ export const BotAssistantView: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const webSearchAbortRef = useRef<AbortController | null>(null);
 
   const isWelcome = messages.length === 0;
 
@@ -75,14 +81,70 @@ export const BotAssistantView: React.FC = () => {
   const handleTextSubmit = () => {
     const query = inputValue.trim();
     if (!query) return;
+
+    // Abort any previous in-flight web search so stale results never attach
+    // to the wrong message.
+    webSearchAbortRef.current?.abort();
+    webSearchAbortRef.current = null;
+
+    // Local answer is always synchronous and always comes first.
     const knowledgeAnswer = buildKnowledgeAnswer(query);
+
+    // Web search fires only when:
+    //   • the query is within the FPV/drone domain
+    //   • local confidence is not already high
+    //   • no safety note is present (safety-critical topics stay local-only)
+    const isOutOfDomain = knowledgeAnswer.answer === outOfDomainMessage;
+    const shouldWebSearch =
+      !isOutOfDomain &&
+      knowledgeAnswer.confidence !== 'high' &&
+      !knowledgeAnswer.safetyNote;
+
+    const now = Date.now();
+    const botMsgId = (now + 1).toString();
+
     setMessages(prev => [
       ...prev,
-      { id: Date.now().toString(), from: 'user', text: query },
-      { id: (Date.now() + 1).toString(), from: 'bot', knowledgeAnswer },
+      { id: now.toString(), from: 'user', text: query },
+      { id: botMsgId, from: 'bot', knowledgeAnswer, webLoading: shouldWebSearch },
     ]);
     setInputValue('');
     inputRef.current?.blur();
+
+    if (!shouldWebSearch) return;
+
+    // Start the async web search.
+    const controller = new AbortController();
+    webSearchAbortRef.current = controller;
+
+    fetchTrustedWebSearch(query, { signal: controller.signal })
+      .then(res => {
+        // If another message arrived while this was in flight, ignore the result.
+        if (webSearchAbortRef.current !== controller) return;
+
+        const safeResults = res.results
+          .filter(r => r.safeToDisplay)
+          .slice(0, 3);
+
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgId
+              ? { ...m, webLoading: false, webResults: safeResults }
+              : m,
+          ),
+        );
+      })
+      .catch(() => {
+        // fetchTrustedWebSearch never throws, but clear loading state defensively.
+        if (webSearchAbortRef.current !== controller) return;
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgId
+              ? { ...m, webLoading: false, webResults: [] }
+              : m,
+          ),
+        );
+      });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -158,6 +220,56 @@ export const BotAssistantView: React.FC = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Zone D — Trusted external web results (secondary, clearly labelled) */}
+        {msg.knowledgeAnswer && (msg.webLoading || (msg.webResults && msg.webResults.length > 0)) && (
+          <div className="rounded-2xl p-3 space-y-2"
+            style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.12)' }}>
+
+            {/* Section header */}
+            <div className="flex items-center gap-1.5">
+              <Globe size={11} className="text-amber-400/60 flex-shrink-0" />
+              <p className="text-xs font-semibold text-amber-400/70">مصادر خارجية موثوقة</p>
+            </div>
+
+            {/* Loading state */}
+            {msg.webLoading && (
+              <p className="text-xs text-slate-500 text-right">أبحث في مصادر FPV موثوقة...</p>
+            )}
+
+            {/* Results */}
+            {!msg.webLoading && msg.webResults && msg.webResults.length > 0 && (
+              <>
+                <p className="text-[10px] text-slate-600 leading-relaxed text-right">
+                  نتائج من مواقع FPV موثوقة للاطلاع، وليست بديلاً عن قواعد السلامة داخل التطبيق.
+                </p>
+                <div className="space-y-2">
+                  {msg.webResults.slice(0, 3).map((result, i) => (
+                    <div key={i} className="rounded-xl p-2.5"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p className="text-xs font-medium text-slate-300 leading-snug mb-1">{result.title}</p>
+                      {result.snippet && (
+                        <p className="text-[10px] text-slate-500 mb-2 leading-relaxed">{result.snippet}</p>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-cyan-700/60 font-mono truncate">{result.domain}</span>
+                        <a
+                          href={result.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[10px] text-cyan-500/70 hover:text-cyan-400 transition-colors flex-shrink-0"
+                        >
+                          فتح المصدر
+                          <ExternalLink size={9} />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
