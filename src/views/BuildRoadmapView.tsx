@@ -126,11 +126,14 @@ export const BuildRoadmapView: React.FC = () => {
   return (
     <AppShell tint="cyan">
       <Header title="خريطة البناء"/>
-      <div className="px-4 py-4 fade-in">
-        <p className="text-sm text-slate-400 mb-5"><span className="text-cyan-300 font-bold">{completedRoadmapSteps.length}</span> من {roadmapData.length} مراحل مكتملة</p>
+      <div className="px-4 py-4 fade-in" style={{ backgroundImage: 'radial-gradient(rgba(34,211,238,0.025) 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+        <div className="mb-5">
+          <p className="text-sm text-slate-400"><span className="text-cyan-300 font-bold">{completedRoadmapSteps.length}</span> من {roadmapData.length} مراحل مكتملة</p>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(34,211,238,0.45)' }}>ابنِ درونك خطوة بخطوة</p>
+        </div>
         <div className="relative space-y-3 pr-10">
           {/* dashed timeline line */}
-          <div className="absolute right-[18px] top-3 bottom-3 w-0.5 border-r-2 border-dashed border-cyan-400/35"/>
+          <div className="absolute right-[18px] top-3 bottom-3 w-0.5 border-r-2 border-dashed border-cyan-400/50"/>
           {roadmapData.map(step => {
             const Icon = iconMap[step.icon] || Package;
             const done = completedRoadmapSteps.includes(step.id);
@@ -147,7 +150,13 @@ export const BuildRoadmapView: React.FC = () => {
                 <div className={`absolute right-[-30px] top-4 z-10 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-extrabold text-sm ${done ? 'bg-green-400/25 border border-green-400/50 text-green-300' : active ? 'bg-cyan-400/25 border border-cyan-400/55 text-cyan-200 pulse-glow' : 'bg-slate-800 border border-cyan-400/30 text-cyan-300'}`}>
                   {done ? <CheckCircle2 size={18} className="text-green-300"/> : step.number}
                 </div>
-                <div className={`card-feature transition-all ${done ? 'border-green-400/30' : active ? 'border-cyan-400/50' : ''}`}>
+                <div
+                  className={`card-feature transition-all ${done ? 'border-green-400/30' : active ? 'border-cyan-400/50' : ''}`}
+                  style={active
+                    ? { boxShadow: '0 0 0 1px rgba(34,211,238,0.15), 0 4px 24px rgba(34,211,238,0.07)', background: 'rgba(5,16,28,0.98)' }
+                    : { background: 'rgba(7,16,28,0.78)' }
+                  }
+                >
                   <button className="w-full p-4 flex items-center gap-3 text-right" onClick={() => toggleStep(step.id)}>
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-green-400/20' : 'bg-cyan-400/10'}`}>
                       {done ? <CheckCircle2 size={20} className="text-green-400"/> : <Icon size={20} className="text-cyan-400"/>}
@@ -169,7 +178,7 @@ export const BuildRoadmapView: React.FC = () => {
                   </button>
 
                   {active && (
-                    <div className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/10 pt-3">
+                    <div className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/20 pt-3" style={{ background: 'rgba(34,211,238,0.012)' }}>
 
                       {/* 0. Educational image */}
                       {imgSrc && (
@@ -253,13 +262,13 @@ export const BuildRoadmapView: React.FC = () => {
                       )}
 
                       {/* 6. Checklist */}
-                      <div>
-                        <p className="text-[10px] text-slate-500 font-bold mb-2 text-right">قائمة التحقق</p>
+                      <div className="rounded-xl p-3" style={{ background: 'rgba(34,211,238,0.025)', border: '1px solid rgba(34,211,238,0.1)' }}>
+                        <p className="text-[10px] font-bold mb-2 text-right" style={{ color: 'rgba(34,211,238,0.65)' }}>قائمة التحقق</p>
                         <div className="space-y-1.5">
                           {step.checklist.map((item, i) => {
                             const itemDone = isRoadmapItemDone(step.id, i);
                             return (
-                              <button key={i} className="w-full flex items-center gap-3 text-right hover:bg-white/3 rounded-lg p-1 transition-all" onClick={() => toggleRoadmapChecklistItem(step.id, i)}>
+                              <button key={i} className="w-full flex items-center gap-3 text-right hover:bg-cyan-400/5 rounded-lg p-1 transition-all" onClick={() => toggleRoadmapChecklistItem(step.id, i)}>
                                 {itemDone ? <CheckSquare size={18} className="text-cyan-400 flex-shrink-0"/> : <Square size={18} className="text-slate-500 flex-shrink-0"/>}
                                 <span className={`text-sm ${itemDone ? 'text-slate-500 line-through' : 'text-slate-200'}`}>{item}</span>
                               </button>
@@ -271,8 +280,8 @@ export const BuildRoadmapView: React.FC = () => {
                       {/* 7. Help action */}
                       <button
                         onClick={() => navigate('/bot')}
-                        className="w-full rounded-xl py-2 text-xs text-slate-400 hover:text-cyan-300 transition-colors"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                        className="w-full rounded-xl py-2 text-xs hover:text-cyan-300 transition-colors"
+                        style={{ background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)', color: 'rgba(34,211,238,0.6)' }}
                       >
                         💬 واجهت مشكلة؟ اسأل المساعد
                       </button>
