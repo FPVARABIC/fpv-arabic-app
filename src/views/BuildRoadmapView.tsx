@@ -115,6 +115,7 @@ export const BuildRoadmapView: React.FC = () => {
   const navigate = useNavigate();
   const { completedRoadmapSteps, getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone, completeRoadmapStep, setLastOpenedRoadmapStep } = useProgress();
   const [openStep, setOpenStep] = useState<string | null>(null);
+  const [zoomedImage, setZoomedImage] = useState<{ src: string; alt: string } | null>(null);
 
   const toggleStep = (id: string) => {
     const next = openStep === id ? null : id;
@@ -139,6 +140,7 @@ export const BuildRoadmapView: React.FC = () => {
             const materials = stageMaterials[step.id];
             const safety = stageSafety[step.id];
             const links = stageLearningLinks[step.id] || [];
+            const imgSrc = stageImages[step.id];
             return (
               <div key={step.id} className="relative">
                 {/* timeline node */}
@@ -170,15 +172,22 @@ export const BuildRoadmapView: React.FC = () => {
                     <div className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/10 pt-3">
 
                       {/* 0. Educational image */}
-                      {stageImages[step.id] && (
-                        <div className="rounded-xl overflow-hidden" style={{ background: '#0a1a24', border: '1px solid rgba(34,211,238,0.2)' }}>
-                          <img
-                            src={stageImages[step.id]}
-                            alt={`صورة تعليمية: ${step.title}`}
-                            className="w-full"
-                            style={{ maxHeight: '240px', objectFit: 'contain' }}
-                          />
-                        </div>
+                      {imgSrc && (
+                        <button
+                          className="w-full focus:outline-none"
+                          onClick={() => setZoomedImage({ src: imgSrc, alt: `صورة تعليمية: ${step.title}` })}
+                          aria-label={`عرض الصورة بحجم أكبر: ${step.title}`}
+                        >
+                          <div className="rounded-xl overflow-hidden" style={{ background: '#0a1a24', border: '1px solid rgba(34,211,238,0.25)', boxShadow: '0 0 14px rgba(34,211,238,0.07)' }}>
+                            <img
+                              src={imgSrc}
+                              alt={`صورة تعليمية: ${step.title}`}
+                              className="w-full block"
+                              style={{ maxHeight: '320px', objectFit: 'contain' }}
+                            />
+                            <p className="text-center text-[10px] text-cyan-400/60 py-1.5">اضغط للتكبير</p>
+                          </div>
+                        </button>
                       )}
 
                       {/* 1. Goal card */}
@@ -283,6 +292,30 @@ export const BuildRoadmapView: React.FC = () => {
           })}
         </div>
       </div>
+      {/* Zoom image overlay */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(4,6,20,0.94)' }}
+          onClick={() => setZoomedImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center text-white text-lg font-bold"
+            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)' }}
+            onClick={e => { e.stopPropagation(); setZoomedImage(null); }}
+            aria-label="إغلاق المعاينة"
+          >
+            ✕
+          </button>
+          <img
+            src={zoomedImage.src}
+            alt={zoomedImage.alt}
+            className="rounded-xl"
+            style={{ maxWidth: '100%', maxHeight: '88vh', objectFit: 'contain' }}
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </AppShell>
   );
 };
