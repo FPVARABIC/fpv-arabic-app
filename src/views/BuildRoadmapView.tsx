@@ -60,6 +60,19 @@ const stageSafety: Record<string, StageSafety> = {
   'build-pre-battery': { level: 'danger', text: 'لا توصل LiPo قبل فحص القطبية والتأكد من عدم وجود قصر. القصر مع LiPo يسبب حريقاً فورياً.' },
 };
 
+const stageImages: Record<string, string> = {
+  'build-soldering-basics': '/build-images/build-stage-01-soldering-wiring.png',
+  'build-parts-tools': '/build-images/build-stage-02-parts-tools.png',
+  'build-frame': '/build-images/build-stage-03-frame-assembly.png',
+  'build-motors': '/build-images/build-stage-04-motor-mounting.png',
+  'build-esc': '/build-images/build-stage-05-esc-mounting.png',
+  'build-fc': '/build-images/build-stage-06-flight-controller-mounting.png',
+  'build-receiver': '/build-images/build-stage-07-receiver-installation.png',
+  'build-gps': '/build-images/build-stage-08-gps-installation.png',
+  'build-vtx': '/build-images/build-stage-09-vtx-video-system.png',
+  'build-pre-battery': '/build-images/build-stage-10-pre-battery-check.png',
+};
+
 const stageLearningLinks: Record<string, StageLearningLink[]> = {
   'build-soldering-basics': [
     { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
@@ -155,6 +168,18 @@ export const BuildRoadmapView: React.FC = () => {
 
                   {active && (
                     <div className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/10 pt-3">
+
+                      {/* 0. Educational image */}
+                      {stageImages[step.id] && (
+                        <div className="rounded-xl overflow-hidden" style={{ background: '#0a1a24', border: '1px solid rgba(34,211,238,0.2)' }}>
+                          <img
+                            src={stageImages[step.id]}
+                            alt={`صورة تعليمية: ${step.title}`}
+                            className="w-full"
+                            style={{ maxHeight: '240px', objectFit: 'contain' }}
+                          />
+                        </div>
+                      )}
 
                       {/* 1. Goal card */}
                       <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(24,230,230,0.06)', borderTop: '1px solid rgba(34,211,238,0.12)', borderLeft: '1px solid rgba(34,211,238,0.12)', borderBottom: '1px solid rgba(34,211,238,0.12)', borderRight: '2px solid rgba(34,211,238,0.38)' }}>
