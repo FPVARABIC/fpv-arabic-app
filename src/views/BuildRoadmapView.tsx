@@ -10,6 +10,17 @@ const iconMap: Record<string, React.FC<{size?: number; className?: string}>> = {
   Package, Wrench, Cpu, Zap, Shield, Settings, Activity, Wind,
 };
 
+const stageGoals: Record<string, string> = {
+  'step-1': 'قبل أن تبدأ، تأكد أن كل القطع والأدوات الأساسية أمامك حتى لا تتوقف أثناء البناء.',
+  'step-2': 'تثبيت الهيكل والمحركات بشكل صحيح دون ضغط زائد أو براغي خاطئة.',
+  'step-3': 'وضع الإلكترونيات الأساسية في مكانها الصحيح مع مراعاة الاتجاه والعزل.',
+  'step-4': 'تجهيز التوصيلات الأساسية بهدوء ونظافة قبل أي توصيل للبطارية.',
+  'step-5': 'التأكد من عدم وجود قصر أو خطأ خطير قبل أول تشغيل.',
+  'step-6': 'ضبط الإعدادات الأساسية فقط حتى يتعرف الدرون على الريسيفر والموتورات بأمان.',
+  'step-7': 'اختبار اتجاه واستجابة المحركات بدون مراوح وبأقل خطر ممكن.',
+  'step-8': 'تنفيذ أول Hover بسيط في مكان آمن دون استعجال أو مخاطرة.',
+};
+
 export const BuildRoadmapView: React.FC = () => {
   const { completedRoadmapSteps, getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone, completeRoadmapStep, setLastOpenedRoadmapStep } = useProgress();
   const [openStep, setOpenStep] = useState<string | null>(null);
@@ -63,6 +74,20 @@ export const BuildRoadmapView: React.FC = () => {
                 {active && (
                   <div className="px-4 pb-4 space-y-3 border-t border-cyan-400/10 pt-3">
                     <p className="text-xs text-slate-400">{step.description}</p>
+                    {/* Stage goal block */}
+                    <div
+                      className="rounded-xl px-3 py-2.5 text-right"
+                      style={{
+                        background: 'rgba(24,230,230,0.06)',
+                        borderTop: '1px solid rgba(34,211,238,0.12)',
+                        borderLeft: '1px solid rgba(34,211,238,0.12)',
+                        borderBottom: '1px solid rgba(34,211,238,0.12)',
+                        borderRight: '2px solid rgba(34,211,238,0.38)',
+                      }}
+                    >
+                      <p className="text-[10px] text-cyan-400 font-bold mb-1">🎯 هدف المرحلة</p>
+                      <p className="text-xs text-slate-300 leading-relaxed">{stageGoals[step.id]}</p>
+                    </div>
                     <div className="space-y-2">
                       {step.checklist.map((item, i) => {
                         const itemDone = isRoadmapItemDone(step.id, i);
