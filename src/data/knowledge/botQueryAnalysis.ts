@@ -180,6 +180,23 @@ function getEffectiveSafetyLevel(
 
 // ── Concept matching ──────────────────────────────────────────────────────────
 
+// Short tokens (≤ 3 chars) use word-boundary matching to prevent 'tx' from
+// matching inside 'vtx', 'rx' inside 'vrx', etc. Boundaries: space, '/', '-',
+// '_', or string start/end. All occurrences are checked so "vtx tx/rx" still
+// matches 'tx' at the second position.
+function _isWholeTokenMatch(text: string, token: string): boolean {
+  const SEPARATORS = ' /-_';
+  let idx = 0;
+  while ((idx = text.indexOf(token, idx)) !== -1) {
+    const before = idx === 0 || SEPARATORS.includes(text[idx - 1]);
+    const afterIdx = idx + token.length;
+    const after = afterIdx >= text.length || SEPARATORS.includes(text[afterIdx]);
+    if (before && after) return true;
+    idx += 1;
+  }
+  return false;
+}
+
 interface ConceptMatch {
   concept: BotConcept;
   /** Raw (non-normalized) synonym strings from the registry that matched. */
@@ -213,9 +230,12 @@ function matchConceptsInQuery(normalizedQuery: string): ConceptMatch[] {
     // This prevents lipo_safety from firing on generic fire/smoke references
     // with no battery context, and keeps tx_rx_rule scoped to TX/RX/UART queries.
     if (normalizedAnchors && normalizedAnchors.length > 0) {
-      const anchorHit = normalizedAnchors.some(
-        a => a.length >= 1 && normalizedQuery.includes(a),
-      );
+      const anchorHit = normalizedAnchors.some(a => {
+        if (a.length < 1) return false;
+        return a.length <= 3
+          ? _isWholeTokenMatch(normalizedQuery, a)
+          : normalizedQuery.includes(a);
+      });
       if (!anchorHit) continue;
     }
 
@@ -223,11 +243,15 @@ function matchConceptsInQuery(normalizedQuery: string): ConceptMatch[] {
     let longestMatchLength = 0;
 
     for (const { raw, normalized } of normalizedSynonyms) {
-      // Require normalized synonym length ≥ 2 to avoid single-char false positives.
-      if (normalized.length >= 2 && normalizedQuery.includes(normalized)) {
-        matchedSynonyms.push(raw);
-        if (normalized.length > longestMatchLength) longestMatchLength = normalized.length;
-      }
+      if (normalized.length < 2) continue;
+      // Short tokens (≤ 3 chars) require word-boundary match — prevents 'tx'
+      // matching inside 'vtx', 'rx' inside 'vrx', etc.
+      const hit = normalized.length <= 3
+        ? _isWholeTokenMatch(normalizedQuery, normalized)
+        : normalizedQuery.includes(normalized);
+      if (!hit) continue;
+      matchedSynonyms.push(raw);
+      if (normalized.length > longestMatchLength) longestMatchLength = normalized.length;
     }
 
     if (matchedSynonyms.length === 0) continue;
@@ -245,11 +269,15 @@ function matchConceptsInQuery(normalizedQuery: string): ConceptMatch[] {
 //   2. more matched synonyms wins
 //   3. longer single matched synonym wins (critical for tx_rx_rule vs wiring_basics)
 //   4. registry order (first registered wins)
+//
+// Post-selection rule:
+//   5. If drone_build_basics won via a SHORT generic verb (longestMatch ≤ 5 chars,
+//      e.g. "اركب", "اصنع", "تجميع") but a specific component concept also matched,
+//      prefer the component — "كيف أركب VTX؟" should resolve to vtx_basic, not
+//      drone_build_basics, because the query is about component installation.
 
-function selectPrimary(matches: ConceptMatch[]): ConceptMatch | undefined {
-  if (matches.length === 0) return undefined;
-
-  return matches.reduce((best, candidate) => {
+function _reduceByTiebreaker(ms: ConceptMatch[]): ConceptMatch {
+  return ms.reduce((best, candidate) => {
     const bs = SAFETY_ORDER[best.effectiveSafetyLevel];
     const cs = SAFETY_ORDER[candidate.effectiveSafetyLevel];
     if (cs > bs) return candidate;
@@ -257,8 +285,21 @@ function selectPrimary(matches: ConceptMatch[]): ConceptMatch | undefined {
     if (candidate.matchedSynonyms.length > best.matchedSynonyms.length) return candidate;
     if (best.matchedSynonyms.length > candidate.matchedSynonyms.length) return best;
     if (candidate.longestMatchLength > best.longestMatchLength) return candidate;
-    return best; // preserve registry order
+    return best;
   });
+}
+
+function selectPrimary(matches: ConceptMatch[]): ConceptMatch | undefined {
+  if (matches.length === 0) return undefined;
+
+  const result = _reduceByTiebreaker(matches);
+
+  if (result.concept.id === 'drone_build_basics' && result.longestMatchLength <= 5) {
+    const others = matches.filter(m => m.concept.id !== 'drone_build_basics');
+    if (others.length > 0) return _reduceByTiebreaker(others);
+  }
+
+  return result;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
