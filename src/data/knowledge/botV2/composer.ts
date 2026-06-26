@@ -1,5 +1,9 @@
 /**
- * BOT V2 — Template-based answer composer.
+ * BOT V2 — Knowledge-driven answer composer.
+ *
+ * Consumes the knowledge layer (knowledgeBase → knowledgeResolver) to compose
+ * structured answers. Static template constants have been replaced by knowledge
+ * node lookups — one source of truth per concept.
  *
  * Rules:
  *  - shortAnswer: max 2 sentences.
@@ -10,208 +14,53 @@
  *  - No lesson-body copying — only links/chips.
  */
 
-import { getConceptById, type BotConceptId } from '../botConceptRegistry';
+import type { BotConceptId } from '../botConceptRegistry';
 import type { QueryAnalysis } from '../botQueryAnalysis';
-import type { BotV2Answer, BotV2Chip, BotV2Link } from './types';
+import type { BotV2Answer, BotV2Chip } from './types';
 import type { V2SafetyResult } from './safety';
 import type { ModeSelection } from './modeSelector';
+import {
+  getKnowledgeForConcept,
+  getKnowledgeChips,
+  getKnowledgeLinks,
+} from './knowledgeResolver';
 
-// ── Build roadmap content (spec-defined) ──────────────────────────────────────
+// ── Hazard → short answer ─────────────────────────────────────────────────────
 
-const BUILD_ROADMAP_ANSWER = {
-  shortAnswer: 'لبناء كوادكابتر FPV، ابدأ خطوة بخطوة — لا تتعجل ولا تركب المراوح إلا بعد إتمام جميع الاختبارات.',
-  steps: [
-    'اختر الهدف والحجم (ننصح بـ 5 بوصة للمبتدئ)',
-    'افهم القطع الأساسية: FC، ESC، محركات، ريسيفر، VTX',
-    'راجع الكهرباء والتوصيل: GND و5V وVBAT وTX/RX',
-    'جمّع بدون تركيب المراوح — اختبر الكهرباء أولاً',
-    'اختبر عبر Betaflight و Checklist قبل أي طيران',
-  ],
-  warning: 'لا توصل البطارية قبل استخدام Smoke Stopper. لا تركب المراوح أثناء اختبار المحركات أبداً.',
-  chips: [
-    { label: 'ابدأ بخريطة الدروس', route: '/roadmap' },
-    { label: 'افتح Checklist قبل الشراء', route: '/checklists' },
-    { label: 'تعلّم الكهرباء أولاً', route: '/lessons/lesson-8' },
-  ] as BotV2Chip[],
-  links: [
-    { label: 'خريطة البناء', route: '/roadmap' },
-  ] as BotV2Link[],
-} as const;
-
-// ── Safety templates ──────────────────────────────────────────────────────────
-
-const SAFETY_TEMPLATES: Record<string, {
-  shortAnswer: string;
-  steps: string[];
-  warning: string;
-  chips: BotV2Chip[];
-}> = {
-  swollen_lipo: {
-    shortAnswer: 'بطارية LiPo منتفخة = خطر حريق فوري. أبعدها الآن ولا تشحنها تحت أي ظرف.',
-    steps: [
-      'لا تشحنها ولا تستخدمها أبداً',
-      'أبعدها فوراً عن المواد القابلة للاشتعال',
-      'ضعها في مكان مفتوح ومعزول (خارج المنزل)',
-      'انتظر 30–60 دقيقة ثم تخلص منها في مركز إعادة تدوير',
-    ],
-    warning: 'لا تترك بطارية LiPo منتفخة بلا رقابة. لا تضعها في القمامة العادية.',
-    chips: [{ label: 'درس سلامة البطاريات', route: '/lessons/lesson-10' }],
-  },
-  smoke_fire: {
-    shortAnswer: 'خطر! دخان أو حريق من الكواد — افصل البطارية فوراً وابتعد عن المنطقة.',
-    steps: [
-      'افصل البطارية فوراً إن كان آمناً',
-      'ابتعد عن المنطقة',
-      'لا تستخدم ماءً على بطارية LiPo',
-      'اتصل بالإسعاف إن كان هناك حريق فعلي',
-      'لا تعد للجهاز حتى تتأكد من الأمان الكامل',
-    ],
-    warning: 'الدخان من LiPo سام. ابتعد وهوّد المكان فوراً.',
-    chips: [{ label: 'درس السلامة', route: '/lessons/lesson-10' }],
-  },
-  sparks: {
-    shortAnswer: 'شرارة تعني اتصال كهربائي خاطئ — افصل البطارية فوراً وافحص التوصيل.',
-    steps: [
-      'افصل البطارية فوراً',
-      'افحص القطبية (+ و-) قبل إعادة التوصيل',
-      'افحص أي short circuit بالمولتيمتر',
-      'لا تعيد التوصيل حتى تتأكد من السبب',
-    ],
-    warning: 'الشرارة المتكررة تعني وجود short circuit — تالف المكونات أو خطر حريق.',
-    chips: [{ label: 'Checklist قبل البطارية', route: '/checklists' }],
-  },
-  overheating: {
-    shortAnswer: 'سخونة الكابل تعني تيار زائد أو short circuit — افصل البطارية فوراً.',
-    steps: [
-      'افصل البطارية فوراً',
-      'انتظر حتى يبرد الكابل تماماً',
-      'افحص سماكة الكابل وقدرته على التيار',
-      'افحص أي solder bridge أو short circuit',
-    ],
-    warning: 'الكابل الساخن خلال دقائق يعني مشكلة خطيرة في الكهرباء.',
-    chips: [{ label: 'درس التوصيل', route: '/lessons/lesson-8' }],
-  },
-  props_mounted: {
-    shortAnswer: 'خطر! اختبار المحركات مع مراوح مركبة يسبب إصابات بالغة. أوقف الآن.',
-    steps: [
-      'أوقف الاختبار فوراً',
-      'افصل البطارية',
-      'أزل جميع المراوح',
-      'أعد الاختبار بدون مراوح عبر Betaflight Motors Tab',
-      'ركب المراوح فقط بعد اجتياز Checklist كامل',
-    ],
-    warning: 'لا تختبر المحركات أبداً وهي مراوح مركبة — تسبب إصابة بالغة في الأصابع.',
-    chips: [{ label: 'Checklist السلامة', route: '/checklists' }],
-  },
-  electrical_danger: {
-    shortAnswer: 'خطر كهربائي! افصل البطارية الآن وافحص التوصيل والقطبية.',
-    steps: [
-      'افصل البطارية فوراً',
-      'افحص القطبية (+ و-) على كل موصل',
-      'افحص سخونة الأسلاك',
-      'لا توصل البطارية حتى تصحح المشكلة',
-    ],
-    warning: 'القطبية العكسية أو VBAT على مدخل 5V يتلف المكونات بشكل دائم.',
-    chips: [{ label: 'درس الكهرباء', route: '/lessons/lesson-8' }],
-  },
-  generic_critical: {
-    shortAnswer: 'خطر! أوقف كل شيء وافصل البطارية قبل المتابعة.',
-    steps: [
-      'افصل البطارية فوراً',
-      'افحص المكونات بصرياً',
-      'لا تعيد التشغيل حتى تحدد السبب',
-    ],
-    warning: 'لا تتجاهل تحذيرات الأمان — الكوادكابتر يمكن أن يسبب حريقاً أو إصابة.',
-    chips: [{ label: 'Checklist السلامة', route: '/checklists' }],
-  },
+const HAZARD_SHORT_ANSWER: Record<string, string> = {
+  swollen_lipo:     'بطارية LiPo منتفخة = خطر حريق فوري. أبعدها الآن ولا تشحنها تحت أي ظرف.',
+  smoke_fire:       'خطر! دخان أو حريق من الكواد — افصل البطارية فوراً وابتعد عن المنطقة.',
+  sparks:           'شرارة تعني اتصال كهربائي خاطئ — افصل البطارية فوراً وافحص التوصيل.',
+  overheating:      'سخونة الكابل تعني تيار زائد أو short circuit — افصل البطارية فوراً.',
+  props_mounted:    'خطر! اختبار المحركات مع مراوح مركبة يسبب إصابات بالغة. أوقف الآن.',
+  electrical_danger:'خطر كهربائي! افصل البطارية الآن وافحص التوصيل والقطبية.',
+  generic_critical: 'خطر! أوقف كل شيء وافصل البطارية قبل المتابعة.',
 };
 
-// ── Troubleshooting steps per concept ─────────────────────────────────────────
+// ── Hazard → knowledge concept ────────────────────────────────────────────────
 
-const TROUBLESHOOT_STEPS: Partial<Record<BotConceptId, string[]>> = {
-  receiver_basic: [
-    'تحقق من توصيل 5V وGND للريسيفر',
-    'تأكد: TX من الريسيفر → RX في الـ FC (ليس TX→TX)',
-    'فعّل Serial RX على UART الصحيح في Betaflight Ports',
-    'اختر Protocol الصحيح (CRSF لـ ELRS / SBUS للأجهزة الأخرى)',
-    'تأكد من إتمام Binding بين جهاز التحكم والريسيفر',
-  ],
-  tx_rx_rule: [
-    'TX من الريسيفر → RX في الـ FC',
-    'RX من الريسيفر → TX في الـ FC',
-    'لا تصل TX بـ TX ولا RX بـ RX أبداً',
-    'فعّل Serial RX في Betaflight Ports Tab',
-    'اختر CRSF لـ ELRS أو SBUS للأجهزة الأخرى',
-  ],
-  esc_basic: [
-    'افصل البطارية أولاً',
-    'افحص أسلاك البطارية للـ ESC (VBAT وGND)',
-    'افتح Motors Tab في Betaflight وافق على التحذير',
-    'تحقق من Motor Protocol (DSHOT300 أو DSHOT600)',
-    'افحص اللحام على أسلاك الموتور',
-  ],
-  motor_basic: [
-    'افصل البطارية أولاً ثم أزل المراوح',
-    'افتح Motors Tab في Betaflight وحرك شريط الموتور',
-    'تحقق من اتجاه دوران كل موتور (CW/CCW)',
-    'افحص أسلاك الموتور على الـ ESC',
-    'تحقق من DSHOT Protocol في Configuration Tab',
-  ],
-  flight_controller_basic: [
-    'جرب كابل USB آخر (المشكلة الأكثر شيوعاً)',
-    'تحقق من تثبيت Drivers على الحاسوب',
-    'تحقق من عدم وجود قصيرة على الـ FC',
-    'حاول DFU Mode إن لم يُتعرف على الـ FC',
-  ],
-  betaflight_basics: [
-    'اضغط Save بعد كل تغيير (ليس فقط Apply)',
-    'جرب كابل USB آخر إن لم يتصل الـ FC',
-    'تحقق من Serial RX في Ports لمشاكل الريسيفر',
-    'تحقق من Motor Protocol لمشاكل المحركات',
-    'راجع Arming Flags في Status Tab للـ Arm',
-  ],
-  vtx_basic: [
-    'تحقق من توصيل VBAT وGND للـ VTX',
-    'تحقق من تردد النظارة والـ VTX (مثلاً 5.8GHz)',
-    'تحقق من إعدادات OSD في Betaflight',
-    'افحص الكاميرا وكابل الفيديو',
-  ],
-  wiring_basics: [
-    'افحص GND المشترك بين جميع المكونات',
-    'تحقق من القطبية على كل موصل بالمولتيمتر',
-    'افحص continuity بالمولتيمتر بين VBAT وGND',
-    'تحقق من TX/RX مع الريسيفر والـ FC',
-  ],
+const HAZARD_TO_CONCEPT: Partial<Record<string, BotConceptId>> = {
+  swollen_lipo:     'lipo_safety',
+  smoke_fire:       'lipo_safety',
+  sparks:           'wiring_basics',
+  overheating:      'wiring_basics',
+  props_mounted:    'propeller_basic',
+  electrical_danger:'wiring_basics',
+  // generic_critical → no concept; uses inline fallback below
 };
 
-const DEFAULT_TROUBLESHOOT_STEPS = [
-  'افحص التوصيلات بصرياً أولاً',
-  'افصل البطارية ثم أعد التوصيل',
-  'افتح Betaflight وراجع الـ Errors أو Arming Flags',
-  'راجع قسم استكشاف الأعطال في التطبيق',
+// ── Fallback for generic_critical (no knowledge node) ────────────────────────
+
+const _GENERIC_SAFETY_STEPS = [
+  'افصل البطارية فوراً',
+  'افحص المكونات بصرياً',
+  'لا تعيد التشغيل حتى تحدد السبب',
 ];
-
-// ── App navigation templates ──────────────────────────────────────────────────
-
-const APP_NAV_ANSWER = {
-  shortAnswer: 'التطبيق يحتوي على أقسام مترابطة — ابدأ بالبناء والدروس ثم Betaflight.',
-  steps: [
-    'قسم البناء: خريطة طريق كاملة خطوة بخطوة',
-    'قسم الدروس: 18 درساً من الأساسيات للطيران',
-    'قسم Betaflight: إعداد الـ FC خطوة بخطوة',
-    'قسم الـ Checklist: تحقق قبل الشراء والتجميع والطيران',
-    'المساعد: اطرح أي سؤال وسأرشدك',
-  ],
-  chips: [
-    { label: 'ابدأ من خريطة البناء', route: '/roadmap' },
-    { label: 'افتح الدروس', route: '/lessons/lesson-1' },
-    { label: 'افتح Checklist', route: '/checklists' },
-  ] as BotV2Chip[],
-  links: [
-    { label: 'خريطة البناء', route: '/roadmap' },
-    { label: 'الدروس', route: '/lessons/lesson-1' },
-  ] as BotV2Link[],
-};
+const _GENERIC_SAFETY_WARNING =
+  'لا تتجاهل تحذيرات الأمان — الكوادكابتر يمكن أن يسبب حريقاً أو إصابة.';
+const _GENERIC_SAFETY_CHIPS: BotV2Chip[] = [
+  { label: 'Checklist السلامة', route: '/checklists' },
+];
 
 // ── Clarification chips ───────────────────────────────────────────────────────
 
@@ -227,23 +76,14 @@ const CLARIFICATION_OOD_CHIPS: BotV2Chip[] = [
   { label: 'إعداد Betaflight', query: 'كيف أفتح Betaflight' },
 ];
 
-// ── Direct answer helpers ─────────────────────────────────────────────────────
+// ── Troubleshoot fallback (used only when no knowledge node is found) ─────────
 
-function _shortAnswerForConcept(conceptId: BotConceptId | undefined): string {
-  if (!conceptId) return 'لم أجد إجابة محددة. جرب صياغة سؤالك بشكل مختلف.';
-  const concept = getConceptById(conceptId);
-  return concept?.shortDefinition ?? 'يُرجى الرجوع إلى قسم التطبيق المناسب.';
-}
-
-function _chipsForConcept(conceptId: BotConceptId | undefined): BotV2Chip[] {
-  if (!conceptId) return CLARIFICATION_FPV_CHIPS;
-  const concept = getConceptById(conceptId);
-  if (!concept?.relatedConcepts?.length) return [];
-  return concept.relatedConcepts.slice(0, 3).map(id => ({
-    label: getConceptById(id)?.labelAr ?? id,
-    query: getConceptById(id)?.labelAr ?? id,
-  }));
-}
+const DEFAULT_TROUBLESHOOT_STEPS = [
+  'افحص التوصيلات بصرياً أولاً',
+  'افصل البطارية ثم أعد التوصيل',
+  'افتح Betaflight وراجع الـ Errors أو Arming Flags',
+  'راجع قسم استكشاف الأعطال في التطبيق',
+];
 
 // ── Main composer ─────────────────────────────────────────────────────────────
 
@@ -269,42 +109,46 @@ export function composeV2Answer(
   // ── safety_first ──────────────────────────────────────────────────────────
   if (mode === 'safety_first') {
     const hazard = safety.hazard ?? 'generic_critical';
-    const tpl = SAFETY_TEMPLATES[hazard] ?? SAFETY_TEMPLATES.generic_critical;
+    const shortAnswer = HAZARD_SHORT_ANSWER[hazard] ?? HAZARD_SHORT_ANSWER.generic_critical;
+    const nodeConceptId = HAZARD_TO_CONCEPT[hazard];
+    const node = nodeConceptId ? getKnowledgeForConcept(nodeConceptId) : undefined;
     return {
       mode,
       riskLevel: 'critical',
-      shortAnswer: tpl.shortAnswer,
-      steps: tpl.steps,
-      warning: tpl.warning,
-      chips: tpl.chips,
-      links: [],
+      shortAnswer,
+      steps: node?.steps ?? _GENERIC_SAFETY_STEPS,
+      warning: node?.safetyNotes ?? _GENERIC_SAFETY_WARNING,
+      chips: node?.chips ? [...node.chips] : _GENERIC_SAFETY_CHIPS,
+      links: node?.internalLinks ? [...node.internalLinks] : [],
       debug,
     };
   }
 
   // ── build_roadmap ─────────────────────────────────────────────────────────
   if (mode === 'build_roadmap') {
+    const node = getKnowledgeForConcept('drone_build_basics');
     return {
       mode,
       riskLevel: safety.riskLevel,
-      shortAnswer: BUILD_ROADMAP_ANSWER.shortAnswer,
-      steps: [...BUILD_ROADMAP_ANSWER.steps],
-      warning: BUILD_ROADMAP_ANSWER.warning,
-      chips: [...BUILD_ROADMAP_ANSWER.chips],
-      links: [...BUILD_ROADMAP_ANSWER.links],
+      shortAnswer: node?.shortAnswer ?? 'لبناء كوادكابتر FPV، ابدأ خطوة بخطوة.',
+      steps: node?.steps ? [...node.steps] : [],
+      warning: node?.safetyNotes,
+      chips: getKnowledgeChips('drone_build_basics'),
+      links: getKnowledgeLinks('drone_build_basics'),
       debug,
     };
   }
 
   // ── app_navigation ────────────────────────────────────────────────────────
   if (mode === 'app_navigation') {
+    const node = getKnowledgeForConcept('app_navigation');
     return {
       mode,
       riskLevel: 'none',
-      shortAnswer: APP_NAV_ANSWER.shortAnswer,
-      steps: [...APP_NAV_ANSWER.steps],
-      chips: [...APP_NAV_ANSWER.chips],
-      links: [...APP_NAV_ANSWER.links],
+      shortAnswer: node?.shortAnswer ?? 'التطبيق يحتوي على أقسام مترابطة — ابدأ بالبناء والدروس.',
+      steps: node?.steps ? [...node.steps] : [],
+      chips: getKnowledgeChips('app_navigation'),
+      links: getKnowledgeLinks('app_navigation'),
       debug,
     };
   }
@@ -333,42 +177,42 @@ export function composeV2Answer(
 
   // ── definition ────────────────────────────────────────────────────────────
   if (mode === 'definition') {
-    const concept = conceptId ? getConceptById(conceptId) : undefined;
-    const shortAnswer = concept?.shortDefinition
-      ? concept.shortDefinition
-      : 'لم أجد تعريفاً محدداً لهذا المصطلح في قاعدة المعرفة.';
+    const node = conceptId ? getKnowledgeForConcept(conceptId) : undefined;
+    const shortAnswer = node?.shortAnswer ?? 'لم أجد تعريفاً محدداً لهذا المصطلح في قاعدة المعرفة.';
     return {
       mode,
       riskLevel: safety.riskLevel,
       shortAnswer,
-      chips: _chipsForConcept(conceptId),
-      links: [],
+      steps: node?.beginnerExplanation ? [node.beginnerExplanation] : undefined,
+      chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
+      links: conceptId ? getKnowledgeLinks(conceptId) : [],
       debug,
     };
   }
 
   // ── troubleshooting ───────────────────────────────────────────────────────
   if (mode === 'troubleshooting') {
-    const steps =
-      (conceptId && TROUBLESHOOT_STEPS[conceptId]) ?? DEFAULT_TROUBLESHOOT_STEPS;
+    const node = conceptId ? getKnowledgeForConcept(conceptId) : undefined;
+    const steps = node?.steps ?? DEFAULT_TROUBLESHOOT_STEPS;
     return {
       mode,
       riskLevel: safety.riskLevel,
       shortAnswer: 'إليك خطوات التحقق من المشكلة:',
       steps: steps.slice(0, 6),
-      chips: _chipsForConcept(conceptId),
-      links: [],
+      chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
+      links: conceptId ? getKnowledgeLinks(conceptId) : [],
       debug,
     };
   }
 
   // ── direct_short_answer (default) ─────────────────────────────────────────
+  const node = conceptId ? getKnowledgeForConcept(conceptId) : undefined;
   return {
     mode: 'direct_short_answer',
     riskLevel: safety.riskLevel,
-    shortAnswer: _shortAnswerForConcept(conceptId),
-    chips: _chipsForConcept(conceptId),
-    links: [],
+    shortAnswer: node?.shortAnswer ?? 'لم أجد إجابة محددة. جرب صياغة سؤالك بشكل مختلف.',
+    chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
+    links: conceptId ? getKnowledgeLinks(conceptId) : [],
     debug,
   };
 }

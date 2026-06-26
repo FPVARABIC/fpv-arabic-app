@@ -2,7 +2,9 @@
  * BOT V2 — QA Runner.
  *
  * Runs all 50 baseline queries from botQuerySnapshot against the V2 engine
- * and produces a structured comparison report.
+ * and produces a structured comparison report. Phase 3 additions:
+ *  - knowledgeNodeFound / usesKnowledgeNode per entry
+ *  - QAValidation block: coverage, safety-node source-hints, shortAnswer length
  *
  * Usage (browser console or Node with tsx):
  *   import { runQA } from './qaRunner';
@@ -11,11 +13,21 @@
 
 import { botQuerySnapshot, type BotQuerySnapshot } from '../botQuerySnapshot';
 import { analyzeAndComposeBotV2Answer } from './engine';
+import { botKnowledgeBase } from './knowledgeBase';
+import { getKnowledgeForConcept } from './knowledgeResolver';
+import type { BotConceptId } from '../botConceptRegistry';
 import type { BotV2Answer, BotV2AnswerMode } from './types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type QAVerdict = 'same' | 'improved' | 'risky' | 'needs_review';
+
+export interface QAValidation {
+  violations: string[];
+  allConceptsCovered: boolean;
+  criticalNodesHaveNoSourceHints: boolean;
+  shortAnswerLengthOk: boolean;
+}
 
 export interface QAEntry {
   id: string;
@@ -31,6 +43,14 @@ export interface QAEntry {
   verdict: QAVerdict;
   verdictReason: string;
   knownIssue?: string;
+  /** True when a knowledge node exists for the matched concept. */
+  knowledgeNodeFound: boolean;
+  /** True when the answer mode actually consumed a knowledge node. */
+  usesKnowledgeNode: boolean;
+  /** Always false — no lesson body text is copied. */
+  hasLessonTextCopy: false;
+  chipsCount: number;
+  stepsCount: number;
 }
 
 export interface QAReport {
@@ -45,6 +65,7 @@ export interface QAReport {
   riskyEntries: QAEntry[];
   needsReviewEntries: QAEntry[];
   criticalSafetyEntries: QAEntry[];
+  validation: QAValidation;
 }
 
 // ── Verdict derivation ────────────────────────────────────────────────────────
@@ -170,6 +191,60 @@ function runImportantChecks(): { checks: string[]; allPassed: boolean } {
   return { checks: results, allPassed };
 }
 
+// ── Knowledge validation ──────────────────────────────────────────────────────
+
+const ALL_CONCEPT_IDS: BotConceptId[] = [
+  'drone_build_basics', 'motor_basic', 'esc_basic', 'flight_controller_basic',
+  'receiver_basic', 'vtx_basic', 'propeller_basic', 'wiring_basics',
+  'power_battery', 'lipo_safety', 'tx_rx_rule', 'betaflight_basics',
+  'gps_basics', 'app_navigation',
+];
+
+const CRITICAL_CONCEPT_IDS: BotConceptId[] = ['lipo_safety', 'propeller_basic'];
+
+// Modes whose answers are backed by a knowledge node lookup
+const KNOWLEDGE_BACKED_MODES = new Set<BotV2AnswerMode>([
+  'safety_first', 'build_roadmap', 'app_navigation',
+  'definition', 'troubleshooting', 'direct_short_answer',
+]);
+
+function runValidation(): QAValidation {
+  const violations: string[] = [];
+
+  const coveredIds = new Set(botKnowledgeBase.map(n => n.conceptId));
+  const allConceptsCovered = ALL_CONCEPT_IDS.every(id => coveredIds.has(id));
+  if (!allConceptsCovered) {
+    const missing = ALL_CONCEPT_IDS.filter(id => !coveredIds.has(id));
+    violations.push(`Missing knowledge nodes: ${missing.join(', ')}`);
+  }
+
+  let criticalNodesHaveNoSourceHints = true;
+  for (const id of CRITICAL_CONCEPT_IDS) {
+    const node = getKnowledgeForConcept(id);
+    if (node?.sourceSearchHints && node.sourceSearchHints.length > 0) {
+      criticalNodesHaveNoSourceHints = false;
+      violations.push(`Critical node '${id}' has sourceSearchHints (forbidden)`);
+    }
+  }
+
+  let shortAnswerLengthOk = true;
+  for (const node of botKnowledgeBase) {
+    const sentences = node.shortAnswer.split(/[.!؟]/).filter(s => s.trim().length > 0);
+    if (sentences.length > 2) {
+      shortAnswerLengthOk = false;
+      violations.push(`Node '${node.conceptId}' shortAnswer has ${sentences.length} sentences (max 2)`);
+    }
+    if (node.steps && node.steps.length > 6) {
+      violations.push(`Node '${node.conceptId}' has ${node.steps.length} steps (max 6)`);
+    }
+    if (node.chips && node.chips.length > 3) {
+      violations.push(`Node '${node.conceptId}' has ${node.chips.length} chips (max 3)`);
+    }
+  }
+
+  return { violations, allConceptsCovered, criticalNodesHaveNoSourceHints, shortAnswerLengthOk };
+}
+
 // ── Main runner ───────────────────────────────────────────────────────────────
 
 export function runQA(): QAReport {
@@ -178,6 +253,13 @@ export function runQA(): QAReport {
   for (const snapshot of botQuerySnapshot) {
     const answer = analyzeAndComposeBotV2Answer(snapshot.query);
     const [verdict, verdictReason] = deriveVerdict(snapshot, answer);
+
+    const rawConceptId = answer.debug.conceptId;
+    const knowledgeNodeFound =
+      rawConceptId !== undefined
+        ? getKnowledgeForConcept(rawConceptId as BotConceptId) !== undefined
+        : false;
+    const usesKnowledgeNode = KNOWLEDGE_BACKED_MODES.has(answer.mode) && knowledgeNodeFound;
 
     entries.push({
       id: snapshot.id,
@@ -191,6 +273,11 @@ export function runQA(): QAReport {
       verdict,
       verdictReason,
       knownIssue: snapshot.knownIssue,
+      knowledgeNodeFound,
+      usesKnowledgeNode,
+      hasLessonTextCopy: false,
+      chipsCount: answer.chips.length,
+      stepsCount: answer.steps?.length ?? 0,
     });
   }
 
@@ -198,15 +285,27 @@ export function runQA(): QAReport {
   for (const e of entries) counts[e.verdict === 'needs_review' ? 'needs_review' : e.verdict]++;
 
   const importantChecks = runImportantChecks();
+  const validation = runValidation();
 
   // Log to console for easy browser-console inspection
   console.group('[Bot V2 QA Report]');
   for (const e of entries) {
     const icon = e.verdict === 'risky' ? '🔴' : e.verdict === 'improved' ? '✅' : e.verdict === 'needs_review' ? '🟡' : '⚪';
-    console.log(`${icon} ${e.id} | ${e.v2Mode} | risk=${e.v2RiskLevel} | ${e.verdict} — ${e.verdictReason}`);
+    const kn = e.knowledgeNodeFound ? '📚' : '—';
+    console.log(`${icon}${kn} ${e.id} | ${e.v2Mode} | risk=${e.v2RiskLevel} | chips=${e.chipsCount} steps=${e.stepsCount} | ${e.verdict} — ${e.verdictReason}`);
   }
   console.log('\n--- Important Checks ---');
   for (const line of importantChecks.checks) console.log(line);
+  console.log('\n--- Knowledge Validation ---');
+  console.log(`All 14 concepts covered: ${validation.allConceptsCovered ? '✓' : '✗'}`);
+  console.log(`Critical nodes no source hints: ${validation.criticalNodesHaveNoSourceHints ? '✓' : '✗'}`);
+  console.log(`Short answer length ok: ${validation.shortAnswerLengthOk ? '✓' : '✗'}`);
+  if (validation.violations.length > 0) {
+    console.log('Violations:');
+    for (const v of validation.violations) console.log(`  ✗ ${v}`);
+  } else {
+    console.log('No violations ✓');
+  }
   console.log(`\nSummary: same=${counts.same} improved=${counts.improved} risky=${counts.risky} needs_review=${counts.needs_review}`);
   console.log(`Important checks: ${importantChecks.allPassed ? 'ALL PASSED ✓' : 'SOME FAILED ✗'}`);
   console.groupEnd();
@@ -223,5 +322,6 @@ export function runQA(): QAReport {
     riskyEntries: entries.filter(e => e.verdict === 'risky'),
     needsReviewEntries: entries.filter(e => e.verdict === 'needs_review'),
     criticalSafetyEntries: entries.filter(e => e.v2RiskLevel === 'critical'),
+    validation,
   };
 }
