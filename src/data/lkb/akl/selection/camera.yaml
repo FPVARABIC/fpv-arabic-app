@@ -1,0 +1,211 @@
+meta:
+  conceptId: selection.camera
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار كاميرا FPV
+  titleEn: FPV Camera Selection
+  tags:
+    - fpv camera
+    - camera selection
+    - analog camera
+    - digital camera
+    - video system
+    - image quality
+    - latency
+    - low light
+    - اختيار الكاميرا
+    - كاميرا FPV
+    - كاميرا الدرون
+    - نظام الفيديو
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/camera
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV video-system fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains FPV camera selection as part of a compatible video
+    ecosystem. It intentionally excludes camera installation, wiring, firmware,
+    image tuning, and product-specific reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار كاميرا FPV هو اختيار كاميرا متوافقة مع نظام الفيديو المختار، وتناسب
+    حجم الدرون، هدف البناء، جودة الصورة المطلوبة، وزمن التأخير المقبول.
+  textEn: >
+    FPV camera selection is choosing a camera that is compatible with the chosen
+    video system and fits the drone size, build goal, required image quality,
+    and acceptable latency.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    كاميرا FPV ليست اختيارًا منفصلًا عن نظام الفيديو. كاميرا Analog لا تعمل
+    بنفس طريقة كاميرا رقمية مخصصة لنظام معين، والكاميرا يجب أن تناسب الفريم
+    والمساحة المتاحة وطريقة الاستخدام. جودة الصورة مهمة، لكن التوافق وزمن
+    التأخير والحجم والإضاءة مهمة أيضًا.
+  textEn: >
+    An FPV camera is not selected separately from the video system. An analog
+    camera does not work the same way as a digital camera made for a specific
+    ecosystem, and the camera must fit the frame, available space, and use case.
+    Image quality matters, but compatibility, latency, size, and lighting
+    performance matter too.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار الكاميرا يعتمد أولًا على نظام الفيديو المختار.
+  - التمييز بين جودة الصورة والتوافق وزمن التأخير كمعايير مختلفة.
+  - إدراك أن حجم الكاميرا وتركيبها يجب أن يناسبا الفريم وهدف البناء.
+
+keyFacts:
+  - الكاميرا يجب أن تكون متوافقة مع نظام الفيديو المختار.
+  - كاميرات Analog والأنظمة الرقمية ليست قابلة للتبديل عشوائيًا.
+  - حجم الكاميرا يجب أن يناسب الفريم والمساحة المتاحة للتركيب.
+  - جودة الصورة ليست العامل الوحيد؛ زمن التأخير والتوافق مهمان أيضًا.
+  - أداء الكاميرا في الإضاءة الضعيفة قد يكون مهمًا حسب بيئة الطيران.
+  - الكاميرا المناسبة للتصوير السينمائي ليست بالضرورة الأفضل للتدريب أو السباق.
+  - اختيار الكاميرا يجب أن يتم بعد اختيار نظام الفيديو العام.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار الكاميرا فقط، ولا يتضمن تركيبها أو توصيلها أو تغيير
+    إعدادات الصورة أو تشغيل نظام الفيديو. أي تركيب عملي أو توصيل كهربائي يجب
+    أن يتم ضمن مفاهيم التركيب والسلامة المناسبة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي كاميرا FPV تعمل مع أي نظام فيديو.
+    correction: >
+      يجب أن تكون الكاميرا متوافقة مع نظام الفيديو، خصوصًا في الأنظمة الرقمية
+      التي تعتمد على منظومة محددة.
+    conceptLinked: selection.video_system
+
+  - belief: أعلى جودة صورة تعني دائمًا أفضل كاميرا للطيران.
+    correction: >
+      جودة الصورة مهمة، لكن زمن التأخير والحجم والتوافق والأداء في الإضاءة
+      والهدف من الدرون قد تكون أهم في بعض الاستخدامات.
+    conceptLinked: selection.build_goal
+
+  - belief: حجم الكاميرا لا يهم إذا كانت الصورة جيدة.
+    correction: >
+      حجم الكاميرا مهم لأن الفريم قد لا يوفر مساحة أو طريقة تثبيت مناسبة لكل
+      أنواع الكاميرات.
+    conceptLinked: selection.frame_size
+
+expectedQuestions:
+  - كيف أختار كاميرا FPV؟
+  - هل أي كاميرا تعمل مع أي VTX؟
+  - ما الفرق بين كاميرا Analog وكاميرا Digital؟
+  - هل جودة الصورة هي أهم شيء في الكاميرا؟
+  - هل حجم الكاميرا مهم؟
+  - هل الكاميرا تؤثر في زمن التأخير؟
+  - ما علاقة الكاميرا بنظام الفيديو؟
+  - هل أختار الكاميرا قبل نظام الفيديو؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.camera
+    status: draft
+    question: >
+      لماذا يجب اختيار نظام الفيديو قبل اختيار كاميرا FPV؟
+    explanation: >
+      لأن الكاميرا يجب أن تكون متوافقة مع منظومة الفيديو المختارة، ولا تعمل
+      جميع الكاميرات مع جميع الأنظمة أو النظارات أو أجهزة الإرسال.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.camera
+    status: draft
+    question: >
+      لماذا لا تكفي جودة الصورة وحدها لاختيار كاميرا مناسبة؟
+    explanation: >
+      لأن الكاميرا يجب أن تناسب الفريم ونظام الفيديو وزمن التأخير وبيئة الإضاءة
+      وهدف البناء، وليس جودة الصورة فقط.
+
+aliases:
+  ar:
+    - كاميرا FPV
+    - كاميرا الدرون
+    - اختيار الكاميرا
+    - كاميرا الفيديو
+    - كاميرا Analog
+    - كاميرا Digital
+  en:
+    - FPV Camera
+    - Camera Selection
+    - Analog Camera
+    - Digital Camera
+    - Drone Camera
+  transliteration:
+    - fpv camera
+    - camera selection
+    - analog camera
+    - digital camera
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.video_system
+    note: >
+      اختيار الكاميرا يعتمد على نظام الفيديو المختار.
+
+  - type: depends_on
+    targetConceptId: selection.frame_size
+    note: >
+      حجم الفريم والمساحة المتاحة يؤثران في اختيار الكاميرا.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في معايير اختيار الكاميرا مثل الجودة وزمن التأخير والإضاءة.
+
+  - type: prerequisite_for
+    targetConceptId: selection.vtx
+    note: >
+      اختيار VTX يجب أن يراعي توافقه مع الكاميرا ونظام الفيديو.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.camera
+    note: >
+      هذا المفهوم يمهد لفهم كاميرا FPV كمكون ووظيفتها داخل منظومة الفيديو.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.camera_mounting
+    note: >
+      تركيب الكاميرا وتثبيتها العملي ينتمي إلى مفاهيم سلامة أو تركيب منفصلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing an FPV camera.
+  It intentionally excludes camera wiring, mounting steps, lens adjustment,
+  image tuning, firmware configuration, product reviews, and detailed sensor
+  specifications. Camera function belongs in hardware.camera, VTX selection
+  belongs in selection.vtx, and practical installation belongs in safety or
+  assembly procedure nodes.

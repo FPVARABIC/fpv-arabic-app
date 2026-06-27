@@ -1,0 +1,215 @@
+meta:
+  conceptId: selection.esc_current
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار تيار ESC
+  titleEn: ESC Current Selection
+  tags:
+    - esc current
+    - esc rating
+    - amp rating
+    - current draw
+    - motor current
+    - fpv esc
+    - esc selection
+    - اختيار ESC
+    - تيار ESC
+    - أمبير ESC
+    - توافق ESC
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/esc-current
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains ESC current rating as a selection decision related to
+    motor, propeller, battery voltage, expected current draw, and safety margin.
+    It does not provide exact current calculations or product-specific recommendations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار تيار ESC هو اختيار متحكم سرعة يستطيع تحمل التيار المتوقع من المحركات
+    والمراوح والبطارية مع هامش أمان مناسب، دون إجهاد حراري أو كهربائي غير ضروري.
+  textEn: >
+    ESC current selection is choosing a speed controller that can handle the
+    expected current from the motors, propellers, and battery with an appropriate
+    safety margin, without unnecessary electrical or thermal stress.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الـ ESC لا يختار فقط لأنه "يشتغل" مع المحرك، بل يجب أن يتحمل التيار الذي
+    قد يطلبه نظام الدفع أثناء التسارع أو المناورات. محركات أكبر، مراوح أثقل،
+    KV غير مناسب، أو جهد بطارية أعلى قد ترفع التيار والحرارة. لذلك نختار ESC
+    بقدرة مناسبة للنظام كاملًا، وليس بناءً على رقم واحد منفصل.
+  textEn: >
+    An ESC is not chosen only because it can make a motor spin; it must handle
+    the current the propulsion system may demand during acceleration or maneuvers.
+    Larger motors, heavier propellers, unsuitable KV, or higher battery voltage
+    can increase current and heat. The ESC should be selected for the whole system,
+    not from a single number in isolation.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن تيار ESC يجب أن يناسب المحركات والمراوح والبطارية.
+  - إدراك أهمية هامش الأمان في اختيار ESC.
+  - التمييز بين رقم الأمبير المعلن وبين ملاءمة ESC للنظام الكامل.
+
+keyFacts:
+  - ESC يجب أن يتحمل التيار المتوقع من المحرك والمروحة والبطارية.
+  - المراوح الأكبر أو الأعلى حملًا قد تزيد التيار المطلوب من المحركات.
+  - KV غير مناسب أو جهد بطارية أعلى قد يرفعان التيار والحرارة.
+  - اختيار ESC بهامش أمان مناسب يقلل خطر السخونة أو التلف.
+  - رقم الأمبير وحده لا يكفي؛ يجب النظر إلى الجهد المدعوم، الجودة، التبريد، ونوع الاستخدام.
+  - ESC ضعيف بالنسبة للنظام قد يؤدي إلى فقدان قدرة، سخونة، تلف، أو فشل أثناء الطيران.
+  - ESC قوي جدًا قد يعمل، لكنه قد يزيد التكلفة أو الوزن دون فائدة حقيقية إذا كان مبالغًا فيه.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    هذا المفهوم مرتبط مباشرة بقرارات تيار وجهد وحرارة قد تؤثر في سلامة النظام.
+    لا يتضمن هذا المفهوم توصيل ESC أو لحام أسلاك أو اختبار محركات أو تركيب مراوح.
+    أي تطبيق عملي يجب أن يتم ضمن مفاهيم السلامة والفحص المخصصة، مع احترام حدود
+    الجهد والتيار وتجنب تشغيل المحركات أو البطارية خارج سياق آمن.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي ESC يجعل المحرك يدور فهو مناسب.
+    correction: >
+      دوران المحرك لا يعني أن ESC مناسب. يجب أن يتحمل التيار والجهد والحرارة
+      المتوقعة أثناء الاستخدام الفعلي.
+    conceptLinked: selection.component_matching
+
+  - belief: اختيار ESC بأعلى أمبير دائمًا هو الأفضل.
+    correction: >
+      ESC أعلى من الحاجة قد يعطي هامشًا، لكنه قد يزيد الوزن والتكلفة دون فائدة
+      إذا كان مبالغًا فيه بالنسبة للنظام.
+    conceptLinked: selection.esc_current
+
+  - belief: تيار ESC لا علاقة له بالمراوح أو KV.
+    correction: >
+      حجم المروحة وحملها وKV المحرك وجهد البطارية كلها تؤثر في التيار الذي
+      يجب أن يتحمله ESC.
+    conceptLinked: selection.motor_kv
+
+expectedQuestions:
+  - كيف أختار أمبير ESC؟
+  - هل ESC 35A يكفي؟
+  - هل أحتاج ESC 50A؟
+  - ما علاقة ESC بالمحركات؟
+  - ما علاقة ESC بالمراوح؟
+  - هل الأمبير الأعلى أفضل دائمًا؟
+  - لماذا يسخن ESC؟
+  - ماذا يحدث إذا كان ESC ضعيفًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.esc_current
+    status: draft
+    question: >
+      لماذا لا يكفي أن تختار ESC فقط لأنه يستطيع تدوير المحرك على الطاولة؟
+    explanation: >
+      لأن الاستخدام الفعلي قد يطلب تيارًا أعلى أثناء التسارع أو المناورات، وقد
+      يسخن ESC أو يتلف إذا لم يكن مناسبًا للنظام الكامل.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.esc_current
+    status: draft
+    question: >
+      لماذا قد لا يكون اختيار أعلى أمبير ESC دائمًا هو القرار الأفضل؟
+    explanation: >
+      لأن ESC المبالغ فيه قد يزيد الوزن والتكلفة دون فائدة حقيقية إذا كان النظام
+      لا يحتاج إلى ذلك الهامش، بينما المطلوب هو توافق مناسب مع هامش أمان معقول.
+
+aliases:
+  ar:
+    - تيار ESC
+    - أمبير ESC
+    - اختيار ESC
+    - قدرة ESC
+    - توافق ESC
+    - متحكم السرعة
+  en:
+    - ESC Current
+    - ESC Current Rating
+    - ESC Amp Rating
+    - ESC Selection
+    - Electronic Speed Controller
+  transliteration:
+    - esc current
+    - esc amp rating
+    - electronic speed controller
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار تيار ESC يعتمد على توافقه مع نظام الدفع الكامل.
+
+  - type: depends_on
+    targetConceptId: selection.motor_size
+    note: >
+      حجم المحرك يؤثر في متطلبات التيار والعزم والحرارة.
+
+  - type: depends_on
+    targetConceptId: selection.motor_kv
+    note: >
+      KV المحرك مع جهد البطارية والمروحة يؤثر في التيار المتوقع.
+
+  - type: depends_on
+    targetConceptId: selection.propeller_size
+    note: >
+      حجم المروحة وحملها يؤثران في التيار الذي يحتاجه المحرك.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      جهد البطارية يؤثر في سرعة الدوران والتيار والحرارة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.esc
+    note: >
+      هذا المفهوم يمهد لفهم ESC كمكوّن مادي ودوره في نظام الدفع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.smoke_stopper
+    note: >
+      قرارات التيار والـ ESC ترتبط لاحقًا بفحوص السلامة قبل تشغيل النظام.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about ESC current rating.
+  It intentionally excludes exact current calculations, wiring, soldering,
+  BLHeli/firmware setup, motor testing, propeller installation, smoke stopper
+  procedure, brand recommendations, and product-specific amp tables.
+  ESC function belongs in hardware.esc, while current testing, smoke stopper,
+  and electrical safety procedures belong in dedicated safety/procedure nodes.

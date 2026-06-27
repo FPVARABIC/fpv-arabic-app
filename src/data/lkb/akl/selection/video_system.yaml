@@ -1,0 +1,233 @@
+meta:
+  conceptId: selection.video_system
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار نظام الفيديو
+  titleEn: Video System Selection
+  tags:
+    - video system
+    - fpv video
+    - analog
+    - digital fpv
+    - DJI
+    - Walksnail
+    - HDZero
+    - fpv goggles
+    - video ecosystem
+    - اختيار نظام الفيديو
+    - الفيديو الرقمي
+    - الفيديو التناظري
+    - نظارة FPV
+    - نظام FPV
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/video-system
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV video-system fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains how to choose an FPV video ecosystem based on
+    compatibility, image quality, latency, budget, upgrade path, and build goal.
+    It intentionally excludes camera specifications, VTX configuration,
+    goggles setup, frequencies, channels, transmission power, and firmware.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار نظام الفيديو هو اختيار منظومة FPV التي تنقل الصورة من الدرون إلى
+    النظارة أو الشاشة بما يتوافق مع هدف البناء والميزانية ومتطلبات الأداء
+    والتوافق بين مكونات النظام.
+  textEn: >
+    Video system selection is choosing the FPV ecosystem that transmits video
+    from the drone to goggles or a display while matching the build goal,
+    budget, performance requirements, and component compatibility.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    نظام الفيديو ليس مجرد كاميرا أو جهاز إرسال فيديو، بل هو منظومة كاملة
+    تتكون من كاميرا وVTX وجهاز استقبال داخل النظارة أو الشاشة، ويجب أن تعمل
+    جميع هذه المكونات ضمن نظام متوافق واحد. تختلف أنظمة الفيديو في جودة الصورة،
+    وزمن التأخير، والتكلفة، وسهولة الترقية، لذلك لا يوجد نظام واحد هو الأفضل
+    لجميع المستخدمين.
+  textEn: >
+    An FPV video system is not just a camera or a video transmitter. It is a
+    complete ecosystem made of a camera, a VTX, and a compatible receiver inside
+    the goggles or display. All of these parts must work inside one compatible
+    system. Video systems differ in image quality, latency, cost, and upgrade
+    path, so no single system is best for every user.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن نظام الفيديو عبارة عن منظومة متكاملة وليس قطعة واحدة.
+  - التعرف على أهم معايير اختيار نظام الفيديو.
+  - إدراك أن التوافق والنظام البيئي أهم من اختيار أغلى نظام.
+
+keyFacts:
+  - نظام الفيديو يتكون من كاميرا وVTX وجهاز استقبال متوافق داخل النظارة أو الشاشة.
+  - تنقسم أنظمة FPV الحديثة بصورة عامة إلى أنظمة تناظرية Analog وأنظمة رقمية Digital، ثم تختلف الأنظمة داخل كل فئة.
+  - تختلف الأنظمة في جودة الصورة وزمن التأخير والسعر وإمكانية الترقية.
+  - اختيار نظام الفيديو يعني أيضًا اختيار نظام بيئي Ecosystem قد يؤثر في توافق المكونات وإمكانية الترقية مستقبلًا.
+  - تغيير نظام الفيديو لاحقًا قد يتطلب استبدال عدة مكونات في المنظومة.
+  - النظام المناسب يعتمد على هدف البناء والميزانية والتوافق بين المكونات.
+  - لا يوجد نظام فيديو واحد هو الأفضل لجميع المستخدمين.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار نظام الفيديو فقط، ولا يتضمن تشغيل أجهزة الإرسال،
+    أو ضبط قدرة الإرسال، أو تركيب الهوائيات، أو إعداد الترددات، أو أي إجراءات
+    عملية خاصة بالطيران أو بالـ VTX.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أغلى نظام فيديو هو دائمًا أفضل اختيار.
+    correction: >
+      النظام الأفضل هو الذي يناسب هدف البناء وميزانيتك ويحقق التوافق مع بقية
+      مكونات المشروع.
+    conceptLinked: selection.build_goal
+
+  - belief: يمكن تركيب أي كاميرا أو VTX أو نظارة مع أي نظام فيديو.
+    correction: >
+      كل نظام فيديو يعتمد على منظومة متوافقة، لذلك يجب التأكد من توافق
+      الكاميرا وVTX والنظارة قبل الشراء.
+    conceptLinked: selection.component_matching
+
+  - belief: جودة الصورة هي العامل الوحيد الذي يحدد أفضل نظام فيديو.
+    correction: >
+      يجب أيضًا مراعاة زمن التأخير، والميزانية، والتوافق، وإمكانية الترقية،
+      وتوفر القطع.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - ما هو نظام الفيديو في الدرون؟
+  - ما الفرق بين Analog والأنظمة الرقمية؟
+  - هل DJI أفضل من Walksnail؟
+  - هل HDZero مناسب للمبتدئين؟
+  - كيف أختار نظام الفيديو؟
+  - هل أستطيع تغيير نظام الفيديو لاحقًا؟
+  - هل جميع الكاميرات تعمل مع جميع أجهزة VTX والنظارات؟
+  - لماذا يجب اختيار النظام قبل شراء مكوناته؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.video_system
+    status: draft
+    question: >
+      لماذا يجب اختيار نظام الفيديو قبل شراء الكاميرا والـ VTX والنظارة؟
+    explanation: >
+      لأن الكاميرا والـ VTX والنظارة يجب أن تعمل ضمن منظومة متوافقة، واختيار
+      النظام أولًا يمنع شراء مكونات غير متوافقة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.video_system
+    status: draft
+    question: >
+      لماذا لا تكون جودة الصورة وحدها كافية لاختيار نظام الفيديو؟
+    explanation: >
+      لأن زمن التأخير، والتوافق، والميزانية، وإمكانية الترقية عوامل تؤثر أيضًا
+      في القرار النهائي.
+
+aliases:
+  ar:
+    - نظام الفيديو
+    - نظام FPV
+    - الفيديو التناظري
+    - الفيديو الرقمي
+    - اختيار نظام الفيديو
+    - منظومة الفيديو
+    - نظارة FPV
+  en:
+    - Video System
+    - FPV Video System
+    - Analog FPV
+    - Digital FPV
+    - FPV Ecosystem
+    - Video Ecosystem
+  transliteration:
+    - video system
+    - fpv video
+    - analog
+    - digital fpv
+    - ecosystem
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار نظام الفيديو يعتمد على توافق جميع مكونات المنظومة.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في اختيار نظام الفيديو المناسب.
+
+  - type: prerequisite_for
+    targetConceptId: selection.camera
+    note: >
+      اختيار الكاميرا يأتي بعد اختيار نظام الفيديو.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.vtx
+    note: >
+      اختيار جهاز إرسال الفيديو يعتمد على النظام المختار.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.antenna
+    note: >
+      اختيار الهوائي يعتمد على منظومة الفيديو المستخدمة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.goggles
+    note: >
+      اختيار النظارة يعتمد على نظام الفيديو المختار.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.camera
+    note: >
+      هذا المفهوم يمهد لفهم كاميرا FPV كمكون داخل منظومة الفيديو.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.vtx
+    note: >
+      هذا المفهوم يمهد لفهم جهاز إرسال الفيديو ووظيفته.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing an FPV video ecosystem.
+  It intentionally excludes camera specifications, VTX power levels,
+  frequencies, channels, SmartAudio, Tramp, firmware configuration,
+  goggles configuration, wiring, installation, and product reviews.
+  Component descriptions belong in hardware.*, configuration belongs in
+  firmware.*, and installation and safe operation belong in safety.*.
+  Goggle selection belongs in selection.goggles.

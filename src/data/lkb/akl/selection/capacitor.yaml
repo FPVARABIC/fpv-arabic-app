@@ -1,0 +1,183 @@
+meta:
+  conceptId: selection.capacitor
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار المكثف
+  titleEn: Capacitor Selection
+  tags:
+    - capacitor
+    - fpv capacitor
+    - capacitor selection
+    - low esr capacitor
+    - اختيار المكثف
+    - مكثف
+    - مكثف الدرون
+    - توافق المكثف
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/capacitor
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV capacitor selection
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains capacitor selection only as a compatibility and
+    planning decision. It intentionally excludes capacitor theory,
+    capacitance values, ESR, soldering, placement, electrical analysis,
+    firmware, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار المكثف هو تحديد ما إذا كان البناء يحتاج إلى مكثف مناسب، واختيار
+    مكثف يتوافق مع منظومة الطاقة ومتطلبات البناء.
+  textEn: >
+    Capacitor selection is deciding whether a build requires a capacitor and
+    selecting one compatible with the power system and build requirements.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يحتاج كل بناء إلى نفس نوع المكثف أو نفس الاعتبارات عند اختياره.
+    يعتمد القرار على منظومة الطاقة وطبيعة البناء، لذلك يجب التفكير في
+    التوافق مع بقية المكونات بدلاً من اختيار أي مكثف بشكل عشوائي.
+  textEn: >
+    Not every build requires the same capacitor or the same selection
+    criteria. The decision depends on the power system and the build itself,
+    so compatibility should be considered instead of choosing one randomly.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار المكثف قرار يعتمد على منظومة الطاقة.
+  - إدراك أن المكثف يجب أن يكون متوافقاً مع بقية المكونات.
+  - التمييز بين اختيار المكثف وبين تركيبه أو استخدامه.
+
+keyFacts:
+  - اختيار المكثف يعتمد على منظومة الطاقة.
+  - يجب مراعاة توافق المكثف مع البطارية.
+  - يجب مراعاة توافق المكثف مع ESC.
+  - ليست جميع البنايات تحتاج نفس اختيار المكثف.
+  - اختيار المكثف لا يعتمد على عامل واحد فقط.
+  - تركيب المكثف مفهوم مستقل.
+  - خصائص المكثف التفصيلية تنتمي إلى مفاهيم أخرى.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يقتصر على قرار اختيار المكثف، ولا يتضمن أي تعامل عملي معه.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي مكثف يصلح لأي بناء.
+    correction: >
+      يجب اختيار المكثف بما يتوافق مع منظومة الطاقة.
+    conceptLinked: selection.component_matching
+
+  - belief: المكثف الأكبر أفضل دائماً.
+    correction: >
+      لا يعتمد الاختيار على الحجم أو السعة فقط، وإنما على توافقه مع النظام.
+    conceptLinked: selection.battery_voltage
+
+  - belief: يمكن اختيار المكثف دون مراعاة ESC.
+    correction: >
+      يجب أن يكون المكثف متوافقاً مع بقية منظومة الطاقة.
+    conceptLinked: selection.esc
+
+expectedQuestions:
+  - هل أحتاج إلى مكثف؟
+  - كيف أختار مكثف الدرون؟
+  - هل أي مكثف يعمل مع أي ESC؟
+  - هل أي مكثف يعمل مع أي بطارية؟
+  - هل المكثف الأكبر أفضل؟
+  - متى أحتاج إلى مكثف؟
+  - ما الذي أراعيه عند اختيار المكثف؟
+  - هل تركيب المكثف إلزامي؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.capacitor
+    status: draft
+    question: >
+      لماذا لا يمكن اختيار المكثف بمعزل عن منظومة الطاقة؟
+    explanation: >
+      لأن توافقه يعتمد على بقية مكونات النظام.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.capacitor
+    status: draft
+    question: >
+      لماذا لا يكفي اختيار أكبر مكثف متوفر؟
+    explanation: >
+      لأن الاختيار يعتمد على التوافق مع البناء وليس على الحجم فقط.
+
+aliases:
+  ar:
+    - مكثف
+    - كاباسيتور
+    - اختيار المكثف
+    - مكثف الدرون
+    - مكثف ESC
+  en:
+    - Capacitor
+    - Capacitor Selection
+    - FPV Capacitor
+    - ESC Capacitor
+    - Low ESR Capacitor
+  transliteration:
+    - capacitor
+    - fpv capacitor
+    - low esr capacitor
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار المكثف جزء من توافق منظومة الطاقة.
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      يجب مراعاة توافق المكثف مع جهد البطارية.
+
+  - type: depends_on
+    targetConceptId: selection.esc
+    note: >
+      اختيار المكثف يرتبط بمنظومة ESC والطاقة.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.capacitor
+    note: >
+      هذا المفهوم يمهد لفهم المكثف كمكون.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about deciding whether and how to select a
+  capacitor for an FPV build.
+  It intentionally excludes capacitor theory, ESR, capacitance values,
+  soldering, installation, placement, electrical analysis, testing,
+  firmware configuration, and product reviews.
+  Hardware explanation belongs in hardware.capacitor.

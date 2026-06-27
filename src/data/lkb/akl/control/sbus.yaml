@@ -1,0 +1,183 @@
+meta:
+  conceptId: control.sbus
+  namespace: control
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: SBUS
+  titleEn: SBUS
+  tags:
+    - sbus
+    - radio protocol
+    - receiver protocol
+    - serial protocol
+    - receiver
+    - flight controller
+    - بروتوكول
+    - بروتوكول SBUS
+    - التحكم
+    - serial communication
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: control/sbus
+  knowledgeOrigin: >
+    Canonical control concept authored from SBUS receiver communication
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains SBUS as a serial receiver communication protocol
+    that defines how control-channel information is transferred between a
+    receiver and a Flight Controller. It intentionally excludes receiver
+    wiring, UART configuration, Serial RX setup, Betaflight or INAV
+    configuration, troubleshooting, signal inversion details,
+    product-specific implementations, and receiver binding procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    SBUS هو بروتوكول اتصال تسلسلي يحدد كيفية نقل معلومات قنوات التحكم
+    بين الريسيفر ومتحكم الطيران.
+  textEn: >
+    SBUS is a serial communication protocol that defines how control
+    channel information is transferred between a receiver and a Flight
+    Controller.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    عندما يحتاج الريسيفر إلى إرسال معلومات قنوات التحكم إلى متحكم
+    الطيران، يستخدم بروتوكول اتصال يحدد طريقة انتقال هذه البيانات.
+    SBUS هو أحد هذه البروتوكولات، ويحدد كيفية انتقال معلومات التحكم
+    بين الريسيفر ومتحكم الطيران.
+  textEn: >
+    When a receiver needs to send control-channel information to the
+    Flight Controller, it uses a communication protocol that defines how
+    the data is transferred. SBUS is one such protocol.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن SBUS بروتوكول اتصال وليس قطعة عتاد.
+  - إدراك أن SBUS يحدد طريقة انتقال معلومات التحكم بين الريسيفر ومتحكم الطيران.
+  - التمييز بين بروتوكول SBUS وبين إعدادات الـ Firmware أو توصيل الأسلاك.
+
+keyFacts:
+  - SBUS بروتوكول اتصال تسلسلي.
+  - يعمل بين الريسيفر ومتحكم الطيران.
+  - ينقل معلومات قنوات التحكم بصيغة يفهمها متحكم الطيران.
+  - يختلف عن الريسيفر نفسه.
+  - يختلف عن إعدادات الـ Firmware.
+  - يختلف عن توصيل الأسلاك.
+  - هذا المفهوم لا يشرح خطوات الإعداد أو التوصيل أو Binding.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم بروتوكول SBUS كمفهوم نظري فقط، ولا يتضمن أي
+    خطوات إعداد أو توصيل أو تشغيل عملي.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: SBUS هو جهاز استقبال (Receiver).
+    correction: >
+      SBUS ليس قطعة عتاد، بل بروتوكول اتصال يحدد كيفية انتقال
+      معلومات قنوات التحكم بين الريسيفر ومتحكم الطيران.
+    conceptLinked: selection.receiver
+
+  - belief: SBUS هو نفسه Serial RX.
+    correction: >
+      SBUS بروتوكول اتصال، أما Serial RX فهو إعداد داخل الـ Firmware
+      يسمح لمتحكم الطيران باستقبال بيانات بعض بروتوكولات الاتصال
+      التسلسلية.
+    conceptLinked: firmware.receiver_configuration
+
+  - belief: استخدام SBUS يلغي الحاجة إلى إعدادات الـ Firmware.
+    correction: >
+      بروتوكول الاتصال يختلف عن إعدادات الـ Firmware، ولكل منهما
+      مفاهيم مستقلة داخل النظام.
+    conceptLinked: firmware.receiver_configuration
+
+expectedQuestions:
+  - ما هو SBUS؟
+  - لماذا يستخدم SBUS؟
+  - هل SBUS هو نفسه الريسيفر؟
+  - ما الفرق بين SBUS وExpressLRS؟
+  - هل يحتاج SBUS إلى Binding؟
+  - ما علاقة SBUS بالـ Firmware؟
+  - هل SBUS ينقل أوامر التحكم فقط؟
+  - لماذا ما زال SBUS مستخدماً؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: control.sbus
+    status: draft
+    question: >
+      لماذا يعد SBUS بروتوكول اتصال وليس قطعة عتاد؟
+    explanation: >
+      لأنه يحدد طريقة انتقال معلومات قنوات التحكم بين الريسيفر
+      ومتحكم الطيران، ولا يمثل مكوناً مادياً.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: control.sbus
+    status: draft
+    question: >
+      لماذا يجب التمييز بين بروتوكول SBUS وإعدادات الـ Firmware؟
+    explanation: >
+      لأن البروتوكول يحدد كيفية انتقال البيانات، بينما تحدد
+      إعدادات الـ Firmware كيفية تعامل متحكم الطيران معها.
+
+aliases:
+  ar:
+    - SBUS
+    - بروتوكول SBUS
+    - إس باس
+  en:
+    - SBUS
+    - SBUS Protocol
+    - Serial Bus
+  transliteration:
+    - sbus
+    - serial bus
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      يعتمد فهم SBUS على فهم مفهوم بروتوكولات أجهزة الاستقبال.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      فهم بروتوكول SBUS يسبق دراسة كيفية تعامل الـ Firmware مع
+      بياناته.
+
+architecturalNotes: |
+  This concept explains SBUS as a receiver communication protocol.
+  It intentionally excludes receiver wiring, UART configuration,
+  Serial RX setup, Betaflight or INAV walkthroughs,
+  signal inversion, troubleshooting, binding procedures,
+  and product-specific implementations.
+  Receiver selection belongs in selection.receiver.
+  Receiver protocol selection belongs in selection.receiver_protocol.
+  Receiver configuration belongs in firmware.receiver_configuration.

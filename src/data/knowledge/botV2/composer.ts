@@ -19,6 +19,7 @@ import type { QueryAnalysis } from '../botQueryAnalysis';
 import type { BotV2Answer, BotV2Chip } from './types';
 import type { V2SafetyResult } from './safety';
 import type { ModeSelection } from './modeSelector';
+import type { AklIndexEntry } from './aklLookup';
 import {
   getKnowledgeForConcept,
   getKnowledgeChips,
@@ -91,6 +92,7 @@ export function composeV2Answer(
   analysis: QueryAnalysis,
   safety: V2SafetyResult,
   modeSelection: ModeSelection,
+  aklEntry?: AklIndexEntry,
 ): BotV2Answer {
   const { mode, isOutOfDomain } = modeSelection;
   const conceptId = analysis.conceptId;
@@ -178,12 +180,20 @@ export function composeV2Answer(
   // ── definition ────────────────────────────────────────────────────────────
   if (mode === 'definition') {
     const node = conceptId ? getKnowledgeForConcept(conceptId) : undefined;
-    const shortAnswer = node?.shortAnswer ?? 'لم أجد تعريفاً محدداً لهذا المصطلح في قاعدة المعرفة.';
+    const shortAnswer =
+      aklEntry?.shortAnswer ??
+      node?.shortAnswer ??
+      'لم أجد تعريفاً محدداً لهذا المصطلح في قاعدة المعرفة.';
+    const steps = aklEntry?.explanation
+      ? [aklEntry.explanation]
+      : node?.beginnerExplanation
+      ? [node.beginnerExplanation]
+      : undefined;
     return {
       mode,
       riskLevel: safety.riskLevel,
       shortAnswer,
-      steps: node?.beginnerExplanation ? [node.beginnerExplanation] : undefined,
+      steps,
       chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
       links: conceptId ? getKnowledgeLinks(conceptId) : [],
       debug,
@@ -210,7 +220,10 @@ export function composeV2Answer(
   return {
     mode: 'direct_short_answer',
     riskLevel: safety.riskLevel,
-    shortAnswer: node?.shortAnswer ?? 'لم أجد إجابة محددة. جرب صياغة سؤالك بشكل مختلف.',
+    shortAnswer:
+      node?.shortAnswer ??
+      aklEntry?.shortAnswer ??
+      'لم أجد إجابة محددة. جرب صياغة سؤالك بشكل مختلف.',
     chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
     links: conceptId ? getKnowledgeLinks(conceptId) : [],
     debug,

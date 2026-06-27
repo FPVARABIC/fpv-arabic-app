@@ -1,0 +1,213 @@
+meta:
+  conceptId: flight.quadcopter_flight
+  namespace: flight
+  nodeRole: overview
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: كيف يطير الكوادكابتر؟
+  titleEn: How a Quadcopter Flies
+  tags:
+    - quadcopter
+    - drone
+    - flight
+    - flight fundamentals
+    - أساسيات الطيران
+    - كيف يطير الدرون
+    - overview
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/quadcopter-flight
+  knowledgeOrigin: >
+    Canonical overview authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This overview introduces the core principles of quadcopter flight without
+    replacing the dedicated concepts that explain each principle in detail.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    يطير الكوادكابتر عندما يعمل نظام الدفع على توليد قوة كافية لموازنة الوزن
+    أو تجاوزه، بينما تنسق وحدة التحكم بالطيران سرعة المحركات للحفاظ على
+    الاستقرار وتنفيذ أوامر الطيار.
+  textEn: >
+    A quadcopter flies when its propulsion system generates enough thrust to
+    balance or exceed its weight, while the flight controller coordinates motor
+    speeds to maintain stability and execute pilot commands.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يعتمد طيران الكوادكابتر على جزء واحد فقط، بل على عمل عدة أنظمة معًا.
+    تولد المراوح قوة الدفع، ويؤثر الوزن باستمرار نحو الأسفل، بينما تضبط وحدة
+    التحكم سرعة المحركات للحفاظ على توازن الدرون والاستجابة لحركة عصي جهاز
+    التحكم. يساعد فهم هذه المبادئ الأساسية على استيعاب بقية مفاهيم الطيران
+    والبناء.
+  textEn: >
+    A quadcopter does not fly because of a single component.
+    The propellers generate thrust, weight constantly acts downward, and the
+    flight controller adjusts motor speeds to keep the aircraft stable and
+    responsive to pilot inputs.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - تكوين تصور عام عن كيفية طيران الكوادكابتر.
+  - التعرف على الأنظمة الرئيسية المشاركة في عملية الطيران.
+  - الاستعداد لدراسة مفاهيم الطيران الأساسية بالتفصيل.
+
+keyFacts:
+  - الطيران ينتج عن تفاعل عدة أنظمة تعمل معًا.
+  - الدفع والوزن من أهم القوى المؤثرة أثناء الطيران.
+  - وحدة التحكم بالطيران تنسق عمل المحركات ولا تولد قوة الدفع بنفسها.
+  - استقرار الدرون يعتمد على التحكم المستمر في سرعة المحركات.
+  - هذا المفهوم يقدم نظرة عامة، بينما تشرح المفاهيم التالية كل عنصر بالتفصيل.
+
+misconceptions:
+  - belief: الكوادكابتر يطير لأن المحركات تدور فقط.
+    correction: >
+      دوران المحركات وحده لا يكفي، بل يجب أن تعمل جميع أنظمة الطيران معًا
+      بطريقة صحيحة.
+    conceptLinked: flight.thrust
+
+  - belief: وحدة التحكم بالطيران هي التي ترفع الدرون.
+    correction: >
+      وحدة التحكم لا تولد الدفع، وإنما تنظم سرعة المحركات لتحقيق الطيران
+      المستقر.
+    conceptLinked: hardware.flight_controller
+
+  - belief: فهم جزء واحد يكفي لفهم كيفية طيران الدرون.
+    correction: >
+      الطيران نتيجة تفاعل الدفع والوزن والاستقرار وأنظمة التحكم معًا.
+    conceptLinked: flight.thrust
+
+expectedQuestions:
+  - كيف يطير الكوادكابتر؟
+  - ما الذي يجعل الدرون يرتفع عن الأرض؟
+  - ما دور وحدة التحكم بالطيران؟
+  - هل المحركات وحدها تجعل الدرون يطير؟
+  - لماذا يحتاج الدرون إلى أربع مراوح؟
+  - ما أول المفاهيم التي يجب تعلمها لفهم الطيران؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.quadcopter_flight
+    status: draft
+    question: >
+      لماذا لا يمكن تفسير طيران الكوادكابتر بالاعتماد على المحركات وحدها؟
+    explanation: >
+      لأن الطيران يعتمد على تفاعل عدة أنظمة، مثل الدفع والوزن ووحدة التحكم
+      بالطيران، وليس على دوران المحركات فقط.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.quadcopter_flight
+    status: draft
+    question: >
+      ما الفائدة من دراسة هذا المفهوم قبل الانتقال إلى مفاهيم الطيران الأخرى؟
+    explanation: >
+      لأنه يقدم صورة عامة تساعد على فهم العلاقات بين المفاهيم التي ستدرس
+      لاحقًا، مثل الدفع والوزن والتحويم والاستقرار.
+
+aliases:
+  ar:
+    - كيف يطير الدرون
+    - كيف يطير الكوادكابتر
+    - مبدأ طيران الدرون
+  en:
+    - How a Quadcopter Flies
+    - Quadcopter Flight
+  transliteration:
+    - quadcopter flight
+
+typedRelations:
+  - type: explains
+    targetConceptId: flight.thrust
+    note: >
+      يقدم هذا المفهوم مدخلًا عامًا لمفهوم الدفع.
+    pending: true
+
+  - type: explains
+    targetConceptId: flight.weight
+    note: >
+      يقدم هذا المفهوم مدخلًا عامًا لمفهوم الوزن.
+    pending: true
+
+  - type: explains
+    targetConceptId: flight.hover
+    note: >
+      يمهد لفهم مفهوم التحويم.
+    pending: true
+
+  - type: explains
+    targetConceptId: flight.flight_axes
+    note: >
+      يمهد لفهم محاور الحركة.
+    pending: true
+
+  - type: explains
+    targetConceptId: flight.center_of_gravity
+    note: >
+      يقدم تمهيدًا لمفهوم مركز الثقل.
+    pending: true
+
+  - type: explains
+    targetConceptId: flight.stability
+    note: >
+      يقدم تمهيدًا لمفهوم الاستقرار.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.flight_controller
+    note: >
+      يعتمد الطيران المستقر على عمل وحدة التحكم بالطيران.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.motor
+    note: >
+      تعتمد عملية الطيران على المحركات لتدوير المراوح.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.propeller
+    note: >
+      المراوح هي العنصر الذي يولد قوة الدفع.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.esc
+    note: >
+      يتحكم ESC في قدرة كل محرك وفق أوامر وحدة التحكم.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: power.lipo_battery
+    note: >
+      توفر البطارية الطاقة اللازمة لتشغيل نظام الدفع.
+    pending: true
+
+architecturalNotes: |
+  This overview introduces the complete flight system without replacing the
+  dedicated concepts that explain each principle individually.
+  It intentionally avoids procedural instructions, Betaflight configuration,
+  motor testing, propeller installation, and build steps.

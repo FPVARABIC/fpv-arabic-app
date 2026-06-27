@@ -1,0 +1,203 @@
+meta:
+  conceptId: firmware.uart_configuration
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: تخصيص وظائف UART
+  titleEn: UART Function Assignment
+  tags:
+    - uart
+    - uart configuration
+    - uart assignment
+    - firmware
+    - flight controller
+    - serial communication
+    - تخصيص UART
+    - إسناد الوظائف
+    - Serial RX
+    - MSP
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/uart-configuration
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller firmware
+    communication assignment fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains UART function assignment as a firmware concept.
+    It intentionally excludes Betaflight procedures, Ports tab navigation,
+    TX/RX wiring, CLI commands, troubleshooting, and product-specific
+    implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    تخصيص وظائف UART هو إسناد وظيفة Firmware معينة إلى إحدى واجهات UART
+    المتاحة داخل متحكم الطيران بحيث تمتلك كل وظيفة قناة الاتصال المناسبة
+    لها دون تعارض مع وظائف أخرى.
+  textEn: >
+    UART function assignment is the allocation of a firmware function to
+    one of the available UART interfaces so that each function uses an
+    appropriate communication channel without conflicting with others.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يوفر متحكم الطيران عدة واجهات UART، لكن فائدتها لا تتحقق إلا عندما
+    تُسند كل وظيفة إلى الواجهة المناسبة. بعض الوظائف تحتاج قناة اتصال
+    خاصة بها، لذلك يساعد تخصيص وظائف UART على تنظيم الاتصال بين
+    الـ Firmware والأجهزة المختلفة بطريقة واضحة ومنظمة.
+  textEn: >
+    A Flight Controller provides multiple UART interfaces, but they only
+    become useful when firmware functions are assigned appropriately.
+    Some functions require their own communication channel, making UART
+    function assignment essential for organized communication between the
+    firmware and connected devices.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن تخصيص UART يعني إسناد وظيفة Firmware إلى واجهة اتصال مناسبة.
+  - إدراك أن لكل وظيفة قناة اتصال مخصصة داخل متحكم الطيران.
+  - التمييز بين مفهوم تخصيص UART وبين خطوات الإعداد داخل البرامج.
+
+keyFacts:
+  - يعتمد تخصيص UART على عدد واجهات UART المتاحة.
+  - يمنح كل وظيفة قناة اتصال مناسبة.
+  - يساعد على منع تعارض وظائف Firmware.
+  - يعتمد العديد من الأجهزة على تخصيص UART الصحيح.
+  - فهم UART يسبق فهم تخصيصه.
+  - هذا المفهوم لا يشرح خطوات Betaflight.
+  - التنفيذ العملي ينتمي إلى مفاهيم Firmware مستقلة.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم مبدأ تخصيص وظائف UART فقط، ولا يتضمن أي خطوات
+    عملية أو إعداد داخل برامج Firmware.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: تخصيص UART يعني اختيار منفذ مادي فقط.
+    correction: >
+      تخصيص UART هو إسناد وظيفة Firmware إلى واجهة UART مناسبة، وليس مجرد
+      اختيار نقطة توصيل أو منفذ مادي.
+    conceptLinked: firmware.uart
+
+  - belief: يمكن إسناد عدة وظائف مستقلة إلى UART واحد دون تأثير.
+    correction: >
+      يهدف تخصيص UART إلى تنظيم وظائف Firmware بحيث تستخدم كل وظيفة
+      واجهة الاتصال المناسبة وتجنب التعارض.
+    conceptLinked: firmware.uart
+
+  - belief: أي مشكلة في الاتصال تعني أن الجهاز نفسه معطّل.
+    correction: >
+      قد يكون سبب المشكلة مرتبطًا بتخصيص وظيفة UART أو بإعدادات Firmware،
+      وليس بالجهاز نفسه.
+    conceptLinked: firmware.receiver_configuration
+
+expectedQuestions:
+  - ما معنى تخصيص UART؟
+  - لماذا يحتاج كل جهاز إلى UART؟
+  - هل يمكن استخدام UART نفسه لأكثر من وظيفة؟
+  - ما علاقة UART بالريسيفر؟
+  - ما علاقة UART بـ GPS؟
+  - ما علاقة UART بنظام الفيديو؟
+  - هل تخصيص UART هو نفسه إعداد Betaflight؟
+  - لماذا يجب فهم UART قبل تخصيصه؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.uart_configuration
+    status: draft
+    question: >
+      لماذا تحتاج وظائف Firmware المختلفة إلى واجهات UART منفصلة؟
+    explanation: >
+      لأن تنظيم قنوات الاتصال يساعد على عمل الوظائف المختلفة دون تعارض.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.uart_configuration
+    status: draft
+    question: >
+      لماذا يجب فهم UART قبل دراسة تخصيص وظائفه؟
+    explanation: >
+      لأن فهم واجهة الاتصال يسبق فهم كيفية إسناد وظائف Firmware إليها.
+
+aliases:
+  ar:
+    - تخصيص UART
+    - إعداد UART
+    - إسناد وظائف UART
+    - تخصيص الوظائف
+    - UART Configuration
+  en:
+    - UART Configuration
+    - UART Assignment
+    - UART Function Assignment
+    - Serial Function Assignment
+    - UART Setup
+  transliteration:
+    - uart configuration
+    - uart assignment
+    - uart function assignment
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.uart
+    note: >
+      فهم UART يسبق فهم كيفية إسناد وظائف Firmware إلى واجهات UART.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      عدد واجهات UART المتاحة يعتمد على Flight Controller الذي تم اختياره.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      إعداد الريسيفر يعتمد على فهم تخصيص وظائف UART.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.gps_configuration
+    note: >
+      إعداد GPS يعتمد على فهم تخصيص وظائف UART.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.vtx_configuration
+    note: >
+      إعداد نظام الفيديو يعتمد على فهم تخصيص وظائف UART.
+    pending: true
+
+architecturalNotes: |
+  This concept explains UART function assignment as a firmware concept.
+  It intentionally excludes software UI navigation, TX/RX wiring,
+  soldering, CLI commands, troubleshooting, and product-specific
+  implementations.
+  UART itself is defined in firmware.uart.
+  Receiver configuration belongs in firmware.receiver_configuration.
+  GPS configuration belongs in firmware.gps_configuration.
+  VTX configuration belongs in firmware.vtx_configuration.

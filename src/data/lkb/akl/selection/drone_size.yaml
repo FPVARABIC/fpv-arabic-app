@@ -1,0 +1,224 @@
+meta:
+  conceptId: selection.drone_size
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار حجم الدرون
+  titleEn: Drone Size Selection
+  tags:
+    - drone size
+    - fpv size
+    - 3 inch
+    - 5 inch
+    - 7 inch
+    - cinewhoop
+    - toothpick
+    - freestyle
+    - long range
+    - اختيار حجم الدرون
+    - حجم الدرون
+    - اختيار الفريم
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/drone-size
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains drone size as a selection decision driven by build goal,
+    flying environment, propeller size, and component compatibility. It does not
+    provide exact shopping recommendations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار حجم الدرون هو قرار يحدد فئة الفريم والمراوح والقطع المناسبة بناءً
+    على هدف البناء ومكان الطيران ومستوى المتعلم.
+  textEn: >
+    Drone size selection is the decision that defines the frame class, propeller
+    size, and suitable components based on the build goal, flying environment,
+    and learner level.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    حجم الدرون لا يعني حجم الفريم فقط، بل يؤثر في المراوح، المحركات، البطارية،
+    الوزن، زمن الطيران، القوة، وطريقة الاستخدام. درون 5 إنش شائع للفريستايل،
+    ودرون 7 إنش يناسب غالبًا الطيران البعيد، بينما Cinewhoop يركز على التصوير
+    القريب مع حماية المراوح، والأحجام الصغيرة مثل 3 إنش أو Toothpick قد تكون
+    أخف وأقل تكلفة لكنها ليست مناسبة لكل هدف.
+  textEn: >
+    Drone size is not only the physical frame size; it affects propellers, motors,
+    battery, weight, flight time, power, and use case. A 5-inch drone is common
+    for freestyle, a 7-inch drone is often used for long range, cinewhoops focus
+    on close-range filming with prop protection, and smaller sizes such as 3-inch
+    or toothpick builds can be lighter and lower-cost but are not suitable for every goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن حجم الدرون يؤثر في معظم اختيارات القطع.
+  - التمييز بين الأحجام الشائعة مثل 3 إنش و5 إنش و7 إنش وCinewhoop.
+  - ربط حجم الدرون بهدف البناء وبيئة الطيران ومستوى المتعلم.
+
+keyFacts:
+  - حجم الدرون يرتبط غالبًا بحجم المراوح التي يستطيع الفريم حملها.
+  - 5 إنش شائع في الفريستايل لأنه يوازن بين القوة، الاستجابة، وتوفر القطع.
+  - 7 إنش يستخدم غالبًا للطيران البعيد لأنه يسمح بكفاءة ومدى أكبر عند التصميم الصحيح.
+  - Cinewhoop يستخدم حماية للمراوح ويخدم التصوير القريب، لكنه لا يلغي قواعد السلامة.
+  - الأحجام الصغيرة قد تكون مناسبة للتدريب أو الأماكن المحدودة، لكنها تملك تنازلات في القوة والثبات وحمل الوزن.
+  - مكان الطيران والمساحة المتاحة يؤثران في اختيار الحجم، لأن الدرونات الأكبر أو الأسرع تحتاج مساحة أوسع وهامش أمان أكبر.
+  - لا يوجد حجم أفضل دائمًا؛ الحجم الصحيح يعتمد على الهدف والبيئة والميزانية والخبرة.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار الحجم فقط، ولا يعني أن أي حجم مناسب للطيران في أي
+    مكان. اختيار حجم أكبر أو أسرع قد يزيد المخاطر والمساحة المطلوبة للطيران.
+    أي قرار عملي يجب أن يراعي قواعد السلامة والقوانين المحلية وبيئة الطيران.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: حجم 5 إنش هو الخيار الأفضل لكل مبتدئ دائمًا.
+    correction: >
+      5 إنش شائع ومهم في FPV، لكنه ليس دائمًا أفضل خيار لكل مبتدئ. الهدف، المكان،
+      الميزانية، والخبرة قد تجعل حجمًا أصغر أو Cinewhoop أكثر مناسبة.
+    conceptLinked: selection.build_goal
+
+  - belief: كلما كان الدرون أكبر كان أفضل.
+    correction: >
+      الحجم الأكبر قد يعطي مدى أو حملًا أفضل في بعض الحالات، لكنه يزيد الوزن
+      والمساحة المطلوبة والمخاطر والتكلفة.
+    conceptLinked: selection.drone_size
+
+  - belief: Cinewhoop آمن للطيران قرب الناس لأنه يملك حماية للمراوح.
+    correction: >
+      حماية المراوح تقلل بعض المخاطر لكنها لا تجعل الطيران قرب الناس آمنًا
+      تلقائيًا أو مسموحًا في كل مكان.
+    conceptLinked: safety.first_safe_flight
+
+expectedQuestions:
+  - كيف أختار حجم الدرون؟
+  - هل أبدأ بدرون 5 إنش؟
+  - ما الفرق بين 3 إنش و5 إنش و7 إنش؟
+  - متى أختار Cinewhoop؟
+  - ما الحجم المناسب للفريستايل؟
+  - ما الحجم المناسب للطيران البعيد؟
+  - هل الدرون الأكبر أفضل دائمًا؟
+  - هل الحجم يؤثر في اختيار المحركات والبطارية؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.drone_size
+    status: draft
+    question: >
+      لماذا لا يمكن اختيار حجم الدرون قبل تحديد هدف البناء؟
+    explanation: >
+      لأن كل هدف يحتاج خصائص مختلفة. الفريستايل، الطيران البعيد، السباق،
+      والتصوير القريب لا تستخدم نفس الحجم أو نفس تنازلات التصميم.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.drone_size
+    status: draft
+    question: >
+      لماذا قد لا يكون الدرون الأكبر هو الخيار الأفضل للمبتدئ؟
+    explanation: >
+      لأن الحجم الأكبر قد يزيد الوزن والتكلفة والمخاطر والمساحة المطلوبة، وقد
+      يجعل التعلم أصعب إذا لم يكن مناسبًا لهدف المتعلم وبيئة الطيران.
+
+aliases:
+  ar:
+    - حجم الدرون
+    - اختيار حجم الدرون
+    - حجم الفريم
+    - درون 3 إنش
+    - درون 5 إنش
+    - درون 7 إنش
+    - ساين ووب
+    - سينهووب
+    - سين ووب
+  en:
+    - Drone Size
+    - FPV Size
+    - Frame Size
+    - 3 Inch Drone
+    - 5 Inch Drone
+    - 7 Inch Drone
+    - Cinewhoop
+    - Toothpick
+  transliteration:
+    - drone size
+    - frame size
+    - cinewhoop
+    - toothpick
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      اختيار الحجم يعتمد على هدف البناء والاستخدام المقصود.
+
+  - type: depends_on
+    targetConceptId: hardware.quadcopter_system
+    note: >
+      فهم النظام العام يساعد على إدراك تأثير الحجم في بقية المكونات.
+
+  - type: prerequisite_for
+    targetConceptId: selection.component_matching
+    note: >
+      توافق القطع يعتمد على الحجم المختار، خصوصًا الفريم والمراوح والمحركات والبطارية.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.frame_size
+    note: >
+      اختيار حجم الفريم تفصيل لاحق مبني على قرار حجم الدرون العام.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.motor_size
+    note: >
+      حجم المحرك يجب أن يناسب حجم الفريم والمراوح والهدف.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.propeller_size
+    note: >
+      حجم المروحة يرتبط مباشرة بفئة حجم الدرون والفريم.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.battery_voltage
+    note: >
+      اختيار الجهد المناسب يتأثر بحجم الدرون ونظام الدفع.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept, not a frame or propeller specification.
+  It explains how drone size acts as an early build-planning decision.
+  It intentionally avoids exact shopping lists, brand recommendations, fixed part
+  recipes, legal advice, flight procedures, and installation instructions.
+  Detailed frame, motor, propeller, battery, and compatibility choices belong in
+  dedicated selection and hardware concepts.

@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "npx tsx scripts/buildAklIndex.ts && npx tsx scripts/buildAppManifest.ts",
+    "predev": "npx tsx scripts/buildAklIndex.ts && npx tsx scripts/buildAppManifest.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -1,0 +1,233 @@
+meta:
+  conceptId: selection.component_matching
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: توافق القطع
+  titleEn: Component Matching
+  tags:
+    - component matching
+    - compatibility
+    - fpv parts
+    - drone parts
+    - build planning
+    - frame
+    - motor
+    - propeller
+    - esc
+    - battery
+    - توافق القطع
+    - توافق المكونات
+    - اختيار القطع
+    - تخطيط البناء
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/component-matching
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains component matching as a decision layer that ensures
+    selected FPV parts work together as a safe and coherent system. It does not
+    provide exact part lists or brand-specific recommendations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    توافق القطع هو التأكد من أن الفريم، المراوح، المحركات، الـ ESC، البطارية،
+    ووحدة التحكم وأنظمة الاتصال والفيديو تعمل معًا ضمن حدود مناسبة وآمنة.
+  textEn: >
+    Component matching is the process of making sure the frame, propellers, motors,
+    ESC, battery, flight controller, control link, and video system work together
+    within suitable and safe limits.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يكفي أن تكون كل قطعة جيدة وحدها؛ يجب أن تناسب القطع بعضها البعض.
+    حجم الفريم يحدد حجم المراوح، والمراوح تؤثر في اختيار المحركات، والمحركات
+    تحدد متطلبات الـ ESC والبطارية، بينما تحتاج الأنظمة الإلكترونية إلى جهد
+    وتوصيلات مناسبة. عندما يكون التوافق ضعيفًا قد يصبح الدرون صعب التحكم أو
+    غير فعال أو معرضًا لمشاكل كهربائية وميكانيكية.
+  textEn: >
+    It is not enough for each part to be good on its own; the parts must fit each
+    other as a system. Frame size limits propeller size, propellers affect motor
+    choice, motors define ESC and battery requirements, and electronic systems
+    need suitable voltage and connections. Poor matching can make the drone hard
+    to control, inefficient, or vulnerable to electrical and mechanical problems.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار القطع يجب أن يتم كنظام مترابط.
+  - معرفة أهم أزواج التوافق بين الفريم، المراوح، المحركات، ESC، والبطارية.
+  - إدراك أن عدم التوافق قد يسبب أداء ضعيفًا أو مشاكل سلامة.
+
+keyFacts:
+  - الفريم يحدد غالبًا حجم المراوح والمساحة المتاحة للتركيب.
+  - المروحة يجب أن تناسب حجم الفريم وقدرة المحرك.
+  - المحرك يجب أن يناسب حجم المروحة، جهد البطارية، وهدف البناء.
+  - الـ ESC يجب أن يتحمل التيار المتوقع من المحركات والمراوح والبطارية.
+  - البطارية يجب أن تناسب الجهد، التيار، الوزن، والمساحة المتاحة.
+  - Flight Controller يجب أن يملك المنافذ والجهود المناسبة للريسيفر ونظام الفيديو والملحقات.
+  - توافق القطع يقلل الشراء العشوائي ويجعل البناء أكثر أمانًا وقابلية للنجاح.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح توافق القطع على مستوى التخطيط فقط، لكنه مرتبط بقرارات قد
+    تؤثر في السلامة مثل الجهد، التيار، المراوح، البطارية، والـ ESC. لا يتضمن
+    هذا المفهوم توصيل أسلاك أو لحام أو اختبار محركات. أي تطبيق عملي يجب أن يتم
+    ضمن مفاهيم التوافق التفصيلية وإجراءات السلامة والفحص المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: إذا كانت كل قطعة ممتازة وحدها فسيكون الدرون ممتازًا.
+    correction: >
+      جودة القطعة وحدها لا تكفي. يجب أن تكون القطع متوافقة في الحجم، الجهد،
+      التيار، التركيب، والوظيفة.
+    conceptLinked: hardware.quadcopter_system
+
+  - belief: يمكن تركيب أي مروحة على أي محرك إذا ركبت ميكانيكيًا.
+    correction: >
+      تركيب المروحة ميكانيكيًا لا يعني أنها مناسبة للمحرك أو الفريم أو البطارية.
+      يجب أن تكون المروحة ضمن قدرة نظام الدفع.
+    conceptLinked: selection.propeller_size
+
+  - belief: اختيار بطارية أكبر دائمًا يحسن الأداء.
+    correction: >
+      البطارية الأكبر قد تزيد الوزن وتغير مركز الثقل وتتطلب توافقًا مع الجهد
+      والتيار والمساحة المتاحة.
+    conceptLinked: selection.battery_voltage
+
+expectedQuestions:
+  - ما معنى توافق القطع؟
+  - كيف أعرف أن القطع تناسب بعضها؟
+  - هل يمكن تركيب أي محرك مع أي مروحة؟
+  - كيف أختار ESC مناسبًا للمحركات؟
+  - هل البطارية الأكبر أفضل دائمًا؟
+  - ما علاقة الفريم بحجم المراوح؟
+  - ما علاقة حجم الدرون بتوافق القطع؟
+  - ماذا يحدث إذا كانت القطع غير متوافقة؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.component_matching
+    status: draft
+    question: >
+      لماذا لا يكفي أن تختار محركًا قويًا ومروحة كبيرة دون النظر إلى الفريم والـ ESC؟
+    explanation: >
+      لأن المروحة يجب أن تناسب مساحة الفريم وقدرة المحرك، والـ ESC يجب أن يتحمل
+      التيار المطلوب. اختيار قطعة قوية وحدها قد يسبب عدم توافق أو مشاكل أداء وسلامة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.component_matching
+    status: draft
+    question: >
+      لماذا قد تؤدي بطارية أكبر إلى نتيجة أسوأ بدل أداء أفضل؟
+    explanation: >
+      لأن البطارية الأكبر قد تزيد الوزن وتؤثر في مركز الثقل والمساحة المتاحة،
+      وقد لا تناسب الجهد أو التيار المطلوب للنظام.
+
+aliases:
+  ar:
+    - توافق القطع
+    - توافق المكونات
+    - توافق قطع الدرون
+    - اختيار القطع المتوافقة
+    - هل القطع تركب مع بعض
+  en:
+    - Component Matching
+    - Component Compatibility
+    - FPV Parts Compatibility
+    - Drone Parts Matching
+  transliteration:
+    - component matching
+    - compatibility
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: hardware.quadcopter_system
+    note: >
+      فهم الكوادكابتر كنظام مترابط ضروري قبل فهم توافق القطع.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يحدد معايير التوافق المطلوبة بين القطع.
+
+  - type: depends_on
+    targetConceptId: selection.drone_size
+    note: >
+      حجم الدرون يحدد حدودًا مهمة لتوافق الفريم والمراوح والمحركات والبطارية.
+
+  - type: prerequisite_for
+    targetConceptId: selection.frame_size
+    note: >
+      اختيار الفريم التفصيلي يحتاج فهم توافق القطع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.motor_size
+    note: >
+      اختيار حجم المحرك يعتمد على توافقه مع الفريم والمروحة والهدف.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.propeller_size
+    note: >
+      اختيار المروحة يعتمد على توافقها مع الفريم والمحرك ونظام الدفع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.esc_current
+    note: >
+      اختيار قدرة ESC يجب أن يتم بناءً على متطلبات المحركات والمراوح والبطارية.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.battery_voltage
+    note: >
+      اختيار جهد البطارية يجب أن يراعي توافق المحركات والـ ESC ونظام الدفع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.video_system
+    note: >
+      اختيار نظام الفيديو يجب أن يراعي الفريم، المساحة، الطاقة، وهدف البناء.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.receiver_protocol
+    note: >
+      اختيار نظام التحكم يجب أن يراعي Flight Controller وهدف البناء والمدى المطلوب.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about matching components as a system.
+  It intentionally avoids exact part recipes, brand recommendations, wiring
+  instructions, soldering, current calculations, Betaflight setup, or live
+  troubleshooting. Detailed choices for frame, motor, propeller, ESC, battery,
+  receiver, and video system belong in dedicated selection and hardware concepts.

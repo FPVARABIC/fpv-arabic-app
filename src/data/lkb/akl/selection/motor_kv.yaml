@@ -1,0 +1,209 @@
+meta:
+  conceptId: selection.motor_kv
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار KV المحرك
+  titleEn: Motor KV Selection
+  tags:
+    - motor kv
+    - kv rating
+    - fpv motor
+    - brushless motor
+    - motor selection
+    - battery voltage
+    - propeller size
+    - اختيار KV
+    - KV المحرك
+    - سرعة المحرك
+    - توافق المحرك
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/motor-kv
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains motor KV as a selection decision related to battery
+    voltage, motor size, propeller load, and build goal. It does not provide exact
+    product recommendations or full motor performance calculations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    KV المحرك هو قيمة تصف سرعة دوران المحرك النظرية لكل فولت بدون حمل، واختيارها
+    يجب أن يناسب جهد البطارية، حجم المروحة، حجم المحرك، وهدف البناء.
+  textEn: >
+    Motor KV is a value that describes the motor's theoretical no-load RPM per
+    volt, and selecting it must match battery voltage, propeller size, motor size,
+    and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يعني KV الأعلى أن المحرك أفضل أو أقوى دائمًا.
+    KV أعلى مع جهد بطارية أعلى أو مروحة كبيرة قد يرفع التيار والحرارة ويضغط على
+    الـ ESC والبطارية. لذلك يُختار KV كجزء من نظام كامل، وليس كرقم منفصل عن
+    حجم المحرك والمروحة والبطارية.
+  textEn: >
+    Higher KV does not always mean a better or stronger motor.
+    Higher KV combined with higher battery voltage or a large propeller can
+    increase current, heat, and stress on the ESC and battery. KV should be chosen
+    as part of the whole system, not as a number separate from motor size,
+    propeller, and battery.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى KV كعلاقة بين سرعة الدوران والجهد.
+  - التمييز بين KV وحجم المحرك أو قوة المحرك.
+  - إدراك أن اختيار KV يعتمد على البطارية والمروحة والهدف.
+
+keyFacts:
+  - KV يصف عدد دورات المحرك النظرية في الدقيقة لكل فولت بدون حمل.
+  - KV الأعلى لا يعني دائمًا قوة أعلى أو اختيارًا أفضل.
+  - جهد البطارية الأعلى مع KV مرتفع قد يزيد سرعة الدوران والتيار والحرارة.
+  - المراوح الأكبر أو الأثقل تحتاج اختيار KV مناسب حتى لا يجهد النظام.
+  - KV يجب أن ينسجم مع حجم المحرك، حجم المروحة، جهد البطارية، والهدف.
+  - اختيارات KV تختلف بين 4S و6S لأن الجهد يؤثر مباشرة في سرعة الدوران النظرية.
+  - اختيار KV غير مناسب قد يؤدي إلى حرارة عالية، استهلاك زائد، أو أداء غير متوازن.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار KV على مستوى التخطيط فقط، لكنه مرتبط بقرارات قد تؤثر
+    في التيار والحرارة والـ ESC والبطارية والمراوح. لا يتضمن هذا المفهوم تشغيل
+    المحركات أو اختبارها أو تركيب المراوح. أي تطبيق عملي يجب أن يتم ضمن مفاهيم
+    التوافق والفحص والسلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: KV الأعلى يعني محركًا أقوى دائمًا.
+    correction: >
+      KV الأعلى يعني سرعة دوران نظرية أعلى لكل فولت، لكنه لا يعني بالضرورة عزمًا
+      أعلى أو أداءً أفضل داخل النظام.
+    conceptLinked: selection.motor_size
+
+  - belief: يمكن اختيار KV دون معرفة جهد البطارية.
+    correction: >
+      جهد البطارية يؤثر مباشرة في سرعة الدوران النظرية، لذلك لا يمكن اختيار KV
+      بمعزل عن 4S أو 6S أو غيرها.
+    conceptLinked: selection.battery_voltage
+
+  - belief: نفس KV مناسب لكل أحجام المراوح.
+    correction: >
+      المروحة الأكبر أو الأثقل تزيد الحمل على المحرك، وقد تحتاج KV مختلفًا حتى
+      يبقى النظام متوازنًا وآمنًا.
+    conceptLinked: selection.propeller_size
+
+expectedQuestions:
+  - ما معنى KV في محركات الدرون؟
+  - هل KV الأعلى أفضل؟
+  - ما الفرق بين KV وحجم المحرك؟
+  - كيف أختار KV المناسب؟
+  - ما علاقة KV ببطارية 4S أو 6S؟
+  - هل يمكن استخدام نفس KV مع كل المراوح؟
+  - لماذا يسخن المحرك إذا كان KV غير مناسب؟
+  - هل KV يعني عزم المحرك؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.motor_kv
+    status: draft
+    question: >
+      لماذا لا يعني KV الأعلى أن المحرك أقوى أو أفضل دائمًا؟
+    explanation: >
+      لأن KV يصف سرعة دوران نظرية لكل فولت، بينما الأداء الفعلي يعتمد أيضًا على
+      حجم المحرك، المروحة، البطارية، التيار، والحرارة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.motor_kv
+    status: draft
+    question: >
+      لماذا يجب معرفة جهد البطارية قبل اختيار KV المحرك؟
+    explanation: >
+      لأن الجهد يضاعف تأثير KV على سرعة الدوران النظرية. اختيار KV مناسب لـ 4S
+      قد لا يكون مناسبًا بنفس الطريقة لـ 6S.
+
+aliases:
+  ar:
+    - KV المحرك
+    - اختيار KV
+    - قيمة KV
+    - سرعة المحرك
+    - كيه في المحرك
+    - ك ف المحرك
+  en:
+    - Motor KV
+    - KV Rating
+    - Motor KV Selection
+    - RPM per Volt
+  transliteration:
+    - motor kv
+    - kv rating
+    - rpm per volt
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.motor_size
+    note: >
+      اختيار KV يجب أن يأتي بعد فهم حجم المحرك لأنه يختلف عن القدرة الفيزيائية للمحرك.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      KV يجب أن يتوافق مع المروحة، البطارية، ESC، وهدف البناء.
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      جهد البطارية يؤثر مباشرة في سرعة الدوران النظرية الناتجة عن KV.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: selection.propeller_size
+    note: >
+      حجم المروحة وحملها يؤثران في اختيار KV المناسب.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.esc_current
+    note: >
+      اختيار KV يؤثر في التيار والحرارة، وبالتالي في تقدير ESC المناسب.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.motor
+    note: >
+      هذا المفهوم يمهد لفهم KV كخاصية مهمة في المحركات.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing motor KV.
+  It intentionally excludes exact KV tables, brand recommendations, thrust data,
+  motor testing, propeller installation, ESC calibration, Betaflight motor setup,
+  and detailed current calculations. Motor construction belongs in hardware.motor,
+  while battery voltage, propeller size, ESC current, and complete compatibility
+  belong in dedicated selection concepts.

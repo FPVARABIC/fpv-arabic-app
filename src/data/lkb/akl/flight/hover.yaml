@@ -1,0 +1,190 @@
+meta:
+  conceptId: flight.hover
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: التحويم
+  titleEn: Hover
+  tags:
+    - hover
+    - flight
+    - quadcopter
+    - drone
+    - thrust
+    - weight
+    - التحويم
+    - الثبات في الهواء
+    - أساسيات الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/hover
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains hover as a flight state where thrust and weight are
+    approximately balanced. It does not include practical first-flight procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    التحويم هو حالة طيران يبقى فيها الكوادكابتر على ارتفاع وموضع شبه ثابتين
+    عندما يتوازن الدفع الكلي تقريبًا مع الوزن، وتستمر وحدة التحكم بالطيران
+    في تصحيح الاتزان.
+  textEn: >
+    Hover is the flight state in which a quadcopter stays at an approximately
+    constant altitude and position when total thrust is roughly balanced with
+    weight and the flight controller continues correcting balance.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    أثناء التحويم لا يكون الدرون ثابتًا تمامًا مثل جسم معلّق في الهواء.
+    بل يقوم Flight Controller بتعديلات صغيرة ومستمرة على سرعة المحركات للحفاظ
+    على الارتفاع والاتزان. إذا قل الدفع عن الوزن يبدأ الدرون بالهبوط، وإذا زاد
+    الدفع عن الوزن يبدأ بالصعود.
+  textEn: >
+    During hover, the drone is not perfectly motionless like a suspended object.
+    The flight controller continuously makes small motor-speed corrections to
+    maintain altitude and balance. If thrust drops below weight, the drone descends;
+    if thrust exceeds weight, it climbs.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى التحويم في الكوادكابتر.
+  - ربط التحويم بتوازن الدفع والوزن.
+  - إدراك أن التحويم يحتاج تصحيحات مستمرة وليس حالة سكون كاملة.
+
+keyFacts:
+  - التحويم يحدث عندما يكون الدفع الكلي قريبًا من وزن الدرون.
+  - التحويم لا يعني أن الدرون ثابت تمامًا بلا تصحيح.
+  - Flight Controller يساعد على الحفاظ على الاتزان أثناء التحويم.
+  - وزن الدرون ونظام الدفع يؤثران مباشرة في جودة التحويم.
+  - التحويم مفهوم أساسي لفهم الإقلاع والهبوط وأول طيران آمن.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح معنى التحويم فقط، ولا يعد دليلاً عمليًا لتجربة أول
+    تحويم. يجب أن يتم أي تدريب عملي على التحويم ضمن مفاهيم وإجراءات السلامة
+    المخصصة لأول طيران آمن.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: التحويم يعني أن الدرون لا يتحرك إطلاقًا.
+    correction: >
+      التحويم يعني بقاء الارتفاع والموضع شبه ثابتين، لكنه يتطلب تصحيحات
+      مستمرة وقد تحدث حركات صغيرة بسبب الرياح أو التحكم أو عدم التوازن.
+    conceptLinked: flight.stability
+
+  - belief: التحويم يعتمد فقط على قوة المحركات.
+    correction: >
+      التحويم يعتمد على توازن الدفع مع الوزن، وعلى عمل Flight Controller
+      وتوزيع الوزن واستجابة نظام الدفع.
+    conceptLinked: flight.thrust
+
+  - belief: إذا استطاع الدرون التحويم فهذا يعني أن كل الإعدادات مثالية.
+    correction: >
+      القدرة على التحويم لا تعني أن كل شيء مثالي؛ فقد تبقى مشاكل في التوازن
+      أو الاهتزاز أو إعدادات التحكم.
+    conceptLinked: flight.stability
+
+expectedQuestions:
+  - ما هو التحويم؟
+  - كيف يبقى الدرون ثابتًا في الهواء؟
+  - ما العلاقة بين التحويم والدفع؟
+  - ما العلاقة بين التحويم والوزن؟
+  - لماذا يهبط الدرون أثناء التحويم؟
+  - لماذا يصعد الدرون أثناء التحويم؟
+  - هل التحويم يعني أن الدرون ثابت تمامًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.hover
+    status: draft
+    question: >
+      لماذا يبدأ الدرون بالهبوط إذا أصبح الدفع الكلي أقل من الوزن أثناء التحويم؟
+    explanation: >
+      لأن القوة المؤثرة إلى الأسفل تصبح أكبر من القوة التي تدفع الدرون إلى الأعلى،
+      فيفقد القدرة على الحفاظ على ارتفاعه.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.hover
+    status: draft
+    question: >
+      لماذا لا نعتبر التحويم حالة سكون تام رغم أن الدرون يبقى تقريبًا في مكانه؟
+    explanation: >
+      لأن Flight Controller والطيار يقومان بتصحيحات مستمرة، وقد تؤثر عوامل مثل
+      الرياح وتوزيع الوزن والاهتزازات في حركة الدرون الصغيرة.
+
+aliases:
+  ar:
+    - التحويم
+    - الثبات في الهواء
+    - بقاء الدرون في الهواء
+    - هوفر
+  en:
+    - Hover
+    - Hovering
+    - Drone Hover
+  transliteration:
+    - hover
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: flight.thrust
+    note: >
+      التحويم يعتمد على توفر دفع كافٍ لموازنة الوزن.
+
+  - type: depends_on
+    targetConceptId: flight.weight
+    note: >
+      وزن الدرون هو القوة التي يجب موازنتها أثناء التحويم.
+
+  - type: depends_on
+    targetConceptId: flight.stability
+    note: >
+      التحويم الجيد يعتمد على استقرار الدرون واستجابة نظام التحكم.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: flight.center_of_gravity
+    note: >
+      سهولة الحفاظ على التحويم تتأثر بتوزيع الوزن ومركز الثقل.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.first_safe_flight
+    note: >
+      فهم التحويم ضروري قبل التدريب على أول طيران آمن.
+    pending: true
+
+architecturalNotes: |
+  This concept explains hover as a flight state, not as a first-flight procedure.
+  It intentionally excludes arming, throttle practice, Betaflight setup,
+  propeller safety, and outdoor first-flight steps.
+  The included safety block defines the safe scope of this concept only.
+  Practical hover training belongs in dedicated safety and procedure nodes.

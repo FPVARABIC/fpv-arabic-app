@@ -1,0 +1,188 @@
+meta:
+  conceptId: firmware.receiver_binding
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: ربط جهاز الإرسال بالريسيفر
+  titleEn: Receiver Binding
+  tags:
+    - receiver binding
+    - binding
+    - firmware
+    - receiver
+    - transmitter
+    - radio link
+    - control
+    - ربط الريسيفر
+    - ربط جهاز الإرسال
+    - binding relationship
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/receiver-binding
+  knowledgeOrigin: >
+    Canonical firmware concept authored from receiver binding
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains receiver binding as the logical association
+    between a transmitter and a receiver that allows them to communicate
+    using a compatible radio protocol. It intentionally excludes binding
+    procedures, button sequences, Wi-Fi mode, ExpressLRS Configurator,
+    Betaflight or INAV configuration, firmware flashing,
+    troubleshooting, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    Receiver Binding هو الارتباط المنطقي بين جهاز الإرسال والريسيفر
+    الذي يسمح لهما بالتعرف على بعضهما وتبادل بيانات التحكم باستخدام
+    بروتوكول اتصال متوافق.
+  textEn: >
+    Receiver Binding is the logical association between a transmitter
+    and a receiver that allows them to recognize each other and exchange
+    control data using a compatible communication protocol.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    استخدام البروتوكول نفسه لا يكفي لكي يتواصل جهاز الإرسال والريسيفر.
+    يجب أن توجد بينهما علاقة ارتباط تسمح لكل منهما بالتعرف على الآخر
+    قبل تبادل بيانات التحكم. تسمى هذه العلاقة Receiver Binding.
+  textEn: >
+    Sharing the same communication protocol is not enough for a
+    transmitter and receiver to communicate. They must first establish
+    an association that allows each device to recognize the other before
+    exchanging control data. This association is called Receiver Binding.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن Receiver Binding علاقة ارتباط منطقية بين جهاز الإرسال والريسيفر.
+  - إدراك أن Binding يختلف عن بروتوكول الاتصال.
+  - التمييز بين Binding وبين إعدادات الـ Firmware.
+
+keyFacts:
+  - Receiver Binding ينشئ علاقة ارتباط بين جهاز الإرسال والريسيفر.
+  - يعتمد على وجود بروتوكول اتصال متوافق.
+  - لا يمثل بروتوكول اتصال بحد ذاته.
+  - يختلف عن إعدادات الـ Firmware.
+  - يختلف عن توصيل الأسلاك.
+  - قد يحتاج إلى إعادة التنفيذ عند تغيير الأجهزة.
+  - هذا المفهوم لا يشرح خطوات تنفيذ Binding.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم Receiver Binding كمفهوم نظري فقط، ولا يتضمن أي
+    خطوات عملية أو تعليمات تنفيذ.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: Receiver Binding هو نفسه بروتوكول الاتصال.
+    correction: >
+      بروتوكول الاتصال يحدد كيفية تبادل البيانات، أما Receiver Binding
+      فهو علاقة ارتباط بين جهاز الإرسال والريسيفر تسمح باستخدام ذلك
+      البروتوكول بينهما.
+    conceptLinked: selection.receiver_protocol
+
+  - belief: Receiver Binding هو نفسه إعداد الريسيفر.
+    correction: >
+      Receiver Binding يختلف عن إعدادات الريسيفر داخل الـ Firmware،
+      فكل منهما يمثل مفهوماً مستقلاً.
+    conceptLinked: firmware.receiver_configuration
+
+  - belief: Receiver Binding هو توصيل الريسيفر بمتحكم الطيران.
+    correction: >
+      توصيل الريسيفر اتصال مادي بين المكونات، أما Receiver Binding
+      فهو علاقة ارتباط منطقية بين جهاز الإرسال والريسيفر.
+    conceptLinked: selection.receiver
+
+expectedQuestions:
+  - ما هو Receiver Binding؟
+  - لماذا يحتاج جهاز الإرسال والريسيفر إلى Binding؟
+  - هل Binding هو نفسه بروتوكول الاتصال؟
+  - ما الفرق بين Binding وإعداد الريسيفر؟
+  - هل يحتاج كل ريسيفر إلى Binding؟
+  - هل يمكن استخدام جهاز إرسال آخر بعد تنفيذ Binding؟
+  - هل يؤثر Binding على متحكم الطيران؟
+  - متى قد يحتاج Receiver Binding إلى إعادة التنفيذ؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_binding
+    status: draft
+    question: >
+      لماذا لا يكفي استخدام بروتوكول الاتصال نفسه حتى يتواصل جهاز
+      الإرسال والريسيفر؟
+    explanation: >
+      لأن البروتوكول يحدد طريقة تبادل البيانات فقط، بينما ينشئ
+      Receiver Binding علاقة الارتباط بين الجهازين.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_binding
+    status: draft
+    question: >
+      لماذا يجب التمييز بين Receiver Binding وإعدادات الريسيفر؟
+    explanation: >
+      لأن Receiver Binding ينشئ علاقة الارتباط بين جهاز الإرسال
+      والريسيفر، بينما تحدد إعدادات الـ Firmware كيفية التعامل مع
+      بيانات التحكم المستقبلة.
+
+aliases:
+  ar:
+    - ربط الريسيفر
+    - ربط جهاز الإرسال بالريسيفر
+    - Binding
+    - ارتباط الريسيفر
+
+  en:
+    - Receiver Binding
+    - Binding
+
+  transliteration:
+    - receiver binding
+    - binding
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      يعتمد فهم Receiver Binding على فهم بروتوكولات الاتصال بين
+      جهاز الإرسال والريسيفر.
+
+  - type: depends_on
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      يساعد فهم إعداد الريسيفر على التمييز بين مفهوم Binding
+      ومفهوم Configuration.
+
+architecturalNotes: |
+  This concept explains Receiver Binding as a firmware concept.
+  It intentionally excludes binding procedures, button sequences,
+  Wi-Fi mode, ExpressLRS Configurator, Betaflight or INAV
+  walkthroughs, firmware flashing, troubleshooting,
+  and product-specific implementations.
+  Receiver protocol selection belongs in selection.receiver_protocol.
+  Receiver configuration belongs in firmware.receiver_configuration.

@@ -1,0 +1,160 @@
+meta:
+  conceptId: flight.center_of_gravity
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: مركز الثقل
+  titleEn: Center of Gravity
+  tags:
+    - center of gravity
+    - cg
+    - balance
+    - quadcopter
+    - drone
+    - مركز الثقل
+    - توازن الدرون
+    - توزيع الوزن
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/center-of-gravity
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept introduces the role of the drone's center of gravity in stable
+    flight without discussing hardware installation procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    مركز الثقل هو النقطة التي يتوزع حولها وزن الكوادكابتر بصورة متوازنة.
+    يؤثر موقع هذه النقطة في سهولة التحكم واستقرار الطيران.
+  textEn: >
+    The center of gravity is the point around which the quadcopter's weight is
+    balanced. Its position affects control and flight stability.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    عندما يكون توزيع الوزن متوازنًا، يصبح التحكم في الدرون أكثر سلاسة.
+    أما إذا كان مركز الثقل بعيدًا عن الموضع المناسب فقد يحتاج الدرون إلى
+    تصحيحات مستمرة للحفاظ على اتزانه أثناء الطيران.
+  textEn: >
+    When weight is evenly distributed, controlling the drone becomes smoother.
+    If the center of gravity is misplaced, the drone may require continuous
+    corrections to maintain balance.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى مركز الثقل.
+  - إدراك تأثير توزيع الوزن في سلوك الدرون.
+  - ربط مركز الثقل بالتحكم والاستقرار.
+
+keyFacts:
+  - مركز الثقل يمثل نقطة توازن وزن الدرون.
+  - توزيع الوزن يؤثر في سهولة التحكم.
+  - مركز الثقل غير المتوازن قد يزيد الحاجة إلى التصحيحات أثناء الطيران.
+  - وضع البطارية يؤثر غالبًا في موقع مركز الثقل.
+  - تحسين التوازن لا يعني تغيير الوزن الكلي، بل تحسين توزيعه.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح مركز الثقل من الناحية التعليمية فقط.
+    لا يتضمن تعليمات لتركيب المكونات أو نقل البطارية أو تعديل توزيع الوزن عمليًا.
+    أي تعديل فعلي يجب أن يتم ضمن مفاهيم البناء وإجراءات السلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: مركز الثقل هو نفسه وزن الدرون.
+    correction: >
+      الوزن هو مقدار الكتلة المؤثرة بالجاذبية، أما مركز الثقل فهو موضع توزيع هذا الوزن.
+    conceptLinked: flight.weight
+
+  - belief: أي مكان للبطارية يعطي النتيجة نفسها.
+    correction: >
+      تغيير موقع البطارية قد يغير مركز الثقل وبالتالي يؤثر في توازن الدرون.
+    conceptLinked: power.lipo_battery
+
+  - belief: إذا كان الدرون خفيفًا فلا يهم مركز الثقل.
+    correction: >
+      حتى الدرونات الخفيفة تحتاج إلى توزيع وزن مناسب للحصول على استجابة مستقرة.
+    conceptLinked: flight.stability
+
+expectedQuestions:
+  - ما هو مركز الثقل؟
+  - لماذا يؤثر مركز الثقل في الطيران؟
+  - هل البطارية تؤثر في مركز الثقل؟
+  - ما الفرق بين الوزن ومركز الثقل؟
+  - هل يمكن أن يطير الدرون إذا كان مركز الثقل غير متوازن؟
+  - لماذا يصبح التحكم أصعب أحيانًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.center_of_gravity
+    status: draft
+    question: >
+      لماذا قد يحتاج الدرون إلى تصحيحات مستمرة إذا كان مركز الثقل بعيدًا عن موضعه المناسب؟
+    explanation: >
+      لأن توزيع الوزن غير المتوازن يجعل وحدة التحكم تعوض الانحرافات باستمرار للحفاظ على الاتزان.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.center_of_gravity
+    status: draft
+    question: >
+      هل تقليل الوزن دائمًا يحل مشكلة توازن الدرون؟ ولماذا؟
+    explanation: >
+      لا. قد يكون توزيع الوزن هو المشكلة، وليس الوزن الكلي نفسه.
+
+aliases:
+  ar:
+    - مركز الثقل
+    - نقطة التوازن
+    - توازن الوزن
+  en:
+    - Center of Gravity
+    - COG
+    - CG
+  transliteration:
+    - center of gravity
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: flight.weight
+    note: >
+      لا يمكن فهم مركز الثقل دون فهم توزيع الوزن.
+
+  - type: prerequisite_for
+    targetConceptId: flight.stability
+    note: >
+      فهم مركز الثقل يساعد على فهم أسباب الاستقرار وعدم الاستقرار أثناء الطيران.
+    pending: true
+
+architecturalNotes: |
+  This concept explains the role of the center of gravity only.
+  It intentionally excludes battery mounting, frame assembly,
+  component placement procedures, balancing techniques,
+  and practical build instructions.

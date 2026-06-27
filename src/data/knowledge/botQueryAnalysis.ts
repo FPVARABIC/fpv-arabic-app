@@ -1,17 +1,11 @@
 /**
- * BOT PHASE 1 — Shared query analysis module.
+ * BOT V2 — Shared query analysis module.
  *
  * Produces a single QueryAnalysis object from raw user input, using
  * botConceptRegistry as the sole source of concept/safety matching.
+ * Consumed by the Bot V2 engine (botV2/engine.ts).
  *
- * Phase 1 status: INERT — not imported by any runtime code.
- * Runtime behavior (chip-based BotAssistantView) is unchanged.
- *
- * Future phases will wire analyzeQuery() into the NLU pipeline on the
- * wizardly-noether-xdxg2x branch to replace duplicated intent/domain
- * logic spread across botNlu.ts and botKnowledgeRules.ts.
- *
- * Phase 1 fixes applied:
+ * Implemented fixes:
  *  - 'flight controller' added to FPV domain tokens (fix BL-FC-04)
  *  - propeller_basic negation guard: only critical when affirmative danger
  *    phrase present (fix BL-BF-05 — "Motor Test بدون مراوح" not critical)

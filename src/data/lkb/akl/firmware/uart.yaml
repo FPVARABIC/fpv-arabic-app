@@ -1,0 +1,204 @@
+meta:
+  conceptId: firmware.uart
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: UART
+  titleEn: UART
+  tags:
+    - uart
+    - serial communication
+    - serial interface
+    - firmware
+    - flight controller
+    - betaflight
+    - inav
+    - UART
+    - الاتصال التسلسلي
+    - واجهة الاتصال
+    - منافذ UART
+    - متحكم الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/uart
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller firmware
+    communication fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains UART as a firmware communication concept within
+    the Flight Controller. It intentionally excludes UART assignment,
+    Betaflight Ports configuration, TX/RX wiring, CLI commands,
+    troubleshooting, firmware procedures, and product-specific details.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    UART هو واجهة اتصال تسلسلية يوفرها متحكم الطيران ويستخدمها الـ Firmware
+    للتواصل مع الوظائف والأجهزة التي تعتمد الاتصال التسلسلي، مثل المستقبل،
+    ونظام الفيديو، ووحدات GPS وغيرها.
+  textEn: >
+    A UART is a serial communication interface provided by the Flight
+    Controller and used by the firmware to communicate with serial-based
+    functions and external devices such as receivers, video systems,
+    GPS modules, and other peripherals.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يحتوي متحكم الطيران عادةً على عدة واجهات UART مستقلة. تمثل كل واجهة
+    قناة اتصال يمكن أن يخصصها الـ Firmware لوظيفة معينة، مما يسمح
+    بالتواصل مع عدة أجهزة أو خدمات بشكل منظم دون تداخل بين وظائفها.
+  textEn: >
+    A Flight Controller usually provides multiple independent UART
+    interfaces. Each interface represents a communication channel that
+    the firmware can assign to a specific function, allowing multiple
+    devices or services to operate without conflicting with one another.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن UART يمثل واجهة اتصال يوفرها Flight Controller ويستخدمها الـ Firmware.
+  - إدراك سبب وجود عدة واجهات UART داخل متحكم الطيران.
+  - التمييز بين مفهوم UART وبين إعداده أو تخصيصه أو توصيله عملياً.
+
+keyFacts:
+  - UART يمثل واجهة اتصال تسلسلية داخل متحكم الطيران.
+  - يوفر Flight Controller عادةً عدة واجهات UART مستقلة.
+  - يمكن للـ Firmware إسناد كل UART إلى وظيفة مناسبة.
+  - يساعد عدد واجهات UART المتاحة على تحديد إمكانيات الاتصال في البناء.
+  - UART مفهوم أساسي لفهم إعدادات Firmware.
+  - تخصيص وظائف UART ينتمي إلى مفهوم مستقل.
+  - توصيل أسلاك TX وRX لا يندرج ضمن هذا المفهوم.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم UART من الناحية المفاهيمية فقط، ولا يتضمن أي توصيل
+    عملي أو إعداد داخل Betaflight أو تشغيل للمكونات.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: UART هو نفسه نقاط التوصيل الفيزيائية على متحكم الطيران.
+    correction: >
+      UART يمثل واجهة اتصال يستخدمها الـ Firmware، أما نقاط التوصيل الفيزيائية
+      فتُشرح ضمن مفاهيم العتاد.
+    conceptLinked: hardware.flight_controller
+
+  - belief: يمكن استخدام واجهة UART نفسها لعدة وظائف مستقلة في الوقت نفسه.
+    correction: >
+      يجب تخصيص كل UART لوظيفة Firmware مناسبة بما يمنع تعارض الوظائف.
+    conceptLinked: firmware.uart_configuration
+
+  - belief: أي مشكلة في الريسيفر تعني أن الريسيفر نفسه معطّل.
+    correction: >
+      قد يكون سبب المشكلة مرتبطًا بتخصيص UART أو إعداد Firmware وليس بالريسيفر نفسه.
+    conceptLinked: firmware.receiver_configuration
+
+expectedQuestions:
+  - ما هو UART؟
+  - لماذا يوجد UART1 وUART2؟
+  - ماذا يعني UART في Betaflight؟
+  - هل UART هو نفسه TX وRX؟
+  - لماذا يحتاج الريسيفر إلى UART؟
+  - ما علاقة UART بـ GPS؟
+  - هل يمكن استخدام UART نفسه لأكثر من وظيفة؟
+  - ما الفرق بين UART وتخصيص UART؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.uart
+    status: draft
+    question: >
+      لماذا يحتاج Flight Controller إلى أكثر من UART في بعض البنايات؟
+    explanation: >
+      لأن عدة وظائف أو أجهزة قد تحتاج إلى واجهات اتصال مستقلة لتجنب تعارض الوظائف.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.uart
+    status: draft
+    question: >
+      لماذا يجب فهم UART قبل تعلم تخصيصه؟
+    explanation: >
+      لأن فهم واجهة الاتصال يسبق فهم كيفية إسناد الوظائف إليها.
+
+aliases:
+  ar:
+    - UART
+    - واجهة UART
+    - الاتصال التسلسلي
+    - واجهة الاتصال
+    - يورت
+  en:
+    - UART
+    - Serial Interface
+    - Serial Communication
+    - Flight Controller UART
+    - Firmware UART
+  transliteration:
+    - uart
+    - serial interface
+    - serial communication
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      اختيار Flight Controller يحدد عدد واجهات UART المتاحة.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.uart_configuration
+    note: >
+      فهم UART يسبق فهم كيفية تخصيص وظائف Firmware لواجهات UART.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      إعداد الريسيفر يعتمد على فهم UART.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.gps_configuration
+    note: >
+      إعداد GPS يعتمد على فهم UART.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.vtx_configuration
+    note: >
+      إعداد نظام الفيديو يعتمد على فهم UART.
+    pending: true
+
+architecturalNotes: |
+  This concept explains UART as a firmware communication interface.
+  It intentionally excludes UART assignment, Betaflight procedures,
+  TX/RX wiring, soldering, CLI commands, troubleshooting, and
+  product-specific implementations.
+  UART assignment belongs in firmware.uart_configuration.
+  Receiver setup belongs in firmware.receiver_configuration.
+  GPS setup belongs in firmware.gps_configuration.
+  VTX setup belongs in firmware.vtx_configuration.
+  Physical hardware descriptions belong in the hardware namespace.

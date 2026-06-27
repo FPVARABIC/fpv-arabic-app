@@ -1,0 +1,206 @@
+meta:
+  conceptId: firmware.receiver_configuration
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: إعداد الريسيفر
+  titleEn: Receiver Configuration
+  tags:
+    - receiver configuration
+    - firmware receiver
+    - serial rx
+    - radio receiver
+    - uart
+    - betaflight
+    - inav
+    - إعداد الريسيفر
+    - تفعيل الريسيفر
+    - ريسيفر
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/receiver-configuration
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller firmware
+    receiver-configuration fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains receiver configuration as a firmware concept:
+    making the Flight Controller firmware recognize the receiver as the
+    control-input source. It intentionally excludes receiver wiring, binding
+    steps, UI walkthroughs, stick calibration, endpoint tuning, failsafe
+    procedures, troubleshooting, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    إعداد الريسيفر هو ضبط الـ Firmware بحيث يتعرف متحكم الطيران على الريسيفر
+    كمصدر لأوامر التحكم، ويفسر هذه الإشارات كمدخلات تحكم صحيحة داخل منظومة
+    الطيران.
+  textEn: >
+    Receiver configuration is configuring the firmware so the Flight Controller
+    recognizes the receiver as the source of control commands and interprets
+    those signals as valid control inputs within the flight system.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    بعد اختيار الريسيفر كجزء من منظومة التحكم، يحتاج الـ Firmware إلى معرفة
+    أن هذا الريسيفر هو مصدر أوامر التحكم. لا يكفي وجود الريسيفر ضمن البناء؛
+    يجب أن يكون معروفاً داخل إعدادات الـ Firmware حتى تظهر القنوات وتعمل
+    أوامر التحكم كما هو متوقع.
+  textEn: >
+    After the receiver is selected as part of the control system, the firmware
+    must know that this receiver is the source of control commands. Having a
+    receiver in the build is not enough; it must be recognized in the firmware
+    so channels and control inputs behave as expected.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن إعداد الريسيفر يربط الريسيفر بمنطق التحكم داخل الـ Firmware.
+  - إدراك أن اختيار الريسيفر لا يكفي دون تعريفه داخل الـ Firmware.
+  - التمييز بين إعداد الريسيفر وبين التوصيل أو الـ Binding أو ضبط Failsafe.
+
+keyFacts:
+  - إعداد الريسيفر يجعل الـ Firmware يتعامل مع الريسيفر كمصدر أوامر التحكم.
+  - يعتمد إعداد الريسيفر على بروتوكول الريسيفر وطريقة الاتصال المدعومة.
+  - تخصيص UART الصحيح يسبق إعداد الريسيفر في كثير من الأنظمة التسلسلية.
+  - Serial RX مثال شائع لوظيفة مرتبطة بإعداد الريسيفر.
+  - ظهور القنوات في الـ Firmware يعتمد على صحة إعداد الريسيفر والمنظومة المرتبطة به.
+  - Binding الريسيفر ليس هو نفسه إعداد الريسيفر داخل الـ Firmware.
+  - Failsafe وإجراءات السلامة تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح إعداد الريسيفر كمفهوم Firmware فقط. لا يتضمن توصيل
+    الريسيفر أو Binding أو اختبار الطيران أو ضبط Failsafe أو أي إجراء تشغيل
+    عملي. لأن إعداد الريسيفر يؤثر على أوامر التحكم، فهو قريب من السلامة لكنه
+    ليس إجراء سلامة بحد ذاته.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: توصيل الريسيفر يعني أن الـ Firmware سيتعرف عليه تلقائياً.
+    correction: >
+      وجود الريسيفر في البناء لا يكفي؛ يجب أن يكون معروفاً داخل الـ Firmware
+      حتى تُفسَّر أوامر التحكم بصورة صحيحة.
+    conceptLinked: selection.receiver
+
+  - belief: Binding الريسيفر هو نفسه إعداد الريسيفر.
+    correction: >
+      Binding ينشئ الاتصال بين جهاز الإرسال والريسيفر، أما إعداد الريسيفر
+      فيجعل الـ Firmware يتعامل مع الريسيفر كمصدر لأوامر التحكم.
+    conceptLinked: selection.receiver_protocol
+
+  - belief: أي مشكلة في القنوات تعني أن الريسيفر تالف.
+    correction: >
+      قد يكون سبب المشكلة مرتبطاً بإعدادات الـ Firmware أو تخصيص UART،
+      وليس بالريسيفر نفسه.
+    conceptLinked: firmware.uart_configuration
+
+expectedQuestions:
+  - ما معنى إعداد الريسيفر؟
+  - لماذا لا يعمل الريسيفر بعد تركيبه؟
+  - ما الفرق بين Binding وإعداد الريسيفر؟
+  - ما علاقة إعداد الريسيفر بـ UART؟
+  - ما علاقة إعداد الريسيفر بـ Serial RX؟
+  - لماذا لا تظهر القنوات داخل Firmware؟
+  - هل يحتاج كل بروتوكول إلى إعداد؟
+  - هل إعداد الريسيفر هو نفسه Failsafe؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_configuration
+    status: draft
+    question: >
+      لماذا لا يكفي وجود الريسيفر داخل البناء حتى تعمل أوامر التحكم؟
+    explanation: >
+      لأن الـ Firmware يجب أن يتعرف على الريسيفر كمصدر لإشارات التحكم قبل
+      تفسير تلك الإشارات.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_configuration
+    status: draft
+    question: >
+      لماذا يختلف إعداد الريسيفر عن عملية Binding؟
+    explanation: >
+      لأن Binding يربط جهاز الإرسال بالريسيفر، بينما إعداد الريسيفر يعرّف
+      الـ Firmware بكيفية استقبال أوامر التحكم.
+
+aliases:
+  ar:
+    - إعداد الريسيفر
+    - تهيئة الريسيفر
+    - إعداد مستقبل الإشارة
+    - Receiver Configuration
+    - Serial RX
+  en:
+    - Receiver Configuration
+    - Receiver Setup
+    - Receiver Firmware Configuration
+    - Serial RX Configuration
+    - Receiver Input Configuration
+  transliteration:
+    - receiver configuration
+    - receiver setup
+    - serial rx configuration
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.uart_configuration
+    note: >
+      يعتمد إعداد الريسيفر على فهم تخصيص وظائف UART.
+
+  - type: depends_on
+    targetConceptId: selection.receiver
+    note: >
+      يجب اختيار الريسيفر قبل إعداده داخل الـ Firmware.
+
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      يعتمد إعداد الريسيفر على بروتوكول الاتصال المستخدم.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.flight_modes
+    note: >
+      فهم استقبال أوامر التحكم يسبق فهم أوضاع الطيران.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.failsafe
+    note: >
+      إعداد Failsafe يعتمد على وجود إعداد صحيح للريسيفر.
+    pending: true
+
+architecturalNotes: |
+  This concept explains receiver configuration as a firmware concept.
+  It intentionally excludes receiver wiring, binding procedures,
+  Betaflight UI walkthroughs, stick calibration, endpoint tuning,
+  failsafe setup, troubleshooting, and product-specific instructions.
+  UART assignment belongs in firmware.uart_configuration.
+  Receiver selection belongs in selection.receiver.
+  Receiver protocol selection belongs in selection.receiver_protocol.
+  Flight modes and failsafe are covered by separate firmware concepts.

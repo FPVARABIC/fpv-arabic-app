@@ -1,0 +1,192 @@
+meta:
+  conceptId: firmware.flight_modes
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: أوضاع الطيران
+  titleEn: Flight Modes
+  tags:
+    - flight modes
+    - firmware
+    - flight controller
+    - betaflight
+    - inav
+    - angle mode
+    - horizon mode
+    - acro mode
+    - arm
+    - أوضاع الطيران
+    - أوضاع التحكم
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/flight-modes
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller flight-mode
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains Flight Modes as firmware behavior concepts.
+    It intentionally excludes AUX channel assignment, switch mapping,
+    Betaflight UI walkthroughs, arming procedures, failsafe configuration,
+    troubleshooting, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    أوضاع الطيران هي حالات تشغيل داخل الـ Firmware تحدد السلوك الذي يطبقه
+    متحكم الطيران عند تفسير أوامر التحكم والاستجابة لها أثناء تشغيل الدرون.
+  textEn: >
+    Flight Modes are operating states within the firmware that define how
+    the Flight Controller interprets and responds to control inputs during
+    drone operation.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يوفر الـ Firmware عدة أوضاع طيران، ويحدد كل وضع طريقة مختلفة لمعالجة
+    أوامر التحكم أو مستوى المساعدة الذي يقدمه متحكم الطيران. فهم أوضاع
+    الطيران يساعد على إدراك سبب اختلاف سلوك الدرون بين وضع وآخر دون
+    الحاجة إلى تغيير مكونات البناء.
+  textEn: >
+    Firmware provides multiple Flight Modes, each defining a different way
+    of processing control inputs or providing flight assistance. Understanding
+    Flight Modes explains why the drone behaves differently between modes
+    without changing any hardware components.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن Flight Modes تمثل حالات تشغيل داخل الـ Firmware.
+  - إدراك أن كل وضع يغيّر منطق استجابة متحكم الطيران.
+  - التمييز بين مفهوم Flight Modes وبين طريقة تفعيلها داخل البرامج.
+
+keyFacts:
+  - Flight Modes جزء من منطق الـ Firmware.
+  - يحدد كل وضع سلوكاً مختلفاً لمتحكم الطيران.
+  - قد توفر بعض الأوضاع مستوى مختلفاً من المساعدة أثناء الطيران.
+  - يختلف استخدام أوضاع الطيران باختلاف هدف التشغيل.
+  - قد تتضمن منظومة Flight Modes أوضاع تشغيل ووظائف خاصة بحسب نظام الـ Firmware.
+  - إعداد Flight Modes ينتمي إلى مفاهيم Firmware مستقلة.
+  - هذا المفهوم لا يشرح خطوات تفعيل أوضاع الطيران.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم أوضاع الطيران كمفهوم Firmware فقط، ولا يتضمن
+    خطوات التفعيل أو الاختبار أو تشغيل المحركات أو أي إجراءات عملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: جميع أوضاع الطيران تجعل الدرون يتصرف بالطريقة نفسها.
+    correction: >
+      يحدد كل Flight Mode منطقاً مختلفاً لمعالجة أوامر التحكم أو مستوى
+      المساعدة الذي يقدمه متحكم الطيران.
+    conceptLinked: firmware.receiver_configuration
+
+  - belief: تغيير Flight Mode يعني تغيير مكونات الدرون.
+    correction: >
+      Flight Modes تغير سلوك الـ Firmware فقط، ولا تتطلب أي تغيير في
+      المكونات المادية.
+    conceptLinked: selection.flight_controller
+
+  - belief: Flight Modes هي نفسها Failsafe.
+    correction: >
+      Flight Modes تحدد سلوك التشغيل الطبيعي، بينما Failsafe مفهوم مستقل
+      يعالج فقدان إشارة التحكم.
+    conceptLinked: firmware.failsafe
+
+expectedQuestions:
+  - ما هي أوضاع الطيران؟
+  - لماذا يختلف سلوك الدرون بين الأوضاع؟
+  - ما الفرق بين Angle وAcro وHorizon؟
+  - هل كل Firmware يحتوي على أوضاع الطيران نفسها؟
+  - لماذا توجد عدة Flight Modes؟
+  - هل Flight Modes هي نفسها Failsafe؟
+  - هل إعداد Flight Modes هو نفسه تفعيلها؟
+  - متى أحتاج إلى فهم Flight Modes؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.flight_modes
+    status: draft
+    question: >
+      لماذا قد يتغير سلوك الدرون رغم عدم تغيير أي مكون مادي؟
+    explanation: >
+      لأن Flight Mode يغير منطق معالجة أوامر التحكم داخل الـ Firmware.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.flight_modes
+    status: draft
+    question: >
+      لماذا يجب التمييز بين Flight Modes وFailsafe؟
+    explanation: >
+      لأن Flight Modes تصف سلوك التشغيل الطبيعي، بينما Failsafe يعالج
+      حالة فقدان إشارة التحكم.
+
+aliases:
+  ar:
+    - أوضاع الطيران
+    - أوضاع التحكم
+    - Flight Modes
+    - أنماط الطيران
+    - أوضاع Firmware
+  en:
+    - Flight Modes
+    - Flight Mode
+    - Flight Controller Modes
+    - Firmware Flight Modes
+    - Control Modes
+  transliteration:
+    - flight modes
+    - flight mode
+    - control modes
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      يعتمد فهم Flight Modes على وجود مصدر صحيح لأوامر التحكم.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      يطبق Flight Controller منطق Flight Modes داخل الـ Firmware.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.failsafe
+    note: >
+      فهم Flight Modes يسبق فهم Failsafe.
+    pending: true
+
+architecturalNotes: |
+  This concept explains Flight Modes as firmware operating states.
+  It intentionally excludes AUX channel assignment, switch mapping,
+  software UI walkthroughs, arming procedures, motor testing,
+  failsafe configuration, troubleshooting, and product-specific
+  implementations.
+  Definitions of individual modes (such as Angle, Horizon, or Acro)
+  are outside the scope of this concept.
+  Receiver configuration belongs in firmware.receiver_configuration.
+  Failsafe belongs in firmware.failsafe.

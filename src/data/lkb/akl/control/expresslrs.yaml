@@ -1,0 +1,182 @@
+meta:
+  conceptId: control.expresslrs
+  namespace: control
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: ExpressLRS
+  titleEn: ExpressLRS
+  tags:
+    - expresslrs
+    - elrs
+    - radio protocol
+    - receiver protocol
+    - transmitter
+    - receiver
+    - telemetry
+    - بروتوكول
+    - بروتوكول التحكم
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: control/expresslrs
+  knowledgeOrigin: >
+    Canonical protocol concept authored from ExpressLRS radio protocol
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains ExpressLRS as a radio-control communication
+    protocol. It intentionally excludes receiver binding procedures,
+    firmware flashing, Wi-Fi mode, ExpressLRS Configurator,
+    Betaflight or INAV configuration, UART setup,
+    packet-rate selection, RF power configuration,
+    troubleshooting, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    ExpressLRS هو بروتوكول اتصال لاسلكي يستخدم لتبادل أوامر التحكم بين
+    جهاز الإرسال والريسيفر.
+  textEn: >
+    ExpressLRS is a wireless radio-control protocol used to exchange
+    control commands between a transmitter and a receiver.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يحتاج جهاز الإرسال والريسيفر إلى لغة اتصال مشتركة حتى يتمكنا من
+    تبادل أوامر التحكم. ExpressLRS هو أحد بروتوكولات الاتصال التي
+    تحدد كيفية انتقال هذه الأوامر بين الجهازين.
+  textEn: >
+    A transmitter and receiver require a common communication protocol to
+    exchange control commands. ExpressLRS is one such protocol, defining
+    how those commands are transferred between the two devices.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن ExpressLRS بروتوكول اتصال وليس قطعة عتاد.
+  - إدراك أن ExpressLRS يربط جهاز الإرسال بالريسيفر.
+  - التمييز بين بروتوكول ExpressLRS وبين الريسيفر أو إعدادات الـ Firmware.
+
+keyFacts:
+  - ExpressLRS بروتوكول اتصال لاسلكي.
+  - يعمل بين جهاز الإرسال والريسيفر.
+  - ينقل أوامر التحكم بين الجهازين.
+  - يدعم تبادل البيانات في الاتجاهين عند توفرها.
+  - يختلف عن الريسيفر نفسه.
+  - يختلف عن إعدادات الـ Firmware.
+  - هذا المفهوم لا يشرح Bind أو Flash أو Configuration.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم بروتوكول ExpressLRS كمفهوم نظري فقط، ولا يتضمن
+    أي خطوات Bind أو Flash أو إعداد أو تشغيل عملي.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: ExpressLRS هو جهاز استقبال (Receiver).
+    correction: >
+      ExpressLRS ليس قطعة عتاد، بل بروتوكول اتصال يستخدم بين جهاز
+      الإرسال والريسيفر.
+    conceptLinked: selection.receiver
+
+  - belief: ExpressLRS هو نفسه عملية Binding.
+    correction: >
+      Binding إجراء مستقل يربط جهاز الإرسال بالريسيفر، أما
+      ExpressLRS فهو بروتوكول الاتصال المستخدم بينهما.
+    conceptLinked: selection.receiver_protocol
+
+  - belief: استخدام ExpressLRS يلغي الحاجة إلى إعدادات الـ Firmware.
+    correction: >
+      بروتوكول الاتصال يختلف عن إعدادات الـ Firmware، ولكل منهما
+      مفاهيم مستقلة داخل النظام.
+    conceptLinked: firmware.receiver_configuration
+
+expectedQuestions:
+  - ما هو ExpressLRS؟
+  - لماذا يستخدم ExpressLRS؟
+  - هل ExpressLRS هو نفسه الريسيفر؟
+  - ما الفرق بين ExpressLRS وSBUS؟
+  - هل يحتاج ExpressLRS إلى Binding؟
+  - ما علاقة ExpressLRS بالـ Firmware؟
+  - هل ExpressLRS ينقل أوامر التحكم فقط؟
+  - لماذا يختار الكثيرون ExpressLRS؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: control.expresslrs
+    status: draft
+    question: >
+      لماذا يعد ExpressLRS بروتوكول اتصال وليس قطعة عتاد؟
+    explanation: >
+      لأنه يحدد طريقة تبادل البيانات بين جهاز الإرسال والريسيفر،
+      ولا يمثل مكونًا ماديًا داخل الدرون.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: control.expresslrs
+    status: draft
+    question: >
+      لماذا يجب التمييز بين بروتوكول ExpressLRS وإعدادات الـ Firmware؟
+    explanation: >
+      لأن البروتوكول يحدد كيفية انتقال البيانات، بينما تحدد
+      إعدادات الـ Firmware كيفية تعامل متحكم الطيران مع تلك البيانات.
+
+aliases:
+  ar:
+    - ExpressLRS
+    - ELRS
+    - بروتوكول ExpressLRS
+    - بروتوكول ELRS
+  en:
+    - ExpressLRS
+    - ELRS
+    - ExpressLRS Protocol
+    - ELRS Protocol
+  transliteration:
+    - expresslrs
+    - elrs
+    - express lrs
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      يعتمد فهم ExpressLRS على فهم مفهوم بروتوكولات أجهزة الاستقبال.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_binding
+    note: >
+      فهم بروتوكول ExpressLRS يسبق فهم عملية Binding الخاصة به.
+    pending: true
+
+architecturalNotes: |
+  This concept explains ExpressLRS as a radio communication protocol.
+  It intentionally excludes binding procedures, firmware flashing,
+  Wi-Fi mode, packet-rate selection, RF power configuration,
+  UART configuration, software walkthroughs, troubleshooting,
+  and product-specific implementations.
+  Receiver selection belongs in selection.receiver.
+  Receiver protocol selection belongs in selection.receiver_protocol.
+  Receiver binding belongs in firmware.receiver_binding.

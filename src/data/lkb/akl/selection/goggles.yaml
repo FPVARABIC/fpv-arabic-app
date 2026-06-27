@@ -1,0 +1,201 @@
+meta:
+  conceptId: selection.goggles
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار نظارة FPV
+  titleEn: FPV Goggles Selection
+  tags:
+    - fpv goggles
+    - goggles selection
+    - analog goggles
+    - digital goggles
+    - video receiver
+    - video system
+    - اختيار النظارة
+    - نظارة FPV
+    - نظارة الدرون
+    - استقبال الفيديو
+    - نظام الفيديو
+    - توافق النظارة
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/goggles
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV video-system fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains FPV goggles selection as the final decision in the FPV
+    video ecosystem. It intentionally excludes hardware operation, firmware,
+    DVR usage, menu configuration, optics adjustment, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار نظارة FPV هو اختيار جهاز استقبال وعرض متوافق مع نظام الفيديو
+    المستخدم، ويوفر تجربة مشاهدة مناسبة لهدف البناء ومتطلبات الاستخدام.
+  textEn: >
+    FPV goggles selection is choosing a compatible video receiving and viewing
+    device that matches the selected FPV video system and intended use.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    نظارة FPV هي آخر عنصر يتم اختياره في منظومة الفيديو، لأنها تعتمد على
+    النظام الذي تم اختياره والكاميرا وVTX والهوائي. لا تعمل جميع النظارات مع
+    جميع أنظمة الفيديو، لذلك يجب التأكد من التوافق قبل الشراء. راحة الاستخدام،
+    جودة العرض، والتوافق أهم من شراء أغلى نظارة متاحة.
+  textEn: >
+    FPV goggles are typically the final component selected in the FPV video
+    ecosystem because they depend on the chosen video system, camera, VTX,
+    and antenna. Not all goggles work with every video system. Compatibility,
+    viewing comfort, and display quality are more important than simply buying
+    the most expensive goggles.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار النظارة يعتمد على منظومة الفيديو كاملة.
+  - إدراك أن التوافق أهم من السعر أو جودة الشاشة وحدها.
+  - التمييز بين اختيار النظارة وتشغيلها أو إعدادها.
+
+keyFacts:
+  - يجب أن تكون النظارة متوافقة مع نظام الفيديو المختار.
+  - لا تعمل جميع النظارات مع جميع أنظمة الفيديو.
+  - اختيار النظارة يأتي بعد اختيار الكاميرا وVTX والهوائي.
+  - جودة الشاشة ليست العامل الوحيد في الاختيار.
+  - راحة الاستخدام قد تكون عاملاً مهماً خاصة للمبتدئين.
+  - شراء أغلى نظارة لا يعني أنها الأنسب لكل مستخدم.
+  - تشغيل النظارة وإعداداتها ينتميان إلى مفاهيم أخرى.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار نظارة FPV فقط، ولا يتضمن تشغيلها أو ضبط إعداداتها
+    أو استخدامها أثناء الطيران أو أي إجراءات عملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي نظارة FPV تعمل مع أي نظام فيديو.
+    correction: >
+      يجب التأكد من توافق النظارة مع منظومة الفيديو المختارة.
+    conceptLinked: selection.video_system
+
+  - belief: أغلى نظارة هي دائماً أفضل اختيار.
+    correction: >
+      التوافق وراحة الاستخدام وهدف البناء أهم من السعر وحده.
+    conceptLinked: selection.build_goal
+
+  - belief: يمكن اختيار النظارة قبل بقية منظومة الفيديو.
+    correction: >
+      يفضل اختيار النظارة بعد تحديد نظام الفيديو والكاميرا وVTX والهوائي.
+    conceptLinked: selection.antenna
+
+expectedQuestions:
+  - كيف أختار نظارة FPV؟
+  - هل أي نظارة تعمل مع أي نظام فيديو؟
+  - هل أختار النظارة أولاً؟
+  - ما الفرق بين نظارات Analog وDigital؟
+  - هل جودة الشاشة هي أهم شيء؟
+  - هل أغلى نظارة هي الأفضل؟
+  - هل يجب أن تطابق النظارة VTX؟
+  - هل النظارة تؤثر في جودة تجربة FPV؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.goggles
+    status: draft
+    question: >
+      لماذا يجب اختيار النظارة بعد تحديد نظام الفيديو؟
+    explanation: >
+      لأن توافق النظارة يعتمد على منظومة الفيديو المختارة بالكامل.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.goggles
+    status: draft
+    question: >
+      لماذا لا يكفي الاعتماد على جودة الشاشة وحدها عند اختيار النظارة؟
+    explanation: >
+      لأن التوافق وراحة الاستخدام وتجربة المشاهدة المناسبة لا تقل أهمية عن جودة الشاشة.
+
+aliases:
+  ar:
+    - نظارة FPV
+    - نظارة الدرون
+    - اختيار النظارة
+    - نظارة الفيديو
+    - قوقلز FPV
+  en:
+    - FPV Goggles
+    - Goggles Selection
+    - Video Goggles
+    - Digital Goggles
+    - Analog Goggles
+  transliteration:
+    - fpv goggles
+    - goggles
+    - video goggles
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.video_system
+    note: >
+      اختيار النظارة يعتمد على نظام الفيديو المختار.
+
+  - type: depends_on
+    targetConceptId: selection.camera
+    note: >
+      اختيار الكاميرا يؤثر في توافق منظومة العرض.
+
+  - type: depends_on
+    targetConceptId: selection.vtx
+    note: >
+      النظارة يجب أن تتوافق مع VTX المستخدم ضمن نفس المنظومة.
+
+  - type: depends_on
+    targetConceptId: selection.antenna
+    note: >
+      اختيار الهوائي يكتمل قبل اختيار وسيلة استقبال الفيديو.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.goggles
+    note: >
+      هذا المفهوم يمهد لفهم نظارة FPV كمكون ووظيفتها.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.goggle_configuration
+    note: >
+      إعدادات النظارة وإدارتها تنتمي إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing FPV goggles.
+  It intentionally excludes hardware description, display technology,
+  DVR recording, firmware updates, menu configuration, optics adjustment,
+  receiver modules, practical operation, and product reviews.
+  Hardware explanation belongs in hardware.goggles, while configuration
+  belongs in firmware.goggle_configuration.

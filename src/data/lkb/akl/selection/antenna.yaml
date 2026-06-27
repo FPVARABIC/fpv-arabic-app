@@ -1,0 +1,202 @@
+meta:
+  conceptId: selection.antenna
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار هوائي نظام الفيديو
+  titleEn: FPV Antenna Selection
+  tags:
+    - antenna
+    - fpv antenna
+    - video antenna
+    - rhcp
+    - lhcp
+    - sma
+    - rp-sma
+    - ufl
+    - mmcx
+    - polarization
+    - اختيار الهوائي
+    - هوائي FPV
+    - هوائي الفيديو
+    - استقطاب
+    - موصل الهوائي
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/antenna
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV video-system fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains antenna selection as part of a compatible FPV video
+    ecosystem. It excludes antenna installation, RF tuning, range testing,
+    antenna placement, and connector assembly procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار هوائي FPV هو اختيار هوائي متوافق مع نظام الفيديو وVTX ونوع الموصل
+    والاستقطاب المناسب، بما يحقق أداءً مستقراً للإشارة ضمن منظومة الفيديو.
+  textEn: >
+    FPV antenna selection is choosing an antenna compatible with the video
+    system, VTX, connector type, and polarization in order to achieve reliable
+    signal performance within the FPV ecosystem.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الهوائي ليس مجرد قطعة لزيادة المدى، بل جزء أساسي من منظومة الفيديو.
+    يجب أن يتوافق مع VTX ونظام الفيديو ونوع الموصل والاستقطاب المناسب.
+    اختيار هوائي غير متوافق قد يؤدي إلى ضعف الإشارة أو أداء غير جيد، حتى لو
+    كانت بقية المكونات مناسبة.
+  textEn: >
+    The antenna is not simply an accessory for increasing range. It is an
+    essential part of the FPV video system and must match the VTX, video system,
+    connector type, and polarization. An incompatible antenna can reduce signal
+    quality even if the remaining components are correct.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن الهوائي جزء من منظومة الفيديو وليس قطعة مستقلة.
+  - إدراك أهمية توافق الموصل والاستقطاب مع VTX.
+  - التمييز بين اختيار الهوائي وتركيبه العملي.
+
+keyFacts:
+  - يجب أن يتوافق الهوائي مع VTX.
+  - نوع الموصل عامل توافق أساسي.
+  - الاستقطاب يجب أن يكون مناسباً للمنظومة.
+  - الهوائي لا يعمل بمعزل عن نظام الفيديو.
+  - الهوائي المناسب يساعد على استقرار الإشارة.
+  - زيادة المدى لا تعتمد على الهوائي وحده.
+  - تركيب الهوائي وتشغيله العملي ينتميان إلى مفاهيم أخرى.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار الهوائي فقط. تشغيل VTX بدون هوائي أو تنفيذ اختبارات
+    عملية أو تركيب الهوائي بشكل فعلي ينتمي إلى مفاهيم السلامة والتشغيل وليس إلى
+    هذا المفهوم.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي هوائي يعمل مع أي VTX.
+    correction: >
+      يجب التحقق من توافق الموصل والاستقطاب ونظام الفيديو.
+    conceptLinked: selection.vtx
+
+  - belief: الهوائي الأكبر يعني دائماً مدى أفضل.
+    correction: >
+      الأداء يعتمد على المنظومة كاملة وليس على حجم الهوائي فقط.
+    conceptLinked: selection.video_system
+
+  - belief: الهوائي مجرد إكسسوار اختياري.
+    correction: >
+      الهوائي جزء أساسي من منظومة إرسال الفيديو.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - كيف أختار هوائي FPV؟
+  - هل أي هوائي يعمل مع أي VTX؟
+  - ما الفرق بين RHCP وLHCP؟
+  - ما الفرق بين SMA وRP-SMA؟
+  - هل حجم الهوائي مهم؟
+  - هل الهوائي يزيد المدى؟
+  - هل يجب أن يطابق الهوائي VTX؟
+  - هل أختار الهوائي قبل VTX؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.antenna
+    status: draft
+    question: >
+      لماذا لا يكفي اختيار هوائي بناءً على شكله أو حجمه فقط؟
+    explanation: >
+      لأن توافقه مع VTX والاستقطاب ونظام الفيديو أهم من الشكل الخارجي.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.antenna
+    status: draft
+    question: >
+      لماذا يجب اختيار الهوائي بعد اختيار VTX؟
+    explanation: >
+      لأن نوع الموصل والاستقطاب يعتمدان على منظومة الفيديو وVTX المختارين.
+
+aliases:
+  ar:
+    - هوائي FPV
+    - هوائي الفيديو
+    - اختيار الهوائي
+    - أنتينا
+  en:
+    - FPV Antenna
+    - Video Antenna
+    - Antenna Selection
+  transliteration:
+    - antenna
+    - fpv antenna
+    - video antenna
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.vtx
+    note: >
+      اختيار الهوائي يعتمد على VTX المختار.
+
+  - type: depends_on
+    targetConceptId: selection.video_system
+    note: >
+      اختيار الهوائي يعتمد على نظام الفيديو.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      توافق الهوائي جزء من توافق المنظومة كاملة.
+
+  - type: prerequisite_for
+    targetConceptId: selection.goggles
+    note: >
+      اختيار النظارة يكتمل بعد فهم توافق منظومة الإرسال والاستقبال.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.antenna
+    note: >
+      هذا المفهوم يمهد لفهم الهوائي كمكون ووظيفته.
+    pending: true
+
+  - type: requires_safety_warning
+    targetConceptId: safety.vtx_operation
+    note: >
+      تشغيل VTX عملياً مرتبط بوجود هوائي مناسب وإجراءات سلامة منفصلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing an FPV antenna.
+  It excludes antenna installation, connector assembly, RF theory, SWR,
+  antenna placement, VTX operation procedures, product comparisons,
+  and practical testing. Hardware description belongs in hardware.antenna,
+  while practical operation belongs in safety.vtx_operation.

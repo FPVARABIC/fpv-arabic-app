@@ -1,0 +1,209 @@
+meta:
+  conceptId: selection.esc
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار وحدة ESC
+  titleEn: ESC Selection
+  tags:
+    - esc
+    - electronic speed controller
+    - esc selection
+    - fpv esc
+    - 4in1 esc
+    - aio
+    - stack
+    - اختيار ESC
+    - متحكم السرعة الإلكتروني
+    - توافق ESC
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/esc
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV ESC selection fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains ESC selection as a compatibility decision.
+    It intentionally excludes wiring, soldering, firmware flashing,
+    BLHeli configuration, ESC calibration, motor testing, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار ESC هو اختيار وحدة التحكم في سرعة المحركات بما يتوافق مع
+    المحركات، والبطارية، وFlight Controller، وهدف البناء.
+  textEn: >
+    ESC selection is choosing an electronic speed controller compatible with
+    the motors, battery, flight controller, and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يتم اختيار ESC بشكل مستقل، بل كجزء من منظومة مكونات الدرون.
+    يجب أن يتوافق مع المحركات، وجهد البطارية، وFlight Controller،
+    وطبيعة البناء. اختيار ESC مناسب منذ البداية يساعد على بناء منظومة
+    متوافقة ويقلل مشاكل التوافق لاحقاً.
+  textEn: >
+    An ESC should not be selected independently. It is one component of the
+    overall drone system and must match the motors, battery voltage,
+    flight controller, and build goal. Choosing a suitable ESC early
+    improves overall compatibility.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار ESC يعتمد على توافق المنظومة كاملة.
+  - إدراك العلاقة بين ESC والمحركات والبطارية وFlight Controller.
+  - التمييز بين اختيار ESC وبين تركيبه أو إعداده.
+
+keyFacts:
+  - يجب أن يتوافق ESC مع المحركات.
+  - يجب أن يتوافق ESC مع جهد البطارية.
+  - يجب أن يتوافق ESC مع Flight Controller.
+  - اختيار قيمة التيار يناقش في مفهوم مستقل.
+  - يمكن اختيار ESC ضمن تصميم AIO أو Stack حسب طبيعة البناء.
+  - لا يعني AIO أو Stack أن أحدهما أفضل دائماً.
+  - التوصيل والإعداد والبرمجة تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار ESC فقط، ولا يشمل التوصيل أو اللحام أو
+    البرمجة أو الاختبارات العملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي ESC يعمل مع أي محرك.
+    correction: >
+      يجب أن يكون ESC متوافقاً مع المحركات وبقية المنظومة.
+    conceptLinked: selection.component_matching
+
+  - belief: اختيار أعلى قيمة تيار يعني دائماً أفضل ESC.
+    correction: >
+      قيمة التيار عامل واحد فقط ضمن عملية اختيار ESC، وليست العامل الوحيد.
+    conceptLinked: selection.esc_current
+
+  - belief: يمكن اختيار ESC دون مراعاة بقية المكونات.
+    correction: >
+      يجب اختيار ESC بما يتوافق مع المحركات والبطارية وFlight Controller
+      وهدف البناء.
+    conceptLinked: selection.build_goal
+
+expectedQuestions:
+  - كيف أختار ESC؟
+  - هل أي ESC يعمل مع أي محرك؟
+  - هل يجب أن يطابق ESC البطارية؟
+  - هل يجب أن يطابق Flight Controller؟
+  - ما الفرق بين AIO وStack؟
+  - ما الذي يجب أن أراعيه عند اختيار ESC؟
+  - هل قيمة التيار وحدها تكفي؟
+  - متى أختار 4-in-1 ESC؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.esc
+    status: draft
+    question: >
+      لماذا لا يمكن اختيار ESC بمعزل عن بقية مكونات الدرون؟
+    explanation: >
+      لأن توافقه يعتمد على المحركات والبطارية وFlight Controller وهدف البناء.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.esc
+    status: draft
+    question: >
+      لماذا لا تكفي قيمة التيار وحدها لاختيار ESC؟
+    explanation: >
+      لأن اختيار ESC يعتمد على مجموعة من عوامل التوافق وليس على قيمة واحدة فقط.
+
+aliases:
+  ar:
+    - ESC
+    - متحكم السرعة الإلكتروني
+    - اختيار ESC
+    - وحدة ESC
+    - متحكم السرعة
+  en:
+    - ESC
+    - Electronic Speed Controller
+    - ESC Selection
+    - FPV ESC
+    - 4-in-1 ESC
+  transliteration:
+    - esc
+    - electronic speed controller
+    - four in one esc
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار ESC جزء من توافق المنظومة.
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      يجب أن يتوافق ESC مع جهد البطارية.
+
+  - type: depends_on
+    targetConceptId: selection.motor_size
+    note: >
+      اختيار المحرك يؤثر في اختيار ESC.
+
+  - type: depends_on
+    targetConceptId: selection.motor_kv
+    note: >
+      توافق المحرك يؤثر في اختيار ESC.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      يجب أن يتوافق ESC مع Flight Controller.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في اختيار نوع ESC.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.esc
+    note: >
+      هذا المفهوم يمهد لفهم ESC كمكون.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.esc_configuration
+    note: >
+      إعداد ESC وبرمجته ينتميان إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing an ESC.
+  It intentionally excludes wiring, soldering, firmware flashing,
+  BLHeli configuration, ESC calibration, motor testing,
+  and product reviews.
+  Hardware explanation belongs in hardware.esc.
+  ESC configuration belongs in firmware.esc_configuration.

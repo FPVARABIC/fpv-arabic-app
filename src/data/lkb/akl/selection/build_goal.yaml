@@ -1,0 +1,194 @@
+meta:
+  conceptId: selection.build_goal
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: هدف البناء
+  titleEn: Build Goal
+  tags:
+    - build goal
+    - fpv build planning
+    - drone selection
+    - freestyle
+    - racing
+    - long range
+    - cinewhoop
+    - beginner build
+    - هدف البناء
+    - اختيار نوع الدرون
+    - تخطيط البناء
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/build-goal
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains why the learner must define the intended use of the
+    drone before choosing size or components. It does not provide a shopping list.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    هدف البناء هو الاستخدام الأساسي الذي يحدد نوع الدرون والقطع المناسبة له،
+    مثل التدريب، الفريستايل، السباق، الطيران البعيد، أو التصوير القريب.
+  textEn: >
+    The build goal is the primary intended use that guides the drone type and
+    component choices, such as training, freestyle, racing, long range, or close-range filming.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    قبل اختيار الفريم أو المحركات أو البطارية، يجب أن تعرف ماذا تريد من الدرون.
+    درون التدريب يركز على السهولة والمتانة وتكلفة الإصلاح المعقولة، والفريستايل
+    يحتاج تحملًا واستجابة قوية، بينما درون السباق يركز على السرعة والخفة،
+    والطيران البعيد يحتاج كفاءة واعتمادية، والـ Cinewhoop يهتم بحماية المراوح
+    والتصوير القريب دون أن يلغي قواعد السلامة. إذا لم تحدد الهدف أولًا،
+    ستصبح اختيارات القطع عشوائية.
+  textEn: >
+    Before choosing a frame, motors, or battery, you must know what you want the
+    drone to do. A training build emphasizes ease of control, durability, and
+    reasonable repair cost; freestyle needs durability and strong response; racing
+    emphasizes speed and lightness; long range needs efficiency and reliability;
+    and cinewhoop builds focus on propeller protection and close-range filming
+    without removing the need for safety rules.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن هدف البناء يسبق اختيار الحجم والقطع.
+  - التمييز بين أهداف البناء الشائعة في FPV.
+  - إدراك أن كل هدف يغيّر معايير اختيار المكونات.
+
+keyFacts:
+  - هدف البناء هو نقطة البداية قبل اختيار الحجم أو القطع.
+  - هدف التدريب يركز غالبًا على السهولة، المتانة، الأمان، وتكلفة الإصلاح المعقولة.
+  - الفريستايل يركز غالبًا على التحمل، الاستجابة، والقدرة على المناورات.
+  - السباق يركز غالبًا على الخفة، السرعة، والاستجابة السريعة.
+  - الطيران البعيد يركز غالبًا على الكفاءة، الاعتمادية، وزمن الطيران.
+  - Cinewhoop يركز غالبًا على حماية المراوح والتصوير القريب، لكن حماية المراوح لا تعني أن الطيران قرب الناس آمن دائمًا.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار هدف البناء فقط، ولا يتضمن شراء قطع محددة أو تشغيل
+    الدرون أو الطيران في أماكن معينة. ذكر أنواع مثل Racing أو Long Range أو
+    Cinewhoop لا يعني أنها مناسبة كبداية لكل مبتدئ أو مسموحة في كل مكان. أي
+    تطبيق عملي أو اختيار نهائي للقطع يجب أن يتم ضمن مفاهيم الاختيار والتوافق
+    والسلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أفضل درون هو الدرون الأقوى دائمًا.
+    correction: >
+      أفضل درون هو الذي يناسب هدفك. القوة الزائدة قد تكون غير مفيدة إذا كان الهدف
+      تدريبًا هادئًا أو تصويرًا قريبًا.
+    conceptLinked: selection.build_goal
+
+  - belief: يمكن اختيار القطع أولًا ثم تحديد نوع الدرون لاحقًا.
+    correction: >
+      الهدف يجب أن يأتي قبل اختيار القطع، لأن كل نوع استخدام يغيّر الحجم والمحركات
+      والمراوح والبطارية ونظام الفيديو.
+    conceptLinked: selection.component_matching
+
+  - belief: درون واحد مناسب لكل شيء بنفس الكفاءة.
+    correction: >
+      يمكن لبعض الدرونات أداء أكثر من مهمة، لكن كل تصميم يملك تنازلات بين السرعة،
+      التحمل، الكفاءة، الأمان، وجودة التصوير.
+    conceptLinked: selection.drone_size
+
+expectedQuestions:
+  - من أين أبدأ قبل اختيار قطع الدرون؟
+  - كيف أحدد نوع الدرون المناسب لي؟
+  - ما الفرق بين Freestyle وRacing وLong Range؟
+  - هل أحتاج درون 5 إنش أم Cinewhoop؟
+  - لماذا لا أشتري القطع قبل تحديد الهدف؟
+  - ما أفضل نوع درون للمبتدئ؟
+  - هل يمكن بناء درون واحد لكل الاستخدامات؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.build_goal
+    status: draft
+    question: >
+      لماذا قد يكون شراء أقوى قطع متاحة قرارًا سيئًا إذا كان هدفك هو التدريب كمبتدئ؟
+    explanation: >
+      لأن التدريب يحتاج درونًا مناسبًا للتحكم والتعلم، وليس بالضرورة أقوى نظام دفع.
+      القطع القوية قد تزيد الوزن والتكلفة وصعوبة السيطرة دون أن تخدم هدف التدريب.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.build_goal
+    status: draft
+    question: >
+      لماذا يختلف اختيار القطع بين درون Freestyle ودرون Long Range؟
+    explanation: >
+      لأن الفريستايل يحتاج استجابة وتحملًا للمناورات، بينما الطيران البعيد يحتاج
+      كفاءة واعتمادية وزمن طيران أطول.
+
+aliases:
+  ar:
+    - هدف البناء
+    - نوع الدرون
+    - استخدام الدرون
+    - خطة البناء
+    - اختيار نوع الدرون
+  en:
+    - Build Goal
+    - Build Purpose
+    - Drone Use Case
+    - FPV Build Planning
+  transliteration:
+    - build goal
+    - fpv build
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: hardware.quadcopter_system
+    note: >
+      فهم النظام العام يساعد على إدراك أن الهدف يؤثر في كل القطع.
+
+  - type: prerequisite_for
+    targetConceptId: selection.drone_size
+    note: >
+      اختيار الحجم يجب أن يأتي بعد تحديد هدف البناء.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.component_matching
+    note: >
+      توافق القطع يعتمد على هدف البناء والحجم المختار.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.first_build_strategy
+    note: >
+      استراتيجية أول بناء تبدأ من هدف واضح يناسب مستوى المتعلم.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept, not a hardware component description.
+  It explains how the intended use of the drone guides later size and component
+  choices. It intentionally avoids exact shopping recommendations, brand names,
+  part lists, installation instructions, firmware setup, or flight procedures.

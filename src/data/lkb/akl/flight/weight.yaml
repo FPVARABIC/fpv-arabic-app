@@ -1,0 +1,173 @@
+meta:
+  conceptId: flight.weight
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: الوزن
+  titleEn: Weight
+  tags:
+    - weight
+    - quadcopter
+    - drone
+    - flight
+    - وزن الدرون
+    - الكتلة
+    - أساسيات الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/weight
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains the role of weight in quadcopter flight without copying
+    source material. Exact book references will be linked during source indexing.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    الوزن هو القوة الناتجة عن تأثير الجاذبية الأرضية على الكوادكابتر.
+    يجب أن يوازن نظام الدفع هذه القوة للحفاظ على الارتفاع، وأن يتجاوزها
+    حتى يتمكن الدرون من الإقلاع أو الصعود.
+  textEn: >
+    Weight is the force produced by Earth's gravity acting on the quadcopter.
+    The propulsion system must balance this force to maintain altitude, and
+    exceed it for the drone to take off or climb.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لكل كوادكابتر وزن يؤثر عليه باستمرار نحو الأسفل.
+    يشمل هذا الوزن الفريم، والمحركات، والبطارية، وبقية المكونات.
+    عندما يكون الدفع أقل من الوزن يبقى الدرون على الأرض أو يبدأ بالهبوط.
+    وعندما يتوازن الدفع تقريبًا مع الوزن يستطيع الدرون التحويم.
+    لذلك يؤثر الوزن مباشرة في أداء الدرون وزمن الطيران.
+  textEn: >
+    Every quadcopter has weight pulling it downward at all times.
+    This includes the frame, motors, battery, and all installed components.
+    If thrust is lower than weight, the drone remains on the ground or descends.
+    When thrust approximately balances weight, it can hover.
+    Weight therefore directly influences performance and flight time.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى الوزن في الكوادكابتر.
+  - فهم العلاقة بين الوزن والدفع.
+  - إدراك تأثير زيادة الوزن على الأداء وزمن الطيران.
+
+keyFacts:
+  - الوزن يؤثر باستمرار في اتجاه الأسفل بسبب الجاذبية.
+  - البطارية غالبًا من أكبر المساهمين في الوزن الكلي.
+  - زيادة الوزن تتطلب دفعًا أكبر للحفاظ على نفس الأداء.
+  - الوزن يؤثر في زمن الطيران واستهلاك الطاقة.
+  - تقليل الوزن بشكل مدروس قد يحسن الأداء، لكن دون الإضرار بالسلامة أو المتانة.
+
+misconceptions:
+  - belief: الوزن يعني البطارية فقط.
+    correction: >
+      الوزن الكلي يشمل جميع مكونات الدرون، وليس البطارية وحدها.
+    conceptLinked: power.lipo_battery
+
+  - belief: كلما كان الدرون أثقل كان أكثر استقرارًا دائمًا.
+    correction: >
+      زيادة الوزن قد تؤثر في الاستقرار والأداء بطرق مختلفة، وليست ضمانًا
+      لتحسين الاستقرار.
+    conceptLinked: flight.stability
+
+  - belief: إزالة أي قطعة لتخفيف الوزن تحسن الأداء دائمًا.
+    correction: >
+      بعض المكونات ضرورية للسلامة أو الاعتمادية، لذلك يجب أن يكون تخفيف الوزن
+      مدروسًا.
+    conceptLinked: hardware.frame
+
+expectedQuestions:
+  - ما المقصود بوزن الدرون؟
+  - لماذا يمنع الوزن الدرون من الإقلاع؟
+  - ما العلاقة بين الوزن والدفع؟
+  - هل البطارية هي سبب معظم وزن الدرون؟
+  - هل زيادة الوزن تقلل زمن الطيران؟
+  - هل تخفيف الوزن يحسن الأداء دائمًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.weight
+    status: draft
+    question: >
+      لماذا يحتاج الدرون إلى زيادة قوة الدفع عندما يزداد وزنه؟
+    explanation: >
+      لأن قوة الجاذبية المؤثرة على الدرون تزداد مع زيادة الوزن، ولذلك يحتاج
+      إلى دفع أكبر للحفاظ على الارتفاع أو الإقلاع.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.weight
+    status: draft
+    question: >
+      كيف يمكن أن يؤثر تركيب بطارية أثقل في أداء الدرون؟
+    explanation: >
+      البطارية الأثقل تزيد الوزن الكلي، مما قد يتطلب دفعًا أكبر ويؤثر في زمن
+      الطيران واستجابة الدرون.
+
+aliases:
+  ar:
+    - الوزن
+    - وزن الدرون
+    - الوزن الكلي
+  en:
+    - Weight
+    - Drone Weight
+  transliteration:
+    - weight
+
+typedRelations:
+  - type: affects
+    targetConceptId: flight.hover
+    note: >
+      الوزن يؤثر مباشرة في إمكانية التحويم.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: flight.thrust_to_weight_ratio
+    note: >
+      فهم الوزن ضروري قبل دراسة نسبة الدفع إلى الوزن.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: power.lipo_battery
+    note: >
+      البطارية غالبًا تمثل جزءًا مهمًا من الوزن الكلي للدرون.
+    pending: true
+
+  - type: affects
+    targetConceptId: power.flight_time
+    note: >
+      الوزن يؤثر في استهلاك الطاقة وبالتالي في زمن الطيران.
+    pending: true
+
+architecturalNotes: |
+  This concept explains only the role of weight in quadcopter flight.
+  It intentionally excludes thrust-to-weight calculations, battery selection,
+  structural optimization, and practical build procedures.
+  The symmetric balances relation with flight.thrust is authored only on
+  flight.thrust to avoid duplicate reciprocal relations.

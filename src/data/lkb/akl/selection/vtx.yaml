@@ -1,0 +1,219 @@
+meta:
+  conceptId: selection.vtx
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار VTX
+  titleEn: VTX Selection
+  tags:
+    - vtx
+    - video transmitter
+    - fpv video transmitter
+    - analog vtx
+    - digital vtx
+    - video system
+    - fpv video
+    - اختيار VTX
+    - مرسل الفيديو
+    - جهاز إرسال الفيديو
+    - نظام الفيديو
+    - توافق الفيديو
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/vtx
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV video-system fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains VTX selection as part of a compatible FPV video
+    ecosystem. It intentionally excludes wiring, frequency/channel setup,
+    power-level configuration, SmartAudio, Tramp, firmware setup, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار VTX هو اختيار جهاز إرسال فيديو متوافق مع نظام الفيديو والكاميرا
+    والنظارة، ويناسب حجم الدرون وهدف البناء ومتطلبات المدى وجودة الإشارة.
+  textEn: >
+    VTX selection is choosing a video transmitter that is compatible with the
+    video system, camera, and goggles, while fitting the drone size, build goal,
+    range needs, and signal-quality requirements.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الـ VTX هو الجزء الذي يرسل صورة الكاميرا من الدرون إلى النظارة أو الشاشة.
+    لا يتم اختياره وحده؛ يجب أن يكون ضمن نظام فيديو متوافق مع الكاميرا والنظارة.
+    في الأنظمة التناظرية والرقمية تختلف طريقة التوافق والحجم والوزن والطاقة،
+    لذلك يجب اختيار VTX بناءً على المنظومة كاملة وليس على رقم القدرة أو السعر فقط.
+  textEn: >
+    The VTX is the part that sends the camera image from the drone to the goggles
+    or display. It is not selected in isolation; it must belong to a video system
+    compatible with the camera and goggles. Analog and digital systems differ in
+    compatibility, size, weight, and power needs, so the VTX should be chosen
+    based on the whole ecosystem rather than power rating or price alone.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن VTX جزء من منظومة فيديو متوافقة.
+  - ربط اختيار VTX بالكاميرا والنظارة ونظام الفيديو.
+  - إدراك أن القدرة أو السعر وحدهما لا يكفيان لاختيار VTX مناسب.
+
+keyFacts:
+  - VTX يجب أن يكون متوافقًا مع نظام الفيديو المختار.
+  - VTX يجب أن يتوافق مع الكاميرا والنظارة أو جهاز الاستقبال المستخدم.
+  - حجم ووزن VTX مهمان خصوصًا في الدرونات الصغيرة أو Cinewhoop.
+  - بعض أنظمة الفيديو الرقمية تعتمد على وحدات مدمجة تجمع الكاميرا والإرسال ضمن منظومة محددة.
+  - قدرة الإرسال ليست العامل الوحيد في الاختيار، ولا تعني وحدها جودة أفضل.
+  - VTX يحتاج طاقة وتبريدًا مناسبين، لكن تفاصيل التوصيل والتشغيل تنتمي لمفاهيم أخرى.
+  - اختيار VTX يجب أن يأتي بعد اختيار نظام الفيديو العام.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار VTX فقط، لكنه قريب من قرارات الطاقة والحرارة
+    وإرسال الإشارة. لا يتضمن هذا المفهوم توصيل VTX أو تشغيله أو ضبط قدرة الإرسال
+    أو اختيار القنوات أو تركيب الهوائيات. أي تطبيق عملي يجب أن يتم ضمن مفاهيم
+    التثبيت والسلامة والإعداد المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي VTX يعمل مع أي كاميرا وأي نظارة.
+    correction: >
+      يجب أن يكون VTX متوافقًا مع نظام الفيديو والكاميرا والنظارة أو جهاز
+      الاستقبال المستخدم.
+    conceptLinked: selection.video_system
+
+  - belief: القدرة الأعلى في VTX تعني دائمًا صورة أفضل.
+    correction: >
+      قدرة الإرسال ليست العامل الوحيد؛ التوافق، الهوائي، البيئة، التبريد،
+      والنظام المستخدم كلها تؤثر في جودة الإشارة.
+    conceptLinked: selection.antenna
+
+  - belief: اختيار VTX يمكن أن يتم قبل اختيار نظام الفيديو.
+    correction: >
+      اختيار VTX يجب أن يأتي بعد اختيار نظام الفيديو، لأن VTX جزء من منظومة
+      متوافقة وليس قطعة مستقلة.
+    conceptLinked: selection.video_system
+
+expectedQuestions:
+  - ما هو VTX؟
+  - كيف أختار VTX مناسب؟
+  - هل أي VTX يعمل مع أي كاميرا؟
+  - هل القدرة الأعلى تعني صورة أفضل؟
+  - ما علاقة VTX بنظام الفيديو؟
+  - هل أختار VTX قبل الكاميرا؟
+  - هل يختلف VTX في Analog وDigital؟
+  - هل حجم VTX مهم؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.vtx
+    status: draft
+    question: >
+      لماذا لا يجب اختيار VTX بناءً على قدرة الإرسال فقط؟
+    explanation: >
+      لأن جودة الإشارة تعتمد أيضًا على التوافق مع نظام الفيديو، الهوائي، التبريد،
+      البيئة، وجودة المنظومة كاملة، وليس على القدرة وحدها.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.vtx
+    status: draft
+    question: >
+      لماذا يجب اختيار VTX بعد اختيار نظام الفيديو؟
+    explanation: >
+      لأن VTX يجب أن يعمل ضمن منظومة متوافقة مع الكاميرا والنظارة أو جهاز
+      الاستقبال، ولا تعمل جميع أجهزة VTX مع جميع الأنظمة.
+
+aliases:
+  ar:
+    - VTX
+    - مرسل الفيديو
+    - جهاز إرسال الفيديو
+    - اختيار VTX
+    - فيديو ترانسمتر
+    - مرسل FPV
+  en:
+    - VTX
+    - Video Transmitter
+    - FPV Video Transmitter
+    - VTX Selection
+    - Analog VTX
+    - Digital VTX
+  transliteration:
+    - vtx
+    - video transmitter
+    - fpv vtx
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.video_system
+    note: >
+      اختيار VTX يعتمد على نظام الفيديو المختار.
+
+  - type: depends_on
+    targetConceptId: selection.camera
+    note: >
+      VTX يجب أن يتوافق مع الكاميرا ضمن منظومة الفيديو.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار VTX يجب أن يراعي التوافق مع بقية مكونات الدرون.
+
+  - type: prerequisite_for
+    targetConceptId: selection.antenna
+    note: >
+      اختيار الهوائي يعتمد على نوع VTX ومنظومة الفيديو المستخدمة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.vtx
+    note: >
+      هذا المفهوم يمهد لفهم VTX كمكون ووظيفته داخل منظومة الفيديو.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.vtx_configuration
+    note: >
+      إعدادات VTX مثل القنوات والقدرة تنتمي إلى مفاهيم إعداد منفصلة.
+    pending: true
+
+  - type: requires_safety_warning
+    targetConceptId: safety.vtx_operation
+    note: >
+      تشغيل VTX عمليًا يرتبط بالحرارة والهوائي وقدرة الإرسال، ويحتاج إرشادات سلامة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a VTX as part of an FPV video system.
+  It intentionally excludes wiring, soldering, power-level setup, channels,
+  frequencies, SmartAudio, Tramp, Betaflight configuration, antenna mounting,
+  heat testing, product comparisons, and RF operation procedures.
+  VTX hardware function belongs in hardware.vtx, configuration belongs in
+  firmware.vtx_configuration, antenna selection belongs in selection.antenna,
+  and safe practical operation belongs in safety.vtx_operation.

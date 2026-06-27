@@ -1,15 +1,10 @@
-// TEMPORARY BOT ANSWER PLACEHOLDER
-// This file is a Bot V2 presentation-layer placeholder.
-// It is NOT the canonical Learning Knowledge Base.
-// Phase LKB-1 will define the asset-ready LearningNode schema.
-// Phase LKB-2 will migrate this content into the unified Learning Knowledge Base.
-// Do not expand this file beyond the initial Bot V2 concept placeholders.
-
 /**
  * BOT V2 — Knowledge base.
  *
- * 14 knowledge nodes — one per BotConceptId. Each node is self-contained and
- * referenced by knowledgeResolver. Do not inline content elsewhere.
+ * 14 knowledge nodes — one per BotConceptId. These are the primary knowledge
+ * source for the Bot V2 engine. AKL entries (aklIndex.generated.ts) fill gaps
+ * for concepts not covered here; this KB always takes priority over AKL in
+ * direct_short_answer mode.
  *
  * Authoring rules:
  *  - shortAnswer: max 2 Arabic sentences.

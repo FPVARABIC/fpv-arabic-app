@@ -1,0 +1,225 @@
+meta:
+  conceptId: selection.battery_capacity
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار سعة البطارية
+  titleEn: Battery Capacity Selection
+  tags:
+    - battery capacity
+    - lipo capacity
+    - mah
+    - flight time
+    - battery weight
+    - fpv battery
+    - battery selection
+    - سعة البطارية
+    - اختيار البطارية
+    - mAh
+    - زمن الطيران
+    - وزن البطارية
+    - بطارية ليبو
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/battery-capacity
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains LiPo battery capacity as a selection decision related
+    to flight time, weight, build goal, drone size, and current demand. It does
+    not explain charging, storage, or C-rating calculations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار سعة البطارية هو تحديد مقدار الطاقة المخزنة تقريبًا في البطارية، عادة
+    بوحدة mAh، بما يوازن بين زمن الطيران والوزن والمساحة وهدف البناء.
+  textEn: >
+    Battery capacity selection is choosing the approximate stored energy amount,
+    usually measured in mAh, while balancing flight time, weight, available space,
+    and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    سعة أكبر قد تعطي زمن طيران أطول، لكنها غالبًا تزيد وزن البطارية وحجمها.
+    بطارية ثقيلة جدًا قد تجعل الدرون أبطأ، أقل استجابة، أو أصعب في التحكم،
+    وقد تقلل الفائدة الفعلية من السعة الإضافية. لذلك لا نختار أكبر mAh دائمًا،
+    بل نختار سعة تناسب حجم الدرون، نظام الدفع، ومكان الاستخدام.
+  textEn: >
+    Higher capacity can give longer flight time, but it usually increases battery
+    weight and size. A battery that is too heavy can make the drone slower, less
+    responsive, harder to control, and may reduce the real benefit of the extra
+    capacity. The best capacity is not always the largest mAh, but the one that
+    fits the drone size, propulsion system, and use case.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى سعة البطارية بوحدة mAh.
+  - إدراك العلاقة بين السعة وزمن الطيران والوزن.
+  - اختيار السعة كجزء من نظام متوافق وليس كرقم منفصل.
+
+keyFacts:
+  - mAh تعبر عن سعة البطارية، وليست وحدها مقياسًا للأداء الكامل.
+  - زيادة السعة قد تزيد زمن الطيران لكنها تزيد الوزن والحجم غالبًا.
+  - الوزن الزائد قد يقلل الاستجابة ويؤثر في مركز الثقل وكفاءة الطيران.
+  - السعة المناسبة تعتمد على حجم الدرون، هدف البناء، ونظام الدفع.
+  - Long Range قد يحتاج سعة أكبر، بينما Freestyle قد يفضل توازنًا بين الوزن والاستجابة.
+  - البطارية يجب أن تناسب المساحة المتاحة على الفريم وطريقة تثبيتها الآمنة.
+  - اختيار السعة يجب أن يراعي الجهد وC-rating والتيار المطلوب، وليس mAh فقط.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار سعة البطارية على مستوى التخطيط فقط. اختيار سعة غير
+    مناسبة قد يؤثر في الوزن، مركز الثقل، تثبيت البطارية، وزمن الطيران. لا يتضمن
+    هذا المفهوم شحن البطارية أو تخزينها أو توصيلها أو اختبارها. أي تعامل عملي
+    مع بطاريات LiPo يجب أن يتم ضمن مفاهيم السلامة والطاقة والفحص المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أكبر mAh يعني دائمًا بطارية أفضل.
+    correction: >
+      السعة الأكبر قد تزيد زمن الطيران، لكنها تزيد الوزن والحجم وقد تجعل الدرون
+      أقل استجابة أو غير متوازن.
+    conceptLinked: flight.weight
+
+  - belief: سعة البطارية وحدها تحدد زمن الطيران.
+    correction: >
+      زمن الطيران يعتمد أيضًا على الوزن، كفاءة نظام الدفع، أسلوب الطيران، الجهد،
+      والمراوح والمحركات.
+    conceptLinked: selection.component_matching
+
+  - belief: أي بطارية كبيرة يمكن تركيبها إذا كان الجهد مناسبًا.
+    correction: >
+      حتى لو كان الجهد مناسبًا، يجب أن تناسب البطارية مساحة الفريم والوزن ومركز
+      الثقل وطريقة التثبيت.
+    conceptLinked: selection.frame_size
+
+expectedQuestions:
+  - ما معنى mAh في البطارية؟
+  - كيف أختار سعة البطارية؟
+  - هل السعة الأكبر تعني زمن طيران أطول دائمًا؟
+  - هل البطارية الأكبر أفضل؟
+  - ما علاقة سعة البطارية بوزن الدرون؟
+  - ما علاقة السعة بزمن الطيران؟
+  - هل سعة البطارية تؤثر في مركز الثقل؟
+  - هل أختار سعة مختلفة للفريستايل والطيران البعيد؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_capacity
+    status: draft
+    question: >
+      لماذا قد لا تكون البطارية ذات السعة الأكبر هي الخيار الأفضل دائمًا؟
+    explanation: >
+      لأن السعة الأكبر غالبًا تزيد الوزن والحجم، وهذا قد يقلل الاستجابة ويؤثر
+      في مركز الثقل وكفاءة الطيران، وقد يجعل الدرون أصعب في التحكم.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_capacity
+    status: draft
+    question: >
+      لماذا لا يمكن تقدير زمن الطيران من mAh وحدها؟
+    explanation: >
+      لأن زمن الطيران يتأثر بالوزن، كفاءة المحركات والمراوح، الجهد، أسلوب الطيران،
+      وحجم الدرون، وليس بسعة البطارية وحدها.
+
+aliases:
+  ar:
+    - سعة البطارية
+    - اختيار سعة البطارية
+    - mAh
+    - ملي أمبير
+    - ملي أمبير ساعة
+    - بطارية أكبر
+    - زمن الطيران
+  en:
+    - Battery Capacity
+    - LiPo Capacity
+    - mAh
+    - Milliamp Hours
+    - Flight Time
+    - Battery Size
+  transliteration:
+    - battery capacity
+    - lipo capacity
+    - mah
+    - milliamp hours
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      اختيار السعة يأتي بعد فهم جهد البطارية وعدد الخلايا المطلوب.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      السعة يجب أن تتوافق مع حجم الدرون ونظام الدفع والمساحة والوزن.
+
+  - type: depends_on
+    targetConceptId: selection.frame_size
+    note: >
+      الفريم يحدد المساحة المتاحة لتثبيت البطارية وحجمها المناسب.
+
+  - type: depends_on
+    targetConceptId: flight.weight
+    note: >
+      زيادة سعة البطارية غالبًا تزيد الوزن وتؤثر في أداء الدرون.
+
+  - type: prerequisite_for
+    targetConceptId: selection.battery_c_rating
+    note: >
+      فهم السعة ضروري قبل فهم علاقة C-rating بالتيار المتاح.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: power.flight_time
+    note: >
+      السعة عامل مهم في فهم زمن الطيران، لكنها ليست العامل الوحيد.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: power.lipo_battery
+    note: >
+      هذا المفهوم يمهد لفهم خصائص بطارية LiPo ضمن نظام الطاقة.
+    pending: true
+
+  - type: requires_safety_warning
+    targetConceptId: safety.lipo_handling
+    note: >
+      اختيار وتثبيت بطاريات LiPo يرتبط لاحقًا بإجراءات سلامة البطاريات.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing LiPo battery capacity.
+  It intentionally excludes charging instructions, storage voltage, C-rating
+  calculations, connector replacement, wiring, soldering, battery testing,
+  product recommendations, and exact mAh tables.
+  LiPo theory belongs in power.lipo_battery, flight-time modeling belongs in
+  power.flight_time, and practical battery handling belongs in safety.lipo_handling.

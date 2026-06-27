@@ -1,0 +1,192 @@
+meta:
+  conceptId: firmware.gps_configuration
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: إعداد GPS
+  titleEn: GPS Configuration
+  tags:
+    - gps configuration
+    - firmware
+    - gps
+    - uart
+    - flight controller
+    - betaflight
+    - inav
+    - إعداد GPS
+    - تهيئة GPS
+    - الملاحة
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/gps-configuration
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller firmware
+    GPS-configuration fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains GPS configuration as a firmware concept that
+    enables the Flight Controller to recognize and interpret positioning
+    data from a GPS module. It intentionally excludes GPS wiring, UART
+    procedures, baud-rate selection, satellite acquisition, software UI
+    walkthroughs, troubleshooting, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    إعداد GPS هو ضبط الـ Firmware بحيث يتعرف متحكم الطيران على بيانات
+    تحديد الموقع القادمة من وحدة GPS ويفسرها لاستخدامها ضمن وظائف
+    الـ Firmware التي تعتمد على بيانات الموقع.
+  textEn: >
+    GPS configuration is configuring the firmware so the Flight Controller
+    recognizes and interprets positioning data received from a GPS module
+    for firmware functions that rely on location information.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يكفي تركيب وحدة GPS داخل الدرون حتى تصبح بيانات الموقع متاحة
+    لمتحكم الطيران. يحتاج الـ Firmware إلى التعرف على بيانات GPS
+    والتعامل معها بصورة صحيحة حتى تتمكن وظائف الـ Firmware المعتمدة
+    على بيانات الموقع من استخدامها.
+  textEn: >
+    Installing a GPS module alone does not make positioning data available
+    to the Flight Controller. The firmware must recognize and process GPS
+    information correctly before firmware functions that rely on location
+    data can use it.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن إعداد GPS يعرّف الـ Firmware ببيانات تحديد الموقع.
+  - إدراك أن تركيب GPS لا يكفي دون إعداد Firmware المناسب.
+  - التمييز بين مفهوم إعداد GPS وبين توصيله أو ضبطه عملياً.
+
+keyFacts:
+  - إعداد GPS جزء من إعدادات الـ Firmware.
+  - يعتمد على وصول بيانات GPS إلى الـ Firmware.
+  - يعتمد على إعداد UART المناسب.
+  - يتيح لمتحكم الطيران تفسير بيانات الموقع.
+  - إعداد GPS يختلف عن اختيار وحدة GPS.
+  - إعداد GPS يختلف عن توصيل GPS.
+  - هذا المفهوم لا يشرح خطوات إعداد GPS عملياً.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم إعداد GPS كمفهوم Firmware فقط، ولا يتضمن خطوات
+    إعداد أو اختبار أو توصيل أو إجراءات طيران عملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: تركيب وحدة GPS يعني أن متحكم الطيران سيستخدم بيانات الموقع تلقائياً.
+    correction: >
+      وجود وحدة GPS وحده لا يكفي؛ يجب أن يكون الـ Firmware مهيأً
+      لاستقبال بيانات الموقع وتفسيرها.
+    conceptLinked: firmware.uart_configuration
+
+  - belief: إعداد GPS هو نفسه توصيل GPS.
+    correction: >
+      توصيل وحدة GPS يختلف عن إعداد الـ Firmware للتعامل مع بياناتها.
+    conceptLinked: selection.gps
+
+  - belief: إعداد GPS يعني إعداد جميع وظائف الملاحة.
+    correction: >
+      إعداد GPS يقتصر على تعريف الـ Firmware ببيانات الموقع، أما
+      استخدام هذه البيانات داخل الوظائف المختلفة فينتمي إلى مفاهيم
+      Firmware مستقلة.
+    conceptLinked: firmware.uart_configuration
+
+expectedQuestions:
+  - ما هو إعداد GPS؟
+  - لماذا لا يعمل GPS بعد تركيبه؟
+  - ما الفرق بين تركيب GPS وإعداده؟
+  - ما علاقة GPS بـ UART؟
+  - لماذا يحتاج الـ Firmware إلى إعداد GPS؟
+  - هل كل وحدات GPS تحتاج إلى إعداد؟
+  - هل إعداد GPS هو نفسه إعداد الملاحة؟
+  - ما الذي يستخدم بيانات GPS داخل الـ Firmware؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.gps_configuration
+    status: draft
+    question: >
+      لماذا لا يكفي تركيب وحدة GPS حتى يستفيد منها متحكم الطيران؟
+    explanation: >
+      لأن الـ Firmware يجب أن يتعرف على بيانات الموقع ويفسرها قبل
+      أن تتمكن وظائفه من استخدامها.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.gps_configuration
+    status: draft
+    question: >
+      لماذا يجب التمييز بين اختيار GPS وإعداد GPS؟
+    explanation: >
+      لأن اختيار الوحدة يخص العتاد، بينما إعداد GPS يخص طريقة تعامل
+      الـ Firmware مع بياناتها.
+
+aliases:
+  ar:
+    - إعداد GPS
+    - تهيئة GPS
+    - إعداد نظام تحديد الموقع
+    - GPS Configuration
+  en:
+    - GPS Configuration
+    - GPS Setup
+    - GPS Firmware Configuration
+    - GPS Module Configuration
+  transliteration:
+    - gps configuration
+    - gps setup
+    - gps firmware configuration
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.uart_configuration
+    note: >
+      يعتمد إعداد GPS على فهم تخصيص وظائف UART.
+
+  - type: depends_on
+    targetConceptId: selection.gps
+    note: >
+      يجب اختيار وحدة GPS قبل إعدادها داخل الـ Firmware.
+
+  - type: prerequisite_for
+    targetConceptId: firmware.navigation_configuration
+    note: >
+      فهم إعداد GPS يسبق دراسة إعدادات الملاحة.
+    pending: true
+
+architecturalNotes: |
+  This concept explains GPS configuration as a firmware concept.
+  It intentionally excludes GPS wiring, UART procedures, baud-rate
+  selection, satellite acquisition, software UI walkthroughs,
+  troubleshooting, and product-specific implementations.
+  This concept explains how firmware recognizes GPS data, not how
+  navigation features use that data.
+  GPS selection belongs in selection.gps.
+  UART assignment belongs in firmware.uart_configuration.
+  Navigation configuration belongs in firmware.navigation_configuration.
