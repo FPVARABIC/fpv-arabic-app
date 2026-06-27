@@ -14,6 +14,7 @@ export interface Lesson {
   importantPoints: string[];
   commonMistake: string;
   warning?: string;
+  conceptIds?: BotConceptId[];
 }
 
 export type DiagramType =
@@ -65,6 +66,7 @@ export interface BetaflightSection {
   explanation: string;
   importantPoints: string[];
   warning?: string;
+  conceptIds?: BotConceptId[];
 }
 
 export interface TroubleshootingItem {

@@ -57,7 +57,7 @@ for (const l of lessonsData) {
     title: l.title,
     route: `/lessons/${l.id}`,
     type: 'lesson',
-    conceptIds: [],
+    conceptIds: l.conceptIds ?? [],
     order: l.number,
   });
 }
@@ -81,7 +81,7 @@ for (const b of betaflightData) {
     title: b.title,
     route: `/betaflight/${b.id}`,
     type: 'betaflight_section',
-    conceptIds: [],
+    conceptIds: b.conceptIds ?? [],
   });
 }
 

@@ -11,6 +11,7 @@ export const betaflightData: BetaflightSection[] = [
       'استخدم diff all في CLI لحفظ نسخة احتياطية',
     ],
     warning: 'لا تضغط Calibrate Accelerometer إلا إذا كانت الطائرة على سطح مستوٍ تمامًا',
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'firmware', title: 'Firmware / تحديث',
@@ -22,6 +23,7 @@ export const betaflightData: BetaflightSection[] = [
       'لا تقطع USB أثناء Flash',
     ],
     warning: 'قطع الاتصال أثناء Flash قد يحتاج إلى DFU mode للإصلاح',
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'ports', title: 'Ports',
@@ -33,6 +35,7 @@ export const betaflightData: BetaflightSection[] = [
       'وثّق أي UART وصّلت فيه كل جهاز',
     ],
     warning: 'تفعيل Serial RX على UART خاطئ يمنع Receiver من العمل',
+    conceptIds: ['betaflight_basics', 'receiver_basic'],
   },
   {
     id: 'receiver', title: 'Receiver',
@@ -43,6 +46,7 @@ export const betaflightData: BetaflightSection[] = [
       'Channel Map يحدد ترتيب القنوات',
       'قيمة Throttle في الوضع الطبيعي يجب أن تكون حول 1000',
     ],
+    conceptIds: ['receiver_basic', 'betaflight_basics'],
   },
   {
     id: 'modes', title: 'Modes',
@@ -54,6 +58,7 @@ export const betaflightData: BetaflightSection[] = [
       'BEEPER مفيد جداً للعثور على الدرون المفقود',
     ],
     warning: 'لا تفعّل Acro mode في أول الطيران - استخدم ANGLE',
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'motors', title: 'Motors',
@@ -65,6 +70,7 @@ export const betaflightData: BetaflightSection[] = [
       'أوقف الاختبار فور انتهائك',
     ],
     warning: 'لا تركب المراوح أثناء اختبار المحركات - خطر جسدي حقيقي',
+    conceptIds: ['motor_basic', 'betaflight_basics'],
   },
   {
     id: 'failsafe', title: 'Failsafe',
@@ -76,6 +82,7 @@ export const betaflightData: BetaflightSection[] = [
       'Land mode آمن أكثر من Drop في بعض الحالات',
     ],
     warning: 'لا تطر بدون إعداد Failsafe صحيح',
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'osd', title: 'OSD',
@@ -86,6 +93,7 @@ export const betaflightData: BetaflightSection[] = [
       'RSSI يُحذرك من ضعف إشارة جهاز التحكم',
       'لا تحتاج OSD لأول الاختبارات البرية',
     ],
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'blackbox', title: 'Blackbox',
@@ -96,6 +104,7 @@ export const betaflightData: BetaflightSection[] = [
       'بعض FC يحتاج SD card للـ Blackbox',
       'Blackbox يمكن أن يبطئ FC قليلاً عند تشغيله',
     ],
+    conceptIds: ['betaflight_basics'],
   },
   {
     id: 'cli', title: 'CLI',
@@ -107,5 +116,6 @@ export const betaflightData: BetaflightSection[] = [
       'لا تستخدم أوامر لا تعرفها في البداية',
     ],
     warning: 'بعض أوامر CLI يمكن أن تعيد ضبط FC للإعدادات الافتراضية - انتبه',
+    conceptIds: ['betaflight_basics'],
   },
 ];
