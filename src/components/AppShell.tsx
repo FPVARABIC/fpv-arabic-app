@@ -1,6 +1,7 @@
 import React from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { FloatingAssistant } from './FloatingAssistant';
+import { QuadcopterLauncher } from './QuadcopterLauncher';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -48,6 +49,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
       </main>
       {showNav && <BottomNavigation/>}
       {showNav && <FloatingAssistant/>}
+      {showNav && <QuadcopterLauncher/>}
     </div>
   </div>
 );
