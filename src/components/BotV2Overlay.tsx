@@ -134,7 +134,7 @@ export const BotV2Overlay: React.FC = () => {
           borderRadius: '22px 22px 0 0',
           border: '1px solid rgba(34,211,238,0.13)',
           borderBottom: 'none',
-          transform: isOpen ? 'translateY(0)' : 'translateY(106%)',
+          transform: isOpen ? 'translateY(0)' : 'translateY(120%)',
           transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
           pointerEvents: isOpen ? 'auto' : 'none',
           display: 'flex',
