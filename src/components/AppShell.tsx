@@ -2,6 +2,8 @@ import React from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { FloatingAssistant } from './FloatingAssistant';
 import { QuadcopterLauncher } from './QuadcopterLauncher';
+import { BotOverlayProvider } from '../contexts/BotOverlayContext';
+import { BotV2Overlay } from './BotV2Overlay';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -41,15 +43,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
         style={{ zIndex: 0 }}
         aria-hidden
       />
-      <main
-        className={`relative flex-1 overflow-y-auto ${showNav ? 'pb-24' : ''}`}
-        style={{ zIndex: 1 }}
-      >
-        {children}
-      </main>
-      {showNav && <BottomNavigation/>}
-      {showNav && <FloatingAssistant/>}
-      {showNav && <QuadcopterLauncher/>}
+      <BotOverlayProvider>
+        <main
+          className={`relative flex-1 overflow-y-auto ${showNav ? 'pb-24' : ''}`}
+          style={{ zIndex: 1 }}
+        >
+          {children}
+        </main>
+        {showNav && <BottomNavigation/>}
+        {showNav && <FloatingAssistant/>}
+        {showNav && <QuadcopterLauncher/>}
+        {showNav && <BotV2Overlay/>}
+      </BotOverlayProvider>
     </div>
   </div>
 );

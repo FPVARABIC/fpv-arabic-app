@@ -1,6 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bot, X, BookOpen, Map, CheckSquare, Cpu, Wrench, BarChart2, ChevronLeft, Zap, HelpCircle } from 'lucide-react';
+import { X, BookOpen, Map, CheckSquare, Cpu, Wrench, BarChart2, ChevronLeft, Zap, HelpCircle } from 'lucide-react';
+import { useBotOverlay } from '../contexts/BotOverlayContext';
+
+const QuadcopterIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+    <path d="M12 10.5L6 5.5"   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 10.5L18 5.5"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 13.5L6 18.5"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M12 13.5L18 18.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor"/>
+    <circle cx="6"  cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+    <circle cx="18" cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+    <circle cx="6"  cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+    <circle cx="18" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+  </svg>
+);
 
 const quickActions = [
   { icon: HelpCircle, label: 'لا أعرف من أين أبدأ', route: '/bot' },
@@ -12,7 +27,7 @@ const quickActions = [
   { icon: Zap, label: 'المحركات لا تدور', route: '/betaflight/motors' },
   { icon: BarChart2, label: 'تقدمي في التعلم', route: '/progress' },
   { icon: BookOpen, label: 'درس التوصيل TX/RX', route: '/lessons/lesson-9' },
-  { icon: Bot, label: 'مساعد FPV الكامل', route: '/bot' },
+  { icon: QuadcopterIcon, label: 'مساعد FPV الكامل', route: '/bot' },
 ];
 
 const BUTTON_SIZE = 56;
@@ -20,6 +35,7 @@ const DRAG_THRESHOLD = 5;
 const STORAGE_KEY = 'floatingAssistantPos';
 
 export const FloatingAssistant: React.FC = () => {
+  const { openBot } = useBotOverlay();
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ x: 334 - 16, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -169,7 +185,11 @@ export const FloatingAssistant: React.FC = () => {
 
   const handleAction = (route: string) => {
     setOpen(false);
-    navigate(route);
+    if (route === '/bot') {
+      openBot();
+    } else {
+      navigate(route);
+    }
   };
 
   return (
@@ -191,7 +211,7 @@ export const FloatingAssistant: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
                     style={{ background: 'linear-gradient(135deg, rgba(24,230,230,0.18), rgba(0,160,255,0.12))', border: '1px solid rgba(34,211,238,0.3)' }}>
-                    <Bot size={20} className="text-cyan-300" />
+                    <QuadcopterIcon size={20} className="text-cyan-300" />
                   </div>
                   <div>
                     <p className="text-base font-bold text-white">مساعد FPV</p>
@@ -247,7 +267,7 @@ export const FloatingAssistant: React.FC = () => {
         onMouseEnter={e => { if (!isDragging) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 36px rgba(34,211,238,0.75), 0 6px 20px rgba(0,0,0,0.5)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = open ? '0 0 28px rgba(34,211,238,0.6), 0 6px 20px rgba(0,0,0,0.5)' : '0 0 18px rgba(34,211,238,0.4), 0 6px 16px rgba(0,0,0,0.5)'; }}
         aria-label="مساعد FPV">
-        {open ? <X size={22} className="text-white" /> : <Bot size={24} className="text-white" />}
+        {open ? <X size={22} className="text-white" /> : <QuadcopterIcon size={24} className="text-white" />}
       </button>
     </>
   );
