@@ -5,7 +5,7 @@ import { ProgressRing } from '../components/ProgressRing';
 import { useProgress } from '../hooks/useProgress';
 import { lessonsData } from '../data/lessonsData';
 import { roadmapData } from '../data/roadmapData';
-import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Bot, Shield, MoreVertical, X, Settings, Mail, Info } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Shield, MoreVertical, X, Settings, Mail, Info } from 'lucide-react';
 
 const quickSections = [
   { icon: Map, label: 'خريطة البناء', path: '/roadmap', grad: 'linear-gradient(135deg, rgba(24,230,230,0.22), rgba(0,160,255,0.12))', color: 'text-cyan-300' },
@@ -13,7 +13,6 @@ const quickSections = [
   { icon: Cpu, label: 'Betaflight', path: '/betaflight', grad: 'linear-gradient(135deg, rgba(168,85,247,0.24), rgba(217,70,239,0.12))', color: 'text-purple-300' },
   { icon: CheckSquare, label: 'Checklist', path: '/checklists', grad: 'linear-gradient(135deg, rgba(34,197,94,0.24), rgba(16,185,129,0.12))', color: 'text-green-300' },
   { icon: Wrench, label: 'المشاكل والحلول', path: '/troubleshooting', grad: 'linear-gradient(135deg, rgba(249,115,22,0.24), rgba(245,158,11,0.12))', color: 'text-orange-300' },
-  { icon: Bot, label: 'مساعد FPV', path: '/bot', grad: 'linear-gradient(135deg, rgba(236,72,153,0.24), rgba(244,114,182,0.12))', color: 'text-pink-300' },
 ];
 
 const secondaryOptions = [

@@ -73,20 +73,6 @@ export interface TroubleshootingItem {
   safetyNote?: string;
 }
 
-export interface BotResponse {
-  id: string;
-  trigger: string;
-  label: string;
-  answer: string;
-  steps: string[];
-  actions: BotAction[];
-}
-
-export interface BotAction {
-  label: string;
-  route: string;
-}
-
 export interface ProgressState {
   completedLessons: string[];
   completedRoadmapSteps: string[];

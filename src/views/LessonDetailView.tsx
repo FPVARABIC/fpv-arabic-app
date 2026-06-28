@@ -92,7 +92,6 @@ export const LessonDetailView: React.FC = () => {
               <ul className="space-y-1">
                 <li className="text-sm text-slate-300">• راجع الدرس السابق مرة أخرى</li>
                 <li className="text-sm text-slate-300">• افتح Checklist المتعلق بهذه المرحلة</li>
-                <li><button className="text-sm underline" style={{ color: '#5EEAD4' }} onClick={() => navigate('/bot')}>• اسأل مساعد FPV</button></li>
               </ul>
             </div>
           )}

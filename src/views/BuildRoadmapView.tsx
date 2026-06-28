@@ -277,16 +277,7 @@ export const BuildRoadmapView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 7. Help action */}
-                      <button
-                        onClick={() => navigate('/bot')}
-                        className="w-full rounded-xl py-2 text-xs hover:text-cyan-300 transition-colors"
-                        style={{ background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.12)', color: 'rgba(34,211,238,0.6)' }}
-                      >
-                        💬 واجهت مشكلة؟ اسأل المساعد
-                      </button>
-
-                      {/* 8. Complete stage / done */}
+                      {/* 7. Complete stage / done */}
                       {!done && checklistDoneCount === step.checklist.length && checklistDoneCount > 0 && (
                         <button className="btn-primary w-full text-sm py-2" onClick={() => completeRoadmapStep(step.id)}>
                           <CheckCircle2 size={16}/> إتمام المرحلة
