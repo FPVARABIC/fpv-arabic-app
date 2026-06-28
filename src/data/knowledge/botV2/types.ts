@@ -55,6 +55,8 @@ export interface BotV2Debug {
 
 export interface BotV2Answer {
   mode: BotV2AnswerMode;
+  /** Resolved concept from query analysis. undefined for OOD or vague queries. */
+  conceptId?: string;
   riskLevel: BotV2RiskLevel;
   /** Max 2 sentences. */
   shortAnswer: string;

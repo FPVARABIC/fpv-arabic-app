@@ -116,6 +116,7 @@ export function composeV2Answer(
     const node = nodeConceptId ? getKnowledgeForConcept(nodeConceptId) : undefined;
     return {
       mode,
+      conceptId,
       riskLevel: 'critical',
       shortAnswer,
       steps: node?.steps ?? _GENERIC_SAFETY_STEPS,
@@ -131,6 +132,7 @@ export function composeV2Answer(
     const node = getKnowledgeForConcept('drone_build_basics');
     return {
       mode,
+      conceptId,
       riskLevel: safety.riskLevel,
       shortAnswer: node?.shortAnswer ?? 'لبناء كوادكابتر FPV، ابدأ خطوة بخطوة.',
       steps: node?.steps ? [...node.steps] : [],
@@ -146,6 +148,7 @@ export function composeV2Answer(
     const node = getKnowledgeForConcept('app_navigation');
     return {
       mode,
+      conceptId,
       riskLevel: 'none',
       shortAnswer: node?.shortAnswer ?? 'التطبيق يحتوي على أقسام مترابطة — ابدأ بالبناء والدروس.',
       steps: node?.steps ? [...node.steps] : [],
@@ -160,6 +163,7 @@ export function composeV2Answer(
     if (isOutOfDomain) {
       return {
         mode,
+        conceptId,
         riskLevel: 'none',
         shortAnswer: 'هذا التطبيق مخصص للـ FPV فقط. هل سؤالك عن بناء الدرون أو الطيران؟',
         chips: CLARIFICATION_OOD_CHIPS,
@@ -169,6 +173,7 @@ export function composeV2Answer(
     }
     return {
       mode,
+      conceptId,
       riskLevel: 'none',
       shortAnswer: 'سؤالك عن FPV — اختر ما يناسبك:',
       chips: CLARIFICATION_FPV_CHIPS,
@@ -191,6 +196,7 @@ export function composeV2Answer(
       : undefined;
     return {
       mode,
+      conceptId,
       riskLevel: safety.riskLevel,
       shortAnswer,
       steps,
@@ -206,6 +212,7 @@ export function composeV2Answer(
     const steps = node?.steps ?? DEFAULT_TROUBLESHOOT_STEPS;
     return {
       mode,
+      conceptId,
       riskLevel: safety.riskLevel,
       shortAnswer: 'إليك خطوات التحقق من المشكلة:',
       steps: steps.slice(0, 6),
@@ -219,6 +226,7 @@ export function composeV2Answer(
   const node = conceptId ? getKnowledgeForConcept(conceptId) : undefined;
   return {
     mode: 'direct_short_answer',
+    conceptId,
     riskLevel: safety.riskLevel,
     shortAnswer:
       node?.shortAnswer ??
