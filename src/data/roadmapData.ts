@@ -17,6 +17,7 @@ export const roadmapData: RoadmapStep[] = [
       'عرفت أن الأسلاك المكشوفة خطر',
       'جهزت مكان عمل نظيف وآمن',
     ],
+    conceptIds: ['wiring_basics'],
   },
   {
     id: 'build-parts-tools', number: 2, icon: 'Package',
@@ -36,6 +37,7 @@ export const roadmapData: RoadmapStep[] = [
       'مفكات مناسبة موجودة',
       'أدوات اللحام جاهزة',
     ],
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'build-frame', number: 3, icon: 'Wrench',
@@ -49,6 +51,7 @@ export const roadmapData: RoadmapStep[] = [
       'تركت مساحة مناسبة للإلكترونيات',
       'تأكدت من اتجاه مقدمة الدرون',
     ],
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'build-motors', number: 4, icon: 'Activity',
@@ -63,6 +66,7 @@ export const roadmapData: RoadmapStep[] = [
       'وجهت أسلاك المحركات نحو داخل الفريم',
       'لا توجد مراوح مركبة',
     ],
+    conceptIds: ['motor_basic'],
   },
   {
     id: 'build-esc', number: 5, icon: 'Cpu',
@@ -76,6 +80,7 @@ export const roadmapData: RoadmapStep[] = [
       'موصل البطارية في مكان مناسب',
       'لا توجد أسلاك تحت ضغط أو احتكاك',
     ],
+    conceptIds: ['esc_basic'],
   },
   {
     id: 'build-fc', number: 6, icon: 'Settings',
@@ -89,6 +94,7 @@ export const roadmapData: RoadmapStep[] = [
       'لا توجد أسلاك تضغط على FC',
       'FC ثابت لكنه غير مضغوط بشدة',
     ],
+    conceptIds: ['flight_controller_basic'],
   },
   {
     id: 'build-receiver', number: 7, icon: 'Wind',
@@ -103,6 +109,7 @@ export const roadmapData: RoadmapStep[] = [
       'وصلت RX من طرف إلى TX في الطرف الآخر',
       'الأسلاك قصيرة ومنظمة',
     ],
+    conceptIds: ['receiver_basic', 'tx_rx_rule'],
   },
   {
     id: 'build-gps', number: 8, icon: 'Activity',
@@ -117,6 +124,7 @@ export const roadmapData: RoadmapStep[] = [
       'وصلت TX/RX للـ GPS بشكل صحيح',
       'ثبتت كابل GPS بدون شد',
     ],
+    conceptIds: ['gps_basics'],
   },
   {
     id: 'build-vtx', number: 9, icon: 'Wind',
@@ -131,6 +139,7 @@ export const roadmapData: RoadmapStep[] = [
       'لا توجد كابلات قريبة من مكان المراوح',
       'الأسلاك منظمة ومثبتة',
     ],
+    conceptIds: ['vtx_basic'],
   },
   {
     id: 'build-pre-battery', number: 10, icon: 'Shield',
@@ -147,6 +156,7 @@ export const roadmapData: RoadmapStep[] = [
       'Smoke Stopper جاهز',
       'أول توصيل سيكون عبر Smoke Stopper وليس مباشرة',
     ],
+    conceptIds: ['lipo_safety', 'wiring_basics'],
   },
 ];
 

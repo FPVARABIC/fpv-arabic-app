@@ -1,0 +1,204 @@
+meta:
+  conceptId: selection.receiver_protocol
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار بروتوكول الريسيفر
+  titleEn: Receiver Protocol Selection
+  tags:
+    - receiver protocol
+    - radio protocol
+    - ELRS
+    - ExpressLRS
+    - Crossfire
+    - CRSF
+    - FrSky
+    - Radio Link
+    - receiver
+    - بروتوكول الريسيفر
+    - نظام التحكم
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/receiver-protocol
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV radio-link fundamentals and
+    organized for AKL.
+  extractionNotes: >
+    This concept explains how to choose a receiver protocol according to
+    compatibility, ecosystem, build goal, and future expandability.
+    It intentionally excludes binding procedures, firmware flashing,
+    receiver wiring, UART configuration, and Betaflight setup.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار بروتوكول الريسيفر هو اختيار نظام الاتصال اللاسلكي الذي يربط جهاز
+    الإرسال بالدرون، بما يحقق التوافق مع الريموت والريسيفر وهدف البناء.
+  textEn: >
+    Receiver protocol selection is choosing the wireless communication protocol
+    that connects the radio transmitter and the drone while ensuring
+    compatibility with the transmitter, receiver, and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    بروتوكول الريسيفر هو اللغة التي يتواصل بها جهاز الإرسال مع الريسيفر.
+    لا يمكن استخدام أي ريموت مع أي ريسيفر إذا لم يدعما البروتوكول نفسه.
+    لذلك يجب اختيار البروتوكول أولاً، ثم شراء الريموت والريسيفر المتوافقين معه.
+  textEn: >
+    A receiver protocol is the communication language between the radio
+    transmitter and the receiver. A transmitter and receiver must support the
+    same protocol to work together. The protocol should therefore be chosen
+    before selecting the radio transmitter and receiver.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى بروتوكول الريسيفر.
+  - إدراك أن التوافق أهم من شهرة البروتوكول.
+  - اختيار بروتوكول مناسب قبل شراء الريموت والريسيفر.
+
+keyFacts:
+  - بروتوكول الاتصال يحدد توافق الريموت مع الريسيفر.
+  - ELRS أصبح الخيار الأكثر شيوعًا للمبتدئين والعديد من المستخدمين بفضل انفتاحه وتطوره المستمر.
+  - Crossfire ما زال مستخدمًا في بعض الأنظمة ويتميز باعتمادية عالية.
+  - FrSky يوجد في كثير من الأجهزة الأقدم لكنه ليس الخيار الافتراضي لمعظم المشاريع الجديدة.
+  - تغيير البروتوكول لاحقًا قد يتطلب تغيير الريموت أو الريسيفر أو كليهما.
+  - اختيار البروتوكول يجب أن يسبق شراء الريموت والريسيفر.
+  - لا يوجد بروتوكول واحد هو الأفضل لجميع المستخدمين؛ الاختيار يعتمد على التوافق وهدف البناء.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار بروتوكول الاتصال فقط.
+    لا يتضمن Binding أو تحديث Firmware أو توصيل الريسيفر أو اختبار مدى الإرسال
+    أو تشغيل الدرون. جميع الإجراءات العملية تندرج ضمن مفاهيم مستقلة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي ريموت يعمل مع أي ريسيفر.
+    correction: >
+      يجب أن يدعم كلا الجهازين البروتوكول نفسه حتى يتمكنا من التواصل.
+    conceptLinked: selection.component_matching
+
+  - belief: ELRS هو الأفضل لكل شخص دون استثناء.
+    correction: >
+      ELRS مناسب لمعظم المستخدمين، لكن الاختيار النهائي يعتمد على التوافق
+      والاحتياجات الفعلية للنظام.
+    conceptLinked: selection.build_goal
+
+  - belief: تغيير البروتوكول لاحقًا لا يؤثر على بقية النظام.
+    correction: >
+      تغيير البروتوكول قد يتطلب تغيير الريموت أو الريسيفر أو إعادة بناء جزء
+      من نظام التحكم.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - ما هو بروتوكول الريسيفر؟
+  - ما هو ELRS؟
+  - هل ELRS أفضل من Crossfire؟
+  - هل يمكن استخدام ريموت FrSky مع ELRS؟
+  - متى أختار ELRS؟
+  - هل أستطيع تغيير البروتوكول لاحقًا؟
+  - هل يؤثر البروتوكول في مدى التحكم؟
+  - ماذا أشتري أولاً: الريموت أم الريسيفر؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.receiver_protocol
+    status: draft
+    question: >
+      لماذا يجب اختيار البروتوكول قبل شراء الريموت والريسيفر؟
+    explanation: >
+      لأن توافق الريموت والريسيفر يعتمد على دعمهما للبروتوكول نفسه، واختيار
+      البروتوكول أولًا يمنع شراء مكونات غير متوافقة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.receiver_protocol
+    status: draft
+    question: >
+      لماذا لا يعني انتشار بروتوكول معين أنه الأنسب لكل المستخدمين؟
+    explanation: >
+      لأن الاختيار يعتمد على التوافق مع النظام وهدف البناء والمعدات المتوفرة،
+      وليس على الشعبية فقط.
+
+aliases:
+  ar:
+    - بروتوكول الريسيفر
+    - بروتوكول التحكم
+    - ELRS
+    - Crossfire
+    - FrSky
+    - نظام الاتصال
+  en:
+    - Receiver Protocol
+    - Radio Protocol
+    - ExpressLRS
+    - ELRS
+    - Crossfire
+    - FrSky
+  transliteration:
+    - receiver protocol
+    - expresslrs
+    - elrs
+    - crossfire
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار البروتوكول يعتمد على توافق جميع مكونات نظام التحكم.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء قد يؤثر في اختيار نظام الاتصال المناسب.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.receiver
+    note: >
+      فهم البروتوكول يسبق اختيار وفهم الريسيفر نفسه.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: control.radio_transmitter
+    note: >
+      اختيار البروتوكول يسبق اختيار جهاز الإرسال المناسب.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      إعداد الريسيفر يعتمد على البروتوكول المختار.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a receiver communication protocol.
+  It intentionally excludes receiver hardware description, binding procedures,
+  firmware flashing, UART wiring, Betaflight configuration, range testing,
+  antenna installation, and failsafe configuration.
+  Hardware details belong in hardware.receiver, radio operation belongs in
+  control.radio_transmitter, and configuration belongs in firmware.receiver_configuration.

@@ -1,0 +1,193 @@
+meta:
+  conceptId: firmware.motor_test
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختبار المحركات
+  titleEn: Motor Test
+  tags:
+    - motor test
+    - firmware
+    - flight controller
+    - esc
+    - motors
+    - betaflight
+    - inav
+    - اختبار المحركات
+    - فحص المحركات
+    - السلامة
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/motor-test
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller firmware
+    motor-test fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains Motor Test as a firmware function that provides
+    controlled motor output for understanding motor behavior. It intentionally
+    excludes testing procedures, propeller handling, arming procedures,
+    ESC calibration, troubleshooting, UI walkthroughs, and product-specific
+    implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    Motor Test هو وظيفة داخل الـ Firmware تسمح بإرسال أوامر مباشرة إلى
+    المحركات لفهم سلوك منظومة الدفع واستجابة مخرجات متحكم الطيران.
+  textEn: >
+    Motor Test is a firmware function that allows direct motor output to
+    understand propulsion-system behavior and Flight Controller motor output.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يوفر الـ Firmware وظيفة تسمى Motor Test لفهم العلاقة بين أوامر متحكم
+    الطيران واستجابة المحركات. يقتصر هذا المفهوم على تفسير الغرض من هذه
+    الوظيفة، ولا يشرح كيفية استخدامها أو تنفيذها عملياً، لأن ذلك ينتمي
+    إلى مفاهيم السلامة والإجراءات.
+  textEn: >
+    Firmware provides a Motor Test function to understand the relationship
+    between Flight Controller commands and motor response. This concept
+    explains the purpose of the function only and does not describe how to
+    perform motor testing, as that belongs to safety procedures.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن Motor Test وظيفة داخل الـ Firmware.
+  - إدراك الغرض من وجود Motor Test.
+  - التمييز بين مفهوم Motor Test وبين تنفيذ اختبار المحركات.
+
+keyFacts:
+  - Motor Test وظيفة Firmware.
+  - ترتبط بمنظومة Flight Controller وESC والمحركات.
+  - تتيح فهم استجابة المحركات لأوامر متحكم الطيران.
+  - لا تشرح خطوات تشغيل المحركات.
+  - لا تغني عن إجراءات السلامة.
+  - تنفيذ Motor Test يختلف عن مفهومه.
+  - إجراءات الاختبار العملي تنتمي إلى مفاهيم السلامة.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم وظيفة Motor Test من الناحية المفاهيمية فقط.
+    ولا يتضمن أي خطوات تشغيل أو اختبار عملي أو تعليمات تتعلق بالمراوح
+    أو التسليح أو تشغيل المحركات. جميع الإجراءات العملية تنتمي إلى
+    مفاهيم السلامة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: Motor Test هو نفسه تشغيل المحركات للطيران.
+    correction: >
+      Motor Test هو وظيفة Firmware لفهم استجابة المحركات، وليس وضعاً
+      مخصصاً للطيران أو بديلاً عن التشغيل الطبيعي.
+    conceptLinked: firmware.flight_modes
+
+  - belief: يمكن تنفيذ Motor Test دون أي اعتبارات سلامة.
+    correction: >
+      يشرح هذا المفهوم وظيفة Motor Test فقط، أما تنفيذ الاختبار عملياً
+      فينتمي إلى مفاهيم وإجراءات السلامة.
+    conceptLinked: firmware.failsafe
+
+  - belief: Motor Test يختبر المحركات فقط.
+    correction: >
+      ترتبط وظيفة Motor Test بمنظومة الدفع كاملة، بما في ذلك متحكم
+      الطيران وESC والمحركات.
+    conceptLinked: selection.esc
+
+expectedQuestions:
+  - ما هو Motor Test؟
+  - لماذا يحتوي الـ Firmware على Motor Test؟
+  - ما الذي يوضحه Motor Test؟
+  - هل Motor Test هو نفسه ARM؟
+  - هل Motor Test جزء من Flight Modes؟
+  - ما الفرق بين Motor Test والطيران الفعلي؟
+  - لماذا يحتاج Motor Test إلى إجراءات سلامة مستقلة؟
+  - ما علاقة Motor Test بمنظومة الدفع؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.motor_test
+    status: draft
+    question: >
+      لماذا يوفر الـ Firmware وظيفة مستقلة تسمى Motor Test؟
+    explanation: >
+      لأنها تساعد على فهم العلاقة بين أوامر متحكم الطيران واستجابة
+      منظومة الدفع دون أن تكون جزءاً من الطيران الطبيعي.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.motor_test
+    status: draft
+    question: >
+      لماذا يجب التمييز بين مفهوم Motor Test وتنفيذ اختبار المحركات؟
+    explanation: >
+      لأن المفهوم يشرح الغرض من الوظيفة، بينما التنفيذ العملي يخضع
+      لإجراءات سلامة مستقلة.
+
+aliases:
+  ar:
+    - اختبار المحركات
+    - فحص المحركات
+    - Motor Test
+    - اختبار الموتورات
+    - اختبار استجابة المحركات
+  en:
+    - Motor Test
+    - Motor Testing
+    - Firmware Motor Test
+    - Motor Output Test
+    - Motor Check
+  transliteration:
+    - motor test
+    - motor testing
+    - motor output test
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.flight_modes
+    note: >
+      ينتمي Motor Test إلى وظائف الـ Firmware التي يديرها متحكم الطيران.
+
+  - type: prerequisite_for
+    targetConceptId: safety.motor_testing
+    note: >
+      يجب فهم مفهوم Motor Test قبل دراسة تنفيذ اختبار المحركات عملياً.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.propeller_safety
+    note: >
+      يجب فهم وظيفة Motor Test قبل دراسة إجراءات سلامة المراوح.
+    pending: true
+
+architecturalNotes: |
+  This concept explains Motor Test as a firmware function.
+  It intentionally excludes motor-testing procedures, propeller removal,
+  arming procedures, ESC calibration, troubleshooting, software UI
+  walkthroughs, and product-specific implementations.
+  Motor Test is not a Flight Mode.
+  Practical motor testing belongs in the safety namespace.
+  Flight Modes belong in firmware.flight_modes.

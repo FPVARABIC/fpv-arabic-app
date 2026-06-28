@@ -1,0 +1,192 @@
+meta:
+  conceptId: selection.gps
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار وحدة GPS
+  titleEn: GPS Module Selection
+  tags:
+    - gps
+    - gps module
+    - fpv gps
+    - drone gps
+    - gps selection
+    - اختيار GPS
+    - وحدة GPS
+    - نظام تحديد المواقع
+    - توافق GPS
+    - gps module selection
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/gps
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV GPS selection
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains GPS module selection as a planning and compatibility
+    decision. It intentionally excludes wiring, installation, satellite
+    acquisition, firmware configuration, rescue features, calibration,
+    navigation procedures, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار وحدة GPS هو اختيار وحدة تحديد مواقع تتوافق مع هدف البناء وFlight
+    Controller والوظائف التي يرغب المستخدم في إضافتها إلى الدرون.
+  textEn: >
+    GPS module selection is choosing a positioning module compatible with the
+    build goal, flight controller, and the desired drone capabilities.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    ليست كل الدرونات تحتاج إلى GPS. يعتمد القرار على هدف البناء والوظائف التي
+    يريد المستخدم إضافتها. إذا لم تكن هناك حاجة لهذه الوظائف، فقد لا تكون إضافة
+    GPS ضرورية منذ البداية.
+  textEn: >
+    Not every drone requires a GPS module. The decision depends on the build
+    goal and the functions the user wants to add. If those functions are not
+    needed, installing a GPS module may not be necessary.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن GPS ليس مكوناً إلزامياً لكل بناء.
+  - إدراك أن اختيار GPS يعتمد على هدف البناء.
+  - التمييز بين اختيار وحدة GPS وبين تركيبها أو إعدادها.
+
+keyFacts:
+  - بعض البنايات لا تحتاج إلى GPS.
+  - هدف البناء هو العامل الأساسي في قرار إضافة GPS.
+  - يجب أن تتوافق وحدة GPS مع Flight Controller.
+  - حجم الوحدة قد يؤثر في بعض البنايات الصغيرة.
+  - وجود GPS لا يعني أن جميع الوظائف المعتمدة عليه ستكون متاحة تلقائياً.
+  - إعداد GPS ووظائفه العملية تنتمي إلى مفاهيم مستقلة.
+  - اختيار GPS يسبق مرحلة الإعداد البرمجي.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار وحدة GPS فقط، ولا يشمل تركيبها أو إعدادها أو
+    استخدام الوظائف العملية المرتبطة بها.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: كل درون يحتاج إلى GPS.
+    correction: >
+      الحاجة إلى GPS تعتمد على هدف البناء والاستخدام المتوقع.
+    conceptLinked: selection.build_goal
+
+  - belief: وجود GPS وحده يوفر جميع الوظائف المرتبطة به.
+    correction: >
+      اختيار الوحدة يختلف عن إعدادها واستخدام ميزاتها.
+    conceptLinked: selection.flight_controller
+
+  - belief: يمكن اختيار أي GPS لأي بناء.
+    correction: >
+      يجب مراعاة توافق الوحدة مع Flight Controller وبقية المنظومة.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - هل أحتاج GPS؟
+  - متى أضيف GPS إلى الدرون؟
+  - هل كل الدرونات تحتاج GPS؟
+  - هل GPS ضروري للمبتدئ؟
+  - هل أي GPS يعمل مع أي Flight Controller؟
+  - هل GPS يزيد مدى الطيران؟
+  - هل وجود GPS وحده يكفي للاستفادة من جميع وظائفه؟
+  - متى أختار وحدة GPS؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.gps
+    status: draft
+    question: >
+      لماذا قد لا يحتاج بعض المبتدئين إلى GPS في أول بناء؟
+    explanation: >
+      لأن الحاجة إلى GPS تعتمد على هدف البناء والوظائف المطلوبة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.gps
+    status: draft
+    question: >
+      لماذا لا يكفي شراء وحدة GPS فقط للاستفادة من جميع الوظائف التي تعتمد عليه؟
+    explanation: >
+      لأن اختيار الوحدة يختلف عن تركيبها وإعدادها واستخدام وظائفها.
+
+aliases:
+  ar:
+    - GPS
+    - وحدة GPS
+    - جي بي إس
+    - نظام تحديد المواقع
+    - اختيار GPS
+  en:
+    - GPS
+    - GPS Module
+    - Drone GPS
+    - GPS Selection
+    - GNSS Module
+  transliteration:
+    - gps
+    - gps module
+    - gnss
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      الحاجة إلى GPS تعتمد على هدف البناء.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      يجب أن تكون وحدة GPS متوافقة مع Flight Controller.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار GPS جزء من توافق المنظومة.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.gps
+    note: >
+      هذا المفهوم يمهد لفهم وحدة GPS كمكون.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.gps_configuration
+    note: >
+      إعداد GPS ينتمي إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a GPS module.
+  It intentionally excludes installation, wiring, UART configuration,
+  firmware setup, rescue features, satellite acquisition, calibration,
+  navigation procedures, and product reviews.
+  Hardware explanation belongs in hardware.gps.
+  GPS configuration belongs in firmware.gps_configuration.

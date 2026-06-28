@@ -1,0 +1,250 @@
+meta:
+  conceptId: selection.flight_controller
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار Flight Controller
+  titleEn: Flight Controller Selection
+  tags:
+    - flight controller
+    - fc selection
+    - flight controller selection
+    - uart
+    - aio
+    - stack
+    - betaflight
+    - inav
+    - اختيار Flight Controller
+    - اختيار FC
+    - متحكم الطيران
+    - فلايت كنترولر
+    - توافق FC
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/flight-controller
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV flight-controller selection
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains flight controller selection as a compatibility,
+    expandability, and firmware-support decision. It excludes wiring, soldering,
+    UART mapping, firmware flashing, Betaflight configuration, INAV configuration,
+    sensor calibration, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار Flight Controller هو اختيار متحكم طيران يتوافق مع حجم الدرون وهدف
+    البناء والـ ESC والريسيفر ونظام الفيديو والملحقات والبرنامج الذي سيُستخدم
+    لإعداده لاحقًا.
+  textEn: >
+    Flight controller selection is choosing a flight controller that fits the
+    drone size, build goal, ESC, receiver, video system, accessories, and the
+    firmware that will be used to configure it later.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    Flight Controller هو مركز التحكم الذي تتصل به عدة أنظمة في الدرون، لذلك
+    لا يُختار فقط لأنه مشهور أو رخيص. يجب أن يملك المنافذ والجهود والمقاس
+    والتوافق المناسب للـ ESC والريسيفر ونظام الفيديو والملحقات مثل GPS أو
+    Buzzer. كذلك يجب أن يكون مناسبًا للبرنامج الذي ستستخدمه لاحقًا مثل
+    Betaflight أو INAV. اختيار FC مناسب من البداية يقلل مشاكل التوافق عند
+    التوصيل والإعداد.
+  textEn: >
+    The flight controller is the control hub that several drone systems connect
+    to, so it should not be chosen only because it is popular or inexpensive.
+    It must provide the ports, voltage outputs, size, and compatibility needed
+    for the ESC, receiver, video system, and accessories such as GPS or a buzzer.
+    It should also fit the firmware you plan to use later, such as Betaflight
+    or INAV. Choosing a suitable FC early reduces compatibility problems during
+    wiring and setup.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن Flight Controller يجب أن يناسب نظام الدرون كاملًا.
+  - إدراك أهمية المنافذ والجهود والمقاس والتوافق قبل الشراء.
+  - فهم أن دعم البرنامج مثل Betaflight أو INAV عامل اختيار، وليس خطوة إعداد في هذا المفهوم.
+  - التمييز بين اختيار FC وإعداده أو توصيله عمليًا.
+
+keyFacts:
+  - Flight Controller يجب أن يتوافق مع حجم الدرون وهدف البناء.
+  - عدد المنافذ مثل UARTs يؤثر في إمكانية توصيل الريسيفر وGPS ونظام الفيديو والملحقات.
+  - توافق FC مع ESC مهم، خصوصًا عند استخدام Stack أو AIO.
+  - بعض البوردات توفر BEC أو مخارج 5V و9V، لكن استخدامها العملي يحتاج مفاهيم توصيل منفصلة.
+  - يجب التأكد أن FC مناسب للبرنامج المقصود مثل Betaflight أو INAV، لكن إعداد البرنامج موضوع منفصل.
+  - AIO قد يناسب بعض البنايات الصغيرة لأنه يدمج أكثر من وظيفة في لوحة واحدة.
+  - Stack قد يناسب بنايات تحتاج فصلًا أو توسعًا أكبر بين FC وESC.
+  - اختيار FC يجب أن يراعي التوسع المستقبلي مثل GPS أو Buzzer أو Blackbox.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار Flight Controller فقط، لكنه مرتبط بتوافق الجهد
+    والمنافذ والـ ESC والريسيفر ونظام الفيديو. لا يتضمن هذا المفهوم توصيل
+    أسلاك أو لحام أو إعداد Firmware أو تشغيل الدرون. أي تطبيق عملي يجب أن يتم
+    ضمن مفاهيم التوصيل والسلامة والإعداد المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي Flight Controller يعمل مع أي بناء.
+    correction: >
+      يجب أن يتوافق FC مع حجم الدرون، ESC، الريسيفر، نظام الفيديو، والملحقات
+      التي تريد استخدامها.
+    conceptLinked: selection.component_matching
+
+  - belief: عدد UARTs الكبير يعني دائمًا أن FC هو الأفضل.
+    correction: >
+      عدد المنافذ مهم، لكنه ليس العامل الوحيد؛ يجب أيضًا النظر إلى الحجم، الجهود،
+      التوافق، الجودة، هدف البناء، ودعم البرنامج المناسب.
+    conceptLinked: selection.build_goal
+
+  - belief: AIO أفضل دائمًا من Stack لأنه أبسط.
+    correction: >
+      AIO قد يكون مناسبًا لبعض البنايات الصغيرة، لكن Stack قد يكون أنسب عندما
+      تحتاج مرونة أو تحملًا أو توسعًا أكبر.
+    conceptLinked: selection.drone_size
+
+  - belief: إذا كان FC مشهورًا فهذا يعني أنه مناسب لأي Firmware.
+    correction: >
+      يجب التأكد من توافق FC مع البرنامج الذي تريد استخدامه، مثل Betaflight أو
+      INAV، لأن دعم البرنامج جزء مهم من قرار الاختيار.
+    conceptLinked: firmware.flight_controller_configuration
+
+expectedQuestions:
+  - كيف أختار Flight Controller؟
+  - ما معنى FC؟
+  - هل أي Flight Controller يناسب أي درون؟
+  - ما أهمية عدد UARTs؟
+  - ما الفرق بين AIO وStack؟
+  - هل أحتاج 5V أو 9V في FC؟
+  - هل FC يجب أن يناسب ESC؟
+  - هل أختار FC قبل الريسيفر ونظام الفيديو؟
+  - هل يجب أن أتأكد من دعم Betaflight أو INAV؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.flight_controller
+    status: draft
+    question: >
+      لماذا لا يكفي اختيار Flight Controller لأنه مشهور أو رخيص؟
+    explanation: >
+      لأن FC يجب أن يناسب النظام كاملًا من ناحية الحجم، المنافذ، الجهود،
+      التوافق مع ESC والريسيفر ونظام الفيديو والملحقات، ودعم البرنامج المناسب.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.flight_controller
+    status: draft
+    question: >
+      لماذا قد يكون عدد UARTs عاملًا مهمًا عند اختيار FC؟
+    explanation: >
+      لأن الريسيفر وGPS وبعض أنظمة الفيديو والملحقات قد تحتاج منافذ اتصال،
+      وإذا لم تكن المنافذ كافية قد تصبح الإضافات المستقبلية صعبة أو مستحيلة.
+
+aliases:
+  ar:
+    - Flight Controller
+    - FC
+    - فلايت كنترولر
+    - متحكم الطيران
+    - اختيار FC
+    - اختيار Flight Controller
+  en:
+    - Flight Controller
+    - FC
+    - Flight Controller Selection
+    - FC Selection
+    - Flight Control Board
+  transliteration:
+    - flight controller
+    - fc
+    - flight control board
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: hardware.flight_controller
+    note: >
+      فهم وظيفة Flight Controller كمكون يساعد على اختياره بشكل صحيح.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار FC يعتمد على توافقه مع بقية مكونات الدرون.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في عدد المنافذ والملحقات والبرنامج المناسب.
+
+  - type: depends_on
+    targetConceptId: selection.drone_size
+    note: >
+      حجم الدرون يؤثر في مقاس FC المناسب وخيار AIO أو Stack.
+
+  - type: depends_on
+    targetConceptId: selection.esc_type
+    note: >
+      اختيار FC يجب أن يراعي نوع ESC أو Stack وطريقة التوافق بينهما.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      اختيار البروتوكول والريسيفر يؤثر في متطلبات الاتصال مع FC.
+
+  - type: depends_on
+    targetConceptId: selection.video_system
+    note: >
+      نظام الفيديو قد يحتاج توافقًا مع FC حسب نوع المنظومة والميزات المستخدمة.
+
+  - type: prerequisite_for
+    targetConceptId: selection.receiver
+    note: >
+      اختيار الريسيفر التفصيلي يجب أن يراعي توافقه مع FC والمنافذ المتاحة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.uart_configuration
+    note: >
+      إعداد UARTs يأتي لاحقًا بعد فهم أهمية المنافذ كعامل اختيار.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.flight_controller_configuration
+    note: >
+      إعداد FC في البرامج مثل Betaflight أو INAV ينتمي إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a flight controller.
+  It intentionally excludes wiring, soldering, pin mapping, UART assignment,
+  firmware flashing, Betaflight setup, INAV setup, sensor calibration, PID tuning,
+  and product reviews.
+  Hardware explanation belongs in hardware.flight_controller, UART mapping belongs
+  in firmware.uart_configuration, and firmware setup belongs in
+  firmware.flight_controller_configuration.

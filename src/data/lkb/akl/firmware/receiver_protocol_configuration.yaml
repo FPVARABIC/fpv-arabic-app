@@ -1,0 +1,187 @@
+meta:
+  conceptId: firmware.receiver_protocol_configuration
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: إعداد بروتوكول الريسيفر
+  titleEn: Receiver Protocol Configuration
+  tags:
+    - receiver protocol
+    - receiver configuration
+    - firmware
+    - serial receiver
+    - control
+    - expresslrs
+    - sbus
+    - protocol configuration
+    - إعداد بروتوكول الريسيفر
+    - إعداد البروتوكول
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/receiver-protocol-configuration
+  knowledgeOrigin: >
+    Canonical firmware concept authored from receiver protocol
+    configuration fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains receiver protocol configuration as the firmware
+    configuration that determines how incoming receiver data is
+    interpreted. It intentionally excludes UART configuration,
+    Serial RX setup, Betaflight or INAV walkthroughs,
+    receiver binding procedures, wiring, troubleshooting,
+    CLI commands, and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    إعداد بروتوكول الريسيفر هو إعداد في الـ Firmware يحدد بروتوكول
+    الاتصال الذي يستخدمه متحكم الطيران لتفسير بيانات التحكم القادمة
+    من الريسيفر.
+  textEn: >
+    Receiver Protocol Configuration is a firmware setting that specifies
+    which receiver communication protocol the Flight Controller uses to
+    interpret incoming control data.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    تصل إلى متحكم الطيران بيانات تحكم قادمة من الريسيفر. ولكي يستطيع
+    الـ Firmware تفسير هذه البيانات بصورة صحيحة، يجب أن يعرف
+    بروتوكول الاتصال الذي يستخدمه الريسيفر.
+  textEn: >
+    The Flight Controller receives control data from the receiver.
+    To interpret that data correctly, the firmware must know which
+    communication protocol the receiver is using.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن الـ Firmware يحتاج إلى معرفة بروتوكول الريسيفر.
+  - إدراك أن إعداد بروتوكول الريسيفر يختلف عن Binding.
+  - التمييز بين إعداد بروتوكول الريسيفر وبين إعدادات UART.
+
+keyFacts:
+  - يحدد كيفية تفسير بيانات التحكم القادمة من الريسيفر.
+  - يعتمد على توافق بروتوكول الريسيفر مع البروتوكول الذي يتوقعه الـ Firmware.
+  - يختلف عن Binding.
+  - يختلف عن UART Configuration.
+  - يختلف عن توصيل الريسيفر.
+  - يسبق معالجة بيانات التحكم داخل الـ Firmware.
+  - هذا المفهوم لا يشرح خطوات إعداد البروتوكول عملياً.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم إعداد بروتوكول الريسيفر كمفهوم Firmware فقط،
+    ولا يتضمن أي خطوات إعداد أو تشغيل عملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: إعداد بروتوكول الريسيفر هو نفسه Receiver Binding.
+    correction: >
+      Receiver Binding ينشئ علاقة ارتباط بين جهاز الإرسال والريسيفر،
+      أما إعداد بروتوكول الريسيفر فيحدد كيف يفسر الـ Firmware بيانات
+      التحكم القادمة من الريسيفر.
+    conceptLinked: firmware.receiver_binding
+
+  - belief: إعداد بروتوكول الريسيفر هو نفسه إعداد UART.
+    correction: >
+      إعداد UART يحدد واجهة الاتصال المستخدمة، أما إعداد بروتوكول
+      الريسيفر فيحدد كيفية تفسير بيانات التحكم بعد وصولها إلى
+      الـ Firmware.
+    conceptLinked: firmware.uart_configuration
+
+  - belief: تغيير إعداد بروتوكول الريسيفر يعني تغيير بروتوكول الاتصال نفسه.
+    correction: >
+      بروتوكول الاتصال تحدده الأجهزة المستخدمة، أما إعداد بروتوكول
+      الريسيفر داخل الـ Firmware فيحدد كيفية تفسير البيانات القادمة
+      باستخدام ذلك البروتوكول.
+    conceptLinked: selection.receiver_protocol
+
+expectedQuestions:
+  - ما هو إعداد بروتوكول الريسيفر؟
+  - لماذا يحتاج الـ Firmware إلى معرفة بروتوكول الريسيفر؟
+  - ما الفرق بين Receiver Binding وإعداد البروتوكول؟
+  - ما الفرق بين إعداد البروتوكول وUART؟
+  - هل يغير إعداد البروتوكول نوع بروتوكول الاتصال؟
+  - ماذا يحدث إذا كان البروتوكول غير متوافق؟
+  - هل يحتاج كل ريسيفر إلى إعداد بروتوكول؟
+  - هل يشرح هذا المفهوم خطوات الإعداد؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_protocol_configuration
+    status: draft
+    question: >
+      لماذا يحتاج الـ Firmware إلى معرفة بروتوكول الريسيفر قبل تفسير
+      بيانات التحكم؟
+    explanation: >
+      لأن طريقة تفسير البيانات تعتمد على البروتوكول المستخدم، ولا يمكن
+      للـ Firmware تفسير البيانات بصورة صحيحة دون معرفة هذا البروتوكول.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.receiver_protocol_configuration
+    status: draft
+    question: >
+      لماذا يجب التمييز بين Receiver Binding وإعداد بروتوكول الريسيفر؟
+    explanation: >
+      لأن Receiver Binding ينشئ علاقة الارتباط بين جهاز الإرسال
+      والريسيفر، بينما يحدد إعداد البروتوكول كيفية تفسير بيانات
+      التحكم داخل الـ Firmware.
+
+aliases:
+  ar:
+    - إعداد بروتوكول الريسيفر
+    - إعداد بروتوكول المستقبل
+    - إعداد البروتوكول
+
+  en:
+    - Receiver Protocol Configuration
+    - Receiver Protocol Setup
+
+  transliteration:
+    - receiver protocol configuration
+    - receiver protocol setup
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.receiver_binding
+    note: >
+      يعتمد فهم هذا المفهوم على فهم Receiver Binding.
+
+  - type: depends_on
+    targetConceptId: firmware.uart_configuration
+    note: >
+      يساعد فهم UART Configuration على التمييز بين واجهة الاتصال
+      وآلية تفسير البيانات داخل الـ Firmware.
+
+architecturalNotes: |
+  This concept explains receiver protocol configuration as a firmware
+  concept only. It intentionally excludes UART setup procedures,
+  Serial RX configuration, Betaflight or INAV walkthroughs,
+  binding procedures, wiring, CLI commands, troubleshooting,
+  and product-specific implementations.
+  Receiver Binding belongs in firmware.receiver_binding.
+  UART configuration belongs in firmware.uart_configuration.

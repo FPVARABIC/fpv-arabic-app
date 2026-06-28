@@ -1,0 +1,196 @@
+meta:
+  conceptId: selection.power_regulator
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار منظم الجهد
+  titleEn: Power Regulator Selection
+  tags:
+    - power regulator
+    - voltage regulator
+    - bec
+    - ubec
+    - regulated power
+    - fpv regulator
+    - اختيار منظم الجهد
+    - منظم الجهد
+    - BEC
+    - UBEC
+    - توافق الجهد
+    - تغذية المكونات
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/power-regulator
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV power regulator
+    selection fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains power regulator selection only as a planning
+    and compatibility decision. It intentionally excludes wiring,
+    soldering, current calculations, regulator design, efficiency,
+    firmware configuration, troubleshooting, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار منظم الجهد هو تحديد الحاجة إلى منظم جهد مناسب لتوفير تغذية
+    كهربائية متوافقة للمكونات التي تحتاج جهداً منظماً ضمن منظومة الدرون.
+  textEn: >
+    Power regulator selection is deciding whether a suitable voltage
+    regulator is required to provide compatible regulated power for
+    drone components.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا تعمل جميع مكونات الدرون على نفس الجهد الكهربائي، لذلك قد تحتاج بعض
+    المكونات إلى منظم جهد مناسب. يعتمد هذا القرار على منظومة الطاقة
+    والمكونات المستخدمة، ولا يعني وجود منظم جهد أنه ضروري في كل بناء.
+  textEn: >
+    Not all drone components operate at the same voltage. Some may require
+    a suitable voltage regulator. The decision depends on the overall power
+    system and the components being used, and a regulator is not required
+    for every build.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن بعض مكونات الدرون تحتاج إلى جهد منظم ومتوافق.
+  - إدراك أن اختيار منظم الجهد يعتمد على منظومة الطاقة والمكونات المستخدمة.
+  - التمييز بين اختيار منظم الجهد وبين تركيبه أو توصيله أو ضبطه.
+
+keyFacts:
+  - ليست جميع مكونات الدرون تعمل مباشرة على جهد البطارية.
+  - اختيار منظم الجهد يعتمد على متطلبات المكونات التي سيتم تغذيتها.
+  - يجب أن يكون منظم الجهد متوافقاً مع منظومة الطاقة.
+  - قد يكون منظم الجهد مدمجاً داخل أحد المكونات أو منفصلاً حسب تصميم البناء.
+  - إضافة منظم جهد خارجي ليست ضرورية في جميع الحالات.
+  - توافق الجهد أهم من إضافة مكونات غير ضرورية.
+  - التوصيل والاختبارات والحسابات الكهربائية تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار منظم الجهد فقط، لكنه قريب من قرارات الجهد وتغذية
+    المكونات. لا يتضمن هذا المفهوم توصيل الأسلاك أو اختبار الجهد أو حساب التيار
+    أو تشغيل المكونات عملياً.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: كل مكونات الدرون يمكن تغذيتها بنفس الجهد.
+    correction: >
+      بعض المكونات تحتاج إلى جهد منظم ومتوافق، لذلك يجب مراعاة متطلبات كل مكون.
+    conceptLinked: selection.battery_voltage
+
+  - belief: وجود منظم جهد خارجي يجعل البناء أفضل دائماً.
+    correction: >
+      منظم الجهد الخارجي يستخدم عند الحاجة فقط، وليس إضافة ضرورية لكل بناء.
+    conceptLinked: selection.component_matching
+
+  - belief: وجود مخارج جهد في Flight Controller يعني أنني لا أحتاج أي تنظيم جهد آخر.
+    correction: >
+      قد تكفي مخارج Flight Controller في بعض البنايات، وقد لا تكفي في بنايات أخرى
+      حسب المكونات المستخدمة ومتطلبات الطاقة.
+    conceptLinked: selection.flight_controller
+
+expectedQuestions:
+  - هل أحتاج منظم جهد؟
+  - ما هو BEC أو UBEC؟
+  - متى أحتاج منظم جهد خارجي؟
+  - هل كل المكونات تعمل على نفس الجهد؟
+  - هل Flight Controller يكفي لتغذية كل شيء؟
+  - هل منظم الجهد ضروري لكل بناء؟
+  - ما الذي أراعيه عند اختيار منظم الجهد؟
+  - هل أختار منظم الجهد قبل المكونات الأخرى؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.power_regulator
+    status: draft
+    question: >
+      لماذا لا يمكن افتراض أن جميع مكونات الدرون تعمل على نفس الجهد؟
+    explanation: >
+      لأن المكونات قد تحتاج إلى جهود مختلفة، ويجب اختيار التغذية بما يتوافق مع
+      متطلبات كل مكون.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.power_regulator
+    status: draft
+    question: >
+      لماذا لا يكون منظم الجهد الخارجي ضرورياً في كل بناء؟
+    explanation: >
+      لأن الحاجة إليه تعتمد على المكونات المستخدمة ومنظومة الطاقة المتوفرة في البناء.
+
+aliases:
+  ar:
+    - منظم الجهد
+    - BEC
+    - UBEC
+    - منظم كهرباء
+    - منظم 5V
+    - منظم 9V
+    - اختيار منظم الجهد
+  en:
+    - Power Regulator
+    - Voltage Regulator
+    - BEC
+    - UBEC
+    - Regulated Power
+    - FPV Regulator
+  transliteration:
+    - power regulator
+    - voltage regulator
+    - bec
+    - ubec
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      اختيار منظم الجهد يعتمد على جهد البطارية ومنظومة الطاقة.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      إمكانيات Flight Controller ومنظومة الطاقة تؤثر في الحاجة إلى منظم جهد خارجي.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار منظم الجهد جزء من توافق منظومة الطاقة والمكونات.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.power_regulator
+    note: >
+      هذا المفهوم يمهد لفهم منظم الجهد كمكون.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a power regulator such as a BEC or UBEC.
+  It intentionally excludes wiring, soldering, current calculations, regulator
+  design, efficiency theory, voltage testing, heat testing, firmware configuration,
+  troubleshooting, and product reviews.
+  Hardware explanation belongs in hardware.power_regulator.

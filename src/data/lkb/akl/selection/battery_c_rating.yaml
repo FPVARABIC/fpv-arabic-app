@@ -1,0 +1,211 @@
+meta:
+  conceptId: selection.battery_c_rating
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار معدل التفريغ C
+  titleEn: Battery C-Rating Selection
+  tags:
+    - battery c rating
+    - c rating
+    - discharge rate
+    - lipo
+    - battery selection
+    - current capability
+    - اختيار C Rating
+    - معدل التفريغ
+    - بطارية ليبو
+    - تيار البطارية
+    - توافق البطارية
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/battery-c-rating
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains LiPo C-rating as a selection decision related to
+    current delivery capability, propulsion demand, and system compatibility.
+    It intentionally excludes mathematical calculations and battery testing procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار معدل التفريغ C هو اختيار بطارية تستطيع توفير التيار الذي يحتاجه
+    نظام الدفع بأمان، بما يتوافق مع المحركات والـ ESC وسعة البطارية وهدف البناء.
+  textEn: >
+    Battery C-rating selection is choosing a battery capable of supplying the
+    current required by the propulsion system while remaining compatible with
+    the motors, ESC, battery capacity, and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    قيمة C لا تعني أن البطارية تدوم مدة أطول، بل تعبر عن قدرتها على توفير
+    التيار عند الحاجة. إذا كانت قدرة البطارية أقل من متطلبات النظام فقد يحدث
+    هبوط في الجهد أو سخونة أو ضعف في الأداء. لذلك يجب اختيار C-Rating كجزء من
+    النظام الكامل، وليس بالنظر إلى هذا الرقم وحده.
+  textEn: >
+    The C-rating does not indicate longer flight time. It describes the battery's
+    ability to deliver current when required. If the battery cannot provide the
+    required current, voltage sag, overheating, or reduced performance may occur.
+    C-rating must therefore be selected as part of the complete system.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن C-Rating يصف قدرة البطارية على توفير التيار.
+  - التمييز بين C-Rating وسعة البطارية وجهدها.
+  - إدراك أن اختيار C-Rating يعتمد على متطلبات النظام بالكامل.
+
+keyFacts:
+  - C-Rating يعبر عن قدرة البطارية على توفير التيار، وليس عن كمية الطاقة المخزنة.
+  - سعة البطارية وجهدها وC-Rating تمثل خصائص مختلفة ومتكاملة.
+  - نظام الدفع الأقوى قد يحتاج بطارية تستطيع توفير تيار أعلى.
+  - انخفاض قدرة البطارية على توفير التيار قد يؤدي إلى هبوط الجهد وضعف الأداء.
+  - اختيار C-Rating يجب أن يراعي المحركات والـ ESC والمراوح والبطارية.
+  - C-Rating المرتفع لا يعني تلقائيًا أن البطارية أفضل لكل استخدام.
+  - اختيار البطارية يجب أن يعتمد على توافق النظام الكامل وليس على رقم C فقط.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    هذا المفهوم يرتبط بقدرة البطارية على توفير التيار، وهو قرار قد يؤثر في
+    سلامة النظام واستقراره الحراري. لا يتضمن هذا المفهوم اختبار البطاريات،
+    أو قياس التيار، أو الشحن، أو التفريغ العملي. أي تطبيق عملي يجب أن يتم ضمن
+    مفاهيم السلامة الخاصة ببطاريات LiPo.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: كلما زادت قيمة C كانت البطارية أفضل دائمًا.
+    correction: >
+      القيمة الأعلى ليست دائمًا أفضل، بل يجب أن تناسب احتياجات النظام الفعلية.
+    conceptLinked: selection.component_matching
+
+  - belief: C-Rating هو نفسه سعة البطارية.
+    correction: >
+      السعة تعبر عن كمية الطاقة، بينما C-Rating يعبر عن قدرة البطارية على
+      توفير التيار.
+    conceptLinked: selection.battery_capacity
+
+  - belief: يمكن تجاهل C-Rating إذا كان الجهد مناسبًا.
+    correction: >
+      توافق الجهد وحده لا يكفي؛ يجب أن تستطيع البطارية توفير التيار المطلوب
+      لنظام الدفع.
+    conceptLinked: selection.battery_voltage
+
+expectedQuestions:
+  - ما معنى C-Rating؟
+  - هل C الأعلى أفضل دائمًا؟
+  - ما الفرق بين C وmAh؟
+  - كيف أختار C-Rating المناسب؟
+  - ماذا يحدث إذا كانت قيمة C منخفضة؟
+  - هل C يؤثر في زمن الطيران؟
+  - هل يمكن استخدام أي C مع نفس البطارية؟
+  - ما علاقة C بالمحركات والـ ESC؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_c_rating
+    status: draft
+    question: >
+      لماذا لا تعني قيمة C الأعلى أن البطارية هي الخيار الأفضل دائمًا؟
+    explanation: >
+      لأن اختيار البطارية يعتمد على توافقها مع متطلبات النظام، وليس على أعلى
+      قيمة C فقط.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_c_rating
+    status: draft
+    question: >
+      لماذا يجب النظر إلى C-Rating مع الجهد والسعة معًا؟
+    explanation: >
+      لأن البطارية يجب أن تحقق توافقًا في الجهد، والسعة، وقدرة توفير التيار،
+      وليس في خاصية واحدة فقط.
+
+aliases:
+  ar:
+    - C Rating
+    - معدل التفريغ
+    - قدرة التفريغ
+    - قيمة C
+    - سي ريتنج
+  en:
+    - Battery C Rating
+    - C-Rating
+    - Discharge Rating
+    - Battery Discharge Rate
+  transliteration:
+    - c rating
+    - battery c rating
+    - discharge rate
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.battery_capacity
+    note: >
+      فهم السعة ضروري لفهم دور C-Rating في اختيار البطارية.
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      اختيار البطارية يعتمد على توافق الجهد مع قدرة توفير التيار.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      C-Rating يجب أن يتوافق مع متطلبات النظام الكامل.
+
+  - type: depends_on
+    targetConceptId: selection.esc_current
+    note: >
+      متطلبات التيار في الـ ESC تؤثر في اختيار البطارية المناسبة.
+
+  - type: prerequisite_for
+    targetConceptId: power.lipo_battery
+    note: >
+      هذا المفهوم يمهد لفهم خصائص بطاريات LiPo بصورة أشمل.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: power.current_draw
+    note: >
+      فهم C-Rating يساعد لاحقًا في فهم سحب التيار داخل النظام.
+    pending: true
+
+  - type: requires_safety_warning
+    targetConceptId: safety.lipo_handling
+    note: >
+      اختيار بطارية LiPo يرتبط بإجراءات السلامة الخاصة بالبطاريات.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing LiPo battery C-rating.
+  It intentionally excludes mathematical current calculations, charging,
+  storage, battery testing, voltage sag measurement, connector replacement,
+  and product recommendations.
+  Battery theory belongs in power.lipo_battery, current behavior belongs in
+  power.current_draw, and practical battery handling belongs in
+  safety.lipo_handling.

@@ -1,0 +1,213 @@
+meta:
+  conceptId: selection.propeller_size
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار حجم المروحة
+  titleEn: Propeller Size Selection
+  tags:
+    - propeller size
+    - prop size
+    - propeller
+    - fpv propeller
+    - prop selection
+    - drone propeller
+    - اختيار المروحة
+    - حجم المروحة
+    - مراوح الدرون
+    - نظام الدفع
+    - توافق المراوح
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/propeller-size
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains propeller size as a selection decision based on frame
+    size, motor size, motor KV, battery voltage, build goal, and propulsion
+    system compatibility. It intentionally excludes propeller installation,
+    rotation direction, balancing, and testing.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار حجم المروحة هو تحديد قطر المروحة المناسب بما يتوافق مع الفريم،
+    المحرك، KV، البطارية، وهدف البناء لتحقيق توازن مناسب بين الأداء والكفاءة
+    وسلامة النظام.
+  textEn: >
+    Propeller size selection is choosing a propeller diameter that matches the
+    frame, motor, motor KV, battery, and build goal to achieve a suitable balance
+    between performance, efficiency, and system safety.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    المروحة ليست مجرد قطعة تدور، بل هي الجزء الذي يحول قدرة المحرك إلى قوة دفع.
+    المروحة الأكبر أو الأعلى حملاً قد تحتاج محركًا مناسبًا وقد تزيد التيار،
+    بينما المروحة الصغيرة قد تعطي استجابة أسرع لكنها لا تناسب كل الاستخدامات.
+    لذلك يتم اختيار حجم المروحة كجزء من نظام دفع متكامل وليس بشكل منفصل.
+  textEn: >
+    A propeller is not simply a spinning part; it converts motor power into
+    thrust. Larger or heavier-loaded propellers may require a suitable motor and
+    can increase current draw, while smaller propellers may provide faster
+    response but are not appropriate for every application. Propeller size should
+    therefore be selected as part of the complete propulsion system.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن حجم المروحة يؤثر في نظام الدفع بالكامل.
+  - إدراك العلاقة بين المروحة والمحرك والبطارية.
+  - اختيار حجم المروحة بناءً على توافق النظام وليس على الأداء وحده.
+
+keyFacts:
+  - حجم المروحة يجب أن يناسب الفريم ولا يلامس أي جزء من الدرون.
+  - المروحة الأكبر قد تولد دفعًا أكبر لكنها قد تزيد الحمل على المحرك والـ ESC.
+  - المروحة الأصغر قد تعطي استجابة أسرع لكنها ليست الخيار الأفضل لكل بناء.
+  - حجم المروحة يجب أن يتوافق مع حجم المحرك وKV وجهد البطارية.
+  - هدف البناء يؤثر في اختيار حجم المروحة كما يؤثر في بقية مكونات نظام الدفع.
+  - اختيار المروحة يجب أن يوازن بين الأداء والكفاءة وسحب التيار.
+  - لا توجد مروحة واحدة هي الأفضل لجميع الدرونات أو جميع الاستخدامات.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار حجم المروحة فقط، لكنه يرتبط مباشرة بالحمل على
+    المحركات والـ ESC والبطارية. لا يتضمن هذا المفهوم تركيب المراوح أو اتجاه
+    دورانها أو اختبار المحركات أو تشغيل الدرون. أي تطبيق عملي يجب أن يتم ضمن
+    مفاهيم وإجراءات السلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: المروحة الأكبر أفضل دائمًا.
+    correction: >
+      المروحة الأكبر قد تزيد الدفع لكنها قد تزيد الحمل والتيار والوزن المطلوب،
+      ولذلك يجب أن تتوافق مع بقية النظام.
+    conceptLinked: selection.component_matching
+
+  - belief: يمكن استخدام أي مروحة مع أي محرك.
+    correction: >
+      حجم المروحة يجب أن يتوافق مع حجم المحرك وKV والبطارية والفريم.
+    conceptLinked: selection.motor_size
+
+  - belief: تغيير حجم المروحة لا يؤثر إلا في سرعة الدرون.
+    correction: >
+      حجم المروحة يؤثر أيضًا في التيار والحرارة والكفاءة وزمن الطيران واستجابة
+      النظام بالكامل.
+    conceptLinked: selection.esc_current
+
+expectedQuestions:
+  - كيف أختار حجم المروحة؟
+  - هل المروحة الأكبر أفضل؟
+  - ما علاقة المروحة بالمحرك؟
+  - هل تؤثر المروحة في ESC؟
+  - هل تؤثر المروحة في البطارية؟
+  - لماذا لا أستخدم أي مروحة؟
+  - هل حجم المروحة يؤثر في زمن الطيران؟
+  - هل تختلف المراوح حسب نوع الدرون؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.propeller_size
+    status: draft
+    question: >
+      لماذا لا يمكن اختيار حجم المروحة دون معرفة المحرك والبطارية؟
+    explanation: >
+      لأن المروحة تؤثر في الحمل والتيار والدفع، ويجب أن تتوافق مع بقية نظام
+      الدفع حتى يعمل بأمان وكفاءة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.propeller_size
+    status: draft
+    question: >
+      لماذا قد لا تكون المروحة الأكبر هي الخيار الأفضل دائمًا؟
+    explanation: >
+      لأنها قد تزيد الحمل على المحرك والـ ESC والبطارية، وقد لا تناسب الفريم
+      أو هدف البناء رغم أنها توفر دفعًا أكبر.
+
+aliases:
+  ar:
+    - حجم المروحة
+    - اختيار المروحة
+    - مراوح الدرون
+    - قطر المروحة
+    - بروبيلر
+  en:
+    - Propeller Size
+    - Prop Size
+    - FPV Propeller
+    - Drone Propeller
+    - Propeller Selection
+  transliteration:
+    - propeller size
+    - prop size
+    - fpv propeller
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.frame_size
+    note: >
+      الفريم يحدد الحد الأقصى لحجم المروحة الممكن استخدامه.
+
+  - type: depends_on
+    targetConceptId: selection.motor_size
+    note: >
+      حجم المحرك يجب أن يتوافق مع حجم المروحة.
+
+  - type: depends_on
+    targetConceptId: selection.motor_kv
+    note: >
+      اختيار KV يؤثر في حجم المروحة المناسب للنظام.
+
+  - type: depends_on
+    targetConceptId: selection.battery_voltage
+    note: >
+      جهد البطارية يؤثر في توافق المروحة مع نظام الدفع.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      المروحة يجب أن تكون جزءًا من نظام متوافق بالكامل.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.propeller
+    note: >
+      هذا المفهوم يمهد لفهم المروحة كمكون ووظيفتها داخل نظام الدفع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.propeller_safety
+    note: >
+      اختيار المروحة يسبق تعلم إجراءات السلامة الخاصة بالمراوح.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing propeller size.
+  It intentionally excludes propeller installation, CW/CCW direction,
+  balancing, tightening methods, motor testing, thrust measurements,
+  product recommendations, and performance tables.
+  Propeller function belongs in hardware.propeller, while installation,
+  testing, and injury prevention belong in dedicated safety concepts.

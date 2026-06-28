@@ -1,0 +1,217 @@
+meta:
+  conceptId: selection.frame_size
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار مقاس الفريم
+  titleEn: Frame Size Selection
+  tags:
+    - frame size
+    - drone frame
+    - fpv frame
+    - wheelbase
+    - propeller clearance
+    - 3 inch
+    - 5 inch
+    - 7 inch
+    - اختيار الفريم
+    - مقاس الفريم
+    - حجم الفريم
+    - توافق الفريم
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/frame-size
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains frame size as a component-selection decision linked to
+    drone size, propeller clearance, build goal, and component space. It does not
+    provide exact product or brand recommendations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار مقاس الفريم هو تحديد الفريم الذي يستطيع حمل حجم المراوح المناسب
+    ويوفر مساحة كافية للمكونات، مع ملاءمة هدف البناء وحجم الدرون المختار.
+  textEn: >
+    Frame size selection is the choice of a frame that can fit the intended
+    propeller size, provide enough room for components, and match the selected
+    drone size and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الفريم هو الهيكل الذي يحدد حدود البناء: ما حجم المراوح التي يمكن استخدامها،
+    أين ستثبت القطع، وكم مساحة متاحة للبطارية والإلكترونيات. لا تختار الفريم
+    لأنه يبدو جميلًا فقط؛ اختره لأنه يناسب هدف البناء، حجم الدرون، المراوح،
+    المحركات، ونظام الفيديو أو التحكم الذي ستستخدمه.
+  textEn: >
+    The frame defines the physical limits of the build: what propeller size can
+    fit, where components can be mounted, and how much space is available for
+    the battery and electronics. A frame should not be chosen only because it
+    looks good; it must fit the build goal, drone size, propellers, motors, and
+    the video or control system used.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن مقاس الفريم يحدد حدود البناء الفيزيائية.
+  - ربط مقاس الفريم بحجم المراوح والهدف وحجم الدرون.
+  - إدراك أن الفريم يجب أن يوفر مساحة وتركيبًا مناسبين لبقية المكونات.
+
+keyFacts:
+  - مقاس الفريم يرتبط غالبًا بحجم المراوح التي يستطيع حملها دون احتكاك.
+  - الفريم يجب أن يناسب هدف البناء مثل التدريب، الفريستايل، السباق، الطيران البعيد، أو Cinewhoop.
+  - المساحة الداخلية للفريم تؤثر في تركيب Flight Controller وESC والريسيفر ونظام الفيديو.
+  - الفريم الأكبر قد يوفر مساحة وحملًا أفضل، لكنه يزيد الوزن والمساحة المطلوبة للطيران.
+  - الفريم الأصغر قد يكون أخف وأقل تكلفة، لكنه يملك مساحة محدودة وقدرة حمل أقل.
+  - توافق الفريم مع المراوح والمحركات والبطارية أهم من شكله الخارجي.
+  - اختيار الفريم يجب أن يأتي بعد تحديد هدف البناء وحجم الدرون العام.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار مقاس الفريم فقط، ولا يتضمن تركيبًا عمليًا أو حفرًا
+    أو قصًا أو تثبيت مكونات أو تشغيل الدرون. اختيار فريم غير مناسب قد يؤدي إلى
+    مشاكل في التوافق أو احتكاك المراوح أو تركيب غير آمن. أي تركيب فعلي يجب أن
+    يتم ضمن مفاهيم التركيب والفحص والسلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي فريم 5 إنش يقبل أي مروحة 5 إنش وأي مكونات.
+    correction: >
+      حتى داخل نفس الفئة قد تختلف المساحة الداخلية، توزيع الثقوب، ارتفاع الستاك،
+      مساحة البطارية، ومساحة نظام الفيديو.
+    conceptLinked: selection.component_matching
+
+  - belief: شكل الفريم أهم من توافقه مع القطع.
+    correction: >
+      الشكل وحده لا يكفي. يجب أن يناسب الفريم المراوح، المحركات، الإلكترونيات،
+      البطارية، وهدف البناء.
+    conceptLinked: hardware.quadcopter_system
+
+  - belief: الفريم الأكبر دائمًا أسهل للمبتدئ.
+    correction: >
+      الفريم الأكبر قد يوفر مساحة أكبر، لكنه غالبًا يزيد الوزن والقوة والمساحة
+      المطلوبة للطيران، وهذا قد لا يناسب كل مبتدئ.
+    conceptLinked: selection.drone_size
+
+expectedQuestions:
+  - كيف أختار مقاس الفريم؟
+  - ما الفرق بين حجم الدرون ومقاس الفريم؟
+  - هل أي فريم 5 إنش مناسب لأي بناء؟
+  - هل الفريم الأكبر أفضل دائمًا؟
+  - ما علاقة الفريم بحجم المراوح؟
+  - ما علاقة الفريم بالمحركات والبطارية؟
+  - لماذا يجب التفكير في مساحة الإلكترونيات داخل الفريم؟
+  - هل شكل الفريم يكفي لاختياره؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.frame_size
+    status: draft
+    question: >
+      لماذا لا يكفي أن تختار فريمًا لأنه مكتوب عليه 5 إنش فقط؟
+    explanation: >
+      لأن مقاس 5 إنش لا يضمن وحده أن الفريم يناسب كل المكونات. يجب فحص مساحة
+      التركيب، توافق المراوح، مواضع المحركات، مساحة البطارية، ومكان الإلكترونيات.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.frame_size
+    status: draft
+    question: >
+      لماذا قد يكون الفريم الصغير غير مناسب إذا أردت تركيب نظام فيديو كبير أو بطارية أكبر؟
+    explanation: >
+      لأن الفريم الصغير يملك مساحة محدودة وقدرة حمل أقل، وقد لا يوفر مكانًا
+      مناسبًا لتركيب مكونات أكبر دون التأثير في التوازن أو الأمان.
+
+aliases:
+  ar:
+    - مقاس الفريم
+    - حجم الفريم
+    - اختيار الفريم
+    - فريم 3 إنش
+    - فريم 5 إنش
+    - فريم 7 إنش
+    - هيكل الدرون
+  en:
+    - Frame Size
+    - Drone Frame Size
+    - FPV Frame
+    - Frame Selection
+    - Wheelbase
+  transliteration:
+    - frame size
+    - fpv frame
+    - wheelbase
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.drone_size
+    note: >
+      اختيار مقاس الفريم هو تفصيل مبني على حجم الدرون العام.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      الفريم يجب أن يتوافق مع المراوح والمحركات والبطارية وبقية المكونات.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يحدد نوع الفريم المناسب من حيث المتانة، الوزن، المساحة، والحماية.
+
+  - type: prerequisite_for
+    targetConceptId: selection.propeller_size
+    note: >
+      حجم المروحة يجب أن يناسب المساحة التي يسمح بها الفريم.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.motor_size
+    note: >
+      اختيار حجم المحرك يرتبط بالفريم والمراوح والهدف.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.video_system
+    note: >
+      نظام الفيديو يحتاج مساحة وتركيبًا مناسبين داخل الفريم.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.frame
+    note: >
+      هذا المفهوم يمهد لفهم الفريم كمكون مادي ووظيفته في البناء.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing the appropriate frame size.
+  It does not describe frame construction in detail and does not provide exact
+  product recommendations, brand names, drilling, cutting, assembly steps, wiring,
+  or installation procedures. Detailed frame function belongs in hardware.frame,
+  while physical mounting and build steps belong in dedicated assembly/procedure
+  nodes.

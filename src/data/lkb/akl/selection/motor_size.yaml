@@ -1,0 +1,216 @@
+meta:
+  conceptId: selection.motor_size
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار حجم المحرك
+  titleEn: Motor Size Selection
+  tags:
+    - motor size
+    - fpv motor
+    - brushless motor
+    - stator size
+    - 2207
+    - 2306
+    - 1404
+    - 1804
+    - motor selection
+    - اختيار المحرك
+    - حجم المحرك
+    - مقاس المحرك
+    - توافق المحرك
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/motor-size
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains motor size as a selection decision based on frame size,
+    propeller size, drone size, build goal, and component matching. It does not
+    cover motor KV selection or exact product recommendations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار حجم المحرك هو تحديد مقاس المحرك المناسب للفريم والمروحة وهدف البناء،
+    بحيث يستطيع نظام الدفع توليد أداء مناسب دون إجهاد غير ضروري لبقية القطع.
+  textEn: >
+    Motor size selection is choosing a motor size that matches the frame,
+    propeller, and build goal so the propulsion system can provide suitable
+    performance without unnecessary stress on the other components.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    حجم المحرك لا يختار لأنه أكبر أو أقوى فقط. المحرك يجب أن يناسب حجم المروحة
+    والفريم ووزن الدرون ونوع الاستخدام. محرك كبير جدًا قد يزيد الوزن ويسحب تيارًا
+    أعلى، ومحرك صغير جدًا قد لا يستطيع تدوير المروحة المناسبة بكفاءة أو قوة كافية.
+  textEn: >
+    Motor size is not chosen simply because bigger or stronger seems better.
+    The motor must match the propeller size, frame, drone weight, and use case.
+    A motor that is too large can add weight and draw more current, while a motor
+    that is too small may not drive the intended propeller efficiently or strongly enough.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن حجم المحرك يجب أن يناسب الفريم والمروحة وهدف البناء.
+  - التمييز بين المحرك الكبير جدًا والمحرك الصغير جدًا من ناحية التوافق.
+  - إدراك أن حجم المحرك يؤثر في الوزن، التيار، الاستجابة، والكفاءة.
+
+keyFacts:
+  - حجم المحرك يرتبط بحجم الجزء الدوار والستاتور وليس فقط بالشكل الخارجي.
+  - المراوح الأكبر تحتاج غالبًا محركات قادرة على تدويرها بكفاءة.
+  - المحرك الأكبر قد يوفر عزمًا أعلى لكنه يزيد الوزن وقد يرفع استهلاك التيار.
+  - المحرك الأصغر قد يكون أخف لكنه قد يعاني مع مروحة كبيرة أو وزن أعلى.
+  - اختيار حجم المحرك يجب أن يراعي حجم الفريم والمروحة والبطارية والهدف.
+  - حجم المحرك يختلف عن KV؛ الحجم يصف قدرة المحرك الفيزيائية، وKV يصف سرعة الدوران لكل فولت.
+  - لا يوجد حجم محرك أفضل دائمًا؛ الأفضل هو ما يناسب النظام الكامل.
+
+safety:
+  level: medium
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار حجم المحرك على مستوى التخطيط فقط، لكنه مرتبط بقرارات
+    قد تؤثر في التيار والحرارة والـ ESC والبطارية والمراوح. لا يتضمن هذا المفهوم
+    اختبار محركات أو تركيب مراوح أو توصيل أسلاك. أي تطبيق عملي يجب أن يتم ضمن
+    مفاهيم التوافق والفحص والسلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: المحرك الأكبر أفضل دائمًا.
+    correction: >
+      المحرك الأكبر قد يزيد العزم، لكنه قد يزيد الوزن والتيار والتكلفة وقد لا يناسب
+      الفريم أو هدف البناء.
+    conceptLinked: selection.component_matching
+
+  - belief: حجم المحرك وKV هما الشيء نفسه.
+    correction: >
+      حجم المحرك يصف أبعاد المحرك وقدرته الفيزيائية، أما KV فيصف سرعة الدوران
+      النظرية لكل فولت.
+    conceptLinked: selection.motor_kv
+
+  - belief: يمكن اختيار المحرك قبل معرفة حجم المروحة والفريم.
+    correction: >
+      اختيار المحرك يجب أن يأتي بعد فهم حجم الدرون والفريم والمروحة المناسبة.
+    conceptLinked: selection.frame_size
+
+expectedQuestions:
+  - كيف أختار حجم المحرك؟
+  - هل المحرك الأكبر أفضل؟
+  - ما الفرق بين حجم المحرك وKV؟
+  - ما علاقة المحرك بحجم المروحة؟
+  - هل محرك 2207 مناسب لكل 5 إنش؟
+  - لماذا يسحب المحرك تيارًا عاليًا؟
+  - ماذا يحدث إذا كان المحرك صغيرًا جدًا؟
+  - ماذا يحدث إذا كان المحرك كبيرًا جدًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.motor_size
+    status: draft
+    question: >
+      لماذا قد لا يكون اختيار محرك أكبر دائمًا قرارًا أفضل؟
+    explanation: >
+      لأن المحرك الأكبر قد يزيد الوزن واستهلاك التيار والتكلفة، وقد لا يناسب
+      الفريم أو المروحة أو هدف البناء رغم أنه أقوى.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.motor_size
+    status: draft
+    question: >
+      لماذا يجب التفكير في المروحة والفريم قبل اختيار حجم المحرك؟
+    explanation: >
+      لأن المحرك يجب أن يكون قادرًا على تدوير المروحة المناسبة داخل حدود الفريم
+      وبطريقة تناسب هدف البناء ونظام الطاقة.
+
+aliases:
+  ar:
+    - حجم المحرك
+    - مقاس المحرك
+    - اختيار المحرك
+    - محرك 2207
+    - محرك 2306
+    - حجم موتور الدرون
+    - موتور FPV
+  en:
+    - Motor Size
+    - Motor Size Selection
+    - FPV Motor Size
+    - Brushless Motor Size
+    - Stator Size
+  transliteration:
+    - motor size
+    - fpv motor
+    - brushless motor
+    - stator size
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار حجم المحرك يعتمد على توافقه مع الفريم والمروحة والبطارية والـ ESC.
+
+  - type: depends_on
+    targetConceptId: selection.frame_size
+    note: >
+      مقاس الفريم يحدد حدود المروحة والمساحة والوزن المتوقع للبناء.
+
+  - type: depends_on
+    targetConceptId: selection.drone_size
+    note: >
+      حجم الدرون العام يؤثر في فئة المحركات المناسبة.
+
+  - type: prerequisite_for
+    targetConceptId: selection.motor_kv
+    note: >
+      فهم حجم المحرك يجب أن يسبق اختيار KV لأنهما قراران مختلفان ومترابطان.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.propeller_size
+    note: >
+      اختيار المروحة يحتاج فهم العلاقة بينها وبين حجم المحرك.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.esc_current
+    note: >
+      تقدير قدرة ESC يعتمد على متطلبات المحرك والمروحة ونظام الطاقة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: hardware.motor
+    note: >
+      هذا المفهوم يمهد لفهم المحرك كمكون مادي ووظيفته في نظام الدفع.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing motor size.
+  It intentionally excludes motor KV selection, exact current calculations,
+  thrust stand data, product lists, brand recommendations, wiring, soldering,
+  motor testing, propeller installation, and Betaflight motor setup.
+  Motor function belongs in hardware.motor, while KV, propeller size, ESC current,
+  and detailed compatibility belong in dedicated selection concepts.

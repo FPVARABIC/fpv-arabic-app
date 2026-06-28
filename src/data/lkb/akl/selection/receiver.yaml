@@ -1,0 +1,202 @@
+meta:
+  conceptId: selection.receiver
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار مستقبل الإشارة
+  titleEn: Receiver Selection
+  tags:
+    - receiver
+    - radio receiver
+    - fpv receiver
+    - receiver selection
+    - elrs receiver
+    - crossfire receiver
+    - frsky receiver
+    - اختيار الريسيفر
+    - مستقبل الإشارة
+    - ريسيفر
+    - مستقبل الدرون
+    - توافق الريسيفر
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/receiver
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV radio-control selection
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains receiver selection as a compatibility decision.
+    It intentionally excludes receiver wiring, binding, UART configuration,
+    firmware setup, Betaflight configuration, failsafe setup, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار مستقبل الإشارة هو اختيار Receiver متوافق مع بروتوكول التحكم
+    وFlight Controller وهدف البناء ومتطلبات الاعتمادية والمدى.
+  textEn: >
+    Receiver selection is choosing a receiver compatible with the selected
+    radio protocol, flight controller, build goal, and the required
+    reliability and operating range.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    لا يتم اختيار الريسيفر بشكل مستقل، بل يجب أن يكون متوافقاً مع بروتوكول
+    التحكم وFlight Controller وهدف البناء. اختيار Receiver مناسب من البداية
+    يساعد على بناء منظومة تحكم متوافقة ويقلل مشاكل التوافق لاحقاً.
+  textEn: >
+    A receiver should not be selected independently. It must match the chosen
+    radio protocol, flight controller, and build goal. Selecting a compatible
+    receiver from the beginning helps create a reliable control system and
+    reduces future compatibility issues.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن اختيار الريسيفر يعتمد على بروتوكول التحكم.
+  - إدراك أهمية توافق الريسيفر مع Flight Controller.
+  - التمييز بين اختيار الريسيفر وبين تركيبه أو إعداده.
+
+keyFacts:
+  - يجب أن يتوافق الريسيفر مع بروتوكول التحكم المختار.
+  - يجب أن يكون الريسيفر متوافقاً مع Flight Controller.
+  - اختيار البروتوكول يسبق اختيار الريسيفر.
+  - الاعتمادية والمدى يؤثران في قرار الاختيار.
+  - حجم الريسيفر قد يؤثر في بعض البنايات الصغيرة.
+  - الميزات الإضافية ليست ضرورية لكل بناء.
+  - التوصيل والإعداد والـ Binding تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار الريسيفر فقط، ولا يتضمن التوصيل أو الـ Binding
+    أو إعداد Firmware أو أي إجراءات تشغيل عملية.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: أي Receiver يعمل مع أي بروتوكول.
+    correction: >
+      يجب أن يتوافق الريسيفر مع بروتوكول التحكم المختار.
+    conceptLinked: selection.receiver_protocol
+
+  - belief: أصغر Receiver هو الأفضل دائماً.
+    correction: >
+      الحجم عامل واحد فقط، ويجب موازنته مع التوافق والاعتمادية وهدف البناء.
+    conceptLinked: selection.build_goal
+
+  - belief: يمكن اختيار الريسيفر دون مراعاة Flight Controller.
+    correction: >
+      يجب أن يكون الريسيفر متوافقاً مع Flight Controller وبقية منظومة التحكم.
+    conceptLinked: selection.flight_controller
+
+expectedQuestions:
+  - كيف أختار Receiver؟
+  - كيف أعرف أن هذا Receiver يدعم ELRS؟
+  - هل يجب أن يطابق الريسيفر Flight Controller؟
+  - هل أختار البروتوكول أم الريسيفر أولاً؟
+  - هل حجم الريسيفر مهم؟
+  - هل أحتاج Receiver بمدى كبير؟
+  - هل جميع الريسيفرات متشابهة؟
+  - هل أحتاج Receiver Nano؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.receiver
+    status: draft
+    question: >
+      لماذا يجب اختيار بروتوكول التحكم قبل اختيار الريسيفر؟
+    explanation: >
+      لأن توافق الريسيفر يعتمد على بروتوكول التحكم المختار.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.receiver
+    status: draft
+    question: >
+      لماذا لا يكفي اختيار الريسيفر بناءً على حجمه فقط؟
+    explanation: >
+      لأن التوافق والاعتمادية وهدف البناء عوامل لا تقل أهمية عن الحجم.
+
+aliases:
+  ar:
+    - Receiver
+    - ريسيفر
+    - مستقبل الإشارة
+    - مستقبل الدرون
+    - اختيار الريسيفر
+  en:
+    - Receiver
+    - Radio Receiver
+    - FPV Receiver
+    - Receiver Selection
+    - RC Receiver
+  transliteration:
+    - receiver
+    - radio receiver
+    - fpv receiver
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      اختيار البروتوكول يسبق اختيار الريسيفر.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار الريسيفر جزء من توافق المنظومة كاملة.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في متطلبات الاعتمادية والمدى.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.receiver
+    note: >
+      هذا المفهوم يمهد لفهم الريسيفر كمكون ووظيفته.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      إعداد الريسيفر وBinding ينتميان إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: control.radio_transmitter
+    note: >
+      فهم منظومة الإرسال والاستقبال يأتي بعد فهم اختيار الريسيفر.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing a radio receiver.
+  It intentionally excludes wiring, soldering, binding, UART mapping,
+  firmware updates, Betaflight configuration, failsafe setup, antenna placement,
+  and product reviews.
+  Hardware explanation belongs in hardware.receiver.
+  Receiver configuration belongs in firmware.receiver_configuration.
+  Radio operation belongs in control.radio_transmitter.

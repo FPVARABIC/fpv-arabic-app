@@ -1,0 +1,198 @@
+meta:
+  conceptId: selection.buzzer
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار الجرس
+  titleEn: Buzzer Selection
+  tags:
+    - buzzer
+    - fpv buzzer
+    - drone buzzer
+    - self powered buzzer
+    - lost model buzzer
+    - اختيار الجرس
+    - جرس الدرون
+    - بيزر
+    - Buzzer
+    - العثور على الدرون
+    - توافق الجرس
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/buzzer
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV buzzer selection fundamentals
+    and organized for AKL.
+  extractionNotes: >
+    This concept explains buzzer selection as a compatibility and recovery
+    planning decision. It intentionally excludes wiring, soldering, Betaflight
+    configuration, buzzer modes, lost-model procedures, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار الجرس هو تحديد ما إذا كان البناء يحتاج إلى Buzzer مناسب يساعد في
+    التنبيه أو العثور على الدرون، مع مراعاة توافقه مع Flight Controller وهدف البناء.
+  textEn: >
+    Buzzer selection is deciding whether a build needs a suitable buzzer for
+    alerts or lost-model recovery, while considering compatibility with the
+    flight controller and build goal.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الجرس ليس مكوناً إلزامياً في كل بناء، لكنه قد يكون مفيداً جداً للتنبيه
+    أو العثور على الدرون إذا سقط في مكان يصعب رؤيته. يعتمد اختياره على هدف
+    البناء، وبيئة الطيران، ومدى الحاجة إلى ميزة العثور على الدرون.
+  textEn: >
+    A buzzer is not mandatory in every build, but it can be very useful for
+    alerts or finding a drone after it lands or crashes in a hard-to-see area.
+    The decision depends on the build goal, flying environment, and the need
+    for lost-model recovery.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن الجرس ليس مكوناً إلزامياً في كل بناء.
+  - إدراك أن اختيار الجرس يعتمد على هدف البناء وبيئة الطيران.
+  - التمييز بين اختيار الجرس وبين توصيله أو إعداده.
+
+keyFacts:
+  - الجرس يساعد في التنبيه أو العثور على الدرون.
+  - ليست كل البنايات تحتاج إلى جرس.
+  - بيئة الطيران تؤثر في الحاجة إلى الجرس.
+  - بعض أنواع الجرس تحتوي على بطارية داخلية، وبعضها يعتمد على تغذية الدرون.
+  - يجب أن يكون الجرس متوافقاً مع Flight Controller.
+  - اختيار الجرس لا يغني عن إعدادات السلامة المناسبة.
+  - التوصيل والإعداد وأنماط التشغيل تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح اختيار الجرس فقط، ولا يتضمن توصيله أو إعداد أوضاعه أو
+    استخدامه كجزء من إجراء عملي للعثور على الدرون.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: كل بناء FPV يحتاج إلى جرس.
+    correction: >
+      يعتمد اختيار الجرس على هدف البناء وبيئة الطيران ومتطلبات المستخدم، وليس
+      جميع البنايات تحتاج إليه.
+    conceptLinked: selection.build_goal
+
+  - belief: أي جرس يعمل مع أي Flight Controller.
+    correction: >
+      يجب التأكد من توافق الجرس مع Flight Controller ومتطلبات البناء.
+    conceptLinked: selection.flight_controller
+
+  - belief: وجود الجرس وحده يكفي لاستعادة الدرون المفقود.
+    correction: >
+      الجرس وسيلة مساعدة فقط، ولا يغني عن اختيار المكونات المناسبة أو وسائل
+      السلامة الأخرى.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - هل أحتاج إلى Buzzer؟
+  - هل كل الدرونات تحتاج إلى جرس؟
+  - كيف أختار جرس الدرون؟
+  - ما الفرق بين الجرس العادي والجرس المزود ببطارية؟
+  - هل الجرس يساعد في العثور على الدرون؟
+  - هل أي Buzzer يعمل مع أي Flight Controller؟
+  - متى يكون الجرس مفيداً؟
+  - هل يمكن الطيران بدون جرس؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.buzzer
+    status: draft
+    question: >
+      لماذا قد يحتاج أحد البنايات إلى جرس بينما لا يحتاجه بناء آخر؟
+    explanation: >
+      لأن قرار اختيار الجرس يعتمد على هدف البناء وبيئة الاستخدام وليس على
+      وجود قاعدة واحدة لجميع الدرونات.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.buzzer
+    status: draft
+    question: >
+      لماذا لا يكفي اختيار أي جرس بشكل عشوائي؟
+    explanation: >
+      لأن الجرس يجب أن يكون متوافقاً مع Flight Controller ومتطلبات البناء.
+
+aliases:
+  ar:
+    - جرس
+    - بيزر
+    - جرس الدرون
+    - جرس العثور على الدرون
+    - جرس الإنذار
+  en:
+    - Buzzer
+    - FPV Buzzer
+    - Drone Buzzer
+    - Lost Model Buzzer
+    - Self Powered Buzzer
+  transliteration:
+    - buzzer
+    - fpv buzzer
+    - lost model buzzer
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يؤثر في الحاجة إلى استخدام الجرس.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      يجب أن يكون الجرس متوافقاً مع Flight Controller المستخدم.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار الجرس جزء من توافق مكونات البناء.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.buzzer
+    note: >
+      هذا المفهوم يمهد لفهم الجرس كمكون مادي داخل الدرون.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.buzzer_configuration
+    note: >
+      اختيار الجرس يسبق فهم إعداداته داخل نظام التحكم.
+    pending: true
+
+architecturalNotes: |
+  This concept explains buzzer selection only as a compatibility and planning
+  decision.
+  It intentionally excludes wiring, soldering, Betaflight configuration,
+  buzzer modes, lost-model procedures, testing, troubleshooting, and product
+  recommendations.
+  Hardware description belongs in hardware.buzzer.
+  Firmware setup belongs in firmware.buzzer_configuration.

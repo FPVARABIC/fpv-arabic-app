@@ -1,0 +1,163 @@
+meta:
+  conceptId: flight.stability
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: الاستقرار
+  titleEn: Flight Stability
+  tags:
+    - stability
+    - stable flight
+    - quadcopter
+    - drone
+    - flight controller
+    - الاستقرار
+    - ثبات الدرون
+    - أساسيات الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/stability
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains flight stability as a property of controlled and
+    balanced flight without introducing PID tuning or firmware configuration.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    الاستقرار هو قدرة الكوادكابتر على الحفاظ على سلوك طيران متوازن والاستجابة
+    بصورة متوقعة للتغيرات وأوامر التحكم.
+  textEn: >
+    Flight stability is the ability of a quadcopter to maintain balanced flight
+    behavior and respond predictably to changes and control inputs.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    الدرون المستقر لا يعني أنه لا يتحرك، بل يعني أنه يستجيب بطريقة متوقعة ولا
+    يفقد اتزانه بسهولة. يعتمد الاستقرار على عدة عوامل تعمل معًا مثل توزيع الوزن،
+    ونظام الدفع، ووحدة التحكم بالطيران.
+  textEn: >
+    A stable drone is not one that never moves, but one that responds
+    predictably without easily losing balance. Stability depends on several
+    factors working together, including weight distribution, propulsion, and
+    the flight controller.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى الاستقرار في الكوادكابتر.
+  - إدراك أن الاستقرار ينتج عن عدة عوامل مجتمعة.
+  - التمييز بين الاستقرار وبين السكون التام.
+
+keyFacts:
+  - الاستقرار لا يعني بقاء الدرون ثابتًا دون حركة.
+  - توزيع الوزن يؤثر في الاستقرار.
+  - نظام الدفع يؤثر في جودة الاستقرار.
+  - Flight Controller يساعد على الحفاظ على الاتزان أثناء الطيران.
+  - الاستقرار الجيد يجعل استجابة الدرون أكثر قابلية للتوقع.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح معنى الاستقرار فقط، ولا يتضمن ضبط إعدادات التحكم
+    أو تعديل قيم PID أو تنفيذ اختبارات طيران عملية.
+    أي تطبيق عملي يجب أن يتم ضمن مفاهيم وإجراءات السلامة المخصصة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: الاستقرار يعني أن الدرون لا يتحرك إطلاقًا.
+    correction: >
+      الاستقرار يعني أن الدرون يحافظ على سلوك متوقع ومتزن، وليس أنه يبقى ساكنًا.
+    conceptLinked: flight.hover
+
+  - belief: تغيير إعداد واحد فقط يجعل الدرون مستقرًا دائمًا.
+    correction: >
+      الاستقرار ينتج عن عمل عدة عناصر معًا، وليس عن عامل واحد فقط.
+    conceptLinked: flight.center_of_gravity
+
+  - belief: إذا استطاع الدرون الإقلاع فهو مستقر بالضرورة.
+    correction: >
+      الإقلاع لا يعني أن الدرون مستقر؛ فقد تظهر مشاكل في الاتزان أو الاستجابة أثناء الطيران.
+    conceptLinked: flight.hover
+
+expectedQuestions:
+  - ما معنى الاستقرار؟
+  - لماذا يهتز بعض الدرونات؟
+  - هل الاستقرار يعني عدم الحركة؟
+  - ما علاقة مركز الثقل بالاستقرار؟
+  - هل يؤثر نظام الدفع في الاستقرار؟
+  - هل Flight Controller مسؤول عن الاستقرار؟
+  - لماذا يبدو بعض الدرونات أسهل في التحكم من غيرها؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.stability
+    status: draft
+    question: >
+      لماذا لا يعني الإقلاع الناجح أن الدرون مستقر تمامًا؟
+    explanation: >
+      لأن الاستقرار يقاس بقدرة الدرون على الحفاظ على اتزانه والاستجابة
+      المتوقعة أثناء الطيران، وليس بمجرد قدرته على الإقلاع.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.stability
+    status: draft
+    question: >
+      لماذا يعتمد الاستقرار على أكثر من عامل واحد؟
+    explanation: >
+      لأن توزيع الوزن، ونظام الدفع، ووحدة التحكم بالطيران تعمل معًا
+      لتحديد سلوك الدرون أثناء الطيران.
+
+aliases:
+  ar:
+    - الاستقرار
+    - ثبات الدرون
+    - استقرار الطيران
+  en:
+    - Flight Stability
+    - Stability
+    - Stable Flight
+  transliteration:
+    - stability
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: flight.center_of_gravity
+    note: >
+      يؤثر توزيع الوزن ومركز الثقل بصورة مباشرة في الاستقرار.
+
+  - type: explains
+    targetConceptId: flight.hover
+    note: >
+      فهم الاستقرار يُوضح جودة التحويم وظروف الحفاظ عليه أثناء الطيران.
+
+architecturalNotes: |
+  This concept explains the meaning of flight stability only.
+  It intentionally excludes PID tuning, firmware configuration,
+  filter settings, Blackbox analysis, vibration diagnosis,
+  and practical tuning procedures.

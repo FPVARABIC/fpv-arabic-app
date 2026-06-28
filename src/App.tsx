@@ -15,6 +15,7 @@ import { SettingsView } from './views/SettingsView';
 import { AboutView } from './views/AboutView';
 import { ContactView } from './views/ContactView';
 import { NotFoundView } from './views/NotFoundView';
+import { BotV2AssistantView } from './views/BotV2AssistantView';
 
 const RedirectLogic: React.FC = () => <Navigate to="/welcome" replace/>;
 
@@ -36,6 +37,7 @@ export const App: React.FC = () => (
     <Route path="/settings" element={<SettingsView/>}/>
     <Route path="/about" element={<AboutView/>}/>
     <Route path="/contact" element={<ContactView/>}/>
+    <Route path="/bot" element={<BotV2AssistantView/>}/>
     <Route path="*" element={<NotFoundView/>}/>
   </Routes>
 );

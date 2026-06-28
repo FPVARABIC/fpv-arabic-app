@@ -1,0 +1,215 @@
+meta:
+  conceptId: selection.telemetry
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار نظام التليمتري
+  titleEn: Telemetry Selection
+  tags:
+    - telemetry
+    - drone telemetry
+    - fpv telemetry
+    - telemetry selection
+    - telemetry system
+    - اختيار التليمتري
+    - نظام التليمتري
+    - نقل البيانات
+    - بيانات الطيران
+    - telemetry
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/telemetry
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV telemetry selection
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains telemetry selection as a planning and compatibility
+    decision. It intentionally excludes telemetry protocol details, wiring,
+    firmware configuration, ground station software, OSD configuration,
+    Blackbox logging, troubleshooting, and product reviews.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار نظام التليمتري هو تحديد الحاجة إلى نظام مناسب لنقل بيانات الدرون
+    أثناء التشغيل بما يتوافق مع متطلبات البناء ومنظومة التحكم المختارة.
+  textEn: >
+    Telemetry selection is deciding whether a build requires a suitable
+    telemetry solution based on the build requirements and the selected
+    control system.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    قد يحتاج بعض المستخدمين إلى استقبال بيانات من الدرون أثناء التشغيل،
+    بينما لا يحتاج جميع المبتدئين إلى ذلك. يعتمد قرار اختيار نظام
+    التليمتري على هدف البناء، ومنظومة التحكم المختارة، ومدى الحاجة
+    إلى هذه البيانات، وليس على وجودها في جميع البنايات.
+  textEn: >
+    Some users need to receive data from the drone during operation,
+    while many beginners do not. Choosing a telemetry system depends
+    on the build goal, the selected control system, and whether this
+    information is actually needed.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن نظام التليمتري يمثل قرار اختيار مستقل.
+  - إدراك أن الحاجة إلى التليمتري تختلف باختلاف هدف البناء.
+  - التمييز بين اختيار نظام التليمتري وبين تركيبه أو توصيله أو إعداده.
+
+keyFacts:
+  - ليست جميع البنايات تحتاج إلى نظام تليمتري إضافي.
+  - قد توفر بعض منظومات التحكم إمكانيات تليمتري دون الحاجة إلى مكونات إضافية.
+  - قد تتطلب بعض الاستخدامات حلول تليمتري إضافية.
+  - يعتمد اختيار نظام التليمتري على هدف البناء.
+  - يجب أن يكون نظام التليمتري متوافقاً مع بقية مكونات المنظومة.
+  - إعداد نظام التليمتري مفهوم مستقل عن قرار اختياره.
+  - تفاصيل البروتوكولات والإعدادات البرمجية تنتمي إلى مفاهيم مستقلة.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح قرار اختيار نظام التليمتري فقط، ولا يتضمن أي توصيل
+    عملي أو إعداد برمجي أو تشغيل فعلي.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: كل بناء FPV يحتاج إلى تليمتري إضافي.
+    correction: >
+      ليست جميع البنايات تحتاج إلى تليمتري إضافي؛ القرار يعتمد على هدف البناء
+      وما توفره منظومة التحكم المختارة.
+    conceptLinked: selection.build_goal
+
+  - belief: اختيار الريسيفر يكفي دائمًا لتغطية كل احتياجات التليمتري.
+    correction: >
+      قد توفر بعض منظومات التحكم تليمتري كافيًا، لكن بعض الاستخدامات قد تحتاج
+      حلاً إضافيًا أو تخطيطًا مختلفًا.
+    conceptLinked: selection.receiver
+
+  - belief: التليمتري يعني فقط إعدادًا برمجيًا.
+    correction: >
+      اختيار التليمتري يبدأ كقرار توافق واحتياج، أما الإعداد البرمجي فينتمي
+      إلى مفاهيم Firmware منفصلة.
+    conceptLinked: selection.component_matching
+
+expectedQuestions:
+  - هل أحتاج إلى Telemetry؟
+  - ما معنى التليمتري في الدرون؟
+  - هل كل درون يحتاج تليمتري؟
+  - هل ELRS يوفر تليمتري كافي؟
+  - هل أحتاج مكون تليمتري إضافي؟
+  - ما علاقة التليمتري بالريسيفر؟
+  - هل التليمتري إعداد برمجي فقط؟
+  - متى يكون التليمتري مهمًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.telemetry
+    status: draft
+    question: >
+      لماذا لا يحتاج كل بناء FPV إلى نظام تليمتري إضافي؟
+    explanation: >
+      لأن الحاجة إلى التليمتري تعتمد على هدف البناء وما توفره منظومة التحكم
+      المختارة من إمكانيات.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.telemetry
+    status: draft
+    question: >
+      لماذا لا يجب اعتبار التليمتري مجرد إعداد برمجي فقط؟
+    explanation: >
+      لأن اختيار التليمتري يبدأ من قرار الحاجة والتوافق، ثم تأتي الإعدادات
+      البرمجية لاحقًا في مفاهيم مستقلة.
+
+aliases:
+  ar:
+    - تليمتري
+    - نظام التليمتري
+    - بيانات الدرون
+    - بيانات الطيران
+    - نقل بيانات الدرون
+  en:
+    - Telemetry
+    - Drone Telemetry
+    - FPV Telemetry
+    - Telemetry Selection
+    - Telemetry System
+  transliteration:
+    - telemetry
+    - drone telemetry
+    - fpv telemetry
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.receiver_protocol
+    note: >
+      بروتوكول التحكم يؤثر في إمكانيات التليمتري المتاحة.
+
+  - type: depends_on
+    targetConceptId: selection.receiver
+    note: >
+      اختيار الريسيفر يؤثر في إمكانيات منظومة التحكم والتليمتري.
+
+  - type: depends_on
+    targetConceptId: selection.flight_controller
+    note: >
+      Flight Controller يؤثر في إمكانيات البيانات والتوافق مع حلول التليمتري.
+
+  - type: depends_on
+    targetConceptId: selection.build_goal
+    note: >
+      هدف البناء يحدد مدى الحاجة إلى التليمتري.
+
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار التليمتري جزء من توافق المنظومة كاملة.
+
+  - type: prerequisite_for
+    targetConceptId: hardware.telemetry_module
+    note: >
+      هذا المفهوم يمهد لفهم وحدات التليمتري كعتاد مستقل عند الحاجة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: firmware.telemetry_configuration
+    note: >
+      إعداد التليمتري وتفعيل بروتوكولاته ينتميان إلى مفاهيم Firmware مستقلة.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about deciding whether telemetry capability is
+  needed and whether the selected control system provides enough telemetry for
+  the build goal.
+  It intentionally excludes protocol details such as CRSF, MSP, MAVLink, or
+  SmartPort configuration, wiring, UART setup, Betaflight or INAV telemetry
+  setup, ground station software, OSD configuration, Blackbox logging,
+  troubleshooting, and product recommendations.
+  Receiver protocol selection belongs in selection.receiver_protocol.
+  Receiver selection belongs in selection.receiver.
+  Telemetry hardware description belongs in hardware.telemetry_module.
+  Telemetry configuration belongs in firmware.telemetry_configuration.

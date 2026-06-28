@@ -18,6 +18,7 @@ export const lessonsData: Lesson[] = [
       'FPV يعني First Person View - الرؤية من منظور الطيار',
     ],
     commonMistake: 'الاعتقاد بأن FPV drone هو نفس طائرة DJI - الفرق كبير في التصميم والهدف',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-2', number: 2,
@@ -34,6 +35,7 @@ export const lessonsData: Lesson[] = [
       'Gyroscope يساعد FC على الحفاظ على التوازن تلقائيًا',
     ],
     commonMistake: 'توصيل الأسلاك عشوائيًا دون فهم مسار الإشارة',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-3', number: 3,
@@ -50,6 +52,7 @@ export const lessonsData: Lesson[] = [
       'FC هو الدماغ ويحدد ميزات الطيران',
     ],
     commonMistake: 'شراء قطع غير متوافقة في الحجم أو المواصفات',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-4', number: 4,
@@ -67,6 +70,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'شراء أغلى قطعة بدلاً من أكثر قطعة توافقًا',
     warning: 'شراء قطع غير متوافقة قد يؤدي إلى احتراقها فور التشغيل',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-5', number: 5,
@@ -83,6 +87,7 @@ export const lessonsData: Lesson[] = [
       'اختر الحجم بناءً على مكان الطيران والهدف',
     ],
     commonMistake: 'اختيار حجم صغير ظنًا أنه أسهل للمبتدئين',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-6', number: 6,
@@ -100,6 +105,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'تجاهل فحص القطبية والاعتماد على لون الأسلاك فقط',
     warning: 'الدائرة القصيرة مع LiPo خطيرة جداً وقد تؤدي إلى حريق',
+    conceptIds: ['wiring_basics', 'power_battery'],
   },
   {
     id: 'lesson-7', number: 7,
@@ -117,6 +123,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'شحن LiPo بشاحن عادي أو ترك البطارية تتفرغ بالكامل',
     warning: 'LiPo المنتفخة خطيرة ويجب التخلص منها بالطريقة الصحيحة فورًا',
+    conceptIds: ['power_battery', 'lipo_safety'],
   },
   {
     id: 'lesson-8', number: 8,
@@ -133,6 +140,7 @@ export const lessonsData: Lesson[] = [
       'FC عادة يوفر 5V منظم للأجهزة المتصلة',
     ],
     commonMistake: 'نسيان توصيل GND المشترك بين FC و Receiver',
+    conceptIds: ['wiring_basics'],
   },
   {
     id: 'lesson-9', number: 9,
@@ -150,6 +158,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'توصيل TX مع TX أو RX مع RX',
     warning: 'توصيل TX مع TX لن يُتلف الجهاز لكن لن يعمل الاتصال مطلقًا',
+    conceptIds: ['tx_rx_rule'],
   },
   {
     id: 'lesson-10', number: 10,
@@ -167,6 +176,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'تخطي Smoke Stopper ظنًا أن البناء صحيح',
     warning: 'لا توصل البطارية قبل فحص Multimeter حتى لو كنت متأكدًا',
+    conceptIds: ['lipo_safety', 'wiring_basics'],
   },
   {
     id: 'lesson-11', number: 11,
@@ -183,6 +193,7 @@ export const lessonsData: Lesson[] = [
       'رتّب الأسلاك من البداية لتسهيل العمل لاحقًا',
     ],
     commonMistake: 'تركيب الفريم معكوس ثم اكتشاف الخطأ بعد اللحام',
+    conceptIds: ['drone_build_basics'],
   },
   {
     id: 'lesson-12', number: 12,
@@ -200,6 +211,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'استخدام مسامير طويلة تلمس ملفات الموتور',
     warning: 'مسمار يلمس ملفات الموتور يؤدي إلى احتراق الموتور عند الدوران',
+    conceptIds: ['motor_basic'],
   },
   {
     id: 'lesson-13', number: 13,
@@ -216,6 +228,7 @@ export const lessonsData: Lesson[] = [
       'استخدم ربط كابل لتثبيت الأسلاك',
     ],
     commonMistake: 'تثبيت ESC في مكان لا يصله هواء التبريد',
+    conceptIds: ['esc_basic'],
   },
   {
     id: 'lesson-14', number: 14,
@@ -232,6 +245,7 @@ export const lessonsData: Lesson[] = [
       'اترك USB port متاحًا دائمًا',
     ],
     commonMistake: 'تثبيت FC مباشرة على الفريم دون grommets',
+    conceptIds: ['flight_controller_basic'],
   },
   {
     id: 'lesson-15', number: 15,
@@ -248,6 +262,7 @@ export const lessonsData: Lesson[] = [
       'اختر بروتوكول الاستقبال الصحيح',
     ],
     commonMistake: 'تفعيل Serial RX على UART خاطئ أو نسيان تفعيله',
+    conceptIds: ['receiver_basic'],
   },
   {
     id: 'lesson-16', number: 16,
@@ -264,6 +279,7 @@ export const lessonsData: Lesson[] = [
       'OSD يعرض معلومات البطارية والطيران على الشاشة',
     ],
     commonMistake: 'شراء نظام فيديو قبل إتقان الأساسيات',
+    conceptIds: ['vtx_basic'],
   },
   {
     id: 'lesson-17', number: 17,
@@ -281,6 +297,7 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'اختبار المحركات مع وجود المراوح',
     warning: 'مروحة دوارة بدون حماية خطيرة جداً - لا تختبر المحركات مع المراوح أبدًا',
+    conceptIds: ['motor_basic', 'betaflight_basics'],
   },
   {
     id: 'lesson-18', number: 18,
@@ -298,5 +315,6 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'محاولة التحكم بوضع Acro في أول رحلة',
     warning: 'لا تطر فوق الناس أو بالقرب منهم - الدرون قد يفقد التحكم',
+    conceptIds: ['betaflight_basics'],
   },
 ];

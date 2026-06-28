@@ -1,0 +1,189 @@
+meta:
+  conceptId: flight.thrust
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: الدفع
+  titleEn: Thrust
+  tags:
+    - thrust
+    - flight
+    - quadcopter
+    - drone
+    - قوة الدفع
+    - دفع الدرون
+    - أساسيات الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/thrust
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains the principle of thrust without copying book text.
+    Detailed book references will be attached during source indexing.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    الدفع هو القوة التي تنتجها المراوح عند دفع الهواء إلى الأسفل.
+    هذه القوة تعمل في الاتجاه المعاكس للوزن، وتمكن الكوادكابتر من الإقلاع والتحويم والصعود.
+  textEn: >
+    Thrust is the force generated when the propellers accelerate air downward.
+    This force acts opposite to weight and enables the quadcopter to take off,
+    hover, and climb.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    عندما تدور المراوح، فإنها تدفع كمية من الهواء إلى الأسفل.
+    وطبقًا لقوانين الحركة، يتولد رد فعل يدفع الدرون إلى الأعلى.
+    إذا كانت قوة الدفع أقل من الوزن فلن يقلع الدرون.
+    وإذا أصبحت مساوية تقريبًا للوزن فإنه يستطيع التحويم.
+    وإذا تجاوزت الوزن فإنه يبدأ بالصعود.
+  textEn: >
+    When the propellers spin, they push air downward.
+    The reaction force pushes the quadcopter upward.
+    If thrust is lower than weight, the drone cannot take off.
+    If thrust approximately equals weight, it can hover.
+    If thrust exceeds weight, it climbs.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى قوة الدفع.
+  - فهم العلاقة الأساسية بين الدفع والوزن.
+  - إدراك أن الدفع ينتج عن المراوح وليس عن Flight Controller.
+
+keyFacts:
+  - المراوح هي التي تولد قوة الدفع.
+  - اتجاه الدفع الأساسي يكون بمحاذاة محور المراوح.
+  - الدفع لا يحرك الدرون أفقيًا مباشرة؛ الحركة الأفقية تنتج عند ميلان الدرون.
+  - زيادة أو نقصان الدفع يغير الارتفاع.
+  - جميع مناورات الطيران تعتمد على التحكم في توزيع الدفع بين المحركات.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    هذا مفهوم تعليمي، لكنه قريب من تطبيقات عملية خطرة مثل اختبار المحركات
+    والمراوح. لا ينبغي تحويل هذا المفهوم إلى تجربة عملية مباشرة. أي اختبار
+    للمحركات أو الدفع يجب أن يتم فقط من خلال مفاهيم وإجراءات السلامة المخصصة،
+    وخصوصًا بدون مراوح للمبتدئين.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: الدفع يأتي من المحرك وحده.
+    correction: >
+      المحرك يوفر الدوران، أما قوة الدفع فتتولد عندما تدفع المروحة الهواء.
+    conceptLinked: hardware.propeller
+
+  - belief: الدفع يجعل الدرون يتحرك للأمام مباشرة.
+    correction: >
+      الدفع يتجه أساسًا مع محور المراوح، والحركة للأمام تنتج عندما يميل الدرون
+      فيتغير اتجاه قوة الدفع.
+    conceptLinked: flight.flight_axes
+
+  - belief: Flight Controller يولد قوة الدفع.
+    correction: >
+      Flight Controller لا يولد الدفع، بل ينسق سرعة المحركات للتحكم فيه.
+    conceptLinked: hardware.flight_controller
+
+expectedQuestions:
+  - ما هو الدفع؟
+  - كيف يتولد الدفع؟
+  - لماذا يستطيع الدرون الإقلاع؟
+  - ما العلاقة بين الدفع والوزن؟
+  - هل المحرك هو الذي يولد الدفع؟
+  - لماذا يتحرك الدرون للأمام؟
+  - ما الفرق بين الدفع والرفع في الكوادكابتر؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.thrust
+    status: draft
+    question: >
+      إذا أصبحت قوة الدفع أقل من وزن الدرون، ماذا تتوقع أن يحدث؟ ولماذا؟
+    explanation: >
+      عندما تصبح قوة الدفع أقل من الوزن، لا يستطيع الدرون المحافظة على ارتفاعه،
+      لأن الوزن يصبح القوة الغالبة.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.thrust
+    status: draft
+    question: >
+      لماذا لا يؤدي زيادة سرعة جميع المحركات بالتساوي إلى حركة الدرون للأمام؟
+    explanation: >
+      زيادة سرعة جميع المحركات بالتساوي تزيد مقدار الدفع الكلي وترفع الدرون،
+      أما الحركة للأمام فتتطلب تغيير اتجاه الدفع عبر ميلان الدرون.
+
+aliases:
+  ar:
+    - قوة الدفع
+    - دفع الدرون
+    - الدفع
+  en:
+    - Thrust
+    - Drone Thrust
+  transliteration:
+    - thrust
+
+typedRelations:
+  - type: affects
+    targetConceptId: flight.hover
+    note: >
+      التحويم يعتمد على توازن الدفع مع الوزن.
+    pending: true
+
+  - type: balances
+    targetConceptId: flight.weight
+    symmetric: true
+    note: >
+      عند التحويم يتوازن الدفع تقريبًا مع الوزن.
+
+  - type: prerequisite_for
+    targetConceptId: flight.thrust_to_weight_ratio
+    note: >
+      فهم الدفع ضروري قبل دراسة نسبة الدفع إلى الوزن.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.propeller
+    note: >
+      المروحة هي العنصر الذي يحول دوران المحرك إلى قوة دفع.
+    pending: true
+
+  - type: depends_on
+    targetConceptId: hardware.motor
+    note: >
+      المحرك يوفر الطاقة الدورانية اللازمة للمروحة.
+    pending: true
+
+architecturalNotes: |
+  This concept explains only the physical principle of thrust.
+  It intentionally excludes motor testing procedures, Betaflight setup,
+  propeller installation, and practical safety workflows.
+  The safety level is high because applying thrust knowledge can lead learners
+  toward motor and propeller testing, while the actual protocol belongs in
+  dedicated safety/procedure nodes.

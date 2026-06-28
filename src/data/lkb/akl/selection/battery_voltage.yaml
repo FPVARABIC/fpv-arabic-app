@@ -1,0 +1,226 @@
+meta:
+  conceptId: selection.battery_voltage
+  namespace: selection
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: اختيار جهد البطارية
+  titleEn: Battery Voltage Selection
+  tags:
+    - battery voltage
+    - lipo voltage
+    - 3S
+    - 4S
+    - 6S
+    - cell count
+    - fpv battery
+    - battery selection
+    - اختيار البطارية
+    - جهد البطارية
+    - عدد الخلايا
+    - بطارية ليبو
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: hardware-selection/battery-voltage
+  knowledgeOrigin: >
+    Canonical selection concept authored from FPV build-planning fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains LiPo battery voltage and cell count as a selection
+    decision related to motor KV, ESC voltage support, propeller load, build goal,
+    and safety. It does not provide charging instructions or battery handling procedures.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    اختيار جهد البطارية هو اختيار عدد خلايا LiPo مثل 3S أو 4S أو 6S بما يناسب
+    المحركات، KV، الـ ESC، المراوح، وهدف البناء دون تجاوز حدود النظام.
+  textEn: >
+    Battery voltage selection is choosing the LiPo cell count, such as 3S, 4S,
+    or 6S, to match the motors, KV, ESC, propellers, and build goal without
+    exceeding the system limits.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    في بطاريات LiPo، الحرف S يعني عدد الخلايا المتصلة على التوالي، وكلما زاد
+    عدد الخلايا زاد الجهد الكلي. الجهد الأعلى لا يعني أنه أفضل دائمًا؛ لأنه
+    يرفع سرعة الدوران النظرية للمحرك مع نفس KV وقد يزيد التيار والحرارة والضغط
+    على ESC والبطارية. لذلك يجب اختيار 3S أو 4S أو 6S كجزء من نظام متوافق كامل.
+  textEn: >
+    In LiPo batteries, S means the number of cells connected in series, and more
+    cells means higher total voltage. Higher voltage is not always better because
+    it increases the motor's theoretical RPM for the same KV and can increase
+    current, heat, and stress on the ESC and battery. The choice between 3S, 4S,
+    or 6S must be made as part of a compatible whole system.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى 3S و4S و6S كعدد خلايا يؤثر في الجهد.
+  - ربط جهد البطارية باختيار KV المحرك والـ ESC والمراوح.
+  - إدراك أن الجهد الأعلى يحتاج توافقًا كاملًا وليس مجرد بطارية أقوى.
+
+keyFacts:
+  - S في بطاريات LiPo تعني عدد الخلايا المتصلة على التوالي.
+  - زيادة عدد الخلايا ترفع الجهد الكلي للبطارية.
+  - الجهد الأعلى مع نفس KV يرفع سرعة الدوران النظرية للمحرك.
+  - ESC والمحركات وبقية الإلكترونيات يجب أن تدعم الجهد المختار.
+  - 4S و6S قد يستخدمان في فئات مختلفة، لكن الاختيار يعتمد على النظام الكامل.
+  - جهد غير مناسب قد يسبب حرارة، تلف مكونات، أو أداء غير متوازن.
+  - اختيار الجهد يجب أن يسبق أو يرافق اختيار KV والـ ESC وبقية نظام الدفع.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    هذا المفهوم مرتبط مباشرة بجهد بطاريات LiPo وتوافق المحركات والـ ESC، وقد
+    يؤدي سوء الاختيار إلى تلف مكونات أو سخونة أو خطر كهربائي. لا يتضمن هذا
+    المفهوم شحن البطاريات أو توصيلها أو اختبار المحركات أو تشغيل الدرون.
+    أي تطبيق عملي يجب أن يتم ضمن مفاهيم السلامة والفحص الخاصة بالبطاريات والطاقة.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: 6S أفضل دائمًا من 4S لأنه جهد أعلى.
+    correction: >
+      6S قد يكون مناسبًا لبعض الأنظمة، لكنه ليس أفضل دائمًا. يجب أن يناسب KV
+      المحرك، ESC، المروحة، الوزن، وهدف البناء.
+    conceptLinked: selection.component_matching
+
+  - belief: يمكن استخدام أي بطارية طالما أن الموصل يركب.
+    correction: >
+      توافق الموصل لا يعني توافق الجهد. يجب التأكد أن ESC والمحركات والإلكترونيات
+      تدعم عدد الخلايا والجهد المختار.
+    conceptLinked: selection.esc_current
+
+  - belief: KV المحرك لا علاقة له بعدد خلايا البطارية.
+    correction: >
+      KV والجهد مرتبطان مباشرة؛ مع نفس KV، زيادة الجهد ترفع سرعة الدوران النظرية.
+    conceptLinked: selection.motor_kv
+
+expectedQuestions:
+  - ما معنى 3S و4S و6S؟
+  - هل 6S أفضل من 4S؟
+  - كيف أختار جهد البطارية؟
+  - ما علاقة جهد البطارية بـ KV؟
+  - هل يمكن تركيب أي بطارية إذا كان الموصل مناسبًا؟
+  - هل ESC يجب أن يدعم 6S؟
+  - ماذا يحدث إذا كان الجهد غير مناسب؟
+  - هل الجهد الأعلى يعطي أداء أفضل دائمًا؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_voltage
+    status: draft
+    question: >
+      لماذا لا يكفي أن يكون موصل البطارية مناسبًا حتى نقول إن البطارية صالحة للنظام؟
+    explanation: >
+      لأن الموصل لا يحدد توافق الجهد. يجب أن تدعم المحركات والـ ESC والإلكترونيات
+      عدد الخلايا والجهد المختار حتى لا يحدث تلف أو أداء غير آمن.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: selection.battery_voltage
+    status: draft
+    question: >
+      لماذا قد يكون استخدام 6S مع KV غير مناسب مشكلة؟
+    explanation: >
+      لأن زيادة الجهد مع KV مرتفع قد ترفع سرعة الدوران النظرية والتيار والحرارة،
+      مما يضغط على المحركات والـ ESC والبطارية.
+
+aliases:
+  ar:
+    - جهد البطارية
+    - فولت البطارية
+    - عدد خلايا البطارية
+    - بطارية 3S
+    - بطارية 4S
+    - بطارية 6S
+    - بطارية ليبو
+    - اختيار بطارية LiPo
+  en:
+    - Battery Voltage
+    - LiPo Voltage
+    - Cell Count
+    - 3S Battery
+    - 4S Battery
+    - 6S Battery
+    - LiPo Battery Selection
+  transliteration:
+    - battery voltage
+    - lipo voltage
+    - cell count
+    - 4s
+    - 6s
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: selection.component_matching
+    note: >
+      اختيار الجهد يجب أن يكون ضمن توافق نظام الدفع الكامل.
+
+  - type: depends_on
+    targetConceptId: selection.motor_kv
+    note: >
+      KV المحرك مع جهد البطارية يحدد سرعة الدوران النظرية.
+
+  - type: depends_on
+    targetConceptId: selection.esc_current
+    note: >
+      ESC يجب أن يدعم الجهد المختار ويتحمل التيار الناتج عن النظام.
+
+  - type: depends_on
+    targetConceptId: selection.motor_size
+    note: >
+      حجم المحرك وقدرته يؤثران في ملاءمة الجهد المختار.
+
+  - type: prerequisite_for
+    targetConceptId: selection.battery_capacity
+    note: >
+      اختيار السعة يجب أن يأتي بعد فهم الجهد وعدد الخلايا المطلوب.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: selection.battery_c_rating
+    note: >
+      فهم الجهد يساعد لاحقًا في فهم متطلبات التيار وقدرة البطارية.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: power.lipo_battery
+    note: >
+      هذا المفهوم يمهد لفهم بطارية LiPo كنظام طاقة.
+    pending: true
+
+  - type: requires_safety_warning
+    targetConceptId: safety.lipo_handling
+    note: >
+      اختيار جهد بطارية LiPo يرتبط لاحقًا بإجراءات سلامة البطاريات.
+    pending: true
+
+architecturalNotes: |
+  This is a selection concept about choosing LiPo battery voltage/cell count.
+  It intentionally excludes charging instructions, storage voltage procedures,
+  wiring, soldering, connector replacement, motor testing, propeller installation,
+  exact voltage tables, and product recommendations.
+  Battery handling belongs in safety.lipo_handling, battery theory belongs in
+  power.lipo_battery, and capacity/C-rating belong in dedicated selection concepts.

@@ -1,0 +1,176 @@
+meta:
+  conceptId: flight.flight_axes
+  namespace: flight
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: محاور الحركة
+  titleEn: Flight Axes
+  tags:
+    - flight axes
+    - roll
+    - pitch
+    - yaw
+    - quadcopter
+    - drone control
+    - محاور الحركة
+    - رول
+    - بيتش
+    - ياو
+    - أساسيات الطيران
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: flight-fundamentals/flight-axes
+  knowledgeOrigin: >
+    Canonical concept authored from FPV flight fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains the three basic rotational axes of quadcopter movement
+    without turning them into stick-control procedures or radio setup instructions.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-26"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    محاور الحركة هي الاتجاهات الدورانية الأساسية التي يتحرك حولها الكوادكابتر:
+    Roll للميلان يمينًا ويسارًا، Pitch للميلان للأمام والخلف، وYaw للدوران حول
+    المحور العمودي.
+  textEn: >
+    Flight axes are the basic rotational directions around which a quadcopter
+    moves: roll for left-right tilt, pitch for forward-backward tilt, and yaw for
+    rotation around the vertical axis.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    عندما يتحرك الدرون في الهواء، فهو لا ينتقل فقط للأعلى أو الأسفل.
+    يمكنه أن يميل يمينًا ويسارًا، ويميل للأمام والخلف، ويدور حول نفسه.
+    هذه الحركات الثلاث تسمى Roll وPitch وYaw، وفهمها يساعد المبتدئ على فهم
+    أوامر الطيران واستجابة الدرون.
+  textEn: >
+    When a drone moves in the air, it does more than go up or down.
+    It can tilt left and right, tilt forward and backward, and rotate around itself.
+    These three movements are called roll, pitch, and yaw, and understanding them
+    helps beginners understand flight commands and drone response.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم معنى محاور الحركة في الكوادكابتر.
+  - التمييز بين Roll وPitch وYaw.
+  - ربط محاور الحركة بفهم أوامر الطيران الأساسية.
+
+keyFacts:
+  - Roll هو الميلان الجانبي يمينًا ويسارًا.
+  - Pitch هو الميلان للأمام والخلف.
+  - Yaw هو دوران الدرون حول المحور العمودي.
+  - Roll وPitch وYaw هي حركات دورانية، وليست انتقالًا مباشرًا في المكان.
+  - فهم المحاور يقلل ارتباك المبتدئ عند تعلم التحكم في الدرون.
+
+safety:
+  level: low
+  reviewed: false
+  notes: >
+    هذا المفهوم يشرح محاور الحركة الدورانية فقط.
+    لا يتضمن إعداد أجهزة التحكم أو تشغيل المحركات أو تدريبات الطيران العملية.
+    أي تطبيق عملي لهذه المحاور يجب أن يتم ضمن مفاهيم التحكم وإجراءات التدريب الآمن.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: Pitch يعني صعود الدرون أو هبوطه.
+    correction: >
+      Pitch يعني ميلان الدرون للأمام أو الخلف، أما الصعود والهبوط فيرتبطان
+      بمقدار الدفع الكلي.
+    conceptLinked: flight.thrust
+
+  - belief: Yaw يعني تحرك الدرون إلى اليمين أو اليسار.
+    correction: >
+      Yaw يعني دوران الدرون حول نفسه، وليس انتقاله جانبيًا.
+    conceptLinked: flight.flight_axes
+
+  - belief: Roll وYaw هما نفس الحركة.
+    correction: >
+      Roll هو ميلان جانبي، أما Yaw فهو دوران حول المحور العمودي.
+    conceptLinked: flight.flight_axes
+
+expectedQuestions:
+  - ما هي محاور الحركة؟
+  - ما معنى Roll؟
+  - ما معنى Pitch؟
+  - ما معنى Yaw؟
+  - ما الفرق بين Roll وYaw؟
+  - هل Pitch يعني الصعود؟
+  - كيف يتحكم الدرون في الاتجاه؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.flight_axes
+    status: draft
+    question: >
+      إذا دار الدرون حول نفسه دون أن يميل للأمام أو الجانبين، أي محور حركة يستخدم؟
+    explanation: >
+      هذه الحركة تسمى Yaw، لأنها دوران حول المحور العمودي للدرون.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: flight.flight_axes
+    status: draft
+    question: >
+      لماذا لا يعتبر Pitch هو نفسه الصعود أو الهبوط؟
+    explanation: >
+      Pitch يصف ميلان الدرون للأمام أو الخلف، أما الصعود والهبوط فيتعلقان
+      بمقدار الدفع الكلي مقارنة بالوزن.
+
+aliases:
+  ar:
+    - محاور الحركة
+    - محاور الطيران
+    - رول
+    - بيتش
+    - ياو
+  en:
+    - Flight Axes
+    - Roll
+    - Pitch
+    - Yaw
+  transliteration:
+    - roll
+    - pitch
+    - yaw
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: flight.thrust
+    note: >
+      التحكم حول المحاور يعتمد على تغيير توزيع الدفع بين المحركات.
+
+  - type: prerequisite_for
+    targetConceptId: control.basic_maneuvers
+    note: >
+      التمييز بين Roll وPitch وYaw ضروري قبل تعلم المناورات الأساسية.
+    pending: true
+
+architecturalNotes: |
+  This concept explains the rotational axes only.
+  It intentionally excludes radio setup, stick mode configuration, Betaflight
+  channel mapping, rates, expo, and practical flight drills.
+  Relations to control.stick_inputs and flight.stability are intentionally
+  omitted here and should be authored from those future concepts if needed.

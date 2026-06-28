@@ -1,3 +1,5 @@
+import type { BotConceptId } from '../data/knowledge/botConceptRegistry';
+
 export interface Lesson {
   id: string;
   number: number;
@@ -12,6 +14,7 @@ export interface Lesson {
   importantPoints: string[];
   commonMistake: string;
   warning?: string;
+  conceptIds?: BotConceptId[];
 }
 
 export type DiagramType =
@@ -41,6 +44,7 @@ export interface RoadmapStep {
   title: string;
   description: string;
   checklist: string[];
+  conceptIds?: BotConceptId[];
 }
 
 export interface ChecklistItem {
@@ -62,6 +66,7 @@ export interface BetaflightSection {
   explanation: string;
   importantPoints: string[];
   warning?: string;
+  conceptIds?: BotConceptId[];
 }
 
 export interface TroubleshootingItem {

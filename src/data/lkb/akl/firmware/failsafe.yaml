@@ -1,0 +1,207 @@
+meta:
+  conceptId: firmware.failsafe
+  namespace: firmware
+  nodeRole: concept
+  version: "1.0.0"
+  status: draft
+  language: ar
+  title: Failsafe
+  titleEn: Failsafe
+  tags:
+    - failsafe
+    - firmware
+    - flight controller
+    - receiver
+    - safety
+    - betaflight
+    - inav
+    - فقدان الإشارة
+    - الأمان
+    - إيقاف آمن
+    - فشل الاتصال
+  consumers:
+    - bot
+    - lesson
+    - search
+    - challenge
+
+source:
+  sourceType: authored
+  sourceRef: firmware/failsafe
+  knowledgeOrigin: >
+    Canonical firmware concept authored from Flight Controller failsafe
+    fundamentals and organized for AKL.
+  extractionNotes: >
+    This concept explains Failsafe as a firmware safety concept that defines
+    how the Flight Controller behaves after losing valid control input.
+    It intentionally excludes firmware setup procedures, timeout values,
+    stage configuration, receiver binding, testing, troubleshooting,
+    and product-specific implementations.
+
+review:
+  status: draft
+  version: "1"
+  createdAt: "2026-06-27"
+  createdBy: "AKP Pilot Authoring"
+  reviewedBy: null
+  reviewedAt: null
+  approvedBy: null
+  approvedAt: null
+
+definition:
+  text: >
+    Failsafe هو سلوك أمان داخل الـ Firmware يُفعَّل عندما يتوقف متحكم
+    الطيران عن استقبال أوامر تحكم صحيحة، لينتقل إلى سلوك أمان محدد وفق
+    منطق الـ Firmware.
+  textEn: >
+    Failsafe is a firmware safety behavior that activates when the Flight
+    Controller no longer receives valid control input, transitioning to a
+    predefined safety behavior according to firmware logic.
+  source: authored
+  reviewed: false
+  level: beginner
+
+beginnerExplanation:
+  text: >
+    يعتمد متحكم الطيران على أوامر التحكم القادمة من الريسيفر أثناء التشغيل.
+    عند فقدان هذه الأوامر أو عدم صلاحيتها، يطبق الـ Firmware سلوك Failsafe
+    المحدد مسبقاً للتعامل مع حالة فقدان التحكم بطريقة منظمة وآمنة.
+  textEn: >
+    During operation, the Flight Controller relies on control input from
+    the receiver. When that input is lost or becomes invalid, the firmware
+    applies its predefined Failsafe behavior to handle the loss of control
+    in a controlled and safe manner.
+  source: authored
+  reviewed: false
+  level: beginner
+
+learningGoals:
+  - فهم أن Failsafe يمثل سلوك أمان داخل الـ Firmware.
+  - إدراك أن Failsafe يعمل عند فقدان أوامر التحكم الصحيحة.
+  - التمييز بين مفهوم Failsafe وبين طريقة إعداده أو اختباره.
+
+keyFacts:
+  - Failsafe جزء من منطق السلامة داخل الـ Firmware.
+  - يُفعَّل عند فقدان أوامر التحكم الصحيحة.
+  - يهدف إلى تقليل المخاطر عند فقدان التحكم.
+  - يعتمد على منطق الـ Firmware وليس على نوع بروتوكول محدد.
+  - إعداد Failsafe يختلف عن مفهومه.
+  - اختبار Failsafe مفهوم مستقل.
+  - هذا المفهوم لا يشرح خطوات إعداد Failsafe.
+
+safety:
+  level: high
+  reviewed: false
+  notes: >
+    يشرح هذا المفهوم مبدأ Failsafe فقط. لا يتضمن أي خطوات إعداد أو اختبار
+    أو تشغيل للمحركات أو تجارب طيران. ونظراً لارتباطه المباشر بسلامة
+    الطائرة عند فقدان التحكم، فقد صُنّف بمستوى سلامة مرتفع.
+  blocksExternalProviders: false
+
+misconceptions:
+  - belief: Failsafe يعني إيقاف الدرون فوراً في جميع الحالات.
+    correction: >
+      Failsafe لا يصف إجراءً واحداً ثابتاً، بل يمثل سلوك أمان يحدده
+      الـ Firmware للتعامل مع فقدان أوامر التحكم.
+    conceptLinked: firmware.flight_modes
+
+  - belief: Failsafe يعمل فقط عند انقطاع الريسيفر.
+    correction: >
+      يعمل Failsafe عندما لا يستقبل متحكم الطيران أوامر تحكم صحيحة،
+      بغض النظر عن السبب الذي أدى إلى ذلك.
+    conceptLinked: firmware.receiver_configuration
+
+  - belief: إعداد Failsafe هو نفسه مفهوم Failsafe.
+    correction: >
+      مفهوم Failsafe يشرح الغاية من وجود هذا السلوك، أما طريقة تطبيقه
+      وإعداده فتندرج ضمن مفاهيم أو إجراءات مستقلة.
+    conceptLinked: firmware.uart_configuration
+
+expectedQuestions:
+  - ما هو Failsafe؟
+  - متى يعمل Failsafe؟
+  - لماذا يحتاج الدرون إلى Failsafe؟
+  - هل يعمل Failsafe مع جميع أنواع الريسيفرات؟
+  - هل Failsafe هو نفسه فقدان الإشارة؟
+  - ما الفرق بين Failsafe وإعداد Failsafe؟
+  - ما الهدف من وجود Failsafe؟
+  - ما علاقة Failsafe بأوضاع الطيران؟
+
+challenges:
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.failsafe
+    status: draft
+    question: >
+      لماذا يحتاج متحكم الطيران إلى سلوك خاص عند فقدان أوامر التحكم؟
+    explanation: >
+      لأن فقدان أوامر التحكم يتطلب انتقال الـ Firmware إلى سلوك أمان
+      يهدف إلى تقليل المخاطر.
+
+  - type: analysis
+    level: beginner
+    linkedConceptId: firmware.failsafe
+    status: draft
+    question: >
+      لماذا يجب التمييز بين مفهوم Failsafe وطريقة إعداده؟
+    explanation: >
+      لأن المفهوم يشرح الغاية من Failsafe، بينما الإعداد يحدد كيفية
+      تطبيق هذا السلوك داخل نظام الـ Firmware.
+
+aliases:
+  ar:
+    - Failsafe
+    - نظام الأمان
+    - وضع الأمان
+    - فقدان الإشارة
+    - الحماية عند فقدان التحكم
+  en:
+    - Failsafe
+    - Receiver Failsafe
+    - Firmware Failsafe
+    - Control Loss Protection
+    - Signal Loss Protection
+  transliteration:
+    - failsafe
+    - receiver failsafe
+    - signal loss protection
+
+typedRelations:
+  - type: depends_on
+    targetConceptId: firmware.receiver_configuration
+    note: >
+      يعتمد Failsafe على وجود مصدر صحيح لأوامر التحكم قبل اكتشاف فقدانها.
+
+  - type: depends_on
+    targetConceptId: firmware.flight_modes
+    note: >
+      يرتبط Failsafe بمنطق التشغيل الذي يديره الـ Firmware.
+
+  - type: prerequisite_for
+    targetConceptId: safety.preflight_checks
+    note: >
+      فهم Failsafe يسبق التحقق من أنظمة السلامة قبل الإقلاع.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.first_flight
+    note: >
+      فهم Failsafe ضروري قبل أول رحلة.
+    pending: true
+
+  - type: prerequisite_for
+    targetConceptId: safety.failsafe_testing
+    note: >
+      يجب فهم مفهوم Failsafe قبل دراسة اختباره عملياً.
+    pending: true
+
+architecturalNotes: |
+  This concept explains Failsafe as a firmware safety behavior.
+  It intentionally excludes configuration procedures, timeout values,
+  stage definitions, receiver binding, flight testing, troubleshooting,
+  and product-specific implementations.
+  It does not define which Failsafe action is selected; that belongs to
+  configuration or procedure concepts.
+  Receiver configuration belongs in firmware.receiver_configuration.
+  Flight Modes belong in firmware.flight_modes.
+  Practical Failsafe testing belongs in the safety namespace.
