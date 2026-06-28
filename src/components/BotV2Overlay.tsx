@@ -115,7 +115,7 @@ export const BotV2Overlay: React.FC = () => {
       {/* Backdrop — semi-transparent, covers visible top area, click to close */}
       <div
         style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: '20%',
+          position: 'fixed', top: 0, left: 0, right: 0, height: '20vh',
           background: 'rgba(2,8,18,0.6)',
           backdropFilter: 'blur(3px)',
           zIndex: 29,
@@ -130,7 +130,7 @@ export const BotV2Overlay: React.FC = () => {
       {/* Panel — slides up from bottom */}
       <div
         style={{
-          position: 'absolute', top: '20%', bottom: '80px', left: 0, right: 0,
+          position: 'fixed', top: '20vh', bottom: '80px', left: 0, right: 0,
           zIndex: 30,
           background: '#030a15',
           borderRadius: '22px 22px 0 0',

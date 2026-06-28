@@ -29,8 +29,9 @@ export const QuadcopterLauncher: React.FC = () => {
       onClick={toggleBot}
       aria-label={isOpen ? 'إغلاق مساعد FPV' : 'فتح مساعد FPV'}
       aria-expanded={isOpen}
-      className="absolute press"
+      className="press"
       style={{
+        position: 'fixed',
         bottom: '80px',
         left: '16px',
         width: '48px',
