@@ -14,6 +14,9 @@ export default {
       backgroundImage: {
         'gradient-navy': 'linear-gradient(135deg, #061827 0%, #082636 50%, #0B1020 100%)',
       },
+      fontFamily: {
+        sans: ["'Cairo Variable'", 'system-ui', '-apple-system', "'Segoe UI'", 'Tahoma', 'Arial', 'sans-serif'],
+      },
     },
   },
   plugins: [],

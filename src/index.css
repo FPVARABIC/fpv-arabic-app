@@ -1,3 +1,5 @@
+@import '@fontsource-variable/cairo';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +10,7 @@
     background: #02080f;
     min-height: 100vh;
     color: #F8FAFC;
-    font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-family: 'Cairo Variable', system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
     direction: rtl;
     margin: 0;
     -webkit-font-smoothing: antialiased;
