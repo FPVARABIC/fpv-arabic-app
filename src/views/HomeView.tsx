@@ -150,13 +150,25 @@ export const HomeView: React.FC = () => {
 
         <div className="px-4 py-4 space-y-6">
           {/* Hero */}
-          <div className="card-hero p-6">
+          <div className="card-hero p-6" style={{
+            background: 'radial-gradient(100% 100% at 0% 0%, rgba(103,232,249,0.25) 0%, transparent 55%), rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(20px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(150%)',
+            borderTop: '1px solid rgba(255,255,255,0.25)',
+            borderLeft: '1px solid rgba(255,255,255,0.12)',
+            borderRight: '1px solid rgba(255,255,255,0.12)',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
+          }}>
             <div className="relative z-10 flex items-center justify-between gap-3">
               <div className="flex-1">
                 <span className="chip mb-3">مرحبًا بعودتك 👋</span>
                 <h1 className="text-2xl font-extrabold text-white leading-tight">جاهز لبناء<br/><span className="text-gradient">أول كوادكابتر FPV؟</span></h1>
                 <p className="text-sm text-slate-400 mt-2 leading-relaxed">مساعدك العربي خطوة بخطوة، من القطع إلى أول طيران.</p>
-                <button className="btn-primary mt-4 text-sm py-2.5 px-5" onClick={() => navigate('/roadmap')}>
+                <button className="btn-primary mt-4 text-sm py-2.5 px-5" onClick={() => navigate('/roadmap')} style={{
+                  background: 'linear-gradient(135deg, #67e8f9 0%, #22d3ee 55%, #06b6d4 100%)',
+                  boxShadow: '0 8px 28px -6px rgba(103,232,249,0.7), 0 0 0 1px rgba(103,232,249,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
+                  color: '#04101e',
+                }}>
                   ابدأ البناء <ArrowLeft size={16}/>
                 </button>
               </div>
@@ -190,7 +202,11 @@ export const HomeView: React.FC = () => {
             <h2 className="text-sm font-bold text-slate-300 mb-3 accent-head">نظرة سريعة</h2>
             <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
               {statChips.map(([v, l]) => (
-                <div key={l} className="card-feature px-5 py-3 flex-shrink-0 text-center min-w-[110px]">
+                <div key={l} className="card-feature px-5 py-3 flex-shrink-0 text-center min-w-[110px]" style={{
+                  background: 'rgba(8,22,38,0.75)',
+                  border: '1px solid rgba(103,232,249,0.28)',
+                  boxShadow: '0 0 14px -8px rgba(103,232,249,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                }}>
                   <p className="text-2xl font-extrabold text-gradient">{v}</p>
                   <p className="text-[11px] text-slate-400 mt-1">{l}</p>
                 </div>

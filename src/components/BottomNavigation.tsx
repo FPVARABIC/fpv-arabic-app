@@ -21,7 +21,7 @@ export const BottomNavigation: React.FC = () => {
     <>
       {/* gradient fade — constrained to 390px column */}
       <div className="fixed bottom-0 left-0 right-0 z-20 h-12 pointer-events-none flex justify-center" aria-hidden>
-        <div className="w-full max-w-[390px]" style={{ background: 'linear-gradient(to top, #04101e 10%, transparent)' }}/>
+        <div className="w-full max-w-[390px]" style={{ background: 'linear-gradient(to top, rgba(4,16,30,0.6) 10%, transparent)' }}/>
       </div>
 
       {/* nav bar — constrained to 390px column */}
@@ -29,9 +29,10 @@ export const BottomNavigation: React.FC = () => {
         <nav
           className="w-full max-w-[390px]"
           style={{
-            background: 'rgba(5,18,31,0.92)',
-            backdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(34,211,238,0.25)',
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            borderTop: '1px solid rgba(103,232,249,0.2)',
           }}
         >
           <div className="flex items-center justify-around px-1 pt-3 pb-3" style={{ minHeight: 64 }}>
@@ -42,7 +43,7 @@ export const BottomNavigation: React.FC = () => {
                   key={item.path}
                   onClick={() => navigate(item.path)}
                   className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl press transition-all ${active ? 'text-cyan-300' : 'text-slate-400 hover:text-slate-300'}`}
-                  style={active ? { background: 'linear-gradient(135deg, rgba(24,230,230,0.24), rgba(0,160,255,0.14))', boxShadow: '0 0 14px -5px rgba(34,211,238,0.55)' } : undefined}
+                  style={active ? { background: 'rgba(103,232,249,0.3)', boxShadow: '0 0 14px -4px rgba(103,232,249,0.7)' } : undefined}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center">
                     {active && (
