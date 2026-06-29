@@ -9,17 +9,60 @@ const STORAGE_KEY = 'botLauncherPos';
 const NAV_HEIGHT = 80;
 const EDGE_MARGIN = 10;
 
-const QuadcopterIcon: React.FC = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 10.5L6 5.5"   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M12 10.5L18 5.5"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M12 13.5L6 18.5"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M12 13.5L18 18.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor"/>
-    <circle cx="6"  cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
-    <circle cx="18" cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
-    <circle cx="6"  cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
-    <circle cx="18" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
+const ARM_ANGLES = [45, 135, 225, 315];
+const BLADE_DELAYS = ['0s', '0.75s', '1.5s', '2.25s'];
+
+const DroneIcon: React.FC = () => {
+  const C = 12;
+  const ARM_LEN = 5.5;
+  const MOTOR_R = 2.2;
+  const BLADE_HALF = 2.5;
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {ARM_ANGLES.map((deg, i) => {
+        const r = (deg * Math.PI) / 180;
+        const mx = C + ARM_LEN * Math.sin(r);
+        const my = C - ARM_LEN * Math.cos(r);
+        const bx = Math.cos(r);
+        const by = Math.sin(r);
+        return (
+          <g key={i}>
+            <line x1={C} y1={C} x2={mx} y2={my} stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            <circle cx={mx} cy={my} r={MOTOR_R} stroke="currentColor" strokeWidth="1.1" fill="currentColor" fillOpacity="0.15"/>
+            <line
+              x1={mx - bx * BLADE_HALF} y1={my - by * BLADE_HALF}
+              x2={mx + bx * BLADE_HALF} y2={my + by * BLADE_HALF}
+              stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"
+              className="ql-blade"
+              style={{ animationDelay: BLADE_DELAYS[i] }}
+            />
+          </g>
+        );
+      })}
+      <circle cx={C} cy={C} r="1.8" fill="currentColor"/>
+    </svg>
+  );
+};
+
+// r=29, circumference≈182.21. Three stacked arcs create a comet-fade: faint tail→medium body→bright head.
+const CometRing: React.FC<{ idle: boolean }> = ({ idle }) => (
+  <svg
+    width="64" height="64"
+    viewBox="0 0 64 64"
+    style={{
+      position: 'absolute',
+      inset: -6,
+      pointerEvents: 'none',
+      animation: idle ? 'ql-ring-spin 3.6s linear infinite' : 'none',
+    }}
+    aria-hidden="true"
+  >
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="1.2"
+      strokeDasharray="75 107.21" strokeLinecap="round"/>
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.45)" strokeWidth="1.4"
+      strokeDasharray="45 137.21" strokeLinecap="round"/>
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth="1.8"
+      strokeDasharray="20 162.21" strokeLinecap="round"/>
   </svg>
 );
 
@@ -158,27 +201,33 @@ export const QuadcopterLauncher: React.FC = () => {
   if (pathname === '/bot') return null;
   if (!position) return null;
 
-  const animating = !isDragging && !isOpen;
-  const boxShadow = animating
-    ? undefined // controlled by @keyframes ql-breath
-    : isDragging
-      ? '0 0 10px rgba(34,211,238,0.18), 0 4px 14px rgba(0,0,0,0.5)'
-      : '0 0 28px rgba(34,211,238,0.6), 0 4px 14px rgba(0,0,0,0.5)';
+  const idle = !isOpen && !isDragging;
 
   return (
     <>
       <style>{`
-        @keyframes ql-breath {
-          0%, 100% { box-shadow: 0 0 14px rgba(34,211,238,0.32), 0 4px 14px rgba(0,0,0,0.5); }
-          50%       { box-shadow: 0 0 30px rgba(34,211,238,0.65), 0 4px 14px rgba(0,0,0,0.5); }
+        @keyframes ql-ring-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes ql-blade-pulse {
+          0%, 100% { opacity: 0.5; }
+          50%       { opacity: 1; }
+        }
+        @keyframes ql-bob {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-4px); }
+        }
+        @keyframes ql-halo-pulse {
+          0%, 100% { opacity: 0.35; transform: scale(1); }
+          50%       { opacity: 0.62; transform: scale(1.12); }
+        }
+        .ql-blade {
+          animation: ql-blade-pulse 1.5s ease-in-out infinite;
         }
       `}</style>
-      <button
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        aria-label={isOpen ? 'إغلاق مساعد FPV' : 'فتح مساعد FPV'}
-        aria-expanded={isOpen}
-        className="press"
+      {/* Wrapper: carries position:fixed and bob animation so ring+halo+button bob together */}
+      <div
         style={{
           position: 'fixed',
           left: `${frameLeft + position.x}px`,
@@ -186,31 +235,64 @@ export const QuadcopterLauncher: React.FC = () => {
           width: BUTTON_SIZE,
           height: BUTTON_SIZE,
           zIndex: 35,
-          borderRadius: 16,
-          background: isOpen
-            ? 'linear-gradient(135deg, rgba(34,211,238,0.22) 0%, rgba(0,160,255,0.14) 100%)'
-            : 'linear-gradient(135deg, rgba(8,22,38,0.92) 0%, rgba(4,16,30,0.96) 100%)',
-          border: isOpen ? '1px solid rgba(34,211,238,0.6)' : '1px solid rgba(34,211,238,0.32)',
-          color: '#22d3ee',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          cursor: isDragging ? 'grabbing' : 'grab',
-          transition: animating
-            ? 'border-color 0.2s, background 0.2s, opacity 0.2s'
-            : 'border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.2s',
-          animation: animating ? 'ql-breath 3s ease-in-out infinite' : 'none',
-          boxShadow,
-          opacity: isDragging ? 0.85 : 1,
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-          touchAction: 'none',
+          animation: idle ? 'ql-bob 4s ease-in-out infinite' : 'none',
         }}
       >
-        {isOpen ? <X size={20} /> : <QuadcopterIcon />}
-      </button>
+        {/* Ambient halo */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: -16,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.32) 0%, rgba(109,40,217,0.10) 55%, transparent 75%)',
+            animation: idle ? 'ql-halo-pulse 5s ease-in-out infinite' : 'none',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Comet-trail ring */}
+        <CometRing idle={idle} />
+        {/* Button: absolute within wrapper */}
+        <button
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          aria-label={isOpen ? 'إغلاق مساعد FPV' : 'فتح مساعد FPV'}
+          aria-expanded={isOpen}
+          className="press"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            background: isOpen
+              ? 'linear-gradient(135deg, rgba(139,92,246,0.28) 0%, rgba(109,40,217,0.18) 100%)'
+              : 'linear-gradient(135deg, rgba(20,10,40,0.92) 0%, rgba(14,6,30,0.96) 100%)',
+            border: isOpen
+              ? '1px solid rgba(167,139,250,0.7)'
+              : '1px solid rgba(139,92,246,0.35)',
+            color: idle ? '#ddd6fe' : '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.2s',
+            boxShadow: isDragging
+              ? '0 0 10px rgba(139,92,246,0.18), 0 4px 14px rgba(0,0,0,0.5)'
+              : isOpen
+                ? '0 0 28px rgba(139,92,246,0.65), 0 4px 14px rgba(0,0,0,0.5)'
+                : '0 0 18px rgba(139,92,246,0.42), 0 4px 14px rgba(0,0,0,0.5)',
+            opacity: isDragging ? 0.85 : 1,
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            touchAction: 'none',
+          }}
+        >
+          {isOpen ? <X size={20} /> : <DroneIcon />}
+        </button>
+      </div>
     </>
   );
 };
