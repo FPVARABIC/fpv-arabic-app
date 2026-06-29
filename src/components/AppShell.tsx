@@ -32,6 +32,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
           overflow: 'hidden',
         }}
       >
+        {/* hero background — below all content layers */}
+        <div className="absolute" style={{ top: 0, left: 0, right: 0, height: '100vh', backgroundImage: "url('/assets/home-hero-canyon.png')", backgroundSize: 'cover', backgroundPosition: 'center 15%', zIndex: -1 }} aria-hidden />
+        <div className="absolute inset-0" style={{ background: 'rgba(2,8,15,0.72)', zIndex: -1 }} aria-hidden />
         {/* ambient orbs — absolute, clipped to column */}
         <div className="orbs" aria-hidden>
           <div className="orb orb-1"/>
