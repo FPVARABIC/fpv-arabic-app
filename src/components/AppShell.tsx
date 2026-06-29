@@ -1,7 +1,6 @@
 import React from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { BotOverlayProvider } from '../contexts/BotOverlayContext';
-import { FloatingAssistant } from './FloatingAssistant';
 import { QuadcopterLauncher } from './QuadcopterLauncher';
 import { BotV2Overlay } from './BotV2Overlay';
 
@@ -54,7 +53,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
           {children}
         </main>
         {showNav && <BottomNavigation/>}
-        {showNav && <FloatingAssistant/>}
         <QuadcopterLauncher/>
         <BotV2Overlay/>
       </div>
