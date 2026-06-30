@@ -107,7 +107,15 @@ export const BotV2AssistantView: React.FC = () => {
           </span>
         }
       />
-      <div className="flex flex-col h-[calc(100vh-9rem)]">
+      <div
+        className="flex flex-col h-[calc(100vh-9rem)]"
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(2,8,15,0.88) 0%, rgba(2,8,15,0.72) 40%, rgba(2,8,15,0.65) 100%), url('/assets/bot-chat-background.png')`,
+          backgroundSize: 'auto, cover',
+          backgroundPosition: 'center center, center 35%',
+          backgroundRepeat: 'no-repeat, no-repeat',
+        }}
+      >
 
         {/* Message thread — scrolls internally, input stays fixed below */}
         <div
@@ -117,7 +125,7 @@ export const BotV2AssistantView: React.FC = () => {
           {msgs.map(msg => (
             <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-start' : 'justify-end'}`}>
               {msg.from === 'bot' ? (
-                <div className="flex gap-2 max-w-[88%]">
+                <div className="flex flex-row-reverse gap-2 max-w-[88%]">
                   <div className="w-8 h-8 rounded-full bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center flex-shrink-0 mt-1 text-cyan-400">
                     <QuadcopterAvatar/>
                   </div>
@@ -162,7 +170,7 @@ export const BotV2AssistantView: React.FC = () => {
         </div>
 
         {/* Input bar */}
-        <div className="px-4 py-3 border-t border-cyan-400/10">
+        <div className="px-4 pt-3 pb-5 border-t border-cyan-400/10">
           <form
             onSubmit={e => {
               e.preventDefault();

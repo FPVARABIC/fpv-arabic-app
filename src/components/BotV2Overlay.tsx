@@ -56,6 +56,13 @@ interface ThreadMsg {
   answer?: BotV2Answer;
 }
 
+// ── Frame geometry helper (same pattern as QuadcopterLauncher) ────────────────
+
+const getFrameRect = (): DOMRect | null => {
+  const el = document.querySelector('[data-app-frame="true"]');
+  return el ? el.getBoundingClientRect() : null;
+};
+
 // ── Overlay ───────────────────────────────────────────────────────────────────
 
 export const BotV2Overlay: React.FC = () => {
@@ -78,6 +85,22 @@ export const BotV2Overlay: React.FC = () => {
     const el = scrollAreaRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs]);
+
+  const [frameBox, setFrameBox] = useState<{ left: number; width: number }>({ left: 0, width: 390 });
+
+  useEffect(() => {
+    const update = () => {
+      const r = getFrameRect();
+      if (r) setFrameBox({ left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
 
   const sendQuery = (query: string) => {
     const q = query.trim();
@@ -113,7 +136,7 @@ export const BotV2Overlay: React.FC = () => {
       {/* Backdrop */}
       <div
         style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '20vh',
+          position: 'fixed', top: 0, left: `${frameBox.left}px`, width: `${frameBox.width}px`, height: '20vh',
           background: 'rgba(2,8,18,0.6)',
           backdropFilter: 'blur(3px)',
           zIndex: 29,
@@ -128,12 +151,15 @@ export const BotV2Overlay: React.FC = () => {
       {/* Panel — slides up from bottom */}
       <div
         style={{
-          position: 'fixed', top: '20vh', bottom: '80px', left: 0, right: 0,
+          position: 'fixed', top: '20vh', bottom: '96px',
+          left: `${frameBox.left}px`, width: `${frameBox.width}px`,
           zIndex: 30,
-          background: '#030a15',
-          borderRadius: '22px 22px 0 0',
+          backgroundImage: `linear-gradient(180deg, rgba(2,8,15,0.88) 0%, rgba(2,8,15,0.72) 40%, rgba(2,8,15,0.65) 100%), url('/assets/bot-chat-background.png')`,
+          backgroundSize: 'auto, cover',
+          backgroundPosition: 'center center, center 35%',
+          backgroundRepeat: 'no-repeat, no-repeat',
+          borderRadius: '22px 22px 16px 16px',
           border: '1px solid rgba(34,211,238,0.13)',
-          borderBottom: 'none',
           transform: isOpen ? 'translateY(0)' : 'translateY(120%)',
           transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
           pointerEvents: isOpen ? 'auto' : 'none',
@@ -178,8 +204,8 @@ export const BotV2Overlay: React.FC = () => {
             aria-label="إغلاق المساعد"
             style={{
               width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)',
-              color: '#94a3b8', cursor: 'pointer',
+              background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)',
+              color: '#cbd5e1', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -199,7 +225,7 @@ export const BotV2Overlay: React.FC = () => {
           {msgs.map(msg => (
             <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-start' : 'flex-end' }}>
               {msg.from === 'bot' ? (
-                <div style={{ display: 'flex', gap: '8px', maxWidth: '88%' }}>
+                <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '8px', maxWidth: '88%' }}>
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
                     background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)',
@@ -247,7 +273,7 @@ export const BotV2Overlay: React.FC = () => {
         </div>
 
         {/* Input bar */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(34,211,238,0.08)', flexShrink: 0 }}>
+        <div style={{ padding: '10px 16px 18px', borderTop: '1px solid rgba(34,211,238,0.08)', flexShrink: 0 }}>
           <form
             onSubmit={e => {
               e.preventDefault();
