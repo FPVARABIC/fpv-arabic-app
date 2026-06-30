@@ -44,8 +44,24 @@ export const LessonDetailView: React.FC = () => {
             <span className="pill-stat text-sm"><Clock size={14} style={{ color: '#5EEAD4' }}/> {lesson.duration}</span>
           </div>
 
-          {/* Diagram FIRST, edge-to-edge inside feature card */}
-          <EducationalDiagram type={lesson.diagramType}/>
+          {/* Hero image when available, else diagram — both edge-to-edge */}
+          {lesson.image ? (
+            <div style={{
+              borderRadius: '16px',
+              overflow: 'hidden',
+              border: '1px solid rgba(94,234,212,0.12)',
+              background: 'rgba(14,42,54,0.7)',
+            }}>
+              <img
+                src={lesson.image}
+                alt={lesson.imagePlaceholder}
+                loading="lazy"
+                style={{ display: 'block', width: '100%', height: 'auto' }}
+              />
+            </div>
+          ) : (
+            <EducationalDiagram type={lesson.diagramType}/>
+          )}
 
           {/* objective */}
           <div className="card-subtle p-4 border-r-2" style={{ background: '#173F4D', borderColor: 'rgba(94,234,212,0.45)' }}>

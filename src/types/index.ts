@@ -10,6 +10,7 @@ export interface Lesson {
   objective: string;
   explanation: string;
   imagePlaceholder: string;
+  image?: string;
   diagramType: DiagramType;
   importantPoints: string[];
   commonMistake: string;

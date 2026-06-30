@@ -11,6 +11,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم مفهوم الكوادكابتر ودور كل محرك فيه',
     explanation: 'الكوادكابتر هو طائرة مسيّرة تعتمد على أربعة محركات مرتبة في شكل X أو H. يختلف عن الطائرات التقليدية لأنه لا يحتاج إلى أجنحة أو ذيل متحرك، بل يتحكم في الطيران عن طريق تغيير سرعة كل محرك منفردًا. عندما يدور محركان بسرعة أكبر من الآخرين يتجه الكوادكابتر في الاتجاه المعاكس. في عالم FPV تحديدًا، الكوادكابتر يُصمَّم لأداء عالٍ وردة فعل سريعة، وهو ما يجعله مختلفًا عن الدرونات التجارية. كل محرك يدور في اتجاه مختلف لمنع دوران الطائرة على محورها. هذا التوازن الدقيق هو ما يجعل الطيران مستقرًا وسلسًا.',
     imagePlaceholder: 'مخطط توضيحي: أربعة محركات في شكل X',
+    image: '/assets/lesson-images/lesson-01-what-is-quadcopter.png',
     diagramType: 'quad-x-layout',
     importantPoints: [
       'أربعة محركات تتحكم في الحركة بجميع الاتجاهات',
@@ -28,6 +29,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم مسار الإشارة الكامل: Radio → Receiver → FC → ESC → Motors',
     explanation: 'عندما تحرك عصا جهاز التحكم، يُرسل الجهاز إشارة لاسلكية إلى Receiver الموجود في الطائرة. يستقبل Receiver هذه الإشارة ويحوّلها إلى بيانات رقمية ويرسلها إلى Flight Controller عبر بروتوكول SBUS أو ELRS. Flight Controller هو الدماغ الذي يحلل هذه البيانات جنبًا إلى جنب مع بيانات الجيروسكوب والمسرّع لحساب السرعة المطلوبة لكل محرك. يرسل FC أوامر إلى ESC لكل محرك، وESC يتحكم في سرعة المحرك بدقة عالية. كل هذه العملية تتكرر مئات المرات في الثانية لضمان الاستقرار.',
     imagePlaceholder: 'مخطط: Radio → Receiver → FC → ESC → Motors',
+    image: '/assets/lesson-images/lesson-02-how-quadcopter-works.png',
     diagramType: 'signal-flow',
     importantPoints: [
       'Flight Controller يحسب كل شيء في الوقت الفعلي',
@@ -45,6 +47,7 @@ export const lessonsData: Lesson[] = [
     objective: 'معرفة اسم ووظيفة كل قطعة أساسية في الكوادكابتر',
     explanation: 'Frame هو الهيكل الذي يحمل كل القطع. Motors هي المحركات التي تدير المراوح وتولّد القوة الرافعة. ESC يتحكم في سرعة كل محرك ويوفر طاقة نظيفة له. Flight Controller هو الدماغ الذي يدير الطيران. Receiver يستقبل أوامر جهاز التحكم. VTX هو جهاز البث المرئي الذي يرسل صورة الكاميرا. Props هي المراوح البلاستيكية أو الكربون. LiPo هي بطارية الطيران عالية الطاقة. كل قطعة لها حجم ومواصفات معينة يجب أن تتوافق مع باقي القطع.',
     imagePlaceholder: 'صورة توضيحية: قطع الكوادكابتر الأساسية',
+    image: '/assets/lesson-images/lesson-03-drone-main-parts.png',
     diagramType: 'parts-map',
     importantPoints: [
       'Frame يحدد حجم الدرون والقطع المتوافقة',
@@ -62,6 +65,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم أهمية التوافق بين القطع وكيف تتجنب الأخطاء الشائعة',
     explanation: 'الخطأ الأكثر شيوعًا عند المبتدئين هو شراء القطع عشوائيًا دون التحقق من التوافق. مثلاً، محرك 2306 يحتاج ESC بتيار 35-45A، وإذا اشتريت ESC بـ20A فستحترق. Frame بحجم 5 بوصة يحتاج محركات بقطر معين وESC بحجم معين. FC يجب أن يدعم عدد المنافذ الكافي لـ Receiver و VTX. بطارية 6S لا تناسب ESC مصمم لـ 4S فقط. قبل الشراء، اختر أولاً الإطار ثم المحركات ثم ESC ثم FC، وتأكد أن كل قطعة تتوافق مع ما قبلها.',
     imagePlaceholder: 'جدول توافق القطع',
+    image: '/assets/lesson-images/lesson-04-define-your-goal.png',
     diagramType: 'parts-compatibility',
     importantPoints: [
       'ابدأ باختيار حجم الفريم ثم اختر باقي القطع بناءً عليه',
@@ -80,6 +84,7 @@ export const lessonsData: Lesson[] = [
     objective: 'اختيار الحجم المناسب لأول كوادكابتر FPV',
     explanation: 'حجم الدرون يُقاس بطول المروحة. 3 بوصة: صغير ومناسب للتحليق الداخلي والحدائق، خفيف وأقل خطرًا لكن التحكم فيه أصعب. 5 بوصة: الأكثر شيوعًا في عالم FPV وهو النقطة الذهبية، ستجد أكبر عدد من الدروس والمجتمعات والقطع لهذا الحجم. 7 بوصة: أكبر وأثقل، مناسب لحمل كاميرات احترافية أو الطيران لمسافات طويلة. للمبتدئين نوصي دائمًا بـ 5 بوصة لأن المحتوى التعليمي والقطع والمجتمع أكبر بكثير.',
     imagePlaceholder: 'مقارنة مرئية: 3 بوصة vs 5 بوصة vs 7 بوصة',
+    image: '/assets/lesson-images/lesson-05-drone-size-selection.png',
     diagramType: 'size-comparison',
     importantPoints: [
       '5 بوصة هو أكثر حجم موثق وله أكبر مجتمع',
@@ -97,6 +102,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم المفاهيم الكهربائية الأساسية لتجنب الأعطال والأخطار',
     explanation: 'الجهد (Voltage) يُقاس بالفولت وهو "قوة" الكهرباء. بطارية 4S تعطي 14.8V و6S تعطي 22.2V. التيار (Current) يُقاس بالأمبير وهو "كمية" الكهرباء المتدفقة. القطبية تعني أن للكهرباء اتجاهًا: (+) موجب و(-) سالب. إذا عكست القطبية قد تحرق القطع فورًا. الدائرة القصيرة تحدث عندما يتلامس طرف (+) مع (-) مباشرة دون مقاومة، وهذا خطير جداً مع بطاريات LiPo. دائمًا تحقق من القطبية بالـ Multimeter قبل توصيل البطارية.',
     imagePlaceholder: 'مخطط: الجهد والتيار والقطبية',
+    image: '/assets/lesson-images/lesson-06-electricity-basics.png',
     diagramType: 'electricity-basics',
     importantPoints: [
       'تحقق من القطبية دائمًا قبل توصيل أي شيء',
@@ -115,6 +121,7 @@ export const lessonsData: Lesson[] = [
     objective: 'التعامل الآمن مع بطاريات LiPo وفهم مواصفاتها',
     explanation: 'بطاريات LiPo تتكون من خلايا (Cells). كل خلية جهدها 3.7V في الاستخدام وأقصى شحن 4.2V. بطارية 4S تعني 4 خلايا = 14.8V-16.8V. جهد التخزين الآمن هو 3.8V لكل خلية. لا تشحن LiPo أبدًا إذا كانت منتفخة (Puffed). لا تتركها تتفرغ تحت 3.5V لكل خلية. احفظها في حقيبة مقاومة للحريق. دائمًا استخدم شاحن مخصص لـ LiPo مع إعداد Balance Charging. لا تتركها تشحن دون مراقبة.',
     imagePlaceholder: 'صورة توضيحية: خلايا LiPo وجهد كل خلية',
+    image: '/assets/lesson-images/lesson-07-lipo-batteries.png',
     diagramType: 'lipo-cells',
     importantPoints: [
       'لا تشحن بطارية منتفخة أبدًا - تخلص منها بأمان',
@@ -133,6 +140,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم مصادر الطاقة المختلفة وأهمية GND المشترك',
     explanation: 'VBAT هو جهد البطارية الكامل مباشرة (14-25V) ويُستخدم لتشغيل الأجهزة القوية كـ VTX. 5V هو جهد منخفض ومنظَّم يُستخدم لتشغيل Receiver والأجهزة الحساسة. GND هو الأرضي المشترك لكل الدائرة، وهو ضروري لعمل أي جهاز. القاعدة الذهبية: يجب أن يكون GND مشتركًا بين جميع الأجهزة. إذا وصّلت جهازين ببعض دون GND مشترك لن يعمل الاتصال بينهما. تحقق دائمًا أن FC وESC وReceiver يتشاركون GND واحد.',
     imagePlaceholder: 'مخطط: VBAT و5V و GND في الدائرة',
+    image: '/assets/lesson-images/lesson-08-gnd-5v-vbat.png',
     diagramType: 'gnd-5v-vbat',
     importantPoints: [
       'GND المشترك ضروري لعمل أي توصيل إشارة',
@@ -186,6 +194,7 @@ export const lessonsData: Lesson[] = [
     objective: 'تركيب هيكل الكوادكابتر بشكل صحيح ومنظم',
     explanation: 'ابدأ بتحديد اتجاه الفريم: معظم الفريمات لها علامة أمامية أو شكل غير متماثل يحدد الأمام. ركّب base plate أولاً وتأكد من تماسك كل المسامير. عند تركيب الأذرع، لا تشد المسامير بقوة زائدة فقد تكسر الكربون. اترك الأسلاك في الداخل مرتبة ومحمية. الفريم يجب أن يكون صلبًا بدون أي حركة في الأذرع. خذ وقتك في هذه المرحلة لأن البناء الجيد يعني طيرانًا أكثر سلاسة وإصلاحات أقل لاحقًا.',
     imagePlaceholder: 'صورة تعليمية: مراحل تركيب الفريم',
+    image: '/assets/lesson-images/lesson-11-frame-assembly.png',
     diagramType: 'frame-assembly',
     importantPoints: [
       'حدد اتجاه الفريم قبل تثبيت أي شيء',
@@ -203,6 +212,7 @@ export const lessonsData: Lesson[] = [
     objective: 'تركيب المحركات بشكل صحيح مع الانتباه للاتجاه وطول المسامير',
     explanation: 'لكل محرك اتجاه دوران محدد. في معظم الإعدادات، المحركان الأمامي الأيسر والخلفي الأيمن يدوران عكس عقارب الساعة (CCW)، والآخران مع عقارب الساعة (CW). مسامير التثبيت يجب أن لا تكون طويلة حتى لا تلمس ملفات الموتور من الداخل. المسامير القصيرة جداً لن تمسك جيداً. استخدم الطول المناسب عادةً 6-8mm. رتّب أسلاك الموتور الثلاثة في اتجاه ESC من البداية حتى لا تضطر للمرور بها لاحقًا.',
     imagePlaceholder: 'مخطط: اتجاه دوران المحركات الأربعة',
+    image: '/assets/lesson-images/lesson-12-motor-installation.png',
     diagramType: 'motor-mount',
     importantPoints: [
       'تحقق من طول مسامير الموتور قبل التركيب',
@@ -221,6 +231,7 @@ export const lessonsData: Lesson[] = [
     objective: 'تثبيت ESC في الموضع الصحيح مع ضمان التبريد الجيد',
     explanation: 'ESC يتحكم في سرعة المحركات ويولّد حرارة أثناء الطيران. لذلك يجب أن يكون في مكان يسمح بمرور الهواء عليه. في الفريمات الحديثة يُثبَّت ESC عادةً في أسفل الفريم أو بين الطبقات. تأكد من تثبيته بشكل جيد لمنع الاهتزاز. أسلاك الطاقة (VBAT وGND) من المحركات تذهب إلى ESC ثم إلى power distribution. أسلاك الإشارة من ESC تذهب إلى FC. حافظ على قِصَر الأسلاك بالقدر الممكن لتقليل التداخل الكهربائي.',
     imagePlaceholder: 'صورة: تثبيت ESC على الفريم',
+    image: '/assets/lesson-images/lesson-13-esc-installation.png',
     diagramType: 'esc-placement',
     importantPoints: [
       'ESC يحتاج تدفق هواء للتبريد',
@@ -238,6 +249,7 @@ export const lessonsData: Lesson[] = [
     objective: 'تثبيت FC بشكل صحيح مع حماية الجيروسكوب من الاهتزاز',
     explanation: 'FC يحتوي على جيروسكوب حساس جداً للاهتزاز. لذلك يجب تثبيته على grommets مطاطية تمتص الاهتزاز وتحمي الجيروسكوب. تأكد أن السهم على FC يشير للأمام في اتجاه الطيران. إذا ركبته معكوسًا أو مائلاً يمكنك تعويض ذلك في Betaflight لكن الأفضل التركيب الصحيح. اترك USB port متاحًا للوصول. لا تضع أسلاكًا ثقيلة فوق FC تضغط عليه. المسامير يجب أن لا تشد FC بقوة على grommets.',
     imagePlaceholder: 'صورة: FC على grommets مع سهم الاتجاه',
+    image: '/assets/lesson-images/lesson-14-flight-controller-installation.png',
     diagramType: 'fc-orientation',
     importantPoints: [
       'سهم FC يجب أن يشير للأمام',
@@ -255,6 +267,7 @@ export const lessonsData: Lesson[] = [
     objective: 'توصيل Receiver بشكل صحيح إلى FC',
     explanation: 'Receiver يحتاج إلى ثلاثة توصيلات: 5V للطاقة، GND للأرضي، وسلك الإشارة. إذا كان البروتوكول ELRS أو SBUS فستحتاج TX وRX لنقل البيانات. تذكر القاعدة: TX من Receiver يذهب إلى RX في FC. اختر UART محدداً في FC لـ Receiver وفعّل Serial RX على هذا UART في Betaflight. إذا كان ELRS فتأكد من اختيار بروتوكول CRSF في Betaflight. وثّق أي UART استخدمته لتسهيل الإعداد لاحقاً.',
     imagePlaceholder: 'مخطط: توصيل Receiver مع FC',
+    image: '/assets/lesson-images/lesson-15-receiver-installation.png',
     diagramType: 'receiver-uart',
     importantPoints: [
       'TX(RX) → RX(FC) وRX(RX) → TX(FC)',
@@ -272,6 +285,7 @@ export const lessonsData: Lesson[] = [
     objective: 'فهم نظام الفيديو وتوصيله بشكل أساسي',
     explanation: 'نظام الفيديو في FPV يتكون من كاميرا تلتقط الصورة وجهاز VTX يبثها لاسلكيًا. هناك نظامان رئيسيان: التناظري (Analog) وهو الأقدم والأقل تكلفة لكن جودته محدودة. الرقمي (Digital) يعطي جودة عالية لكن تكلفته أعلى. للمبتدئين، يمكن البدء بدون نظام فيديو للتعلم على الـ Simulator أولاً. عند توصيل VTX تأكد من توصيل VBAT و GND وإشارة الكاميرا. بعض VTX يدعم OSD لعرض معلومات على الشاشة.',
     imagePlaceholder: 'مخطط: كاميرا → VTX → نظارات',
+    image: '/assets/lesson-images/lesson-16-video-system-installation.png',
     diagramType: 'camera-vtx',
     importantPoints: [
       'يمكن تعلم FPV بالـ Simulator قبل شراء نظام الفيديو',
@@ -289,6 +303,7 @@ export const lessonsData: Lesson[] = [
     objective: 'التحقق من عمل المحركات وترتيبها واتجاهها في Betaflight',
     explanation: 'قبل اختبار المحركات: تأكد أن لا مراوح مركبة إطلاقاً. في Betaflight افتح تبويب Motors. ستظهر رسالة تحذير: وافق عليها فقط إذا كنت متأكدًا من غياب المراوح. تحريك زلاقة محرك واحد يجب أن يحرك محركًا واحدًا فقط. تأكد من الترتيب: Motor 1 أمام يمين، Motor 2 خلف يسار، Motor 3 أمام يسار، Motor 4 خلف يمين. اتجاه الدوران يمكن تغييره من Betaflight Motor Mixer أو بتبديل سلكين من أسلاك الموتور.',
     imagePlaceholder: 'مخطط: ترتيب Motor 1-4 في Betaflight',
+    image: '/assets/lesson-images/lesson-17-motor-test-no-props.png',
     diagramType: 'motor-test',
     importantPoints: [
       'لا مراوح أبدًا أثناء اختبار المحركات',
@@ -307,6 +322,7 @@ export const lessonsData: Lesson[] = [
     objective: 'إجراء أول رحلة طيران آمنة',
     explanation: 'أنت الآن جاهز لأول طيران! اختر مكانًا مفتوحًا بعيدًا عن الأشخاص والأشجار والكابلات الكهربائية. تأكد من شحن البطارية وتثبيتها جيدًا. فعّل وضع Angle Mode لأنه يساعد المبتدئين على الاستقرار. افحص Failsafe: أطفئ جهاز التحكم وتأكد أن الدرون يتوقف. جرّب Arm/Disarm قبل الطيران. ابدأ بارتفاع منخفض جداً (نصف متر) وتعود على ردة فعل الدرون. لا تطر فوق الناس. لا تحاول الحركات المعقدة في أول رحلة. والأهم: استمتع وتعلم من كل تجربة.',
     imagePlaceholder: 'صورة: مكان طيران مفتوح وآمن',
+    image: '/assets/lesson-images/lesson-18-first-safe-flight.png',
     diagramType: 'first-flight',
     importantPoints: [
       'Angle Mode للمبتدئين يجعل التحكم أسهل',
