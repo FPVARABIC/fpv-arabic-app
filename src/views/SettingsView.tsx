@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { AlertTriangle, CheckCircle2, Info, RotateCcw } from 'lucide-react';
 
 interface ConfirmState { action: string; label: string; fn: () => void; }
 
 export const SettingsView: React.FC = () => {
   const navigate = useNavigate();
-  const { resetLessons, resetRoadmap, resetChecklists, resetAll, setSafetySeen } = useProgress();
+  const { resetLessons, resetRoadmap, resetChecklists, resetAll, setSafetySeen } = useProgressContext();
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [done, setDone] = useState<string | null>(null);
 

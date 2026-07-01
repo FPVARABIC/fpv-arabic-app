@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 
 export const SplashView: React.FC = () => {
   const navigate = useNavigate();
-  const { setHasStarted } = useProgress();
+  const { setHasStarted } = useProgressContext();
 
   React.useEffect(() => {
     const t = setTimeout(() => {

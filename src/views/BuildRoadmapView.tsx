@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { roadmapData } from '../data/roadmapData';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckSquare, Square, ChevronDown, ChevronUp, Package, Wrench, Cpu, Zap, Shield, Settings, Activity, Wind, CheckCircle2, BookOpen } from 'lucide-react';
 
 const iconMap: Record<string, React.FC<{size?: number; className?: string}>> = {
@@ -113,7 +113,7 @@ const stageLearningLinks: Record<string, StageLearningLink[]> = {
 
 export const BuildRoadmapView: React.FC = () => {
   const navigate = useNavigate();
-  const { completedRoadmapSteps, getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone, completeRoadmapStep, setLastOpenedRoadmapStep } = useProgress();
+  const { completedRoadmapSteps, getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone, completeRoadmapStep, setLastOpenedRoadmapStep } = useProgressContext();
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [zoomedImage, setZoomedImage] = useState<{ src: string; alt: string } | null>(null);
 

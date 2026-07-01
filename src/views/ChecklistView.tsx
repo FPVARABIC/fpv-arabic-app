@@ -2,7 +2,7 @@ import React from 'react';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { checklistsData } from '../data/checklistsData';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckSquare, ShoppingCart, Battery, Plane, Check } from 'lucide-react';
 
 const iconMap: Record<string, React.FC<{size?: number; className?: string}>> = {
@@ -10,7 +10,7 @@ const iconMap: Record<string, React.FC<{size?: number; className?: string}>> = {
 };
 
 export const ChecklistView: React.FC = () => {
-  const { toggleChecklistItem, isChecklistItemDone, getChecklistGroupProgress } = useProgress();
+  const { toggleChecklistItem, isChecklistItemDone, getChecklistGroupProgress } = useProgressContext();
 
   return (
     <AppShell tint="green">

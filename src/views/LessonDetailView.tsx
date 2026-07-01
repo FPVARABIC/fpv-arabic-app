@@ -4,13 +4,13 @@ import { AppShell } from '../components/AppShell';
 import { SafetyWarning } from '../components/SafetyWarning';
 import { EducationalDiagram } from '../components/EducationalDiagram';
 import { lessonsData } from '../data/lessonsData';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const LessonDetailView: React.FC = () => {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
-  const { completedLessons, completeLesson, setLastOpenedLesson } = useProgress();
+  const { completedLessons, completeLesson, setLastOpenedLesson } = useProgressContext();
   const [showNotUnderstood, setShowNotUnderstood] = useState(false);
 
   const lesson = lessonsData.find(l => l.id === lessonId);

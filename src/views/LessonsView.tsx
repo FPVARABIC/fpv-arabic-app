@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { lessonsData } from '../data/lessonsData';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckCircle2, Clock, ChevronLeft } from 'lucide-react';
 
 export const LessonsView: React.FC = () => {
   const navigate = useNavigate();
-  const { completedLessons } = useProgress();
+  const { completedLessons } = useProgressContext();
 
   const stages = [
     { title: 'الأساسيات', subtitle: 'افهم الفكرة والقطع قبل الشراء', lessons: lessonsData.slice(0, 5) },

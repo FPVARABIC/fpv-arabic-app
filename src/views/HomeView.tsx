@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { ProgressRing } from '../components/ProgressRing';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { lessonsData } from '../data/lessonsData';
 import { roadmapData } from '../data/roadmapData';
 import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Shield, MoreVertical, X, Settings, Mail, Info } from 'lucide-react';
@@ -24,7 +24,7 @@ const secondaryOptions = [
 export const HomeView: React.FC = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { lastOpened, overallProgress, completedLessons, completedRoadmapSteps, totalLessons, totalRoadmapSteps } = useProgress();
+  const { lastOpened, overallProgress, completedLessons, completedRoadmapSteps, totalLessons, totalRoadmapSteps } = useProgressContext();
   const lastLesson = lastOpened.lessonId ? lessonsData.find(l => l.id === lastOpened.lessonId) : null;
   const lastStep = lastOpened.roadmapStepId ? roadmapData.find(s => s.id === lastOpened.roadmapStepId) : null;
 

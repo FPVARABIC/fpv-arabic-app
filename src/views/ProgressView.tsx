@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { ProgressRing } from '../components/ProgressRing';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { lessonsData } from '../data/lessonsData';
 import { roadmapData } from '../data/roadmapData';
 import { Trophy, CheckCircle2, Lock } from 'lucide-react';
@@ -12,7 +12,7 @@ interface Achievement { id: string; title: string; icon: string; unlocked: boole
 
 export const ProgressView: React.FC = () => {
   const navigate = useNavigate();
-  const { overallProgress, completedLessons, completedRoadmapSteps, checklistProgress, totalLessons, totalRoadmapSteps, lastOpened, hasStarted, safetySeen, lessonProgress, roadmapProgress } = useProgress();
+  const { overallProgress, completedLessons, completedRoadmapSteps, checklistProgress, totalLessons, totalRoadmapSteps, lastOpened, hasStarted, safetySeen, lessonProgress, roadmapProgress } = useProgressContext();
 
   const achievements: Achievement[] = [
     { id: 'started', title: 'بدأت الرحلة', icon: '🚀', unlocked: hasStarted },

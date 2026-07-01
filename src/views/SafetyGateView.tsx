@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProgress } from '../hooks/useProgress';
+import { useProgressContext } from '../contexts/ProgressContext';
 import { Shield, CheckCircle2, ArrowLeft } from 'lucide-react';
 
 const safetyPoints = [
@@ -16,7 +16,7 @@ const safetyPoints = [
 
 export const SafetyGateView: React.FC = () => {
   const navigate = useNavigate();
-  const { setSafetySeen } = useProgress();
+  const { setSafetySeen } = useProgressContext();
 
   const handleContinue = () => {
     setSafetySeen(true);

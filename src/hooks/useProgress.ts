@@ -5,6 +5,11 @@ import { TOTAL_LESSONS } from '../data/lessonsData';
 import { TOTAL_ROADMAP_STEPS, ROADMAP_STEP_IDS } from '../data/roadmapData';
 import { TOTAL_CHECKLIST_ITEMS } from '../data/checklistsData';
 
+/**
+ * @deprecated Use useProgressContext() from contexts/ProgressContext instead.
+ * This hook is the internal implementation called by ProgressProvider.
+ * Direct use creates isolated state that does not sync across components.
+ */
 export function useProgress() {
   const [completedLessons, setCompletedLessons] = useLocalStorage<string[]>(STORAGE_KEYS.PROGRESS_LESSONS, []);
   const [completedRoadmapSteps, setCompletedRoadmapSteps] = useLocalStorage<string[]>(STORAGE_KEYS.PROGRESS_ROADMAP, []);
