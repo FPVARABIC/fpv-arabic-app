@@ -17,9 +17,9 @@ export const ProgressView: React.FC = () => {
   const achievements: Achievement[] = [
     { id: 'started', title: 'بدأت الرحلة', icon: '🚀', unlocked: hasStarted },
     { id: 'safety', title: 'أنهيت السلامة', icon: '🛡️', unlocked: safetySeen },
-    { id: 'electricity', title: 'أنهيت الكهرباء', icon: '⚡', unlocked: ['lesson-6','lesson-7','lesson-8'].every(id => completedLessons.includes(id)) },
-    { id: 'betaflight', title: 'وصلت إلى Betaflight', icon: '🖥️', unlocked: completedLessons.includes('lesson-17') },
-    { id: 'flight', title: 'جاهز لأول طيران', icon: '🏆', unlocked: completedLessons.includes('lesson-18') || completedRoadmapSteps.includes('step-8') },
+    { id: 'electricity', title: 'أنهيت الكهرباء', icon: '⚡', unlocked: ['lesson-electricity-basics','lesson-lipo-batteries','lesson-power-rails'].every(id => completedLessons.includes(id)) },
+    { id: 'betaflight', title: 'وصلت إلى Betaflight', icon: '🖥️', unlocked: completedLessons.includes('lesson-motor-test') },
+    { id: 'flight', title: 'جاهز لأول طيران', icon: '🏆', unlocked: completedLessons.includes('lesson-first-flight') || completedRoadmapSteps.includes('step-8') },
   ];
 
   const lastLesson = lastOpened.lessonId ? lessonsData.find(l => l.id === lastOpened.lessonId) : null;

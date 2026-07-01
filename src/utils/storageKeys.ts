@@ -7,4 +7,5 @@ export const STORAGE_KEYS = {
   LAST_OPENED: 'fpv_last_opened',
   SETTINGS: 'fpv_settings',
   CONTACT_MESSAGES: 'fpv_contact_messages',
+  MIGRATION_V1: 'fpv_migration_v1',
 } as const;

@@ -75,39 +75,39 @@ const stageImages: Record<string, string> = {
 
 const stageLearningLinks: Record<string, StageLearningLink[]> = {
   'build-soldering-basics': [
-    { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
-    { label: 'TX/RX', lessonId: 'lesson-9' },
-    { label: 'السلامة قبل البطارية', lessonId: 'lesson-10' },
+    { label: 'GND / 5V / VBAT', lessonId: 'lesson-power-rails' },
+    { label: 'TX/RX', lessonId: 'lesson-tx-rx' },
+    { label: 'السلامة قبل البطارية', lessonId: 'lesson-pre-battery-safety' },
   ],
   'build-parts-tools': [
-    { label: 'ESC', lessonId: 'lesson-13' },
-    { label: 'Flight Controller', lessonId: 'lesson-14' },
-    { label: 'LiPo', lessonId: 'lesson-7' },
-    { label: 'Receiver', lessonId: 'lesson-15' },
+    { label: 'ESC', lessonId: 'lesson-esc-install' },
+    { label: 'Flight Controller', lessonId: 'lesson-fc-install' },
+    { label: 'LiPo', lessonId: 'lesson-lipo-batteries' },
+    { label: 'Receiver', lessonId: 'lesson-receiver-install' },
   ],
   'build-frame': [
-    { label: 'تركيب الفريم', lessonId: 'lesson-11' },
+    { label: 'تركيب الفريم', lessonId: 'lesson-frame-assembly' },
   ],
   'build-motors': [
-    { label: 'تركيب المحركات', lessonId: 'lesson-12' },
+    { label: 'تركيب المحركات', lessonId: 'lesson-motor-install' },
   ],
   'build-esc': [
-    { label: 'ESC', lessonId: 'lesson-13' },
+    { label: 'ESC', lessonId: 'lesson-esc-install' },
   ],
   'build-fc': [
-    { label: 'Flight Controller', lessonId: 'lesson-14' },
+    { label: 'Flight Controller', lessonId: 'lesson-fc-install' },
   ],
   'build-receiver': [
-    { label: 'Receiver', lessonId: 'lesson-15' },
-    { label: 'TX/RX', lessonId: 'lesson-9' },
+    { label: 'Receiver', lessonId: 'lesson-receiver-install' },
+    { label: 'TX/RX', lessonId: 'lesson-tx-rx' },
   ],
   'build-vtx': [
-    { label: 'نظام الفيديو', lessonId: 'lesson-16' },
+    { label: 'نظام الفيديو', lessonId: 'lesson-video-system' },
   ],
   'build-pre-battery': [
-    { label: 'LiPo', lessonId: 'lesson-7' },
-    { label: 'السلامة قبل البطارية', lessonId: 'lesson-10' },
-    { label: 'GND / 5V / VBAT', lessonId: 'lesson-8' },
+    { label: 'LiPo', lessonId: 'lesson-lipo-batteries' },
+    { label: 'السلامة قبل البطارية', lessonId: 'lesson-pre-battery-safety' },
+    { label: 'GND / 5V / VBAT', lessonId: 'lesson-power-rails' },
   ],
 };
 
