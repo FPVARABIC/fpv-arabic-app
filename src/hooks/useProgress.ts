@@ -59,7 +59,16 @@ export function useProgress() {
   const resetLessons = () => setCompletedLessons([]);
   const resetRoadmap = () => setCompletedRoadmapSteps([]);
   const resetChecklists = () => setChecklists({});
-  const resetAll = () => { setCompletedLessons([]); setCompletedRoadmapSteps([]); setChecklists({}); setLastOpened({}); };
+  const resetContactMessages = () => {
+    try { localStorage.removeItem(STORAGE_KEYS.CONTACT_MESSAGES); } catch { /* localStorage unavailable */ }
+  };
+  const resetAll = () => {
+    setCompletedLessons([]);
+    setCompletedRoadmapSteps([]);
+    setChecklists({});
+    setLastOpened({});
+    resetContactMessages();
+  };
 
   return {
     completedLessons, completedRoadmapSteps: validCompletedRoadmapSteps, checklists, lastOpened,
@@ -71,7 +80,7 @@ export function useProgress() {
     completeLesson, completeRoadmapStep, toggleChecklistItem, isChecklistItemDone, getChecklistGroupProgress,
     getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone,
     setLastOpenedLesson, setLastOpenedRoadmapStep,
-    setSafetySeen, setHasStarted, resetLessons, resetRoadmap, resetChecklists, resetAll,
+    setSafetySeen, setHasStarted, resetLessons, resetRoadmap, resetChecklists, resetContactMessages, resetAll,
   };
 }
 

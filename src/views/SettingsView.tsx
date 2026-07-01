@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { useProgressContext } from '../contexts/ProgressContext';
-import { AlertTriangle, CheckCircle2, Info, RotateCcw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, RotateCcw, Shield, MessageSquare } from 'lucide-react';
 
-interface ConfirmState { action: string; label: string; fn: () => void; }
+interface ConfirmState { action: string; label: string; description: string; fn: () => void; }
 
 export const SettingsView: React.FC = () => {
   const navigate = useNavigate();
-  const { resetLessons, resetRoadmap, resetChecklists, resetAll, setSafetySeen } = useProgressContext();
+  const { resetLessons, resetRoadmap, resetChecklists, resetAll, resetContactMessages, setSafetySeen } = useProgressContext();
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -21,11 +21,22 @@ export const SettingsView: React.FC = () => {
   };
 
   const resetOptions = [
-    { label: 'إعادة ضبط تقدم الدروس', fn: resetLessons, danger: false },
-    { label: 'إعادة ضبط مراحل البناء', fn: resetRoadmap, danger: false },
-    { label: 'إعادة ضبط Checklists', fn: resetChecklists, danger: false },
-    { label: 'عرض تحذير السلامة مرة أخرى', fn: () => { setSafetySeen(false); navigate('/safety'); }, danger: false },
-    { label: 'إعادة ضبط كل التقدم', fn: resetAll, danger: true },
+    { label: 'إعادة ضبط تقدم الدروس', description: 'يحذف قائمة الدروس المكتملة.', fn: resetLessons, danger: false },
+    { label: 'إعادة ضبط مراحل البناء', description: 'يحذف مراحل البناء المكتملة.', fn: resetRoadmap, danger: false },
+    { label: 'إعادة ضبط Checklists', description: 'يحذف جميع عناصر Checklist المحددة.', fn: resetChecklists, danger: false },
+    { label: 'عرض تحذير السلامة مرة أخرى', description: 'يعيد ضبط حالة تحذير السلامة.', fn: () => { setSafetySeen(false); navigate('/safety'); }, danger: false },
+    {
+      label: 'حذف سجل التواصل',
+      description: 'يحذف الرسائل المحفوظة محليًا بما فيها الاسم والبريد الإلكتروني دون التأثير على تقدمك.',
+      fn: resetContactMessages,
+      danger: false,
+    },
+    {
+      label: 'مسح بيانات التطبيق',
+      description: 'يحذف جميع بيانات التقدم (الدروس، مراحل البناء، Checklists) وكذلك رسائل التواصل المحفوظة.',
+      fn: resetAll,
+      danger: true,
+    },
   ];
 
   return (
@@ -43,7 +54,7 @@ export const SettingsView: React.FC = () => {
           <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><RotateCcw size={14} className="text-cyan-400"/>إعادة الضبط</h2>
           {resetOptions.map((opt, i) => (
             <button key={i} className={`w-full text-right p-3 rounded-xl border transition-all flex items-center justify-between gap-2 ${opt.danger ? 'bg-red-400/5 border-red-400/20 hover:border-red-400/40 text-red-400' : 'bg-white/3 border-white/5 hover:border-cyan-400/20 text-slate-300 hover:text-white'}`}
-              onClick={() => setConfirm({ action: opt.label, label: opt.label, fn: opt.fn })}>
+              onClick={() => setConfirm({ action: opt.label, label: opt.label, description: opt.description, fn: opt.fn })}>
               <span className="text-sm">{opt.label}</span>
               {opt.danger && <AlertTriangle size={14}/>}
             </button>
@@ -55,6 +66,11 @@ export const SettingsView: React.FC = () => {
           <span className="text-sm text-slate-300">حول التطبيق</span>
         </button>
 
+        <button className="glass-card p-4 w-full text-right flex items-center gap-3 hover:border-cyan-400/30 transition-all" onClick={() => navigate('/privacy')}>
+          <Shield size={18} className="text-cyan-400"/>
+          <span className="text-sm text-slate-300">سياسة الخصوصية</span>
+        </button>
+
         {confirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
             <div className="glass-card p-5 max-w-sm w-full space-y-4 fade-in">
@@ -62,7 +78,8 @@ export const SettingsView: React.FC = () => {
                 <AlertTriangle size={20} className="text-amber-400 flex-shrink-0 mt-0.5"/>
                 <div>
                   <h3 className="font-semibold text-white">تأكيد الإجراء</h3>
-                  <p className="text-sm text-slate-400 mt-1">{confirm.label}؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                  <p className="text-sm text-slate-400 mt-1">{confirm.description}</p>
+                  <p className="text-xs text-red-400/80 mt-2">لا يمكن التراجع عن هذا الإجراء.</p>
                 </div>
               </div>
               <div className="flex gap-3">
