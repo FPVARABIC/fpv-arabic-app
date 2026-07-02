@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
-import { Shield, Database, Eye, Trash2, Globe, Users, RefreshCw, Calendar } from 'lucide-react';
+import { Shield, Database, Eye, Globe, Users, RefreshCw, Calendar } from 'lucide-react';
 
 const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
   <div className="glass-card p-5 space-y-3">

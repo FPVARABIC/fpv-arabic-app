@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { SplashView } from './views/SplashView';
-import { SafetyGateView } from './views/SafetyGateView';
+// import { SafetyGateView } from './views/SafetyGateView'; // reserved for BuildRoadmap flow
 import { HomeView } from './views/HomeView';
 import { BuildRoadmapView } from './views/BuildRoadmapView';
 import { LessonsView } from './views/LessonsView';
@@ -25,7 +25,7 @@ export const App: React.FC = () => (
     <Route path="/" element={<RedirectLogic/>}/>
     <Route path="/welcome" element={<SplashView/>}/>
     <Route path="/splash" element={<SplashView/>}/>
-    <Route path="/safety" element={<SafetyGateView/>}/>
+    {/* <Route path="/safety" element={<SafetyGateView/>}/> */}{/* reserved for BuildRoadmap flow */}
     <Route path="/home" element={<HomeView/>}/>
     <Route path="/roadmap" element={<BuildRoadmapView/>}/>
     <Route path="/lessons" element={<LessonsView/>}/>

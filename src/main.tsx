@@ -5,15 +5,18 @@ import './index.css'
 import { App } from './App'
 import { runMigrations } from './utils/migrations'
 import { ProgressProvider } from './contexts/ProgressContext'
+import { AuthProvider } from './contexts/AuthContext'
 
 runMigrations()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ProgressProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ProgressProvider>
+    <AuthProvider>
+      <ProgressProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ProgressProvider>
+    </AuthProvider>
   </StrictMode>,
 )

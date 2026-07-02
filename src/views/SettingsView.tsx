@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { useProgressContext } from '../contexts/ProgressContext';
-import { AlertTriangle, CheckCircle2, Info, RotateCcw, Shield, MessageSquare } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, RotateCcw, Shield } from 'lucide-react';
 
 interface ConfirmState { action: string; label: string; description: string; fn: () => void; }
 
