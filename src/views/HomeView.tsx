@@ -5,7 +5,8 @@ import { ProgressRing } from '../components/ProgressRing';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { lessonsData } from '../data/lessonsData';
 import { roadmapData } from '../data/roadmapData';
-import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Shield, MoreVertical, X, Settings, Mail, Info } from 'lucide-react';
+import { ArrowLeft, BookOpen, Map, Cpu, CheckSquare, Wrench, Shield, MoreVertical } from 'lucide-react';
+import { ProfileSheet } from '../components/ProfileSheet';
 
 const quickSections = [
   { icon: Map, label: 'خريطة البناء', path: '/roadmap', grad: 'linear-gradient(135deg, rgba(24,230,230,0.22), rgba(0,160,255,0.12))', color: 'text-cyan-300' },
@@ -15,15 +16,9 @@ const quickSections = [
   { icon: Wrench, label: 'المشاكل والحلول', path: '/troubleshooting', grad: 'linear-gradient(135deg, rgba(249,115,22,0.24), rgba(245,158,11,0.12))', color: 'text-orange-300' },
 ];
 
-const secondaryOptions = [
-  { icon: Settings, label: 'الإعدادات', path: '/settings', color: 'text-cyan-300' },
-  { icon: Mail, label: 'اتصل بنا', path: '/contact', color: 'text-blue-300' },
-  { icon: Info, label: 'حول التطبيق', path: '/about', color: 'text-purple-300' },
-];
-
 export const HomeView: React.FC = () => {
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { lastOpened, overallProgress, completedLessons, completedRoadmapSteps, totalLessons, totalRoadmapSteps } = useProgressContext();
   const lastLesson = lastOpened.lessonId ? lessonsData.find(l => l.id === lastOpened.lessonId) : null;
   const lastStep = lastOpened.roadmapStepId ? roadmapData.find(s => s.id === lastOpened.roadmapStepId) : null;
@@ -33,11 +28,6 @@ export const HomeView: React.FC = () => {
     [`${completedRoadmapSteps.length}/${totalRoadmapSteps}`, 'مراحل البناء'],
     [`${overallProgress}%`, 'التقدم العام'],
   ];
-
-  const handleSecondaryNav = (path: string) => {
-    setMenuOpen(false);
-    navigate(path);
-  };
 
   return (
     <AppShell tint="cyan">
@@ -55,7 +45,7 @@ export const HomeView: React.FC = () => {
             }}
           />
           <button
-            onClick={() => setMenuOpen(true)}
+            onClick={() => setSheetOpen(true)}
             aria-label="قائمة الإعدادات"
             style={{
               position: 'absolute',
@@ -76,77 +66,6 @@ export const HomeView: React.FC = () => {
             <MoreVertical size={20} className="text-slate-400" />
           </button>
         </div>
-
-        {/* Secondary options half-screen sheet */}
-        {menuOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm fade-in"
-              onClick={() => setMenuOpen(false)}
-            />
-            {/* Centered modal — stays inside 390px frame, clear of BottomNavigation */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center fade-in" onClick={e => e.stopPropagation()}>
-              <div className="w-full max-w-[390px] px-5">
-                <div
-                  style={{
-                    borderRadius: '24px 24px 20px 20px',
-                    background: 'linear-gradient(160deg, #071828 0%, #050f1c 100%)',
-                    border: '1px solid rgba(34,211,238,0.28)',
-                    boxShadow: '0 -12px 48px rgba(34,211,238,0.18), 0 -2px 0 rgba(34,211,238,0.35), 0 16px 48px rgba(0,0,0,0.7)',
-                    padding: '20px 20px 24px',
-                  }}
-                >
-                  {/* grabber */}
-                  <div className="w-10 h-1 rounded-full mx-auto mb-5"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.5), transparent)' }} />
-                  <div className="flex items-center justify-between mb-5">
-                    <p className="text-base font-bold text-white">الإعدادات والمزيد</p>
-                    <button
-                      onClick={() => setMenuOpen(false)}
-                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors"
-                      style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.18)' }}
-                    >
-                      <X size={16} className="text-cyan-300" />
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      borderRadius: 16,
-                      overflow: 'hidden',
-                      border: '1px solid rgba(34,211,238,0.12)',
-                    }}
-                  >
-                    {secondaryOptions.map((opt, idx) => (
-                      <button
-                        key={opt.path}
-                        onClick={() => handleSecondaryNav(opt.path)}
-                        className="w-full flex items-center gap-3 press"
-                        style={{
-                          padding: '14px 16px',
-                          background: idx % 2 === 0 ? 'rgba(34,211,238,0.04)' : 'rgba(255,255,255,0.02)',
-                          borderBottom: idx < secondaryOptions.length - 1 ? '1px solid rgba(34,211,238,0.10)' : 'none',
-                          textAlign: 'right',
-                        }}
-                      >
-                        <div
-                          className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(0,160,255,0.08))',
-                            border: '1px solid rgba(34,211,238,0.25)',
-                          }}
-                        >
-                          <opt.icon size={18} className={opt.color} />
-                        </div>
-                        <span className="text-sm font-bold text-slate-100 flex-1">{opt.label}</span>
-                        <ArrowLeft size={15} className="text-cyan-500 flex-shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
 
         <div className="px-4 py-4 space-y-6">
           {/* Hero */}
@@ -238,6 +157,7 @@ export const HomeView: React.FC = () => {
           </div>
         </div>
       </div>
+      <ProfileSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </AppShell>
   );
 };
