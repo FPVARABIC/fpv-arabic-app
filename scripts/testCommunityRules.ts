@@ -276,6 +276,20 @@ async function main() {
       reporterId: 'uidB', reason: 'other', note: 'ا'.repeat(201), resolved: false, createdAt: serverTimestamp(),
     }));
 
+  console.log('\n=== 11. "dangerous" report reason (Phase 2 amendment to D9/D11) ===');
+
+  await record('valid report with reason=dangerous and null note', 'allow', () =>
+    setDoc(doc(asA.firestore(), 'reports/report-dangerous-ok'), {
+      targetType: 'post', targetId: 'post-existing', postId: 'post-existing',
+      reporterId: 'uidA', reason: 'dangerous', note: null, resolved: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('reject report with reason=dangerous but a non-null note', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'reports/report-dangerous-bad-note'), {
+      targetType: 'post', targetId: 'post-existing', postId: 'post-existing',
+      reporterId: 'uidB', reason: 'dangerous', note: 'should not be allowed', resolved: false, createdAt: serverTimestamp(),
+    }));
+
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
   await testEnv.cleanup();

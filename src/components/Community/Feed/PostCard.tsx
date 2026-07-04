@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Bookmark } from 'lucide-react';
 import type { PostWithId } from '../types';
 import { CATEGORY_LABELS, CATEGORY_TINTS } from '../utils/categories';
 import { timeAgo } from '../utils/timeAgo';
 import { Avatar } from '../Avatar';
+import { ReportButton } from '../Moderation/ReportButton';
+import { useSavedPostIds } from '../hooks/useSavedPostIds';
+import { useAuthContext } from '../../../contexts/AuthContext';
 
 interface PostCardProps {
   post: PostWithId;
@@ -20,6 +25,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
 
+  const { isGuest } = useAuthContext();
+  const { isSaved, toggleSaved } = useSavedPostIds();
+  const [toast, setToast] = useState<string | null>(null);
+  const saved = isSaved(post.id);
+
+  const handleToggleSaved = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGuest) {
+      setToast('يجب تسجيل الدخول للحفظ');
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+    toggleSaved(post.id);
+  };
+
   return (
     <div
       onClick={() => onOpen(post.id)}
@@ -32,6 +52,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
         borderRadius: 14,
         padding: 14,
         cursor: 'pointer',
+        position: 'relative',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -43,7 +64,28 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
           <span style={{ fontSize: 13, fontWeight: 700, color: '#1a2b3c' }}>{post.authorName}</span>
         </button>
         <span style={{ fontSize: 12, color: '#94a3b3' }} dir="ltr">{timeAgo(post.createdAt)}</span>
+
+        <div style={{ flex: 1 }} />
+        <button onClick={handleToggleSaved} aria-label="حفظ" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}>
+          <Bookmark size={15} color={saved ? '#0e7c86' : '#94a3b3'} fill={saved ? '#0e7c86' : 'none'} />
+        </button>
+        <div onClick={e => e.stopPropagation()}>
+          <ReportButton targetType="post" targetId={post.id} postId={post.id} />
+        </div>
       </div>
+
+      {/* Portal to document.body — see ReportButton.tsx for why fixed-position
+          overlays must escape AppShell's <main> stacking context. */}
+      {toast && createPortal(
+        <div style={{
+          position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+          background: '#1a2b3c', color: '#ffffff', fontSize: 13, padding: '10px 18px',
+          borderRadius: 999, zIndex: 60, whiteSpace: 'nowrap',
+        }}>
+          {toast}
+        </div>,
+        document.body,
+      )}
 
       <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word' }}>
         {post.text}

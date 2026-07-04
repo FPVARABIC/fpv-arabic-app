@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
@@ -33,6 +33,7 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   if (!emulatorGuard.__communityEmulatorConnected) {
     connectFirestoreEmulator(firestoreDb, '127.0.0.1', 8080);
     connectStorageEmulator(firebaseStorage, '127.0.0.1', 9199);
+    connectAuthEmulator(firebaseAuth, 'http://127.0.0.1:9099', { disableWarnings: true });
     emulatorGuard.__communityEmulatorConnected = true;
   }
 }

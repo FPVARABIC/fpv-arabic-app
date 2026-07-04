@@ -20,7 +20,9 @@ export type MediaType = 'none' | 'image' | 'video';
 export type ContentStatus = 'active' | 'hidden' | 'deleted';
 export type UserRole = 'user' | 'moderator';
 export type UserStatus = 'active' | 'banned';
-export type ReportReason = 'spam' | 'abuse' | 'other';
+// 'dangerous' ("معلومات خطيرة") added as a Phase 2 amendment to D9/D11's
+// originally locked three-value enum.
+export type ReportReason = 'spam' | 'abuse' | 'dangerous' | 'other';
 export type ReportTargetType = 'post' | 'comment';
 
 export interface CommunityUser {

@@ -1,7 +1,13 @@
-import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Trash2 } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { firestoreDb } from '../../../lib/firebase';
+import { useAuthContext } from '../../../contexts/AuthContext';
 import { usePost } from '../hooks/usePost';
+import { postPath } from '../utils/firestorePaths';
 import { CommentsList } from './CommentsList';
+import { CommentInput } from './CommentInput';
+import { ReportButton } from '../Moderation/ReportButton';
 import { CATEGORY_LABELS, CATEGORY_TINTS } from '../utils/categories';
 import { timeAgo } from '../utils/timeAgo';
 import { Avatar } from '../Avatar';
@@ -16,10 +22,19 @@ const NEUTRAL_TINT = { bg: '#eef2f6', text: '#5a6b7c' };
 
 // Full-size image loads here only — feed/search show thumbnails (D5).
 export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAuthor }) => {
-  const { post, comments, loading, error } = usePost(postId);
+  const { post, comments, loading, error, refresh } = usePost(postId);
+  const { currentUser, isGuest } = useAuthContext();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const tint = post && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
+
+  const isOwnPost = !!currentUser && !!post && post.authorId === currentUser.uid;
+
+  const deletePost = async () => {
+    await updateDoc(doc(firestoreDb, postPath(postId)), { status: 'deleted' });
+    onBack();
+  };
 
   return (
     <div style={{ minHeight: '100%', background: '#f7f9fb' }}>
@@ -30,7 +45,24 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
         <button onClick={onBack} aria-label="رجوع" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1a2b3c', display: 'flex' }}>
           <ArrowRight size={20} />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2b3c' }}>المنشور</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a2b3c', flex: 1 }}>المنشور</span>
+        {post && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isOwnPost && (
+              confirmingDelete ? (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={deletePost} style={{ fontSize: 12, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>تأكيد الحذف</button>
+                  <button onClick={() => setConfirmingDelete(false)} style={{ fontSize: 12, color: '#5a6b7c', background: 'none', border: 'none', cursor: 'pointer' }}>إلغاء</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmingDelete(true)} aria-label="حذف" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b3', display: 'flex' }}>
+                  <Trash2 size={16} />
+                </button>
+              )
+            )}
+            <ReportButton targetType="post" targetId={post.id} postId={post.id} />
+          </div>
+        )}
       </div>
 
       {loading && <p style={{ padding: 24, textAlign: 'center', color: '#94a3b3', fontSize: 13 }}>جارٍ التحميل...</p>}
@@ -71,13 +103,15 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
 
           <div style={{ height: 1, background: '#e5eaf0', margin: '18px 0' }} />
 
-          <CommentsList comments={comments} onOpenAuthor={onOpenAuthor} />
+          <CommentsList postId={postId} comments={comments} onOpenAuthor={onOpenAuthor} onCommentDeleted={refresh} />
 
-          {/* Phase 2 builds the real login-gated CommentInput; Phase 1 has no
-              write path at all yet, so this note is shown unconditionally. */}
-          <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b3', marginTop: 18 }}>
-            التعليق يتطلب تسجيل الدخول — القراءة متاحة للجميع
-          </p>
+          {isGuest ? (
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b3', marginTop: 18 }}>
+              التعليق يتطلب تسجيل الدخول — القراءة متاحة للجميع
+            </p>
+          ) : (
+            <CommentInput postId={postId} onCommentAdded={refresh} />
+          )}
         </div>
       )}
     </div>

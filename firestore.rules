@@ -216,7 +216,9 @@ service cloud.firestore {
                     && request.resource.data.targetType in ['post', 'comment']
                     && request.resource.data.targetId is string
                     && request.resource.data.postId is string
-                    && request.resource.data.reason in ['spam', 'abuse', 'other']
+                    // 'dangerous' ("معلومات خطيرة") added — Phase 2 amendment to D9/D11's
+                    // originally locked three-value reason enum.
+                    && request.resource.data.reason in ['spam', 'abuse', 'dangerous', 'other']
                     && (
                          (request.resource.data.reason == 'other'
                            && (request.resource.data.note == null

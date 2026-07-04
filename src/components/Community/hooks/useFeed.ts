@@ -35,8 +35,17 @@ export const useFeed = (category: FeedCategory): UseFeedResult => {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const cursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  // Guards against re-entrant/concurrent loadPage calls. loadMore's reference
+  // changes on every loading/hasMore update, which re-triggers the
+  // IntersectionObserver-creating effect in FeedList — and IntersectionObserver
+  // fires its callback immediately if the sentinel is already visible, which
+  // otherwise cascades into overlapping fetches of the same page using the
+  // same stale cursor, appending duplicate posts (same fix as useSavedPosts.ts).
+  const isFetchingRef = useRef(false);
 
   const loadPage = useCallback(async (reset: boolean) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -58,6 +67,7 @@ export const useFeed = (category: FeedCategory): UseFeedResult => {
       console.error('[useFeed]', err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   }, [category]);
 

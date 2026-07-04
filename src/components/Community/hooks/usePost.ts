@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { postPath, commentsPath } from '../utils/firestorePaths';
@@ -9,16 +9,21 @@ interface UsePostResult {
   comments: CommentWithId[];
   loading: boolean;
   error: string | null;
+  // Re-fetches post + comments — used after CommentInput adds a new comment,
+  // and after own-content soft delete, rather than a realtime listener.
+  refresh: () => void;
 }
 
-// One-time fetch, not a realtime listener — Phase 1 is read-only with no
-// live-update requirement in the locked spec. Read-only comments only;
-// CommentInput (writing) is Phase 2.
+// One-time fetch (re-triggerable via refresh()), not a realtime listener —
+// no live-update requirement in the locked spec.
 export const usePost = (postId: string): UsePostResult => {
   const [post, setPost] = useState<PostWithId | null>(null);
   const [comments, setComments] = useState<CommentWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  const refresh = useCallback(() => setRefreshToken(t => t + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,7 +68,7 @@ export const usePost = (postId: string): UsePostResult => {
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [postId, refreshToken]);
 
-  return { post, comments, loading, error };
+  return { post, comments, loading, error, refresh };
 };
