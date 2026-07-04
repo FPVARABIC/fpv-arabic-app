@@ -1,0 +1,234 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function callerProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveCaller() {
+      return isSignedIn() && callerProfile().status == 'active';
+    }
+
+    function isModerator() {
+      return isSignedIn() && callerProfile().role == 'moderator';
+    }
+
+    match /users/{uid} {
+      // Public-profile fields (displayName, photoURL, joinedAt, postsCount) must
+      // be readable by everyone, including logged-out visitors (D2). Rules apply
+      // at document granularity, not field granularity, so this also exposes
+      // role/status/lastPostAt/lastCommentAt on read — none of those are
+      // sensitive (no email/phone ever stored in this doc), so full-document
+      // public read is the accepted trade-off for V1.
+      allow read: if true;
+
+      // Bootstrap: a user's own doc is created lazily on their first
+      // post/comment/report action. Only the owner can create it, and only
+      // with safe defaults — role/status can't be self-elevated at creation.
+      allow create: if isOwner(uid)
+                    && request.resource.data.keys().hasOnly([
+                         'displayName', 'photoURL', 'joinedAt', 'postsCount',
+                         'role', 'status', 'lastPostAt', 'lastCommentAt'
+                       ])
+                    && request.resource.data.displayName is string
+                    && (request.resource.data.photoURL == null || request.resource.data.photoURL is string)
+                    && request.resource.data.joinedAt == request.time
+                    && request.resource.data.postsCount == 0
+                    && request.resource.data.role == 'user'
+                    && request.resource.data.status == 'active'
+                    && request.resource.data.lastPostAt == null
+                    && request.resource.data.lastCommentAt == null;
+
+      // Only two narrow update shapes are ever allowed, each paired with a
+      // content write (post/comment creation). role/status/displayName/
+      // photoURL can NEVER change via any client write path — role/status are
+      // console-only (D10); displayName/photoURL have no V1 edit feature (the
+      // ProfileSheet "edit name" feature writes to localStorage only, never to
+      // this document).
+      allow update: if isOwner(uid)
+                    && (
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
+                           && request.resource.data.lastPostAt == request.time
+                           && request.resource.data.postsCount == resource.data.postsCount + 1
+                           && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's')))
+                         ||
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastCommentAt'])
+                           && request.resource.data.lastCommentAt == request.time
+                           && (resource.data.lastCommentAt == null || request.time > resource.data.lastCommentAt + duration.value(15, 's')))
+                       )
+                    && request.resource.data.role == resource.data.role
+                    && request.resource.data.status == resource.data.status
+                    && request.resource.data.displayName == resource.data.displayName
+                    && request.resource.data.photoURL == resource.data.photoURL;
+
+      allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
+
+      // Saved Posts — private bookmarking, amendment to D2. Nested under
+      // users/{uid} so it is governed entirely by this match block, not by
+      // the parent doc's public-read rule above.
+      match /savedPosts/{postId} {
+        allow read:   if isOwner(uid);
+        allow create: if isOwner(uid)
+                      && request.resource.data.keys().hasOnly(['postId', 'savedAt'])
+                      && request.resource.data.postId == postId
+                      && request.resource.data.savedAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    match /posts/{postId} {
+      allow read: if resource.data.status == 'active';
+
+      allow create: if isSignedIn()
+                    && isActiveCaller()
+                    && request.resource.data.keys().hasOnly([
+                         'authorId', 'authorName', 'authorPhoto', 'text', 'category',
+                         'mediaType', 'mediaURL', 'thumbnailURL', 'mediaSize', 'mediaDuration', 'mediaPath',
+                         'commentsCount', 'createdAt', 'status', 'searchTokens'
+                       ])
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.authorName == callerProfile().displayName
+                    && request.resource.data.authorPhoto == callerProfile().photoURL
+                    && request.resource.data.status == 'active'
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 2000
+                    && request.resource.data.category in [
+                         'questions', 'parts', 'projects', 'flights',
+                         'betaflight', 'electronics', 'long-range', 'cinematic', 'freestyle'
+                       ]
+                    && request.resource.data.commentsCount == 0
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.searchTokens is list
+                    && request.resource.data.searchTokens.size() <= 30
+                    // V1 accepts images only. 'video' is rejected at write time even
+                    // though the schema supports it (D4) — enabling it later is a
+                    // one-line rules change, not a redesign.
+                    && request.resource.data.mediaType in ['none', 'image']
+                    && (
+                         (request.resource.data.mediaType == 'none'
+                           && request.resource.data.mediaURL == null
+                           && request.resource.data.thumbnailURL == null
+                           && request.resource.data.mediaSize == null
+                           && request.resource.data.mediaPath == null
+                           && request.resource.data.mediaDuration == null)
+                         ||
+                         (request.resource.data.mediaType == 'image'
+                           && request.resource.data.mediaURL is string
+                           && request.resource.data.thumbnailURL is string
+                           // Self-reported metadata, capped at the honest ceiling for
+                           // D5's ≤300KB compression target — NOT the real size
+                           // enforcement. Storage Rules' 2MB cap on the actual
+                           // uploaded bytes is the real physical backstop.
+                           && request.resource.data.mediaSize is number
+                           && request.resource.data.mediaSize > 0
+                           && request.resource.data.mediaSize <= 500 * 1024
+                           && request.resource.data.mediaPath == 'community/posts/' + postId
+                           && request.resource.data.mediaDuration == null)
+                       )
+                    // rate limit: 1 post / 60s (D11). First-ever post has no
+                    // lastPostAt yet, so it's allowed through.
+                    && (
+                         callerProfile().lastPostAt == null ||
+                         request.time > callerProfile().lastPostAt + duration.value(60, 's')
+                       );
+
+      allow update: if isSignedIn()
+                    && (
+                         // owner soft-deletes their own post — status only, and only to 'deleted'
+                         (resource.data.authorId == request.auth.uid
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                           && request.resource.data.status == 'deleted')
+                         ||
+                         // moderator hides a post — status only, and only to 'hidden'
+                         (isModerator()
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                           && request.resource.data.status == 'hidden')
+                         ||
+                         // commentsCount increment, paired client-side with a comment
+                         // write. Shape-validated (exact +1, active user, post still
+                         // active) but not cryptographically bound to a real paired
+                         // comment doc — see accepted risks (no Cloud Functions in V1).
+                         (isActiveCaller()
+                           && resource.data.status == 'active'
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
+                           && request.resource.data.commentsCount == resource.data.commentsCount + 1)
+                       );
+
+      allow delete: if false; // soft delete only, ever (D10)
+
+      match /comments/{commentId} {
+        allow read: if resource.data.status == 'active';
+
+        allow create: if isSignedIn()
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt', 'status'])
+                      && request.resource.data.authorId == request.auth.uid
+                      && request.resource.data.authorName == callerProfile().displayName
+                      && request.resource.data.authorPhoto == callerProfile().photoURL
+                      && request.resource.data.status == 'active'
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 500
+                      && request.resource.data.createdAt == request.time
+                      // rate limit: 1 comment / 15s (D11)
+                      && (
+                           callerProfile().lastCommentAt == null ||
+                           request.time > callerProfile().lastCommentAt + duration.value(15, 's')
+                         );
+
+        allow update: if isSignedIn()
+                      && (
+                           (resource.data.authorId == request.auth.uid
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                             && request.resource.data.status == 'deleted')
+                           ||
+                           (isModerator()
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                             && request.resource.data.status == 'hidden')
+                         );
+
+        allow delete: if false;
+      }
+    }
+
+    match /reports/{reportId} {
+      // No admin dashboard in V1 (D9) — reports are reviewed via the Firebase
+      // console using service-account access, which bypasses these rules
+      // entirely. Client-side read stays fully closed, including to the
+      // reporter themselves (D11 — "reporters cannot read others' reports").
+      allow read: if false;
+
+      allow create: if isSignedIn()
+                    && isActiveCaller()
+                    && request.resource.data.keys().hasOnly(['targetType', 'targetId', 'postId', 'reporterId', 'reason', 'note', 'createdAt', 'resolved'])
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.targetType in ['post', 'comment']
+                    && request.resource.data.targetId is string
+                    && request.resource.data.postId is string
+                    && request.resource.data.reason in ['spam', 'abuse', 'other']
+                    && (
+                         (request.resource.data.reason == 'other'
+                           && (request.resource.data.note == null
+                               || (request.resource.data.note is string && request.resource.data.note.size() <= 200)))
+                         ||
+                         (request.resource.data.reason != 'other' && request.resource.data.note == null)
+                       )
+                    && request.resource.data.resolved == false
+                    && request.resource.data.createdAt == request.time;
+
+      allow update: if false; // 'resolved' flipped via console only
+      allow delete: if false;
+    }
+  }
+}

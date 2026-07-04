@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /community/posts/{postId}/{fileName} {
+      // Public read — matches Firestore's public read of active posts (D2).
+      // Known accepted risk: this is unconditional, so an image/thumbnail
+      // whose parent post is later hidden or soft-deleted remains fetchable
+      // by anyone who already has the direct URL. "Delete" delists the post
+      // from feed/search/post-page; it does not erase the underlying file.
+      // Fixing this requires either a Cloud Function to move/delete the
+      // object on hide/delete, or a firestore.get() status check on every
+      // read (costly, and would compete with the write rule below for the
+      // 2-Firestore-read-per-evaluation cap). Accepted for V1.
+      allow read: if true;
+
+      // Only signed-in, non-banned users may write, only image files, only
+      // under the UUID naming pipeline MediaUploader produces:
+      // {uuid}.jpg (full image) and {uuid}_thumb.jpg (thumbnail).
+      allow write: if request.auth != null
+                   && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active'
+                   && fileName.matches('[a-zA-Z0-9-]+(_thumb)?\\.jpg')
+                   && request.resource.contentType.matches('image/.*')
+                   // Hard physical ceiling; D5's compression targets (≤300KB
+                   // full / ≤40KB thumb) sit far under this. This is a
+                   // backstop against a compromised or bypassed client, not
+                   // the primary size control.
+                   && request.resource.size < 2 * 1024 * 1024;
+
+      allow delete: if false; // no client-side deletion in V1; moderation/cleanup via console (D10)
+    }
+  }
+}
