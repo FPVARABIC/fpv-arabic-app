@@ -17,6 +17,8 @@ import { ContactView } from './views/ContactView';
 import { NotFoundView } from './views/NotFoundView';
 import { PrivacyView } from './views/PrivacyView';
 import { BotV2AssistantView } from './views/BotV2AssistantView';
+// TEMP — Phase 1 evidence only, removed in Phase 3 Home-swap diff
+import { CommunityPreviewView } from './views/CommunityPreviewView';
 
 const RedirectLogic: React.FC = () => <Navigate to="/welcome" replace/>;
 
@@ -40,6 +42,8 @@ export const App: React.FC = () => (
     <Route path="/contact" element={<ContactView/>}/>
     <Route path="/bot" element={<BotV2AssistantView/>}/>
     <Route path="/privacy" element={<PrivacyView/>}/>
+    {/* TEMP — Phase 1 evidence only, removed in Phase 3 Home-swap diff */}
+    <Route path="/community-preview" element={<CommunityPreviewView/>}/>
     <Route path="*" element={<NotFoundView/>}/>
   </Routes>
 );

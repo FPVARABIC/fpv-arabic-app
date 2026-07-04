@@ -66,6 +66,17 @@ export interface Comment {
   status: ContentStatus;
 }
 
+// Document data plus its own Firestore doc ID — the shape every read hook
+// (useFeed/usePost/useSearch) hands to components, since components need the
+// ID to navigate/link but Firestore document data itself never contains it.
+export interface PostWithId extends Post {
+  id: string;
+}
+
+export interface CommentWithId extends Comment {
+  id: string;
+}
+
 export interface Report {
   targetType: ReportTargetType;
   targetId: string;

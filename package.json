@@ -13,7 +13,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:community-rules": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/testCommunityRules.ts\""
+    "test:community-rules": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/testCommunityRules.ts\"",
+    "seed:community-emulator": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/seedCommunityEmulator.ts\""
   },
   "dependencies": {
     "@fontsource-variable/cairo": "^5.2.7",

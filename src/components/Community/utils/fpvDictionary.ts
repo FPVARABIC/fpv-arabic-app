@@ -84,7 +84,13 @@ export const FPV_DICTIONARY = {
   },
   lipo: {
     arabic: 'ليبو',
-    keywords: ['lipo', 'lipos', 'ليبو'],
+    // "battery"/"بطارية" are folded into this entry rather than given their
+    // own — a deliberate V1 simplification, not an oversight: in this
+    // community, someone searching "بطارية" means a LiPo battery. If battery
+    // chemistries (Li-Ion, NiMH) ever need distinguishing, split this into
+    // separate dictionary entries then — an isolated dictionary change, not
+    // a schema or rules change.
+    keywords: ['lipo', 'lipos', 'ليبو', 'بطارية', 'بطاريات', 'battery', 'batteries'],
     aliases: ['lithium polymer battery'],
   },
   '6s': {

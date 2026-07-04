@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const cfg = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            as string,
@@ -23,3 +23,16 @@ export const firebaseApp     = initializeApp(cfg);
 export const firebaseAuth    = getAuth(firebaseApp);
 export const firestoreDb     = getFirestore(firebaseApp);
 export const firebaseStorage = getStorage(firebaseApp);
+
+// Local-development-only emulator gate. Off by default (undefined !== 'true'),
+// so it never silently applies to a real dev build, staging, or Vercel
+// production — it only activates when explicitly opted into. Guarded against
+// double-connection across Vite HMR reloads, which would otherwise throw.
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  const emulatorGuard = globalThis as unknown as { __communityEmulatorConnected?: boolean };
+  if (!emulatorGuard.__communityEmulatorConnected) {
+    connectFirestoreEmulator(firestoreDb, '127.0.0.1', 8080);
+    connectStorageEmulator(firebaseStorage, '127.0.0.1', 9199);
+    emulatorGuard.__communityEmulatorConnected = true;
+  }
+}
