@@ -4,6 +4,8 @@ import { VISIBLE_CATEGORY_IDS, CATEGORY_LABELS } from '../utils/categories';
 import { useComposer } from '../hooks/useComposer';
 import type { PostCategory } from '../types';
 
+const IMAGE_UPLOADS_DISABLED_MESSAGE = 'رفع الصور غير متاح حالياً — سيتم تفعيله قريباً';
+
 interface PostComposerProps {
   onPosted: (postId: string) => void;
   onCancel: () => void;
@@ -113,14 +115,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImagePick} style={{ display: 'none' }} />
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImagePick} disabled style={{ display: 'none' }} />
         <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={!!imageFile}
+          disabled
+          aria-describedby="image-upload-disabled-message"
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
-            border: '0.5px solid #e5eaf0', background: '#ffffff', color: '#5a6b7c', fontSize: 13,
-            cursor: imageFile ? 'not-allowed' : 'pointer', opacity: imageFile ? 0.5 : 1,
+            border: '0.5px solid #e5eaf0', background: '#f7f9fb', color: '#94a3b3', fontSize: 13,
+            cursor: 'not-allowed', opacity: 0.7,
           }}
         >
           <ImageIcon size={16} /> صورة
@@ -144,6 +146,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
           </span>
         </button>
       </div>
+      <p id="image-upload-disabled-message" style={{ fontSize: 12, color: '#5a6b7c', margin: '-8px 0 18px', textAlign: 'right' }}>
+        {IMAGE_UPLOADS_DISABLED_MESSAGE}
+      </p>
 
       <button
         onClick={submit}
