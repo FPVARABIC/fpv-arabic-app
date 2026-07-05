@@ -27,10 +27,14 @@ export interface BasePart extends PartNotes {
 
 // ---- Drone type ----
 
+// primaryName is the ONLY field any UI component may use to display a drone
+// type's name. Never read .nameAr or .nameEn directly for display anywhere
+// in the app — they are optional supplementary metadata only.
 export interface DroneType {
   id: string;
-  nameAr: string;
-  nameEn: string;
+  primaryName: string;
+  nameAr?: string;
+  nameEn?: string;
   frameSizeInch: number;
   description: string;
   recommendedBatteryVoltages: number[];
