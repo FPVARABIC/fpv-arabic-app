@@ -34,6 +34,7 @@ export interface DroneType {
   frameSizeInch: number;
   description: string;
   recommendedBatteryVoltages: number[];
+  imagePath: string;
 }
 
 // ---- Build stages (19-stage build journey) ----
