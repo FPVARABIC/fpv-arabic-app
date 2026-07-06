@@ -108,11 +108,18 @@ export interface Motor extends BasePart {
 
 // ---- ESC ----
 
+// burstCurrentRatingA: optional, source has a real column but one SKU (premium
+// tier) genuinely lacks a stated burst value. firmware: optional because one
+// entry has a genuine dual-firmware ambiguity (BLHeli_32 vs AM32 depending on
+// SKU) that can't honestly resolve to a single value; see buildNotes/notFor.
+// weightG: no source data anywhere for this category (case b, not caveated
+// prose like frames/motors — genuinely absent).
 export interface EscSpec {
   currentRatingA: number;
-  firmware: string;
+  burstCurrentRatingA?: number;
+  firmware?: string;
   channels: number;
-  weightG: number;
+  weightG?: number;
   compatibleVoltages: number[];
 }
 export interface Esc extends BasePart {
