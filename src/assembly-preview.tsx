@@ -41,30 +41,34 @@ const PreviewApp = () => {
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
 
   return (
-    <AssemblyLayout>
-      <div style={{ display: 'flex', gap: 8, padding: 8, borderBottom: '1px solid #e5ddcf', flexWrap: 'wrap' }}>
-        <button onClick={() => setScreen({ name: 'home' })} style={{ fontSize: 11, padding: '4px 8px' }}>
-          الرئيسية
-        </button>
-        <button onClick={() => setScreen({ name: 'report', preset: 'compatible' })} style={{ fontSize: 11, padding: '4px 8px' }}>
-          تقرير متوافق
-        </button>
-        <button onClick={() => setScreen({ name: 'report', preset: 'mismatch' })} style={{ fontSize: 11, padding: '4px 8px' }}>
-          تقرير غير متوافق
-        </button>
-      </div>
+    <div className="min-h-screen flex justify-center" style={{ background: '#f0ebe0' }}>
+      <div style={{ width: '100%', maxWidth: '390px', minHeight: '100vh' }}>
+        <AssemblyLayout>
+          <div style={{ display: 'flex', gap: 8, padding: 8, borderBottom: '1px solid #e5ddcf', flexWrap: 'wrap' }}>
+            <button onClick={() => setScreen({ name: 'home' })} style={{ fontSize: 11, padding: '4px 8px' }}>
+              الرئيسية
+            </button>
+            <button onClick={() => setScreen({ name: 'report', preset: 'compatible' })} style={{ fontSize: 11, padding: '4px 8px' }}>
+              تقرير متوافق
+            </button>
+            <button onClick={() => setScreen({ name: 'report', preset: 'mismatch' })} style={{ fontSize: 11, padding: '4px 8px' }}>
+              تقرير غير متوافق
+            </button>
+          </div>
 
-      {screen.name === 'home' && (
-        <AssemblyHome onSelectType={droneTypeId => setScreen({ name: 'flow', droneTypeId })} />
-      )}
-      {screen.name === 'flow' && <BuildFlow droneTypeId={screen.droneTypeId} />}
-      {screen.name === 'report' && (
-        <FinalReportScreen
-          selections={screen.preset === 'compatible' ? COMPATIBLE_PRESET : MISMATCH_PRESET}
-          onBack={() => setScreen({ name: 'home' })}
-        />
-      )}
-    </AssemblyLayout>
+          {screen.name === 'home' && (
+            <AssemblyHome onSelectType={droneTypeId => setScreen({ name: 'flow', droneTypeId })} />
+          )}
+          {screen.name === 'flow' && <BuildFlow droneTypeId={screen.droneTypeId} />}
+          {screen.name === 'report' && (
+            <FinalReportScreen
+              selections={screen.preset === 'compatible' ? COMPATIBLE_PRESET : MISMATCH_PRESET}
+              onBack={() => setScreen({ name: 'home' })}
+            />
+          )}
+        </AssemblyLayout>
+      </div>
+    </div>
   );
 };
 

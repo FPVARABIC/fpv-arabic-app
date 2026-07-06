@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { House, Wrench, BookOpen, CircuitBoard, Gauge } from 'lucide-react';
+import { House, Wrench, BookOpen, CircuitBoard, Package } from 'lucide-react';
 
 const mainNav = [
   { icon: House,        label: 'الرئيسية', path: '/home' },
   { icon: Wrench,       label: 'البناء',   path: '/roadmap' },
   { icon: BookOpen,     label: 'الدروس',   path: '/lessons' },
   { icon: CircuitBoard, label: 'Betaflight', path: '/betaflight' },
-  { icon: Gauge,        label: 'التقدم',   path: '/progress' },
+  { icon: Package,      label: 'التجميع',  path: '/assembly' },
 ];
 
 export const BottomNavigation: React.FC = () => {

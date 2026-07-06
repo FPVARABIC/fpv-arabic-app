@@ -11,6 +11,7 @@ import { BetaflightView } from './views/BetaflightView';
 import { BetaflightDetailView } from './views/BetaflightDetailView';
 import { TroubleshootingView } from './views/TroubleshootingView';
 import { ProgressView } from './views/ProgressView';
+import { AssemblyView } from './views/AssemblyView';
 import { SettingsView } from './views/SettingsView';
 import { AboutView } from './views/AboutView';
 import { ContactView } from './views/ContactView';
@@ -35,6 +36,7 @@ export const App: React.FC = () => (
     <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
     <Route path="/troubleshooting" element={<TroubleshootingView/>}/>
     <Route path="/progress" element={<ProgressView/>}/>
+    <Route path="/assembly" element={<AssemblyView/>}/>
     <Route path="/settings" element={<SettingsView/>}/>
     <Route path="/about" element={<AboutView/>}/>
     <Route path="/contact" element={<ContactView/>}/>
