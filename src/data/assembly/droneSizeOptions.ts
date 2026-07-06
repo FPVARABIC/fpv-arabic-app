@@ -1,6 +1,8 @@
 export interface DroneSizeOption {
   sizeInch: number;
   labelAr: string;
+  imagePath?: string;
+  placeholderIcon?: string;
 }
 
 export const droneSizeOptions: DroneSizeOption[] = [
