@@ -90,12 +90,16 @@ export interface Frame extends BasePart {
 
 // ---- Motor ----
 
+// weightG: optional, source has no dedicated column — weight only appears as
+// caveated prose inside whyChoose (with/without wire, seller variance); see
+// buildNotes. shaftDiameterMm/maxThrustG: optional, no source column and no
+// mention anywhere in the sheet for this category — structurally out of scope.
 export interface MotorSpec {
   kv: number;
   statorSize: string; // e.g. '2207'
-  weightG: number;
-  shaftDiameterMm: number;
-  maxThrustG: number;
+  weightG?: number;
+  shaftDiameterMm?: number;
+  maxThrustG?: number;
   compatibleVoltages: number[]; // S counts this motor's KV is rated for
 }
 export interface Motor extends BasePart {
