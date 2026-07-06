@@ -21,7 +21,15 @@ export interface BasePart extends PartNotes {
   nameAr: string;
   nameEn: string;
   brand?: string;
-  priceRangeEGP?: [number, number];
+  priceRangeUSD?: [number, number];
+  imagePath?: string;
+  placeholderIcon?: string;
+  protocolOrSystem?: string;   // 'ELRS'|'Crossfire' for receivers; 'DJI'|'Walksnail'|'HDZero'|'Analog' for video systems/units; undefined elsewhere
+  whyChoose?: string;          // "لماذا هذه القطعة؟"
+  notFor?: string;             // "متى لا تختارها؟ / أشهر خطأ شائع"
+  upgradePath?: string;        // "أفضل بديل عند الترقية لاحقاً" — free-text, not necessarily a valid part id
+  lastReviewed?: string;       // "تاريخ آخر مراجعة", e.g. "2026-07"
+  confidence?: 'مؤكد' | 'تجربة مجتمع' | 'رأي أولي';
   compatibilityTags: CompatibilityTags;
 }
 
@@ -59,16 +67,22 @@ export interface BatteryVoltageOption {
   maxVoltage: number;
   minVoltage: number;
   labelAr: string;
+  imagePath?: string;
+  placeholderIcon?: string;
 }
 
 // ---- Frame ----
 
+// wheelbaseMm/armThicknessMm/material: no source column exists for these in the
+// merged data (case b, structurally out of scope). weightG: source column exists
+// but content is non-standardizable prose per entry (case c); see buildNotes instead.
 export interface FrameSpec {
   sizeInch: number;
-  wheelbaseMm: number;
-  armThicknessMm: number;
-  material: string;
-  weightG: number;
+  wheelbaseMm?: number;
+  armThicknessMm?: number;
+  material?: string;
+  weightG?: number;
+  stackSizeMm?: string; // e.g. '30.5x30.5 / 25.5x25.5 / 20x20' — FC/ESC stack mounting pattern(s) this frame supports
 }
 export interface Frame extends BasePart {
   specs: FrameSpec;
@@ -116,9 +130,13 @@ export interface FlightController extends BasePart {
 
 // ---- Receiver ----
 
+// frequencyGHz: optional because dual-band protocols (e.g. Crossfire 868/915MHz)
+// don't reduce to one GHz value; see buildNotes for those entries instead.
+// hasTelemetry: derived from protocol (CRSF is telemetry-capable by design), not a
+// directly-stated source cell.
 export interface ReceiverSpec {
   protocol: string;
-  frequencyGHz: number;
+  frequencyGHz?: number;
   weightG: number;
   hasTelemetry: boolean;
 }
@@ -177,8 +195,12 @@ export interface Propeller extends BasePart {
 
 // ---- GPS ----
 
+// chipset: optional because 2 source rows (Flywoo GOKU GM10 Nano V3, budget/mid)
+// have a column-shift in the source data — the cell that should hold a clean
+// chipset name instead holds descriptive text, not a real part identifier; see
+// buildNotes for the raw source text on those two entries.
 export interface GpsSpec {
-  chipset: string;
+  chipset?: string;
   hasCompass: boolean;
   weightG: number;
 }
