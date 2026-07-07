@@ -23,7 +23,7 @@ export const compatibilityRules: CompatibilityRule[] = [
   },
   {
     id: 'motor-battery-voltage',
-    descriptionAr: 'يجب أن تدعم المحركات فولتية البطارية المختارة',
+    descriptionAr: 'يجب أن يتوافق KV المحرك مع عدد خلايا البطارية (4S/6S)؛ KV مرتفع جداً مع 6S يرفع التيار والحرارة، وKV منخفض جداً مع 4S يعطي أداء ضعيفاً — نفس حجم الفريم لا يعني نفس اختيار البطارية أو نفس KV.',
     categoriesInvolved: ['motors', 'batteries'],
   },
   {
@@ -33,12 +33,12 @@ export const compatibilityRules: CompatibilityRule[] = [
   },
   {
     id: 'frame-propeller-size',
-    descriptionAr: 'يجب أن تتناسب مقاسات المراوح مع حجم الإطار',
+    descriptionAr: 'لا تركب مروحة أكبر من المقاس الذي يدعمه الفريم صراحة؛ الخلوص قد يختفي أثناء الاهتزاز أو التصادم، والمقاس القريب (مثل 5.5 إنش على فريم 5 إنش عادي) لا يكفي دون دعم فريم صريح لذلك المقاس تحديداً.',
     categoriesInvolved: ['frames', 'propellers'],
   },
   {
     id: 'video-system-video-unit',
-    descriptionAr: 'يجب أن تتوافق الكاميرا مع نوع نظام الفيديو (analog/digital)',
+    descriptionAr: 'نظارات/نظام الفيديو المختار يجب أن يطابق وحدة الفيديو (DJI مع DJI، Walksnail مع Walksnail، وهكذا)؛ نظارة نظام واحد لا تعرض وحدة من نظام آخر مباشرة.',
     categoriesInvolved: ['videoSystems', 'videoUnits'],
   },
 ];

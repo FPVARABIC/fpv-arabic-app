@@ -1,4 +1,4 @@
-import type { Frame, Motor, Esc, Battery, Propeller } from '../types';
+import type { Frame, Motor, Esc, Battery, Propeller, VideoSystem, VideoUnit } from '../types';
 
 export interface CompatibilityResult {
   isCompatible: boolean;
@@ -31,6 +31,20 @@ export function validateEscBattery(esc: Esc, battery: Battery): CompatibilityRes
 export function validateFramePropeller(frame: Frame, propeller: Propeller): CompatibilityResult {
   if (propeller.specs.sizeInch > frame.specs.sizeInch) {
     return { isCompatible: false, reasonAr: 'مقاس المروحة أكبر من المساحة المتاحة في هذا الإطار' };
+  }
+  return { isCompatible: true };
+}
+
+export function validateVideoSystemVideoUnit(videoSystem: VideoSystem, videoUnit: VideoUnit): CompatibilityResult {
+  if (
+    videoSystem.protocolOrSystem &&
+    videoUnit.protocolOrSystem &&
+    videoSystem.protocolOrSystem !== videoUnit.protocolOrSystem
+  ) {
+    return {
+      isCompatible: false,
+      reasonAr: 'نظارات/نظام الفيديو المختار لا يعرض وحدة الفيديو هذه؛ اختر وحدة من نفس النظام (DJI/Walksnail/HDZero/Analog).',
+    };
   }
   return { isCompatible: true };
 }
