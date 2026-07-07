@@ -205,11 +205,16 @@ export interface Battery extends BasePart {
 
 // ---- Propeller ----
 
+// material: optional, no dedicated column exists — only rows that mention "PC"
+// in whyChoose prose have a known material; the other rows have none stated,
+// not fabricated. weightG: new field, real clean data across all 4 rows (no
+// gaps, no caveats) — unlike prior categories' weight situations.
 export interface PropellerSpec {
   sizeInch: number;
   pitchInch: number;
   bladeCount: number;
-  material: string;
+  material?: string;
+  weightG?: number;
 }
 export interface Propeller extends BasePart {
   specs: PropellerSpec;
