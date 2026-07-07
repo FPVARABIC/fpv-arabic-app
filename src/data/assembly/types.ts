@@ -168,11 +168,18 @@ export interface Receiver extends BasePart {
 
 // ---- Video system (VTX) ----
 
+// maxPowerMw/latencyMs: optional, zero source data anywhere for this category
+// (case b) — every row only gives qualitative "low-latency" prose, never a
+// number. frequencyBand: optional, only one row's product name states a band
+// (5.8GHz); the other 3 (digital systems) never state one. Resolution/format
+// data ("المواصفة الأساسية 2") is deliberately NOT modeled here — it belongs
+// to VideoUnitSpec (the camera/unit's actual output), not the system choice;
+// preserved as buildNotes prose in this category only.
 export interface VideoSystemSpec {
   systemType: 'analog' | 'digital';
-  maxPowerMw: number;
-  frequencyBand: string;
-  latencyMs: number;
+  maxPowerMw?: number;
+  frequencyBand?: string;
+  latencyMs?: number;
 }
 export interface VideoSystem extends BasePart {
   specs: VideoSystemSpec;
@@ -180,11 +187,28 @@ export interface VideoSystem extends BasePart {
 
 // ---- Video unit (camera) ----
 
+// sensorType/resolution: optional — only genuine camera+VTX bundles (DJI O4/
+// O4 Pro/O3 Air Units, Walksnail Avatar HD Pro Kit) have real sensor/
+// resolution data; pure-VTX transmitters (HDZero Freestyle V2, TBS Unify
+// Pro32, RushFPV Tank Solo) have none — they pair with a separate camera,
+// covered under the pilotGear domain, not this stage. resolution is further
+// thin even among camera-bundle rows: only Walksnail states one explicitly.
+// fovDegrees: optional, zero source data anywhere (case b). weightG:
+// optional — one row (Walksnail) has a column-shift where "weight" actually
+// holds a voltage range instead; no real weight stated for that entry.
+// operatingVoltageRange: new, real per-product input-voltage range (string,
+// since it's inherently a min-max range, not a single number) — distinct
+// from VideoSystemSpec.frequencyBand/maxPowerMw, which describe the
+// conceptual category choice (stage 3, mostly-empty numbers) rather than
+// this stage's real purchased product (stage 10, real numbers) — same
+// relationship as batteryVoltageOptions (conceptual) vs. batteries.ts (real
+// product).
 export interface VideoUnitSpec {
-  sensorType: string;
-  resolution: string;
-  fovDegrees: number;
-  weightG: number;
+  sensorType?: string;
+  resolution?: string;
+  fovDegrees?: number;
+  weightG?: number;
+  operatingVoltageRange?: string;
 }
 export interface VideoUnit extends BasePart {
   specs: VideoUnitSpec;
@@ -192,12 +216,19 @@ export interface VideoUnit extends BasePart {
 
 // ---- Battery ----
 
+// burstCRating: optional, source has a real column but only one row (CNHL
+// Black Series V2, budget) states an explicit burst value separate from
+// continuous — same pattern as ESC's burstCurrentRatingA. weightG: optional,
+// no dedicated column — 2 of 4 rows lack a single clean value (one genuine
+// dual-chemistry split, one narrow unresolved range); see buildNotes for
+// both.
 export interface BatterySpec {
   sCount: number;
   capacityMah: number;
   cRating: number;
+  burstCRating?: number;
   connector: string;
-  weightG: number;
+  weightG?: number;
 }
 export interface Battery extends BasePart {
   specs: BatterySpec;
@@ -237,10 +268,18 @@ export interface Gps extends BasePart {
 
 // ---- Buzzer ----
 
+// volumeDb: optional — only VIFLY Finder 2 mentions this at all, and it's a
+// genuine range ("105-110dB تقريباً"), not a single value; per the
+// established consistency principle (same treatment as batteries' narrow-
+// range case), omitted and preserved in buildNotes rather than approximated.
+// Ends up unpopulated for all 3 entries in this transcription. weightG:
+// optional, only VIFLY Finder 2 states a real weight (~5g); the other two
+// rows have only qualitative descriptions ("very light," "smaller than
+// Finder 2"), no numbers.
 export interface BuzzerSpec {
   hasBuiltInBattery: boolean;
-  volumeDb: number;
-  weightG: number;
+  volumeDb?: number;
+  weightG?: number;
 }
 export interface Buzzer extends BasePart {
   specs: BuzzerSpec;
@@ -261,6 +300,13 @@ export interface Capacitor extends BasePart {
 
 // ---- Tools ----
 
+// isMandatory: true for all 3 kit-bundle entries reflects the ORIGINAL
+// locked Assembly master design (every builder needs at least one tool
+// kit) — not derived from this research sheet, which has no
+// mandatory/optional column at all for tools. usedForStages: ['stage-16']
+// for all 3 — kits serve the whole Tools stage collectively, not one
+// granular sub-task; this is an honest broad statement, not fabricated
+// per-tool stage precision the source doesn't provide.
 export interface ToolSpec {
   isMandatory: boolean;
   usedForStages: string[];

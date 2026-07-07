@@ -12,8 +12,11 @@ interface PartCardProps {
 }
 
 // Compact list-row card — sized so the worst-case option count on any single
-// stage (Stage 16 "Tools", 9 entries) still fits the 390×844 viewport
-// without scrolling. See Phase 1 height-budget evidence.
+// stage (originally Stage 16 "Tools", 9 hypothetical entries during Phase 1)
+// still fits the 390×844 viewport without scrolling. Stage 16 now holds 3
+// real kit-bundle entries (real A2 data), which only reduces scroll risk —
+// the 9-entry sizing remains valid as a conservative upper bound; no re-test
+// needed. See Phase 1 height-budget evidence.
 export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
 
