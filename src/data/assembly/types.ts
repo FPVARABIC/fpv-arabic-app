@@ -128,12 +128,23 @@ export interface Esc extends BasePart {
 
 // ---- Flight Controller ----
 
+// gyro/hasBuiltInOsd: optional, no source data anywhere for this category
+// (case b, structurally out of scope). mountingSizeMm: optional, no dedicated
+// column exists and the one row that touches it (Foxeer F722 V4) flags it as
+// SKU-variant-dependent (30x30 vs mini), not a confirmed single number; see
+// notFor. supportsDjiO4: optional only because it's a newly-added field, not
+// because the value is ever genuinely unknown in this category — every entry
+// has a real, confirmed true/false answer (caveats about wiring difficulty
+// are practical nuance, preserved in buildNotes/notFor, not typed-value
+// uncertainty). Candidate field for a future Part B compatibility rule
+// (FC ↔ DJI O4 video-unit selection).
 export interface FlightControllerSpec {
   mcu: string;
-  gyro: string;
-  mountingSizeMm: number;
+  gyro?: string;
+  mountingSizeMm?: number;
   uartCount: number;
-  hasBuiltInOsd: boolean;
+  hasBuiltInOsd?: boolean;
+  supportsDjiO4?: boolean;
 }
 export interface FlightController extends BasePart {
   specs: FlightControllerSpec;
