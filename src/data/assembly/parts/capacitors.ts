@@ -53,7 +53,7 @@ export const capacitors: Capacitor[] = [
     brand: 'Panasonic',
     priceRangeUSD: [2, 5],
     specs: { capacitanceUf: 1000, voltageRating: 50 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [6] },
+    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
     whyChoose: 'يعطي هامش جهد أعلى لأنظمة 6S القوية، وسلسلة FR موثقة كـLow ESR وعمر طويل عند 105°C.',
     notFor: 'لا تختاره إذا كان حجمه يسبب تماساً مع الكربون أو المكونات داخل فريم ضيق.',
     upgradePath: 'Rubycon ZLH 1000uF 35V عند ضيق المساحة',

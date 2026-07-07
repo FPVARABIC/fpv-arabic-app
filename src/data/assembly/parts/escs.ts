@@ -53,7 +53,7 @@ export const escs: Esc[] = [
     brand: 'Hobbywing',
     priceRangeUSD: [70, 85],
     specs: { currentRatingA: 60, firmware: 'BLHeli_32', channels: 4, compatibleVoltages: [3, 4, 5, 6] },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [6] },
+    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
     whyChoose: 'ESC قوي من Hobbywing، 60A BLHeli_32 DShot1200، مع BEC 5V مدمج (تُذكر 0.5A–0.6A حسب مصدر/إصدار المنتج)، مناسب لبناء 5 إنش قوي.',
     notFor: 'لا تختاره إذا كان الفريم يتطلب 20x20 صغير أو إذا أردت الأرخص.',
     upgradePath: 'T-Motor F55A Pro II 55A',
