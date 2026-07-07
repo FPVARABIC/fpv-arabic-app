@@ -36,3 +36,37 @@ spot to mask it (which is what happens on `/home`).
 scope (not yet approved or attempted): `ProfileSheet.tsx`'s closed-position
 transform math — out of scope for whoever picks this up until scoped and
 approved on its own, separate from any feature branch.
+
+---
+
+## validateVideoSystemVideoUnit exists but is not wired to any UI
+
+**Found during:** Assembly Part B evidence review (2026-07-07), while
+reconciling A2's expert-rules research with the compatibility engine.
+
+**Symptom:** A user can select an "Analog" video system at stage 3 and then a
+DJI/Walksnail/HDZero-protocol video unit at stage 10 (or any other
+cross-protocol combination) with zero warning anywhere in the app — the
+final compatibility check (stage 17) never flags this mismatch.
+
+**Root cause (verified by tracing the actual call graph, not guessed):**
+`src/data/assembly/compatibility/validators.ts` has a correct
+`validateVideoSystemVideoUnit()` function (compares `protocolOrSystem` on the
+selected `VideoSystem`/`VideoUnit` for equality), but it has zero call sites.
+`src/components/Assembly/utils/buildReport.ts`'s `ReportableSelections`
+interface only has `frame?/motor?/esc?/battery?/propeller?` — no
+`videoSystem`/`videoUnit` fields — and `buildCompatibilityReport()` never
+calls the new validator. `FinalReportScreen.tsx` (the real, live stage-17
+screen) only passes `frame/motor/esc/battery/propeller` into the report
+builder. The other 4 validators (`validateFrameMotor`, `validateMotorBattery`,
+`validateEscBattery`, `validateFramePropeller`) are genuinely wired in and
+visible to users today via this same path — only the video-system/video-unit
+one is missing from it.
+
+**Status:** Deferred. The validator itself is correct and already committed;
+wiring it in requires three specific changes, none done yet: (1) add
+`videoSystem?`/`videoUnit?` to `ReportableSelections`, (2) call
+`validateVideoSystemVideoUnit` inside `buildCompatibilityReport()`, (3) pass
+`selections.videoSystems`/`selections.videoUnits` from `FinalReportScreen.tsx`.
+Treated as a genuine new scope decision deserving its own review round, not
+rushed in at the end of an already long session.

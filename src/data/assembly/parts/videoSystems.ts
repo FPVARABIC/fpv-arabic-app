@@ -15,7 +15,7 @@ export const videoSystems: VideoSystem[] = [
     upgradePath: 'HDZero إذا تريد latency منخفض مع HD',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
-    beginnerNotes: ['ممتاز للتعلم لكنه لا يعطي صورة Cinematic.'],
+    beginnerNotes: ['ممتاز للتعلم لكنه لا يعطي أعلى جودة صورة ممكنة.'],
     safetyNotes: ['احترم قوانين القدرة والتردد ولا تشغل VTX بدون هوائي.'],
     buildNotes: [
       'مع VTX قوي بدون تبريد قد تحرق الوحدة على الطاولة.',
@@ -31,7 +31,7 @@ export const videoSystems: VideoSystem[] = [
     protocolOrSystem: 'HDZero',
     specs: { systemType: 'digital' },
     compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
-    whyChoose: 'اختيار قوي لمن يهمه زمن الاستجابة أكثر من جودة صورة DJI Cinematic.',
+    whyChoose: 'اختيار قوي لمن يهمه زمن الاستجابة أكثر من أعلى جودة صورة ممكنة من DJI.',
     notFor: 'لا تختاره إذا تريد أفضل جودة تسجيل داخلية مثل DJI O4 Pro.',
     upgradePath: 'DJI O4 إذا تريد جودة صورة أعلى',
     lastReviewed: '2026-07',
@@ -40,7 +40,7 @@ export const videoSystems: VideoSystem[] = [
     safetyNotes: ['لا ترفع القدرة فوق المسموح قانونياً.'],
     buildNotes: [
       'مع Freestyle V2 تأكد من التبريد والهوائي وترخيص القدرة العالية.',
-      'الدقة: 720p/1080p حسب VTX/كاميرا. مواصفة إضافية: مناسب للسباق/freestyle مع latency منخفض.',
+      'الدقة: 720p/1080p حسب VTX/كاميرا. مواصفة إضافية: مناسب للسباق والطيران الحر مع latency منخفض.',
     ],
   },
   {

@@ -100,7 +100,7 @@ export const receivers: Receiver[] = [
     specs: { protocol: 'Crossfire', weightG: 1.8, hasTelemetry: true },
     compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل من Nano RX العادي عندما تريد ثباتاً أعلى في مسارات طويلة.',
-    notFor: 'لا تختاره إن كان كل هدفك freestyle قريب؛ التكلفة والهوائيات أكبر من اللازم.',
+    notFor: 'لا تختاره إن كان كل هدفك الطيران الحر القريب؛ التكلفة والهوائيات أكبر من اللازم.',
     upgradePath: 'ELRS Diversity مثل EP1 Dual إذا تريد 2.4GHz',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',

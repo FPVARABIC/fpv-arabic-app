@@ -31,7 +31,7 @@ export const propellers: Propeller[] = [
     priceRangeUSD: [4, 6],
     specs: { sizeInch: 5, pitchInch: 4, bladeCount: 3, material: 'PC', weightG: 3.7 },
     compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6], frameSizeInch: 5 },
-    whyChoose: 'مروحة HQ/Ethix موثقة: 5 إنش، Pitch 4، 3 شفرات، PC، وزن ~3.7g؛ مناسبة لطيران ناعم/Cinematic.',
+    whyChoose: 'مروحة HQ/Ethix موثقة: 5 إنش، Pitch 4، 3 شفرات، PC، وزن ~3.7g؛ مناسبة لطيران ناعم ومستقر.',
     notFor: 'لا تختارها إذا تريد أقصى punch في سباقات قصيرة.',
     upgradePath: 'Gemfan Hurricane 51466 V2 MCK',
     lastReviewed: '2026-07',

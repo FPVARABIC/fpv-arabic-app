@@ -73,7 +73,7 @@ export const frames: Frame[] = [
     priceRangeUSD: [90, 115],
     specs: { sizeInch: 5, stackSizeMm: '20x20 / 30x30' },
     compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
-    whyChoose: 'فريم Freestyle/HD احترافي بنمط Deadcat، مناسب لمن يريد جودة تصنيع وترتيب كاميرا وفيديو أفضل.',
+    whyChoose: 'فريم للطيران الحر/HD احترافي بنمط Deadcat، مناسب لمن يريد جودة تصنيع وترتيب كاميرا وفيديو أفضل.',
     notFor: 'لا تختاره إذا كانت الميزانية محدودة أو تحتاج قطع غيار رخيصة جداً ومتوفرة في كل مكان.',
     upgradePath: 'AOS 5 EVO V1.2',
     lastReviewed: '2026-07',

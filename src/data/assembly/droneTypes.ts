@@ -16,7 +16,7 @@ export const droneTypes: DroneType[] = [
     primaryName: 'Freestyle',
     nameEn: 'Freestyle 5-inch',
     frameSizeInch: 5,
-    description: 'أشهر فئة بناء بين طياري الـFPV — توازن بين القوة والتحكم، مناسبة للفريستايل والسباق الخفيف.',
+    description: 'أشهر فئة بناء بين طياري الـFPV — توازن بين القوة والتحكم، مناسبة لـFreestyle والسباق الخفيف.',
     recommendedBatteryVoltages: [4, 6],
     imagePath: '/assets/assembly/drone-types/freestyle.png',
   },
@@ -25,7 +25,7 @@ export const droneTypes: DroneType[] = [
     primaryName: 'Cinematic',
     nameEn: 'Cinematic',
     frameSizeInch: 5,
-    description: 'بناء مخصص للتصوير السينمائي الناعم، يركّز على الاستقرار وحمل كاميرا أثقل بدلاً من السرعة أو المناورات الحادة.',
+    description: 'بناء مخصص للتصوير الـCinematic الناعم، يركّز على الاستقرار وحمل كاميرا أثقل بدلاً من السرعة أو المناورات الحادة.',
     recommendedBatteryVoltages: [3], // TODO: Ahmed will review
     imagePath: '/assets/assembly/drone-types/cinematic.png',
   },

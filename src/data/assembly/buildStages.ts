@@ -2,7 +2,7 @@ import type { BuildStage } from './types';
 
 // TODO: Ahmed will review specs
 export const buildStages: BuildStage[] = [
-  { id: 'stage-1',  number: 1,  titleAr: 'اختيار نوع الدرون',            descriptionAr: 'حدد نوع البناء المناسب لهدفك (فريستايل، سباق، سينمائي...)', partCategory: null },
+  { id: 'stage-1',  number: 1,  titleAr: 'اختيار نوع الدرون',            descriptionAr: 'حدد نوع البناء المناسب لهدفك (Freestyle، سباقات، Cinematic...)', partCategory: null },
   // BuildFlow special-cases this stage id — reads from droneSizeOptions.ts / batteryVoltageOptions.ts, not a parts/*.ts array
   { id: 'stage-2',  number: 2,  titleAr: 'اختيار الحجم',                 descriptionAr: 'حدد حجم الإطار المناسب (3.5 أو 5 أو 7 إنش)', partCategory: null },
   { id: 'stage-3',  number: 3,  titleAr: 'اختيار نظام الفيديو (VTX)',    descriptionAr: 'اختر جهاز بث الصورة المناسب (analog أو digital)', partCategory: 'videoSystems' },
