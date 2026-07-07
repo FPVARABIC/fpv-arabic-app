@@ -243,10 +243,12 @@ export interface Buzzer extends BasePart {
 
 // ---- Capacitor ----
 
+// weightG: optional, no source data anywhere for this category (case b,
+// structurally out of scope — no column, no prose mention in any row).
 export interface CapacitorSpec {
   capacitanceUf: number;
   voltageRating: number;
-  weightG: number;
+  weightG?: number;
 }
 export interface Capacitor extends BasePart {
   specs: CapacitorSpec;
