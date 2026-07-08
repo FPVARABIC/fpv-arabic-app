@@ -1,5 +1,17 @@
 import type { Gps } from '../types';
 
+// Long-range tag on gps-matek-m10q-5883-premium rests on real textual
+// evidence, not engineering judgment: its own whyChoose reads "خيار موثوق
+// لمشاريع مدى طويل/INAV/ArduPilot" — the literal term appears directly,
+// same evidentiary standard as the receiver/flight-controller long-range
+// tags elsewhere in this project.
+//
+// No racing or cinematic tag added anywhere in this file: GPS was placed
+// in the strict/evidence-gated category (same standard as Receivers), and
+// none of the 5 entries' own text supports either type. gps-hglrc-m100-
+// mini-budget's "مناسب لـ 2-7 إنش" claim was considered and rejected —
+// broad size-range language, not purpose-specific evidence, same pattern
+// already rejected for DJI O4's initial "many users" framing.
 export const gps: Gps[] = [
   {
     id: 'gps-hglrc-m100-mini-budget',
@@ -51,7 +63,7 @@ export const gps: Gps[] = [
     brand: 'Matek',
     priceRangeUSD: [25, 40],
     specs: { chipset: 'u-blox SAM-M10Q + QMC5883L', hasCompass: true, weightG: 8 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'خيار موثوق لمشاريع مدى طويل/INAV/ArduPilot التي تحتاج GNSS مع Compass مدمج.',
     notFor: 'لا تختاره لأول 5 إنش Betaflight بسيط إذا كان الهدف فقط GPS Rescue؛ سيكون أكبر وأغلى من اللازم.',
     upgradePath: 'HGLRC M100 Mini GPS',
