@@ -136,13 +136,51 @@ export const QuadcopterLauncher: React.FC = () => {
     };
   }, [updateLayout]);
 
-  // Drag start
+  // Shared move handler for both input types — updates position + flags a drag
+  // once past DRAG_THRESHOLD, exactly as before.
+  const handleMove = useCallback((clientX: number, clientY: number) => {
+    const rect = getFrameRect(); // fresh frameRect every move
+    if (!rect) return;
+    const dx = clientX - dragStart.current.clientX;
+    const dy = clientY - dragStart.current.clientY;
+    if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) hasDragged.current = true;
+    const clamped = clampPos(dragStart.current.posX + dx, dragStart.current.posY + dy, rect.width, window.innerHeight);
+    posRef.current = clamped;
+    setPosition(clamped);
+  }, []);
+
+  const onMouseMoveRef = useRef((e: MouseEvent) => handleMove(e.clientX, e.clientY));
+  const onTouchMoveRef = useRef((e: TouchEvent) => {
+    const t = e.touches[0];
+    if (t) handleMove(t.clientX, t.clientY);
+  });
+
+  // Attached/detached imperatively, synchronously, from the down-handlers
+  // themselves — NOT from a useEffect gated on isDragging. That prior pattern
+  // had a real race: setIsDragging(true) only takes effect after React's next
+  // render, so if the real end-event (touchend especially) fires before that
+  // render completes, the listener isn't attached yet and the tap is silently
+  // dropped. Confirmed via raw dispatched TouchEvents: a 0ms touchstart→
+  // touchend gap reproduces the drop every time; a 50ms gap doesn't. Attaching
+  // here closes the race regardless of tap speed or device render latency.
+  const onEndRef = useRef(() => {
+    window.removeEventListener('mousemove', onMouseMoveRef.current);
+    window.removeEventListener('touchmove', onTouchMoveRef.current);
+    window.removeEventListener('mouseup', onEndRef.current);
+    window.removeEventListener('touchend', onEndRef.current);
+    setIsDragging(false);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(posRef.current));
+    if (!hasDragged.current) toggleBot();
+  });
+
   const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!position) return;
     hasDragged.current = false;
     setIsDragging(true);
     dragStart.current = { clientX: e.clientX, clientY: e.clientY, posX: position.x, posY: position.y };
+    window.addEventListener('mousemove', onMouseMoveRef.current);
+    window.addEventListener('mouseup', onEndRef.current);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
@@ -151,52 +189,9 @@ export const QuadcopterLauncher: React.FC = () => {
     setIsDragging(true);
     const t = e.touches[0];
     dragStart.current = { clientX: t.clientX, clientY: t.clientY, posX: position.x, posY: position.y };
+    window.addEventListener('touchmove', onTouchMoveRef.current, { passive: true });
+    window.addEventListener('touchend', onEndRef.current);
   };
-
-  // Drag move + end — window listeners, active only while isDragging
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = getFrameRect(); // fresh frameRect every move
-      if (!rect) return;
-      const dx = e.clientX - dragStart.current.clientX;
-      const dy = e.clientY - dragStart.current.clientY;
-      if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) hasDragged.current = true;
-      const clamped = clampPos(dragStart.current.posX + dx, dragStart.current.posY + dy, rect.width, window.innerHeight);
-      posRef.current = clamped;
-      setPosition(clamped);
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const rect = getFrameRect(); // fresh frameRect every move
-      if (!rect) return;
-      const t = e.touches[0];
-      const dx = t.clientX - dragStart.current.clientX;
-      const dy = t.clientY - dragStart.current.clientY;
-      if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) hasDragged.current = true;
-      const clamped = clampPos(dragStart.current.posX + dx, dragStart.current.posY + dy, rect.width, window.innerHeight);
-      posRef.current = clamped;
-      setPosition(clamped);
-    };
-
-    const onEnd = () => {
-      setIsDragging(false);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(posRef.current));
-      if (!hasDragged.current) toggleBot();
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchend', onEnd);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchend', onEnd);
-    };
-  }, [isDragging, toggleBot]);
 
   if (pathname === '/bot') return null;
   if (!position) return null;
