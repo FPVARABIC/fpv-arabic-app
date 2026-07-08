@@ -121,6 +121,7 @@ export interface MotorSpec {
   shaftDiameterMm?: number;
   maxThrustG?: number;
   compatibleVoltages: number[]; // S counts this motor's KV is rated for
+  maxFrameSizeInch?: number; // real documented upper frame/propeller-size limit beyond the nominal frameSizeInch tag, when explicitly stated in this motor's own text — leave undefined when no such figure is documented
 }
 export interface Motor extends BasePart {
   specs: MotorSpec;

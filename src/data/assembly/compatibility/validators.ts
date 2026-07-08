@@ -5,13 +5,24 @@ export interface CompatibilityResult {
   reasonAr?: string;
 }
 
-// TODO: Ahmed will review specs
+// Frame sizeInch values are real decimals (5, 5.1, 5.5, 7); motor
+// frameSizeInch tags are rounded nominal-class labels (e.g. 5). A frame's
+// own sourced text often calls itself "5 inch" even at sizeInch: 5.1 (see
+// frame-speedybee-mario5-budget, frame-aos5-evo-mid) — a small tolerance
+// resolves that precision mismatch without treating genuinely larger
+// frames (5.5") as automatically the same class.
+const FRAME_SIZE_TOLERANCE_INCH = 0.15;
+
 export function validateFrameMotor(frame: Frame, motor: Motor): CompatibilityResult {
-  if (!motor.compatibilityTags.frameSizeInch) return { isCompatible: true };
-  if (motor.compatibilityTags.frameSizeInch !== frame.specs.sizeInch) {
-    return { isCompatible: false, reasonAr: 'حجم المحرك غير مناسب لحجم هذا الإطار' };
+  const nominal = motor.compatibilityTags.frameSizeInch;
+  if (!nominal) return { isCompatible: true };
+  const withinTolerance = Math.abs(frame.specs.sizeInch - nominal) <= FRAME_SIZE_TOLERANCE_INCH;
+  const withinDocumentedMax =
+    motor.specs.maxFrameSizeInch !== undefined && frame.specs.sizeInch <= motor.specs.maxFrameSizeInch;
+  if (withinTolerance || withinDocumentedMax) {
+    return { isCompatible: true };
   }
-  return { isCompatible: true };
+  return { isCompatible: false, reasonAr: 'حجم المحرك غير مناسب لحجم هذا الإطار' };
 }
 
 export function validateMotorBattery(motor: Motor, battery: Battery): CompatibilityResult {

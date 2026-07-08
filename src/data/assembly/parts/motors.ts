@@ -13,6 +13,12 @@ import type { Motor } from '../types';
 // (motor-emax-eco-ii-2306-budget) explicitly disclaims being the "smoother"
 // option in its own notFor. Cinematic motor support remains a genuine
 // research gap, not covered by this decision.
+//
+// specs.maxFrameSizeInch on motor-emax-eco-ii-2306-budget (5.5) rests on
+// real textual evidence: its own whyChoose states "يدعم مراوح 5-5.5 إنش" —
+// an explicit 5.5" claim. None of the other 3 motors make this claim (they
+// only say "5 إنش"), so none of them get this field — a real gap, not
+// silently extended by similarity to the EMAX entry.
 export const motors: Motor[] = [
   {
     id: 'motor-emax-eco-ii-2306-budget',
@@ -21,7 +27,7 @@ export const motors: Motor[] = [
     nameEn: 'EMAX ECO II 2306 1700KV',
     brand: 'EMAX',
     priceRangeUSD: [13, 20],
-    specs: { kv: 1700, statorSize: '2306', compatibleVoltages: [6] },
+    specs: { kv: 1700, statorSize: '2306', compatibleVoltages: [6], maxFrameSizeInch: 5.5 },
     compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [6], frameSizeInch: 5 },
     whyChoose: 'محرك اقتصادي 2306 موثق بوزن ~30.4g بدون السلك ويدعم مراوح 5-5.5 إنش؛ مناسب لـ5 إنش 6S عند اختيار KV الصحيح.',
     notFor: 'لا تختاره إذا أردت أخف وزن أو أعلى نعومة؛ الخطأ الشائع استخدام KV عالي مع 6S دون فهم.',
