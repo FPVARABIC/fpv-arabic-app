@@ -1,5 +1,12 @@
 import type { Buzzer } from '../types';
 
+// Engineering-judgment droneTypes additions (racing/cinematic/long-range on
+// all 3 entries below): a buzzer's function — sounding an alarm on power
+// loss or crash — has no dependency on airframe type, size class, or flight
+// purpose. A 5V-driven or self-powered buzzer works identically regardless
+// of whether it's bolted to a racing, cinematic, or long-range build. A
+// conscious engineering decision, not inferred from prose — none of the 3
+// entries' own researched text mentions any of these three drone types.
 export const buzzers: Buzzer[] = [
   {
     id: 'buzzer-generic-5v-active-budget',
@@ -8,7 +15,7 @@ export const buzzers: Buzzer[] = [
     nameEn: 'Generic 5V Active Buzzer',
     priceRangeUSD: [2, 5],
     specs: { hasBuiltInBattery: false },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'أرخص حل لسماع إنذار عند قرب الدرون.',
     notFor: 'لا تختاره إذا تخاف فقدان الدرون بعد فصل البطارية.',
     upgradePath: 'VIFLY Finder 2',
@@ -29,7 +36,7 @@ export const buzzers: Buzzer[] = [
     brand: 'VIFLY',
     priceRangeUSD: [12, 18],
     specs: { hasBuiltInBattery: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'حل جيد عندما تريد self-powered buzzer لكن الوزن مهم.',
     notFor: 'لا تختاره إذا تريد أعلى صوت وأطول مدة تشغيل.',
     upgradePath: 'VIFLY Finder 2',
@@ -50,7 +57,7 @@ export const buzzers: Buzzer[] = [
     brand: 'VIFLY',
     priceRangeUSD: [15, 20],
     specs: { hasBuiltInBattery: true, weightG: 5 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل قطعة صغيرة لتقليل احتمال ضياع الدرون بعد crash.',
     notFor: 'لا تختاره إذا كل غرام مهم جداً في micro build.',
     upgradePath: 'VIFLY Finder Mini حسب الوزن',
