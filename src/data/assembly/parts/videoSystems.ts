@@ -1,5 +1,37 @@
 import type { VideoSystem } from '../types';
 
+// Cinematic tag on video-system-dji-o4-premium rests on real textual
+// evidence: its own whyChoose reads "أفضل خيار جودة صورة وتجربة جاهزة
+// لكثير من المستخدمين" — an explicit, direct superiority claim on image
+// quality, the exact attribute cinematic exists to prioritize. Same
+// evidentiary standard already used for video-unit-dji-o4-air-unit-pro-
+// premium's cinematic tag (its own "للتصوير" claim).
+//
+// The other 3 systems were considered and excluded, not silently skipped:
+//
+// - video-system-analog-58ghz-budget: explicitly disqualified, twice over.
+//   notFor: "لا تختاره إذا تريد جودة صورة HD أو تسجيل عالي داخل الوحدة."
+//   beginnerNotes: "ممتاز للتعلم لكنه لا يعطي أعلى جودة صورة ممكنة." Both
+//   directly state this system does not deliver high image quality.
+//
+// - video-system-hdzero-mid: explicitly disqualified, three times over.
+//   whyChoose positions it as prioritizing response time "أكثر من أعلى
+//   جودة صورة ممكنة من DJI"; notFor: "لا تختاره إذا تريد أفضل جودة
+//   تسجيل داخلية مثل DJI O4 Pro"; upgradePath itself points to DJI O4
+//   "إذا تريد جودة صورة أعلى" — all three frame this system as image-
+//   quality-inferior to DJI by its own account.
+//
+// - video-system-walksnail-avatar-hd-mid: considered but excluded. Its
+//   beginnerNotes ("جيد لمن يريد HD بدون دفع سعر DJI الكامل") is real
+//   evidence, but frames the product around VALUE/cost-relative-to-DJI,
+//   not image quality as a defining characteristic in itself — a
+//   different axis than the one cinematic's tag requires. Same pattern
+//   as the propeller-gemfan-f3s-5135-budget exclusion: real language,
+//   serving an adjacent but distinct purpose than the type's own goal.
+//
+// Long-range: no evidence found anywhere in this file, for any of the 4
+// systems, in either direction. Remains a full, undecided research gap —
+// not a judgment-call candidate.
 export const videoSystems: VideoSystem[] = [
   {
     id: 'video-system-analog-58ghz-budget',
@@ -72,7 +104,7 @@ export const videoSystems: VideoSystem[] = [
     priceRangeUSD: [109, 650],
     protocolOrSystem: 'DJI',
     specs: { systemType: 'digital' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'cinematic'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل خيار جودة صورة وتجربة جاهزة لكثير من المستخدمين.',
     notFor: 'لا تختاره إذا تريد نظام مفتوح أو أرخص قطع أو إصلاح أسهل.',
     upgradePath: 'Walksnail أو HDZero حسب الأولوية',
