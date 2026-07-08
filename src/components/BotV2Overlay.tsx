@@ -76,14 +76,14 @@ export const BotV2Overlay: React.FC = () => {
   }]);
   const [input, setInput] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const latestMsgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     closeBot();
   }, [pathname, closeBot]);
 
   useEffect(() => {
-    const el = scrollAreaRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    latestMsgRef.current?.scrollIntoView({ block: 'start' });
   }, [msgs]);
 
   const [frameBox, setFrameBox] = useState<{ left: number; width: number }>({ left: 0, width: 390 });
@@ -136,7 +136,7 @@ export const BotV2Overlay: React.FC = () => {
       {/* Backdrop */}
       <div
         style={{
-          position: 'fixed', top: 0, left: `${frameBox.left}px`, width: `${frameBox.width}px`, height: '20vh',
+          position: 'fixed', top: 0, left: `${frameBox.left}px`, width: `${frameBox.width}px`, height: '10vh',
           background: 'rgba(2,8,18,0.6)',
           backdropFilter: 'blur(3px)',
           zIndex: 29,
@@ -148,10 +148,30 @@ export const BotV2Overlay: React.FC = () => {
         aria-hidden="true"
       />
 
+      {/* Gap-filler — the panel's bottom (bottom: 96px) intentionally leaves
+          clearance above the real nav bar for the rounded-corner "floating
+          card" look, but nothing previously covered that band: the real page
+          behind the overlay showed through it, looking like a separate
+          window behind the nav. This sits exactly in that band, themed to
+          match the panel's own gradient top-stop color, gated on isOpen the
+          same way the backdrop is. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed', bottom: 0, height: '96px',
+          left: `${frameBox.left}px`, width: `${frameBox.width}px`,
+          zIndex: 28,
+          background: 'rgba(2,8,15,0.88)',
+          opacity: isOpen ? 1 : 0,
+          pointerEvents: 'none',
+          transition: 'opacity 0.25s ease',
+        }}
+      />
+
       {/* Panel — slides up from bottom */}
       <div
         style={{
-          position: 'fixed', top: '20vh', bottom: '96px',
+          position: 'fixed', top: '10vh', bottom: '96px',
           left: `${frameBox.left}px`, width: `${frameBox.width}px`,
           zIndex: 30,
           backgroundImage: `linear-gradient(180deg, rgba(2,8,15,0.88) 0%, rgba(2,8,15,0.72) 40%, rgba(2,8,15,0.65) 100%), url('/assets/bot-chat-background.png')`,
@@ -222,8 +242,12 @@ export const BotV2Overlay: React.FC = () => {
             padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px',
           }}
         >
-          {msgs.map(msg => (
-            <div key={msg.id} style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-start' : 'flex-end' }}>
+          {msgs.map((msg, i) => (
+            <div
+              key={msg.id}
+              ref={i === msgs.length - 1 ? latestMsgRef : undefined}
+              style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-start' : 'flex-end' }}
+            >
               {msg.from === 'bot' ? (
                 <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '8px', maxWidth: '88%' }}>
                   <div style={{
