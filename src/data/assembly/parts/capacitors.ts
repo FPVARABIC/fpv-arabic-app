@@ -1,14 +1,27 @@
 import type { Capacitor } from '../types';
 
+// Engineering-judgment droneTypes additions (racing/cinematic/long-range on
+// all 3 entries below): a capacitor's job — suppressing voltage spikes at a
+// 4-in-1 ESC — is purely a function of battery voltage, not airframe
+// purpose. The same 1000uF/35V or /50V part protects an ESC identically
+// whether it's driving a racing, cinematic, or long-range build. A
+// conscious engineering decision, not inferred from prose — none of the 3
+// entries' own researched text mentions any of these three drone types.
 export const capacitors: Capacitor[] = [
   {
     id: 'capacitor-generic-1000uf-35v-budget',
+    // Note for future maintainers: this 35V rating is fine for today's
+    // 6S-max battery data, but this specific capacitor should be
+    // re-evaluated if an 8S+ battery is ever added for Long-Range
+    // specifically — see this capacitor's own notFor warning against 8S+
+    // use below. No battery above 6S exists in this project today, so this
+    // is not a live gap, only a forward-looking note.
     tier: 'budget',
     nameAr: 'كاباستور 1000uF 35V - اقتصادي',
     nameEn: 'Low ESR Capacitor 1000uF 35V (Rubycon/Panasonic/Nichicon equivalent)',
     priceRangeUSD: [1, 3],
     specs: { capacitanceUf: 1000, voltageRating: 35 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'مكثف مناسب لمعظم Builds 4S/6S التقليدية مع ESC 4in1 لتقليل voltage spikes.',
     notFor: 'لا تختاره لـ8S أو أنظمة أعلى من 6S؛ الجهد 35V لا يعطي هامشاً كافياً هناك.',
     upgradePath: 'Panasonic FR 1000uF 50V',
@@ -29,7 +42,7 @@ export const capacitors: Capacitor[] = [
     brand: 'Rubycon',
     priceRangeUSD: [1, 3],
     specs: { capacitanceUf: 1000, voltageRating: 35 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'مكثف Rubycon ZLH 1000uF 35V موثق كـlow impedance و10,000h @105°C، مناسب لتقليل الضوضاء في 5 إنش.',
     notFor: 'لا تختاره إذا كان المكان ضيقاً أو إذا تحتاج 50V لهامش أكبر.',
     upgradePath: 'Panasonic FR 1000uF 50V',
@@ -53,7 +66,7 @@ export const capacitors: Capacitor[] = [
     brand: 'Panasonic',
     priceRangeUSD: [2, 5],
     specs: { capacitanceUf: 1000, voltageRating: 50 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'يعطي هامش جهد أعلى لأنظمة 6S القوية، وسلسلة FR موثقة كـLow ESR وعمر طويل عند 105°C.',
     notFor: 'لا تختاره إذا كان حجمه يسبب تماساً مع الكربون أو المكونات داخل فريم ضيق.',
     upgradePath: 'Rubycon ZLH 1000uF 35V عند ضيق المساحة',
