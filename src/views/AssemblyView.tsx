@@ -11,13 +11,10 @@ import { BuildFlow } from '../components/Assembly/BuildFlow';
 // serialization/rehydration strategy for selections.parts (full BasePart
 // objects) — a separate, dedicated task, not bundled into this integration.
 //
-// KNOWN GAP (pre-existing, Phase 1): BuildFlow has no in-flow way back to
-// AssemblyHome's drone-type selection screen. Pressing "back" past stage-2
-// decrements to stage-1, which BuildFlow doesn't special-case — it falls
-// through to the generic part-category renderer with zero parts, showing
-// an empty dead-end screen rather than AssemblyHome's real six-type grid.
-// Leaving the تجميع tab and returning is the only way back to AssemblyHome,
-// which (per the gap above) also resets progress.
+// The "تغيير نوع الدرون" link inside BuildFlow calls onChangeType below to
+// return here directly, without relying on stage-index navigation (which
+// still can't represent "go to AssemblyHome" — see BuildFlow.tsx's fixed
+// stage-1 dead-end, now bypassed rather than fixed at its root).
 
 type Screen = { name: 'home' } | { name: 'flow'; droneTypeId: string };
 
@@ -30,7 +27,9 @@ export const AssemblyView: React.FC = () => {
         {screen.name === 'home' && (
           <AssemblyHome onSelectType={droneTypeId => setScreen({ name: 'flow', droneTypeId })} />
         )}
-        {screen.name === 'flow' && <BuildFlow droneTypeId={screen.droneTypeId} />}
+        {screen.name === 'flow' && (
+          <BuildFlow droneTypeId={screen.droneTypeId} onChangeType={() => setScreen({ name: 'home' })} />
+        )}
       </AssemblyLayout>
     </AppShell>
   );

@@ -65,21 +65,47 @@ const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconK
 
 interface BuildFlowProps {
   droneTypeId: string;
+  onChangeType: () => void;
 }
 
 // Starts at stage index 1 (Stage 2 — Size): Stage 1 (drone type) is already
 // resolved by AssemblyHome before BuildFlow mounts.
-export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId }) => {
+export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType }) => {
   const { stage, stageIndex, totalStages, selections, goNext, goPrev, selectSize, selectBatteryVoltage, selectPart } =
     useAssemblyBuild(1);
 
+  const handleChangeType = () => {
+    if (window.confirm('سيتم فقدان اختياراتك الحالية في هذا البناء. هل تريد المتابعة؟')) {
+      onChangeType();
+    }
+  };
+
+  const ChangeTypeLink = () => (
+    <button
+      onClick={handleChangeType}
+      style={{
+        display: 'block', fontSize: 12, fontWeight: 700, color: '#0e7c86',
+        background: 'transparent', border: 'none', padding: '10px 16px 0',
+        textAlign: 'start', cursor: 'pointer',
+      }}
+    >
+      ↩ تغيير نوع الدرون
+    </button>
+  );
+
   if (stage.id === 'stage-17') {
-    return <FinalReportScreen selections={selections.parts} droneTypeId={droneTypeId} onBack={goPrev} />;
+    return (
+      <div>
+        <ChangeTypeLink />
+        <FinalReportScreen selections={selections.parts} droneTypeId={droneTypeId} onBack={goPrev} />
+      </div>
+    );
   }
 
   if (stage.id === 'stage-18' || stage.id === 'stage-19') {
     return (
       <div>
+        <ChangeTypeLink />
         <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         <p style={{ padding: '0 16px', fontSize: 13, color: '#7a6a52' }}>هذه الميزة قيد التطوير — قريباً</p>
         <StageNavigation
@@ -96,6 +122,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId }) => {
   if (stage.id === 'stage-2') {
     return (
       <div>
+        <ChangeTypeLink />
         <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         <div style={{ padding: '4px 16px', display: 'flex', gap: 8 }}>
           {droneSizeOptions.map(opt => (
@@ -118,6 +145,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId }) => {
   if (stage.id === 'stage-4') {
     return (
       <div>
+        <ChangeTypeLink />
         <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         <div style={{ padding: '4px 16px', display: 'flex', gap: 8 }}>
           {batteryVoltageOptions.map(opt => (
@@ -147,6 +175,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId }) => {
 
   return (
     <div>
+      <ChangeTypeLink />
       <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
       <PartCardsContainer
         parts={relevantParts}

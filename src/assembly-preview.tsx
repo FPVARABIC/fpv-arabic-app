@@ -59,7 +59,9 @@ const PreviewApp = () => {
           {screen.name === 'home' && (
             <AssemblyHome onSelectType={droneTypeId => setScreen({ name: 'flow', droneTypeId })} />
           )}
-          {screen.name === 'flow' && <BuildFlow droneTypeId={screen.droneTypeId} />}
+          {screen.name === 'flow' && (
+            <BuildFlow droneTypeId={screen.droneTypeId} onChangeType={() => setScreen({ name: 'home' })} />
+          )}
           {screen.name === 'report' && (
             <FinalReportScreen
               selections={screen.preset === 'compatible' ? COMPATIBLE_PRESET : MISMATCH_PRESET}
