@@ -1,5 +1,22 @@
 import type { Battery } from '../types';
 
+// Engineering-judgment droneTypes additions (racing/cinematic/long-range on
+// the entries below): battery cell count, capacity, and C-rating are
+// electrical facts that don't change based on flight philosophy — the same
+// pack works identically regardless of build purpose. These specific tags
+// were added by conscious engineering decision, NOT because the product's
+// own researched text (whyChoose/notFor/buildNotes) mentions these drone
+// types — unlike every other droneTypes tag in this file and project,
+// which rests on actual researched prose evidence. Flagged here so this
+// distinction stays traceable.
+//
+// The 4S entry (battery-tattu-rline-1550-4s-budget) deliberately excludes
+// long-range: this is a genuine engineering judgment call, not settled
+// physics — long-range builds conventionally pair lower-KV motors with
+// higher voltage (6S) for efficient cruising thrust, a motor/voltage
+// pairing convention rather than an airtight wiring-efficiency argument.
+// Revisit this specific exclusion if dedicated long-range motor research
+// later suggests otherwise.
 export const batteries: Battery[] = [
   {
     id: 'battery-cnhl-black-series-v2-1300-6s-budget',
@@ -9,7 +26,7 @@ export const batteries: Battery[] = [
     brand: 'CNHL',
     priceRangeUSD: [23, 30],
     specs: { sCount: 6, capacityMah: 1300, cRating: 130, burstCRating: 260, connector: 'XT60' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [6] },
     whyChoose: 'بطارية 6S شائعة؛ سعة 1300mAh، 22.2V، وزن حوالي 223g وأبعاد 48x33x77mm حسب مصادر بيع موثوقة.',
     notFor: 'لا تختارها إذا تريد أخف وزن طويل المدى أو إذا فريمك مصمم لـ4S.',
     upgradePath: 'Tattu R-Line V6 1300mAh 6S',
@@ -30,7 +47,7 @@ export const batteries: Battery[] = [
     brand: 'GNB',
     priceRangeUSD: [28, 33],
     specs: { sCount: 6, capacityMah: 1100, cRating: 120, connector: 'XT60' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [6] },
     whyChoose: 'بطارية 6S أخف من 1300mAh؛ يوجد نسختان شائعتان: LiPo 22.2V بوزن ~190g وأبعاد 38x35x76mm، وLiHV 22.8V بوزن ~173g وأبعاد قريبة حسب النسخة.',
     notFor: 'لا تختارها إذا تريد زمن طيران أطول أو تحمل كاميرا أكشن ثقيلة.',
     upgradePath: 'CNHL Black Series V2 1300mAh 6S',
@@ -51,7 +68,7 @@ export const batteries: Battery[] = [
     brand: 'Tattu',
     priceRangeUSD: [35, 45],
     specs: { sCount: 6, capacityMah: 1300, cRating: 160, connector: 'XT60 / XT60U-F' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [6] },
     whyChoose: 'بطارية أداء عالية: 1300mAh، 22.2V، 160C، وزن حوالي 197g وأبعاد 76x39x33mm حسب GensAce/Tattu.',
     notFor: 'لا تختارها لأول تدريب إذا كنت ستكسر بطاريات كثيرًا؛ سعرها أعلى.',
     upgradePath: 'CNHL Black Series V2 1300mAh 6S',
@@ -72,7 +89,7 @@ export const batteries: Battery[] = [
     brand: 'Tattu',
     priceRangeUSD: [25, 35],
     specs: { sCount: 4, capacityMah: 1550, cRating: 95, connector: 'XT60' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic'], batteryVoltages: [4] },
     whyChoose: 'بطارية 4S كلاسيكية: 1550mAh، 14.8V، وزن حوالي 192-193g وموصل XT60، مناسبة لبناء 4S 5 إنش.',
     notFor: 'لا تختارها مع محركات KV منخفضة مخصصة غالباً لـ6S؛ الأداء سيكون ضعيفاً.',
     upgradePath: 'CNHL/Tattu 1300mAh 6S عند الانتقال لـ6S',
