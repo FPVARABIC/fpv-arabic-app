@@ -9,6 +9,24 @@ export interface PartNotes {
   buildNotes: string[];
 }
 
+// Card-front "quick glance" summary — 2 authored short phrases (3-5 words
+// each), NOT algorithmically derived from whyChoose/notFor/safetyNotes/
+// buildNotes/beginnerNotes. whyTag distills whyChoose. noteTag distills
+// whichever single field (notFor/safetyNotes/buildNotes/beginnerNotes) the
+// author judges most genuinely decision-critical for THIS specific part —
+// chosen case-by-case per part during authoring, not by a fixed universal
+// priority order. noteTagSource records which field noteTag actually
+// summarizes, so the UI can show a matching icon (e.g. an alert-triangle
+// only when noteTagSource is genuinely 'safety', not by default).
+// Optional until a part has been through the authoring pass; UI must
+// handle its absence (line 1/3 simply don't render) rather than assume
+// every part has it.
+export interface QuickTags {
+  whyTag: string;
+  noteTag: string;
+  noteTagSource: 'notFor' | 'safety' | 'build' | 'beginner';
+}
+
 export interface CompatibilityTags {
   droneTypes: string[];
   batteryVoltages: number[]; // LiPo cell (S) counts this part supports, e.g. [4, 6]
@@ -30,6 +48,7 @@ export interface BasePart extends PartNotes {
   upgradePath?: string;        // "أفضل بديل عند الترقية لاحقاً" — free-text, not necessarily a valid part id
   lastReviewed?: string;       // "تاريخ آخر مراجعة", e.g. "2026-07"
   confidence?: 'مؤكد' | 'تجربة مجتمع' | 'رأي أولي';
+  quickTags?: QuickTags;
   compatibilityTags: CompatibilityTags;
 }
 
