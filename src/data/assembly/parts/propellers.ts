@@ -18,13 +18,23 @@ import type { Propeller } from '../types';
 // completeness of the evidence, not because the two products mean
 // fundamentally different things.
 //
-// No racing tag added in this file: propeller-gemfan-hurricane-51466-v2-mck-
-// premium was considered as an engineering-judgment candidate (aggressive-
-// flying language, paired with the same 2207/2306 motors already tagged
-// racing) but rejected — real-world competitive racing prop selection often
-// diverges from aggressive-freestyle prop selection in ways that don't
-// apply to motor/KV choice, so the same judgment basis used for Motors
-// doesn't transfer cleanly here. Remains deferred.
+// No racing tag added to any of the original 4 entries in this file:
+// propeller-gemfan-hurricane-51466-v2-mck-premium was considered as an
+// engineering-judgment candidate (aggressive-flying language, paired with
+// the same 2207/2306 motors already tagged racing) but rejected —
+// real-world competitive racing prop selection often diverges from
+// aggressive-freestyle prop selection in ways that don't apply to
+// motor/KV choice, so the same judgment basis used for Motors doesn't
+// transfer cleanly here. Remains deferred.
+//
+// propeller-meps-sz5145-budget was added as a new, dedicated racing entry
+// instead: its own primary manufacturer description states it is
+// "specifically designed for FPV racing" — a direct, product-defining
+// claim, not an adjacent descriptor like Hurricane's "aggressive." The
+// same manufacturer's broader marketing also positions this exact SKU for
+// freestyle and cinematic use in multiple places (not just a secondary
+// Q&A aside) — considered and weighed, but the primary claim was judged
+// strong enough to stand on its own; cinematic/freestyle were not added.
 export const propellers: Propeller[] = [
   {
     id: 'propeller-gemfan-f3s-5135-budget',
@@ -106,6 +116,28 @@ export const propellers: Propeller[] = [
     buildNotes: [
       'مع 6S ومحركات 2207/2306 قوية تعطي grip أعلى لكن تستهلك أكثر.',
       'ملاحظة توافق الإطار: النص المصدري يذكر "5 إنش / 5.1 إنش" (توافق مع الحجمين)؛ حقل frameSizeInch تُرك فارغاً بدل تضييق التوافق الحقيقي لحجم واحد فقط.',
+    ],
+  },
+  {
+    id: 'propeller-meps-sz5145-budget',
+    tier: 'budget',
+    nameAr: 'مروحة سباق 5.1 إنش - اقتصادية',
+    nameEn: 'MEPS SZ5145 5.1x4.5x3 Propeller',
+    brand: 'MEPS',
+    specs: { sizeInch: 5.1, pitchInch: 4.5, bladeCount: 3, material: 'PC', weightG: 3.7 },
+    compatibilityTags: { droneTypes: ['racing'], batteryVoltages: [4, 6] },
+    whyChoose: 'مصممة خصيصاً لسباقات الـFPV حسب وصف الشركة المصنعة (MEPS) نفسها؛ قطر 5.1 إنش، Pitch 4.5، 3 شفرات، وزن ~3.7g. الشركة توصي بإقرانها مع محركات MEPS SPACE 2207 السباقية.',
+    notFor: 'لا تختارها إذا تحتاج مروحة مقوّاة خصيصاً لتحمل تصادمات شديدة ومتكررة؛ لم يُذكر في المصدر أي مادة مقوّاة غير PC العادي.',
+    upgradePath: 'لا يوجد حالياً بديل سباقي أعلى في القاعدة.',
+    lastReviewed: '2026-07',
+    confidence: 'مؤكد',
+    beginnerNotes: ['ليست الخيار الأول لأول تجربة سباق؛ تفترض إطاراً وإعداداً سباقياً جاهزاً مثل AOS RC 5R، وليست موجّهة للطيران الحر العام.'],
+    safetyNotes: ['لا تختبر المراوح داخل المنزل أو قرب الأشخاص؛ تأكد من إحكام ربط المروحة على عمود الموتور قبل أول طيران.'],
+    buildNotes: [
+      'قطرها 5.1 إنش يقع ضمن الحد الأقصى لمروحة إطار AOS RC 5R (5.3 إنش)، ويجتاز فحص التوافق بين الإطار والمروحة.',
+      'ملاحظة تصنيف: الوصف التسويقي الأساسي يذكرها صراحة كمروحة "مصممة خصيصاً لسباقات الـFPV" — وهذا أساس تصنيفها هنا كسباق فقط. نفس الشركة تسوّقها أيضاً، في مواد تسويقية أخرى غير قسم الأسئلة الثانوي فقط، كخيار مناسب لطيران حر وتصوير أيضاً؛ لم يُعتبر هذا كافياً لإضافة أي تصنيف آخر هنا.',
+      'ملاحظة سعر: مصدر واحد فقط (DIYFPV) يذكر سعراً "يبدأ من" 4.90 دولار تقريباً، دون نطاق سعر مؤكد من مصادر متعددة؛ تُرك priceRangeUSD فارغاً بدل افتراض نطاق غير مؤكد.',
+      'ملاحظة مادة: PC (بولي كاربونات) مؤكدة من صفحة الشركة المصنعة مباشرة ومصدر ثانٍ مستقل؛ ذكر "carbon fiber" في وصف عام لقائمة أمازون منفصلة لم يُعتمد لأنه على الأرجح نص عام غير خاص بهذا المنتج تحديداً.',
     ],
   },
 ];
