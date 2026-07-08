@@ -46,7 +46,7 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     chips: [
       { label: 'ابدأ بخريطة الدروس', route: '/roadmap' },
       { label: 'افتح Checklist قبل الشراء', route: '/checklists' },
-      { label: 'تعلّم الكهرباء أولاً', route: '/lessons/lesson-8' },
+      { label: 'تعلّم الكهرباء أولاً', route: '/lessons/lesson-electricity-basics' },
     ],
     lessonRedirect: '/roadmap',
   },
@@ -67,12 +67,12 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
       'اعكس سلكين في الـ ESC أو من Betaflight لتصحيح الاتجاه',
     ],
     relatedConceptIds: ['esc_basic', 'propeller_basic', 'betaflight_basics'],
-    internalLinks: [{ label: 'درس المحركات', route: '/lessons/lesson-5' }],
+    internalLinks: [{ label: 'درس المحركات', route: '/lessons/lesson-motor-install' }],
     chips: [
-      { label: 'درس الحجم والمحركات', route: '/lessons/lesson-5' },
+      { label: 'درس الحجم والمحركات', route: '/lessons/lesson-motor-install' },
       { label: 'اختبار في Betaflight', route: '/betaflight' },
     ],
-    lessonRedirect: '/lessons/lesson-5',
+    lessonRedirect: '/lessons/lesson-motor-install',
     sourceSearchHints: ['motor direction FPV quad', 'brushless motor KV rating', 'motor not spinning betaflight'],
   },
 
@@ -92,10 +92,10 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
       'افحص أسلاك الموتور على الـ ESC إن كان موتور لا يدور',
     ],
     relatedConceptIds: ['motor_basic', 'flight_controller_basic', 'lipo_safety', 'wiring_basics'],
-    internalLinks: [{ label: 'درس التوصيل', route: '/lessons/lesson-8' }],
+    internalLinks: [{ label: 'درس التوصيل', route: '/lessons/lesson-power-rails' }],
     chips: [
       { label: 'اختبار المحركات', query: 'كيف أختبر محركاتي' },
-      { label: 'درس التوصيل', route: '/lessons/lesson-8' },
+      { label: 'درس التوصيل', route: '/lessons/lesson-power-rails' },
     ],
     sourceSearchHints: ['ESC calibration FPV', 'DSHOT protocol setup', 'BLHeli ESC configuration', '4in1 ESC wiring'],
   },
@@ -119,7 +119,7 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     internalLinks: [{ label: 'قسم Betaflight', route: '/betaflight' }],
     chips: [
       { label: 'فتح Betaflight', route: '/betaflight' },
-      { label: 'درس التوصيل', route: '/lessons/lesson-8' },
+      { label: 'درس التوصيل', route: '/lessons/lesson-power-rails' },
     ],
     lessonRedirect: '/betaflight',
     sourceSearchHints: ['flight controller not detected USB', 'FC driver install', 'DFU mode betaflight'],
@@ -141,12 +141,12 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
       'تأكد من إتمام Binding بين جهاز التحكم والريسيفر',
     ],
     relatedConceptIds: ['tx_rx_rule', 'flight_controller_basic', 'betaflight_basics'],
-    internalLinks: [{ label: 'درس TX/RX', route: '/lessons/lesson-9' }],
+    internalLinks: [{ label: 'درس TX/RX', route: '/lessons/lesson-tx-rx' }],
     chips: [
       { label: 'ربط الريسيفر', route: '/betaflight/receiver' },
       { label: 'قاعدة TX/RX', query: 'كيف أوصل TX و RX' },
     ],
-    lessonRedirect: '/lessons/lesson-9',
+    lessonRedirect: '/lessons/lesson-tx-rx',
     sourceSearchHints: ['ELRS binding guide', 'SBUS receiver setup betaflight', 'receiver channels not moving'],
   },
 
@@ -169,7 +169,7 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     relatedConceptIds: ['drone_build_basics', 'wiring_basics'],
     internalLinks: [],
     chips: [
-      { label: 'توصيل الكهرباء', route: '/lessons/lesson-8' },
+      { label: 'توصيل الكهرباء', route: '/lessons/lesson-power-rails' },
       { label: 'إعداد OSD', query: 'كيف أضبط OSD في Betaflight' },
     ],
     sourceSearchHints: ['VTX no signal FPV', 'FPV camera wiring', 'OSD Betaflight setup', 'DJI goggles frequency'],
@@ -221,12 +221,12 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     safetyNotes:
       'القطبية العكسية أو الشرارة أثناء التوصيل تعني short circuit — افصل فوراً. الأسلاك الساخنة تعني تيار زائد — لا تلمسها وافصل البطارية.',
     relatedConceptIds: ['flight_controller_basic', 'esc_basic', 'receiver_basic', 'tx_rx_rule'],
-    internalLinks: [{ label: 'درس الكهرباء', route: '/lessons/lesson-8' }],
+    internalLinks: [{ label: 'درس الكهرباء', route: '/lessons/lesson-power-rails' }],
     chips: [
-      { label: 'درس الكهرباء', route: '/lessons/lesson-8' },
+      { label: 'درس الكهرباء', route: '/lessons/lesson-power-rails' },
       { label: 'Checklist قبل البطارية', route: '/checklists' },
     ],
-    lessonRedirect: '/lessons/lesson-8',
+    lessonRedirect: '/lessons/lesson-power-rails',
   },
 
   // ── power_battery ─────────────────────────────────────────────────────────
@@ -247,12 +247,12 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     safetyNotes:
       'لا تشحن بطارية منتفخة. لا تترك البطارية بلا رقابة أثناء الشحن.',
     relatedConceptIds: ['lipo_safety', 'wiring_basics', 'esc_basic'],
-    internalLinks: [{ label: 'درس البطارية', route: '/lessons/lesson-10' }],
+    internalLinks: [{ label: 'درس البطارية', route: '/lessons/lesson-lipo-batteries' }],
     chips: [
-      { label: 'درس البطارية والسلامة', route: '/lessons/lesson-10' },
+      { label: 'درس البطارية والسلامة', route: '/lessons/lesson-lipo-batteries' },
       { label: 'Checklist قبل التوصيل', route: '/checklists' },
     ],
-    lessonRedirect: '/lessons/lesson-10',
+    lessonRedirect: '/lessons/lesson-lipo-batteries',
   },
 
   // ── lipo_safety ───────────────────────────────────────────────────────────
@@ -275,8 +275,8 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     safetyNotes:
       'لا تشحن بطارية LiPo منتفخة أو متضررة. لا تستخدم الماء على حريق LiPo — يزيد الاشتعال. إذا كان هناك دخان ابتعد وهوّد المكان. لا تضعها في القمامة العادية.',
     relatedConceptIds: ['power_battery', 'propeller_basic'],
-    internalLinks: [{ label: 'درس سلامة البطاريات', route: '/lessons/lesson-10' }],
-    chips: [{ label: 'درس سلامة البطاريات', route: '/lessons/lesson-10' }],
+    internalLinks: [{ label: 'درس سلامة البطاريات', route: '/lessons/lesson-pre-battery-safety' }],
+    chips: [{ label: 'درس سلامة البطاريات', route: '/lessons/lesson-pre-battery-safety' }],
     // sourceSearchHints intentionally omitted — critical safety node
   },
 
@@ -297,14 +297,14 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     ],
     relatedConceptIds: ['receiver_basic', 'flight_controller_basic', 'wiring_basics'],
     internalLinks: [
-      { label: 'درس TX/RX', route: '/lessons/lesson-9' },
+      { label: 'درس TX/RX', route: '/lessons/lesson-tx-rx' },
       { label: 'إعداد Betaflight Ports', route: '/betaflight/ports' },
     ],
     chips: [
-      { label: 'درس TX/RX', route: '/lessons/lesson-9' },
+      { label: 'درس TX/RX', route: '/lessons/lesson-tx-rx' },
       { label: 'Betaflight Ports', route: '/betaflight/ports' },
     ],
-    lessonRedirect: '/lessons/lesson-9',
+    lessonRedirect: '/lessons/lesson-tx-rx',
   },
 
   // ── betaflight_basics ─────────────────────────────────────────────────────
@@ -375,11 +375,11 @@ export const botKnowledgeBase: BotV2KnowledgeNode[] = [
     relatedConceptIds: ['drone_build_basics', 'betaflight_basics'],
     internalLinks: [
       { label: 'خريطة البناء', route: '/roadmap' },
-      { label: 'الدروس', route: '/lessons/lesson-1' },
+      { label: 'الدروس', route: '/lessons' },
     ],
     chips: [
       { label: 'ابدأ من خريطة البناء', route: '/roadmap' },
-      { label: 'افتح الدروس', route: '/lessons/lesson-1' },
+      { label: 'افتح الدروس', route: '/lessons' },
       { label: 'افتح Checklist', route: '/checklists' },
     ],
   },
