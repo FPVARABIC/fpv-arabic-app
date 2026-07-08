@@ -40,18 +40,23 @@ interface AssemblyHomeProps {
   onSelectType: (droneTypeId: string) => void;
 }
 
-// Only 'freestyle' has real part data behind it (Phase 0 scope). The other
-// five types render disabled in their locked array position — no reordering
-// by data-availability status. 2-column grid, compact cards sized so all
-// six (3 rows) fit the 390×844 viewport without scrolling — see Phase 1
-// height-budget evidence.
+// 'freestyle' and 'racing' have real, verified part data behind them —
+// every mandatory build stage populated and confirmed via a real end-to-end
+// walkthrough reaching 100% compatibility. Cinematic and Long-Range remain
+// disabled: each still has real, documented research gaps (Cinematic:
+// Motors; Long-Range: Motors, ESCs, Video Systems, Propellers) that haven't
+// been closed yet. Beginner and Cinewhoop remain disabled/out of scope.
+// The remaining locked types render disabled in their locked array
+// position — no reordering by data-availability status. 2-column grid,
+// compact cards sized so all six (3 rows) fit the 390×844 viewport without
+// scrolling — see Phase 1 height-budget evidence.
 export const AssemblyHome: React.FC<AssemblyHomeProps> = ({ onSelectType }) => (
   <div style={{ padding: 16 }}>
     <h1 style={{ fontSize: 18, fontWeight: 800, color: '#3a2e1f', margin: '4px 0 2px' }}>التجميع</h1>
     <p style={{ fontSize: 12, color: '#7a6a52', margin: '0 0 12px' }}>هنا تختار القطع المناسبة لمشروعك</p>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       {droneTypes.map(type => {
-        const isAvailable = type.id === 'freestyle';
+        const isAvailable = ['freestyle', 'racing'].includes(type.id);
         return (
           <button
             key={type.id}
