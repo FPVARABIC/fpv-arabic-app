@@ -1,5 +1,30 @@
 import type { Propeller } from '../types';
 
+// Cinematic tag on propeller-hqprop-ethix-s5-mid rests on real textual
+// evidence, not engineering judgment: its own whyChoose reads "مناسبة
+// لطيران ناعم ومستقر" (suitable for smooth AND STABLE flying) — "مستقر"
+// directly echoes the same root word droneTypes.ts itself uses to define
+// cinematic ("يركّز على الاستقرار وحمل كاميرا أثقل"). Same standard as the
+// "للتصوير" evidence that justified video-unit-dji-o4-air-unit-pro-premium's
+// cinematic tag — functionally-equivalent non-forbidden language naming the
+// type's own defining characteristic, not an inference.
+//
+// propeller-gemfan-f3s-5135-budget was considered and excluded: it shares
+// similar "ناعم" (smooth) language but without Ethix S5's explicit pairing
+// with "مستقر" (stable) as a flight-quality claim — its surrounding text
+// (motor load/heat reduction, beginner forgiveness) leans toward but
+// doesn't conclusively settle a gear-gentleness reading rather than a
+// flight-stability one. A close call, decided on the strength/
+// completeness of the evidence, not because the two products mean
+// fundamentally different things.
+//
+// No racing tag added in this file: propeller-gemfan-hurricane-51466-v2-mck-
+// premium was considered as an engineering-judgment candidate (aggressive-
+// flying language, paired with the same 2207/2306 motors already tagged
+// racing) but rejected — real-world competitive racing prop selection often
+// diverges from aggressive-freestyle prop selection in ways that don't
+// apply to motor/KV choice, so the same judgment basis used for Motors
+// doesn't transfer cleanly here. Remains deferred.
 export const propellers: Propeller[] = [
   {
     id: 'propeller-gemfan-f3s-5135-budget',
@@ -30,7 +55,7 @@ export const propellers: Propeller[] = [
     brand: 'HQProp',
     priceRangeUSD: [4, 6],
     specs: { sizeInch: 5, pitchInch: 4, bladeCount: 3, material: 'PC', weightG: 3.7 },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6], frameSizeInch: 5 },
+    compatibilityTags: { droneTypes: ['freestyle', 'cinematic'], batteryVoltages: [4, 6], frameSizeInch: 5 },
     whyChoose: 'مروحة HQ/Ethix موثقة: 5 إنش، Pitch 4، 3 شفرات، PC، وزن ~3.7g؛ مناسبة لطيران ناعم ومستقر.',
     notFor: 'لا تختارها إذا تريد أقصى punch في سباقات قصيرة.',
     upgradePath: 'Gemfan Hurricane 51466 V2 MCK',
