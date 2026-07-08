@@ -7,6 +7,18 @@ import type { VideoSystem } from '../types';
 // evidentiary standard already used for video-unit-dji-o4-air-unit-pro-
 // premium's cinematic tag (its own "للتصوير" claim).
 //
+// Racing tags on video-system-analog-58ghz-budget and video-system-hdzero-
+// mid rest on the same real-evidence standard as the cinematic tag above,
+// not engineering judgment:
+// - video-system-analog-58ghz-budget whyChoose: "أفضل خيار رخيص للتعلم
+//   والسباقات والتجارب الخشنة" — explicit, direct racing evidence.
+// - video-system-hdzero-mid buildNotes: "مناسب للسباق والطيران الحر مع
+//   latency منخفض" — explicit, direct racing evidence.
+// Both were previously listed below as "excluded" from the cinematic
+// decision specifically — that exclusion (correct, and unchanged) was
+// about cinematic, not racing; their own text argues the opposite case for
+// racing, which is why they're tagged here despite being rejected there.
+//
 // The other 3 systems were considered and excluded, not silently skipped:
 //
 // - video-system-analog-58ghz-budget: explicitly disqualified, twice over.
@@ -41,7 +53,7 @@ export const videoSystems: VideoSystem[] = [
     priceRangeUSD: [40, 120],
     protocolOrSystem: 'Analog',
     specs: { systemType: 'analog', frequencyBand: '5.8GHz' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل خيار رخيص للتعلم والسباقات والتجارب الخشنة.',
     notFor: 'لا تختاره إذا تريد جودة صورة HD أو تسجيل عالي داخل الوحدة.',
     upgradePath: 'HDZero إذا تريد latency منخفض مع HD',
@@ -62,7 +74,7 @@ export const videoSystems: VideoSystem[] = [
     priceRangeUSD: [170, 600],
     protocolOrSystem: 'HDZero',
     specs: { systemType: 'digital' },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [4, 6] },
     whyChoose: 'اختيار قوي لمن يهمه زمن الاستجابة أكثر من أعلى جودة صورة ممكنة من DJI.',
     notFor: 'لا تختاره إذا تريد أفضل جودة تسجيل داخلية مثل DJI O4 Pro.',
     upgradePath: 'DJI O4 إذا تريد جودة صورة أعلى',
