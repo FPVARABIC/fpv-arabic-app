@@ -25,8 +25,8 @@ export const droneTypes: DroneType[] = [
     primaryName: 'Cinematic',
     nameEn: 'Cinematic',
     frameSizeInch: 5,
-    description: 'بناء مخصص للتصوير الـCinematic الناعم، يركّز على الاستقرار وحمل كاميرا أثقل بدلاً من السرعة أو المناورات الحادة.',
-    recommendedBatteryVoltages: [3], // TODO: Ahmed will review
+    description: 'بناء مخصص للتصوير الناعم، يركّز على الاستقرار وحمل كاميرا أثقل بدلاً من السرعة أو المناورات الحادة.',
+    recommendedBatteryVoltages: [4, 6],
     imagePath: '/assets/assembly/drone-types/cinematic.png',
   },
   {
@@ -35,7 +35,7 @@ export const droneTypes: DroneType[] = [
     nameAr: 'مدى طويل',
     frameSizeInch: 7,
     description: 'بناء موجّه للرحلات الطويلة والمسافات البعيدة، يعتمد على كفاءة الطاقة وأنظمة اتصال قوية بدلاً من الأداء الحاد.',
-    recommendedBatteryVoltages: [6], // TODO: Ahmed will review
+    recommendedBatteryVoltages: [6],
     imagePath: '/assets/assembly/drone-types/long-range.png',
   },
   {
@@ -53,7 +53,7 @@ export const droneTypes: DroneType[] = [
     nameAr: 'سباقات',
     frameSizeInch: 5,
     description: 'بناء مخصص لسباقات الأداء العالي، يركّز على السرعة والاستجابة السريعة أكثر من حمل الكاميرا أو الاستقرار.',
-    recommendedBatteryVoltages: [4, 6], // TODO: Ahmed will review
+    recommendedBatteryVoltages: [4, 6],
     imagePath: '/assets/assembly/drone-types/racing.png',
   },
 ];
