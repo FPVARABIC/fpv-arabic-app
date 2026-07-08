@@ -1,5 +1,13 @@
 import type { Receiver } from '../types';
 
+// Engineering-judgment droneTypes additions (racing/cinematic on the 3 ELRS
+// entries below): ELRS 2.4GHz is electrically well-suited to short/mid-range
+// use regardless of whether each product's own text mentions either term —
+// a conscious protocol-based decision, not inferred from prose. This is
+// distinct from the two TBS Crossfire entries' long-range tag, which rests
+// on actual researched text (see their whyChoose/beginnerNotes) — those two
+// entries previously carried an incorrect 'freestyle' tag despite their own
+// text explicitly disclaiming freestyle use; corrected to 'long-range' only.
 export const receivers: Receiver[] = [
   {
     id: 'receiver-radiomaster-rp1-v2-budget',
@@ -10,7 +18,7 @@ export const receivers: Receiver[] = [
     priceRangeUSD: [15, 22],
     protocolOrSystem: 'ELRS 2.4GHz / CRSF',
     specs: { protocol: 'ExpressLRS', frequencyGHz: 2.4, weightG: 2.2, hasTelemetry: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic'], batteryVoltages: [4, 6] },
     whyChoose: 'مستقبل صغير وموثوق ومناسب لمعظم بنايات 5 إنش مع ELRS.',
     notFor: 'لا تختاره إذا تريد Diversity حقيقي أو مدى طويل جداً 868/915MHz.',
     upgradePath: 'Happymodel EP1 Dual TCXO',
@@ -32,7 +40,7 @@ export const receivers: Receiver[] = [
     priceRangeUSD: [11, 17],
     protocolOrSystem: 'ELRS 2.4GHz / CRSF',
     specs: { protocol: 'ExpressLRS', frequencyGHz: 2.4, weightG: 0.7, hasTelemetry: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic'], batteryVoltages: [4, 6] },
     whyChoose: 'رخيص وخفيف ومناسب لبناء اقتصادي إذا أردت ELRS بدون تعقيد.',
     notFor: 'لا تختاره إذا تحتاج TCXO أو Diversity أو توثيق مصنع أوسع.',
     upgradePath: 'RadioMaster RP1 V2',
@@ -54,7 +62,7 @@ export const receivers: Receiver[] = [
     priceRangeUSD: [22, 32],
     protocolOrSystem: 'ELRS 2.4GHz Diversity / CRSF',
     specs: { protocol: 'ExpressLRS', frequencyGHz: 2.4, weightG: 1, hasTelemetry: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic'], batteryVoltages: [4, 6] },
     whyChoose: 'اختيار أقوى لمن يريد استقبالاً أكثر ثباتاً من Nano receiver عادي.',
     notFor: 'لا تختاره إن كان الوزن والمساحة أهم من الثبات، مثل micro build ضيق جداً.',
     upgradePath: 'RadioMaster RP1 V2 إذا تريد أبسط وأخف',
@@ -76,7 +84,7 @@ export const receivers: Receiver[] = [
     priceRangeUSD: [30, 40],
     protocolOrSystem: 'Crossfire / CRSF',
     specs: { protocol: 'Crossfire', weightG: 0.5, hasTelemetry: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'خيار معروف للمدى الطويل ومناسب لمن يملك نظام Crossfire أصلاً.',
     notFor: 'لا تختاره إذا نظامك كله ELRS 2.4GHz ولا تريد شراء ecosystem جديد.',
     upgradePath: 'TBS Crossfire Diversity Nano RX',
@@ -98,7 +106,7 @@ export const receivers: Receiver[] = [
     priceRangeUSD: [45, 60],
     protocolOrSystem: 'Crossfire Diversity / CRSF',
     specs: { protocol: 'Crossfire', weightG: 1.8, hasTelemetry: true },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل من Nano RX العادي عندما تريد ثباتاً أعلى في مسارات طويلة.',
     notFor: 'لا تختاره إن كان كل هدفك الطيران الحر القريب؛ التكلفة والهوائيات أكبر من اللازم.',
     upgradePath: 'ELRS Diversity مثل EP1 Dual إذا تريد 2.4GHz',
