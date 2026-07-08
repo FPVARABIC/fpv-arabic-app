@@ -183,15 +183,35 @@ export const QuadcopterLauncher: React.FC = () => {
     window.addEventListener('mouseup', onEndRef.current);
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
-    if (!position) return;
+  // React delegates `onTouchStart` through a root-level listener registered
+  // *passive* (a scroll-perf default since React 17) — calling preventDefault()
+  // there is silently ignored by the browser ("Unable to preventDefault inside
+  // passive event listener invocation"), so the native touchstart/touchend
+  // pair still isn't suppressed and the browser follows up with synthetic
+  // compatibility mousedown/mouseup ~8ms later, hitting the same shared
+  // onEndRef and toggling the bot a second time. Attaching touchstart natively
+  // with { passive: false } is the only way to make preventDefault effective.
+  // A callback ref (not useEffect) is required here: this component returns
+  // null on its first render (position starts null until the mount effect
+  // runs), so a ref-attaching effect with `[]` deps would fire once against
+  // buttonRef.current === null and never attach anything. A callback ref is
+  // invoked by React exactly when the underlying DOM node itself changes.
+  const nativeTouchStartHandler = useRef((e: TouchEvent) => {
+    e.preventDefault();
     hasDragged.current = false;
     setIsDragging(true);
     const t = e.touches[0];
-    dragStart.current = { clientX: t.clientX, clientY: t.clientY, posX: position.x, posY: position.y };
+    dragStart.current = { clientX: t.clientX, clientY: t.clientY, posX: posRef.current.x, posY: posRef.current.y };
     window.addEventListener('touchmove', onTouchMoveRef.current, { passive: true });
     window.addEventListener('touchend', onEndRef.current);
-  };
+  });
+
+  const buttonElRef = useRef<HTMLButtonElement | null>(null);
+  const buttonCallbackRef = useCallback((el: HTMLButtonElement | null) => {
+    buttonElRef.current?.removeEventListener('touchstart', nativeTouchStartHandler.current);
+    buttonElRef.current = el;
+    el?.addEventListener('touchstart', nativeTouchStartHandler.current, { passive: false });
+  }, []);
 
   if (pathname === '/bot') return null;
   if (!position) return null;
@@ -249,8 +269,8 @@ export const QuadcopterLauncher: React.FC = () => {
         <CometRing idle={idle} />
         {/* Button: absolute within wrapper */}
         <button
+          ref={buttonCallbackRef}
           onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
           aria-label={isOpen ? 'إغلاق مساعد FPV' : 'فتح مساعد FPV'}
           aria-expanded={isOpen}
           className="press"
