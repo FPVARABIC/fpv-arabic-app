@@ -29,7 +29,8 @@ export function validateEscBattery(esc: Esc, battery: Battery): CompatibilityRes
 }
 
 export function validateFramePropeller(frame: Frame, propeller: Propeller): CompatibilityResult {
-  if (propeller.specs.sizeInch > frame.specs.sizeInch) {
+  const maxSize = frame.specs.maxPropSizeInch ?? frame.specs.sizeInch;
+  if (propeller.specs.sizeInch > maxSize) {
     return { isCompatible: false, reasonAr: 'مقاس المروحة أكبر من المساحة المتاحة في هذا الإطار' };
   }
   return { isCompatible: true };

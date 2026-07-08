@@ -83,6 +83,7 @@ export interface FrameSpec {
   material?: string;
   weightG?: number;
   stackSizeMm?: string; // e.g. '30.5x30.5 / 25.5x25.5 / 20x20' — FC/ESC stack mounting pattern(s) this frame supports
+  maxPropSizeInch?: number; // real documented max propeller clearance, when it differs from the frame's nominal sizeInch label — leave undefined when no such figure is documented
 }
 export interface Frame extends BasePart {
   specs: FrameSpec;
