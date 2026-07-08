@@ -1,5 +1,12 @@
 import type { Tool } from '../types';
 
+// Engineering-judgment droneTypes additions (racing/cinematic/long-range on
+// all 3 entries below): these are build/maintenance tools (soldering iron,
+// multimeter, hex drivers), not flight hardware — the physical act of
+// soldering an ESC or checking continuity is identical regardless of the
+// airframe's flight purpose. A conscious engineering decision, not inferred
+// from prose — none of the 3 entries' own researched text mentions any of
+// these three drone types.
 export const tools: Tool[] = [
   {
     id: 'tool-starter-fpv-tool-kit-budget',
@@ -8,7 +15,7 @@ export const tools: Tool[] = [
     nameEn: 'Starter FPV Tool Kit',
     priceRangeUSD: [50, 80],
     specs: { isMandatory: true, usedForStages: ['stage-16'] },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'حزمة دخول تكفي لأول build إذا كانت الكاوية حقيقية وليست ضعيفة جداً.',
     notFor: 'لا تختار kit رخيص بلا Smoke Stopper أو كاوية لا تضبط الحرارة.',
     lastReviewed: '2026-07',
@@ -26,7 +33,7 @@ export const tools: Tool[] = [
     nameEn: 'Reliable Builder Kit',
     priceRangeUSD: [100, 160],
     specs: { isMandatory: true, usedForStages: ['stage-16'] },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'حزمة ممتازة لمن سيبني أكثر من درون واحد ويحتاج لحام نظيف.',
     notFor: 'لا تختارها إذا ستشتري كل أداة مرة واحدة بدون معرفة استخدامها.',
     lastReviewed: '2026-07',
@@ -44,7 +51,7 @@ export const tools: Tool[] = [
     nameEn: 'Workshop FPV Kit',
     priceRangeUSD: [220, 400],
     specs: { isMandatory: true, usedForStages: ['stage-16'] },
-    compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'لمن يريد ورشة حقيقية وصيانة مستمرة لا مجرد build واحد. تنبيه هام: هذه الحزمة لا تتضمن Smoke Stopper — يجب إضافته بشكل منفصل قبل أول تشغيل.',
     notFor: 'لا تختارها كمبتدئ قبل أن تثبت أنك ستستمر في الهواية.',
     lastReviewed: '2026-07',
