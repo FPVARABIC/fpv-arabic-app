@@ -324,7 +324,7 @@ export interface Capacitor extends BasePart {
 // isMandatory: true for all 3 kit-bundle entries reflects the ORIGINAL
 // locked Assembly master design (every builder needs at least one tool
 // kit) — not derived from this research sheet, which has no
-// mandatory/optional column at all for tools. usedForStages: ['stage-16']
+// mandatory/optional column at all for tools. usedForStages: ['stage-15']
 // for all 3 — kits serve the whole Tools stage collectively, not one
 // granular sub-task; this is an honest broad statement, not fabricated
 // per-tool stage precision the source doesn't provide.

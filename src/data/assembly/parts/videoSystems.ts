@@ -1,5 +1,12 @@
 import type { VideoSystem } from '../types';
 
+// NOT WIRED TO ANY STAGE: this category's stage was merged away — the
+// build flow's single video stage (stage-3 in buildStages.ts) now selects
+// directly from videoUnits.ts. This file is kept as a data/evidence
+// archive (the researched comparative trade-offs and tag decisions below
+// remain real and documented), not as live flow data; nothing imports it,
+// so it drops out of the app bundle.
+//
 // Cinematic tag on video-system-dji-o4-premium rests on real textual
 // evidence: its own whyChoose reads "أفضل خيار جودة صورة وتجربة جاهزة
 // لكثير من المستخدمين" — an explicit, direct superiority claim on image

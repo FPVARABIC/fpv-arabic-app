@@ -7,7 +7,6 @@ import { motors } from '../../data/assembly/parts/motors';
 import { escs } from '../../data/assembly/parts/escs';
 import { flightControllers } from '../../data/assembly/parts/flightControllers';
 import { receivers } from '../../data/assembly/parts/receivers';
-import { videoSystems } from '../../data/assembly/parts/videoSystems';
 import { videoUnits } from '../../data/assembly/parts/videoUnits';
 import { gps } from '../../data/assembly/parts/gps';
 import { buzzers } from '../../data/assembly/parts/buzzers';
@@ -23,12 +22,12 @@ import { useAssemblyBuild } from './hooks/useAssemblyBuild';
 import type { BasePart } from '../../data/assembly/types';
 
 const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
-  frames, motors, escs, flightControllers, receivers, videoSystems, videoUnits,
+  frames, motors, escs, flightControllers, receivers, videoUnits,
   gps, buzzers, capacitors, propellers, batteries, tools,
 };
 
 // Every part category a build cannot be completed without — i.e. all
-// part-backed stages except GPS (stage-11), the only optional one. Stage-4
+// part-backed stages except GPS (stage-10), the only optional one. Stage-4
 // only offers a battery voltage when EVERY one of these categories has at
 // least one part tagged for the current drone type at that voltage;
 // otherwise picking it would guarantee an empty, un-passable stage later
@@ -121,7 +120,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
     </button>
   );
 
-  if (stage.id === 'stage-17') {
+  if (stage.id === 'stage-16') {
     return (
       <div>
         <ChangeTypeLink />
@@ -130,7 +129,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
     );
   }
 
-  if (stage.id === 'stage-18' || stage.id === 'stage-19') {
+  if (stage.id === 'stage-17' || stage.id === 'stage-18') {
     return (
       <div>
         <ChangeTypeLink />
@@ -139,7 +138,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
         <StageNavigation
           canGoPrev
           canGoNext={stageIndex < totalStages - 1}
-          isLastStage={stage.id === 'stage-19'}
+          isLastStage={stage.id === 'stage-18'}
           onPrev={goPrev}
           onNext={goNext}
         />

@@ -1,4 +1,4 @@
-import type { Frame, Motor, Esc, Battery, Propeller, VideoSystem, VideoUnit } from '../types';
+import type { Frame, Motor, Esc, Battery, Propeller } from '../types';
 
 export interface CompatibilityResult {
   isCompatible: boolean;
@@ -47,16 +47,8 @@ export function validateFramePropeller(frame: Frame, propeller: Propeller): Comp
   return { isCompatible: true };
 }
 
-export function validateVideoSystemVideoUnit(videoSystem: VideoSystem, videoUnit: VideoUnit): CompatibilityResult {
-  if (
-    videoSystem.protocolOrSystem &&
-    videoUnit.protocolOrSystem &&
-    videoSystem.protocolOrSystem !== videoUnit.protocolOrSystem
-  ) {
-    return {
-      isCompatible: false,
-      reasonAr: 'نظارات/نظام الفيديو المختار لا يعرض وحدة الفيديو هذه؛ اختر وحدة من نفس النظام (DJI/Walksnail/HDZero/Analog).',
-    };
-  }
-  return { isCompatible: true };
-}
+// validateVideoSystemVideoUnit was removed with the video-stage merge: the
+// separate videoSystems selection it cross-checked no longer exists (users
+// now pick the concrete video unit directly at stage-3), and the validator
+// was never wired into buildReport.ts anyway. The goggles-must-match-system
+// guardrail it encoded lives in stage-3's descriptionAr instead.

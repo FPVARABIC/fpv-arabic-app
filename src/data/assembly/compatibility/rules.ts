@@ -5,8 +5,7 @@ export type CompatibilityRuleId =
   | 'frame-motor-size'
   | 'motor-battery-voltage'
   | 'esc-battery-voltage'
-  | 'frame-propeller-size'
-  | 'video-system-video-unit';
+  | 'frame-propeller-size';
 
 export interface CompatibilityRule {
   id: CompatibilityRuleId;
@@ -36,9 +35,8 @@ export const compatibilityRules: CompatibilityRule[] = [
     descriptionAr: 'لا تركب مروحة أكبر من المقاس الذي يدعمه الفريم صراحة؛ الخلوص قد يختفي أثناء الاهتزاز أو التصادم، والمقاس القريب (مثل 5.5 إنش على فريم 5 إنش عادي) لا يكفي دون دعم فريم صريح لذلك المقاس تحديداً.',
     categoriesInvolved: ['frames', 'propellers'],
   },
-  {
-    id: 'video-system-video-unit',
-    descriptionAr: 'نظارات/نظام الفيديو المختار يجب أن يطابق وحدة الفيديو (DJI مع DJI، Walksnail مع Walksnail، وهكذا)؛ نظارة نظام واحد لا تعرض وحدة من نظام آخر مباشرة.',
-    categoriesInvolved: ['videoSystems', 'videoUnits'],
-  },
+  // The 'video-system-video-unit' rule was removed with the video-stage
+  // merge: there is no separate videoSystems selection to cross-check
+  // anymore. Its goggles-must-match-system guidance moved into the merged
+  // stage-3's descriptionAr in buildStages.ts.
 ];
