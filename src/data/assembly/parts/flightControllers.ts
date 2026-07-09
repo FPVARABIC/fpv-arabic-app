@@ -35,6 +35,11 @@ export const flightControllers: FlightController[] = [
     upgradePath: 'Holybro Kakute H7 V2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'قيمة ممتازة لأول بناء — Bluetooth وموصل DJI جاهز',
+      noteTag: 'النطاق السعري للوحة وحدها أو Stack كامل — تأكد ماذا تشتري',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['ممتاز لأول بناء لأنه يقلل تعقيد التوصيل عند استخدام Stack كامل.'],
     safetyNotes: ['لا تفترض أن كابل DJI/O4 pinout متطابق دائماً؛ راجع مخطط اللوحة والوحدة قبل التشغيل.'],
     buildNotes: [
@@ -56,6 +61,11 @@ export const flightControllers: FlightController[] = [
     upgradePath: 'Holybro Kakute H7 V2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'F7 موثوقة — Blackbox 16MB وBEC قوي',
+      noteTag: 'أكثر من نسخة مقاس (30x30/mini) — تأكد قبل الشراء',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب لمن تجاوز أول بناء ويريد FC أقوى من F405.'],
     safetyNotes: ['خطأ شائع: توصيل TX مع TX أو RX مع RX؛ الصحيح TX إلى RX والعكس.'],
     buildNotes: [
@@ -77,6 +87,11 @@ export const flightControllers: FlightController[] = [
     upgradePath: 'Matek H743-SLIM V3',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'H7 قوية — 128MB logging ودعم 2-8S',
+      noteTag: '6 UART قد تضيق بمزيج مدى طويل كامل — Matek تعطي 7',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['اختيار قوي لمن يريد بناء قابل للتوسع لاحقاً.'],
     safetyNotes: ['احذر من توزيع UART عشوائياً؛ وثّق كل منفذ قبل اللحام.'],
     buildNotes: [
@@ -98,6 +113,11 @@ export const flightControllers: FlightController[] = [
     upgradePath: 'Holybro Kakute H7 V2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'الأكثر توسعاً — 7 UART وCAN وINAV/ArduPilot',
+      noteTag: 'دعم DJI يدوي (MSP/UART) — ليس plug-and-play',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب للمتقدمين الذين يفهمون pinout والتوزيع الكهربائي.'],
     safetyNotes: ['لا توصل VBAT/5V عشوائياً؛ راجع جهد كل طرفية قبل التشغيل.'],
     buildNotes: [
