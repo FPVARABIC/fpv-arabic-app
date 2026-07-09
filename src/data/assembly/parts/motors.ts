@@ -27,6 +27,15 @@ import type { Motor } from '../types';
 // an explicit 5.5" claim. None of the other 3 motors make this claim (they
 // only say "5 إنش"), so none of them get this field — a real gap, not
 // silently extended by similarity to the EMAX entry.
+//
+// motor-emax-e3-2808-1300kv-premium was added as a new, dedicated
+// long-range entry: its own real product text states it is "designed for
+// long-range and cinematic FPV drones... ideal for 7\" prop setups" — a
+// direct, first-party claim. frameSizeInch: 7 is an exact match against
+// the long-range frame's (GEPRC MOZ7 V2) own sizeInch: 7, not a tolerance
+// case. Its documented 56A peak current at 6S is the same real figure
+// that justified adding a dedicated long-range ESC (SEQURE Blueson A2
+// 65A) rather than extending the existing 3 ESCs' tags.
 export const motors: Motor[] = [
   {
     id: 'motor-emax-eco-ii-2306-budget',
@@ -137,6 +146,28 @@ export const motors: Motor[] = [
       'عدد الأقطاب: 14 قطباً — مرجع لازم لضبط RPM filter في Betaflight بدقة.',
       'ملاحظة مروحة: النص المصدري يذكر توافقاً حتى مراوح 6 إنش (مع ضبط Motor Output Limit في Betaflight) — أكبر من مروحة Cinematic الحالية في القاعدة (Ethix S5، 5 إنش). لا يمنع هذا استخدام المحرك مع مروحة 5 إنش؛ 1750KV هي الأساس الفعلي لملاءمته لبناء تصويري 5 إنش، لا تصنيف المروحة الأقصى المذكور.',
       'ملاحظة سعر: لم يُعثر على سعر مؤكد من أي مصدر رغم عدة محاولات بحث؛ تُرك priceRangeUSD فارغاً بدل اختراع رقم.',
+    ],
+  },
+  {
+    id: 'motor-emax-e3-2808-1300kv-premium',
+    tier: 'premium',
+    nameAr: 'محرك 2808 - احترافي',
+    nameEn: 'EMAX E3 Series 2808 Motor 1300KV',
+    brand: 'EMAX',
+    specs: { kv: 1300, statorSize: '2808', weightG: 53.6, shaftDiameterMm: 5, compatibleVoltages: [3, 4, 5, 6] },
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6], frameSizeInch: 7 },
+    whyChoose: 'المسمى الرسمي من الشركة المصنعة: "مصمم لطائرات FPV مدى طويل...، مثالي لإعدادات مراوح 7 إنش" — ادعاء مباشر من الشركة نفسها. مغناطيس N52SH قوسي، محامل NSK يابانية، جسم ألمنيوم، 12N14P (12 سن ستاتور/14 قطباً)، عمود 5mm.',
+    notFor: 'لا تختاره لبناء 5 إنش عادي؛ 1300KV منخفض جداً لهذا الحجم ومصمم خصيصاً لمراوح 6-7 إنش.',
+    upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
+    lastReviewed: '2026-07',
+    confidence: 'مؤكد',
+    beginnerNotes: ['ليس اختياراً لأول بناء؛ يفترض فهم مشاريع مدى طويل ومراوح 7 إنش تحديداً.'],
+    safetyNotes: ['راقب حرارة المحرك عند الرحلات الطويلة المستمرة؛ ذروة تيار 56A عند 6S تحتاج ESC بهامش حقيقي.'],
+    buildNotes: [
+      'مقاس التركيب: 19×19mm — ملاحظة: إطار GEPRC MOZ7 V2 (المُتاح حالياً لمدى طويل) لا يوثّق مقاس تركيب المحرك في بياناته الحالية؛ هذا المقاس حقيقي لهذا المحرك تحديداً وليس تأكيداً متبادلاً مع الإطار.',
+      'الأبعاد: Ø34.8×37mm. الوزن: 53.6g بدون أسلاك.',
+      'ذروة تيار 56A عند 6S — نفس الرقم المعتمد في قرار إضافة SEQURE Blueson A2 65A كـESC مدى طويل.',
+      'ملاحظة سعر: سعر رسمي واحد فقط من EMAX مباشرة ($23.99) تكرر عبر عدة عمليات بحث دون نطاق حقيقي من مصادر متعددة مختلفة السعر؛ تُرك priceRangeUSD فارغاً بدل افتراض نطاق.',
     ],
   },
 ];
