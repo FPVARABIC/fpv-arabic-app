@@ -55,6 +55,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'DJI O4 Air Unit Pro',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أخف وحدة DJI حديثة (~8.2g)',
+      noteTag: 'ليست للباحث عن كاميرا Pro أو تسجيل أعلى',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسبة لمن يريد DJI حديث بأقل وزن.'],
     safetyNotes: ['لا تشغلها مدة طويلة بلا تبريد.'],
     buildNotes: [
@@ -78,6 +83,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'DJI O4 Air Unit',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أفضل جودة صورة DJI — مناسب للتصوير',
+      noteTag: 'ثقيلة نسبياً (32g) — ليست للبناء الخفيف',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ممتازة إن كانت جودة الفيديو أهم من الوزن.'],
     safetyNotes: ['تبريد إلزامي عند الإعداد على الطاولة.'],
     buildNotes: [
@@ -101,6 +111,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'DJI O4 Air Unit',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'HD بسعر أقل من DJI وأداء ليلي جيد',
+      noteTag: 'ليست لمن عتاده نظارات DJI فقط',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['حل HD جيد للطيار المتوسط.'],
     safetyNotes: ['لا تشغل VTX بلا هوائي أو تبريد.'],
     buildNotes: [
@@ -124,6 +139,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'HDZero Race VTX أو DJI O4 حسب الهدف',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أقل latency — HDZero لمقاسات 3-5 إنش',
+      noteTag: 'وحدة VTX فقط — تحتاج كاميرا FPV منفصلة',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['مناسب لمن يطير سباقات أو طيران حر ويهتم بالاستجابة.'],
     safetyNotes: ['لا تستخدم قنوات/قدرة غير مسموحة في بلدك.'],
     buildNotes: [
@@ -147,6 +167,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'Rush Tank Solo أو Foxeer Reaper V2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Analog موثوق للطيران الحر/مدى طويل (1000+mW)',
+      noteTag: 'وحدة VTX فقط — تحتاج كاميرا FPV منفصلة',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['ممتاز إذا أردت analog عالي الجودة.'],
     safetyNotes: ['لا تشغله بدون هوائي أبداً.'],
     buildNotes: [
@@ -170,6 +195,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'TBS Unify Pro32 HV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Analog قوي متين للطيران الحر',
+      noteTag: 'حجمه/وزنه ليس الأصغر — مزعج على فريم صغير',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار جيد لمن يريد analog قوي وسهل.'],
     safetyNotes: ['لا تشغل القدرة العالية بلا تبريد/هوائي.'],
     buildNotes: [
@@ -193,6 +223,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'DJI O4 Air Unit',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'خيار DJI موثق لمن يملك عتاد O3 أصلاً',
+      noteTag: 'ليس لمن يبدأ من الصفر — O4 أحدث وأخف',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['خيار جيد إذا كان متوفراً بسعر منخفض أو لديك عتاد DJI O3 أصلاً.'],
     safetyNotes: ['استخدم 9V/10V BEC مناسب ولا تغذّي الوحدة من مصدر غير موثق.'],
     buildNotes: [
@@ -215,6 +250,11 @@ export const videoUnits: VideoUnit[] = [
     upgradePath: 'لا يوجد حالياً بديل أعلى قدرة موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'وحدة "Long Range" رسمياً — حتى 1000mW بمروحة تبريد',
+      noteTag: 'دعم SmartAudio غير مؤكد — التحكم عبر OSD/Tramp',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ تفترض احتياج مدى طويل حقيقي لا مجرد طيران حر عادي.'],
     safetyNotes: ['لا تشغلها بدون هوائي؛ احترم قوانين القدرة المسموحة في بلدك خاصة عند استخدام 800-1000mW.'],
     buildNotes: [
