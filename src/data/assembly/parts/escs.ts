@@ -31,6 +31,11 @@ export const escs: Esc[] = [
     upgradePath: 'T-Motor F55A Pro II 55A',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'اقتصادي قوي — 55A مستمر ومكثف Low ESR مرفق',
+      noteTag: 'BLHeli_S فقط — لا BLHeli_32/AM32 ولا telemetry متقدم',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب جداً مع SpeedyBee F405 Stack لأول بناء جاد.'],
     safetyNotes: ['لا تلحم البطارية قبل تركيب مكثف Low ESR وفحص Smoke Stopper.'],
     buildNotes: [
@@ -53,6 +58,11 @@ export const escs: Esc[] = [
     upgradePath: 'Hobbywing XRotor Micro 60A 4in1',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'موثوق 55A/75A burst لبناء 5 إنش قوي',
+      noteTag: 'نسخة firmware تختلف حسب SKU — تأكد قبل الشراء',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['خيار ترقية ممتاز لمن يريد ثباتاً أعلى في التيار.'],
     safetyNotes: ['تأكد من نسخة firmware الفعلية قبل الشراء، لأن صفحات السوق تختلف في تسمية F55A Pro II.'],
     buildNotes: [
@@ -75,6 +85,11 @@ export const escs: Esc[] = [
     upgradePath: 'T-Motor F55A Pro II 55A',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '60A BLHeli_32 مع BEC 5V مدمج',
+      noteTag: 'لا يناسب فريمات ستاك 20×20 الصغيرة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار مناسب لمن يريد تقليل خطر احتراق ESC في بناء قوي.'],
     safetyNotes: ['لا تختبر المحركات بمراوح مركبة داخل المنزل.'],
     buildNotes: [
@@ -96,6 +111,11 @@ export const escs: Esc[] = [
     upgradePath: 'لا يوجد حالياً بديل أعلى تياراً موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '65A/120A — هامش حقيقي لمحرك المدى الطويل',
+      noteTag: 'تصنيف "مدى طويل" هندسي بالأرقام — ليس ادعاء الشركة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ 65A/120A أعلى مما يحتاجه بناء بسيط، وهامشها الحقيقي مخصص لمحركات مدى طويل عالية التيار تحديداً.'],
     safetyNotes: ['لا تلحم البطارية قبل التأكد من التبريد ومن توافق الجهد (2-6S)؛ راجع إعدادات AM32 قبل أول تشغيل.'],
     buildNotes: [
