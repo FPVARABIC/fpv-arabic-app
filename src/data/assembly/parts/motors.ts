@@ -51,6 +51,11 @@ export const motors: Motor[] = [
     upgradePath: 'iFlight XING2 2207 1750KV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'اقتصادي خفيف (~30.4g) — يدعم مراوح 5-5.5 إنش',
+      noteTag: 'ليس الأخف ولا الأنعم — انتبه لاختيار KV مع 6S',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار جيد لأول بناء بشرط اختيار KV مناسب للبطارية.'],
     safetyNotes: ['اختبر اتجاه المحركات بدون مراوح أولاً، ولا تركب مروحة أثناء إعداد Betaflight.'],
     buildNotes: [
@@ -73,6 +78,11 @@ export const motors: Motor[] = [
     upgradePath: 'RCinPower Wasp Major 22.6-6.5 1860KV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'T-Motor موثوق لـ5 إنش 6S — ذروة ~34.6A',
+      noteTag: 'وزنه (~37.3g) أعلى من بعض المنافسين',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب لمن يريد اسم موثوق وسعر غير مبالغ.'],
     safetyNotes: ['استخدم براغي مناسبة الطول حتى لا تخترق ملفات الستاتور.'],
     buildNotes: [
@@ -95,6 +105,11 @@ export const motors: Motor[] = [
     upgradePath: 'RCinPower Wasp Major 22.6-6.5 1860KV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'متوازن جداً لـ5 إنش 6S — خفيف (30.5g)',
+      noteTag: 'ليس الأرخص — وانتبه لضيق الفريم على أسلاكه',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['من أفضل خيارات الترقية من محرك اقتصادي إلى مستوى موثوق.'],
     safetyNotes: ['لا تخلط KV مختلف بين المحركات الأربعة.'],
     buildNotes: [
@@ -117,6 +132,11 @@ export const motors: Motor[] = [
     upgradePath: 'iFlight XING2 2207 1750KV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'قوي وخفيف نسبياً (1860KV) للطيران الحر',
+      noteTag: 'ليس لميزانية محدودة أو ESC ضعيف',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار ترقية ممتاز بعد فهم إدارة الحرارة والـ prop load.'],
     safetyNotes: ['راقب حرارة المحرك بعد تغييرات المراوح أو الـ tune.'],
     buildNotes: [
@@ -138,6 +158,11 @@ export const motors: Motor[] = [
     upgradePath: 'لا يوجد حالياً بديل آخر مخصص لهذا الاستخدام موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Ring Magnet لاهتزاز أقل — "Cinematic" رسمياً',
+      noteTag: 'سعره غير مؤكد — وبدائل أرخص موثقة السعر متاحة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ الميزة الأساسية (Ring Magnet) تفيد تحديداً من يريد نعومة تصوير أعلى، لا بناء بسيط عام.'],
     safetyNotes: ['استخدم عزم ربط مناسباً لبراغي M5 ولا تفرط في الشد؛ اختبر اتجاه الدوران بدون مراوح أولاً.'],
     buildNotes: [
@@ -161,6 +186,11 @@ export const motors: Motor[] = [
     upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'مصمم رسمياً للمدى الطويل — مثالي لمراوح 7 إنش',
+      noteTag: '1300KV منخفض جداً لبناء 5 إنش عادي',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليس اختياراً لأول بناء؛ يفترض فهم مشاريع مدى طويل ومراوح 7 إنش تحديداً.'],
     safetyNotes: ['راقب حرارة المحرك عند الرحلات الطويلة المستمرة؛ ذروة تيار 56A عند 6S تحتاج ESC بهامش حقيقي.'],
     buildNotes: [
