@@ -44,12 +44,15 @@ interface AssemblyHomeProps {
 // verified part data behind them — every mandatory build stage populated
 // and confirmed via a real end-to-end walkthrough reaching 100%
 // compatibility for each (Racing re-confirmed unchanged after the later
-// Cinematic/Long-Range research additions touched shared files). Beginner
-// and Cinewhoop remain disabled/out of scope — no part data exists for
-// either. The remaining locked types render disabled in their locked
+// Cinematic/Long-Range research additions touched shared files). Cinewhoop
+// remains disabled/out of scope — no part data exists for it. Beginner was
+// removed entirely from droneTypes.ts (not merely disabled) per an
+// explicit product decision — see droneTypes.ts directly for the current
+// type list. The remaining locked type renders disabled in its locked
 // array position — no reordering by data-availability status. 2-column
-// grid, compact cards sized so all six (3 rows) fit the 390×844 viewport
-// without scrolling — see Phase 1 height-budget evidence.
+// grid, compact cards sized so all five (3 rows, last one trailing/
+// centered) fit the 390×844 viewport without scrolling — see Phase 1
+// height-budget evidence.
 export const AssemblyHome: React.FC<AssemblyHomeProps> = ({ onSelectType }) => (
   <div style={{ padding: 16 }}>
     <h1 style={{ fontSize: 18, fontWeight: 800, color: '#3a2e1f', margin: '4px 0 2px' }}>التجميع</h1>

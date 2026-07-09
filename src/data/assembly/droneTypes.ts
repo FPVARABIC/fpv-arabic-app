@@ -3,15 +3,6 @@ import type { DroneType } from './types';
 // TODO: Ahmed will review specs
 export const droneTypes: DroneType[] = [
   {
-    id: 'beginner',
-    primaryName: 'للمبتدئين',
-    nameAr: 'للمبتدئين',
-    frameSizeInch: 3,
-    description: 'دروب صغيرة وخفيفة مناسبة لأول تجربة طيران وتعلّم التحكم الأساسي، غالبًا للطيران الداخلي أو في مساحات محدودة.',
-    recommendedBatteryVoltages: [1, 2], // TODO: Ahmed will review
-    imagePath: '/assets/assembly/drone-types/beginner.png',
-  },
-  {
     id: 'freestyle',
     primaryName: 'Freestyle',
     nameEn: 'Freestyle 5-inch',
