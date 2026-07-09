@@ -15,6 +15,11 @@ export const frames: Frame[] = [
     upgradePath: 'AOS 5 EVO V1.2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Deadcat اقتصادي واسع — جاهز لـDJI O4/O3',
+      noteTag: 'أثقل من فريمات السباق — ليس لسباق خفيف',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ممتاز كبداية لأنه واسع وواضح في التركيب ويدعم مقاسات ستاك متعددة.'],
     safetyNotes: ['تأكد من طول براغي المحرك ومن خلوص المراوح؛ لا تعتمد على الشكل فقط.'],
     buildNotes: [
@@ -36,6 +41,11 @@ export const frames: Frame[] = [
     upgradePath: 'ImpulseRC ApexDC EVO 5',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'أساس هندسي جيد لتقليل الاهتزاز مع HD',
+      noteTag: 'ليس الأرخص — وقطع غياره ليست في كل متجر',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب بعد أول بناء أو لمن يريد فريم أنظف من الفئات الاقتصادية.'],
     safetyNotes: ['لا تركب مروحة أكبر من دعم الفريم حتى لو بدا الخلوص قريباً.'],
     buildNotes: [
@@ -57,6 +67,11 @@ export const frames: Frame[] = [
     upgradePath: 'AOS 5 EVO V1.2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '5.5 إنش — كفاءة أعلى وحمل كاميرا أكشن',
+      noteTag: '5.5 إنش يزيد مسؤولية اختيار المحرك والمروحة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب لمن يفهم فرق 5 و5.5 إنش، وليس كأول اختيار عشوائي.'],
     safetyNotes: ['تأكد من خلوص المراوح والبطارية؛ لا تركب 5.5 على فريم 5 إنش عادي.'],
     buildNotes: [
@@ -78,6 +93,11 @@ export const frames: Frame[] = [
     upgradePath: 'AOS 5 EVO V1.2',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'Deadcat احترافي — جودة تصنيع وترتيب HD أنظف',
+      noteTag: 'لا وزن رسمي موثق — تحقق منه عند الشراء',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['اختيار جيد بعد فهم احتياجاتك، وليس ضرورياً لأول بناء اقتصادي.'],
     safetyNotes: ['افحص عزل وحدات HD والأسلاك عن الكربون وتأكد من عدم وجود تماس.'],
     buildNotes: [
@@ -98,6 +118,11 @@ export const frames: Frame[] = [
     notFor: 'لا تختاره إذا تحتاج ستاك 30.5×30.5mm أو توافق DJI O4/O3 مؤكد؛ المصدر يذكر Vista HD (Walksnail) وBLITZ Mini VTX (Analog) فقط، دون ذكر DJI.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'مصمم للسباق — تركيب بسيط ومثبتات X-Cell',
+      noteTag: 'ستاك 20×20mm فقط — لا يذكر المصدر توافق DJI',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['تركيب بسيط بدون تعقيد يجعله خياراً معقولاً حتى لأول تجربة أداء عالي، لكنه يفترض فهم أساسيات التوصيل والسلامة أولاً.'],
     safetyNotes: ['تأكد من التوافق مع مقاس ESC 20×20mm قبل الشراء؛ هذا الإطار لا يدعم 30.5×30.5mm إطلاقاً.'],
     buildNotes: [
@@ -119,6 +144,11 @@ export const frames: Frame[] = [
     notFor: 'لا تختاره إذا كنت تبحث عن أخف وزن ممكن للطيران السريع العدواني؛ الوزن والتصميم موجّهان للاستقرار وحمل الكاميرا لا الرشاقة القصوى.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'اهتزاز أقل حتى 50% — مخصص للتصوير المستقر',
+      noteTag: 'تأكد من نسخة V5.1 تحديداً — V5 يختلف في التصميم',
+      noteTagSource: 'safety',
+    },
     beginnerNotes: ['مناسب لمن يريد نتيجة تصوير مستقرة دون تعقيد اختيار قطع منفصلة لتقليل الاهتزاز.'],
     safetyNotes: ['تأكد من مطابقة نسخة V5.1 عند الشراء؛ الإصدار السابق V5 يختلف في تصميم تشابك الأذرع.'],
     buildNotes: [
@@ -141,6 +171,11 @@ export const frames: Frame[] = [
     notFor: 'لا تختاره إذا كنت تبحث عن إطار خفيف للطيران العدواني القريب؛ مصمم للكفاءة والمدى لا السرعة أو الرشاقة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '7 إنش للمدى الطويل — مكان GPS مخصص ومراوح حتى 8 إنش',
+      noteTag: 'تأكد من نسخة V2 — إصدار V1 مختلف تماماً',
+      noteTagSource: 'safety',
+    },
     beginnerNotes: ['ليس اختياراً لأول تجربة؛ يفترض فهم إعداد GPS وFailsafe قبل الطيران لمسافات طويلة.'],
     safetyNotes: ['تأكد من نسخة V2 تحديداً عند الشراء؛ النسخة الأصلية V1 بطول قاعدة 320mm ووزن ~310g مختلفة تماماً في التصميم — لا تخلط بين الإصدارين.'],
     buildNotes: [
