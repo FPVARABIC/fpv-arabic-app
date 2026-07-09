@@ -40,23 +40,23 @@ interface AssemblyHomeProps {
   onSelectType: (droneTypeId: string) => void;
 }
 
-// 'freestyle' and 'racing' have real, verified part data behind them —
-// every mandatory build stage populated and confirmed via a real end-to-end
-// walkthrough reaching 100% compatibility. Cinematic and Long-Range remain
-// disabled: each still has real, documented research gaps (Cinematic:
-// Motors; Long-Range: Motors, ESCs, Video Systems, Propellers) that haven't
-// been closed yet. Beginner and Cinewhoop remain disabled/out of scope.
-// The remaining locked types render disabled in their locked array
-// position — no reordering by data-availability status. 2-column grid,
-// compact cards sized so all six (3 rows) fit the 390×844 viewport without
-// scrolling — see Phase 1 height-budget evidence.
+// 'freestyle', 'racing', 'cinematic', and 'long-range' all have real,
+// verified part data behind them — every mandatory build stage populated
+// and confirmed via a real end-to-end walkthrough reaching 100%
+// compatibility for each (Racing re-confirmed unchanged after the later
+// Cinematic/Long-Range research additions touched shared files). Beginner
+// and Cinewhoop remain disabled/out of scope — no part data exists for
+// either. The remaining locked types render disabled in their locked
+// array position — no reordering by data-availability status. 2-column
+// grid, compact cards sized so all six (3 rows) fit the 390×844 viewport
+// without scrolling — see Phase 1 height-budget evidence.
 export const AssemblyHome: React.FC<AssemblyHomeProps> = ({ onSelectType }) => (
   <div style={{ padding: 16 }}>
     <h1 style={{ fontSize: 18, fontWeight: 800, color: '#3a2e1f', margin: '4px 0 2px' }}>التجميع</h1>
     <p style={{ fontSize: 12, color: '#7a6a52', margin: '0 0 12px' }}>هنا تختار القطع المناسبة لمشروعك</p>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       {droneTypes.map(type => {
-        const isAvailable = ['freestyle', 'racing'].includes(type.id);
+        const isAvailable = ['freestyle', 'racing', 'cinematic', 'long-range'].includes(type.id);
         return (
           <button
             key={type.id}
