@@ -7,13 +7,15 @@ import type { Esc } from '../types';
 // inferred from prose — none of the 3 entries' own researched text
 // mentions either type.
 //
-// Long-range deliberately excluded — a genuine, undecided research gap,
-// not a judgment call: these are 55-60A stacks sized for punchy freestyle/
-// racing current draw, and no dedicated long-range-appropriate ESC has
-// been researched (same standard as Motors' long-range exclusion — no
-// 7"-appropriate motor was researched either). Revisit only if dedicated
-// long-range ESC research is done, not by stretching this file's existing
-// judgment basis to cover it.
+// Long-range was investigated as a possible extension of the existing 3
+// entries' tags (current-headroom argument), but real numbers refuted it:
+// a real 7" long-range motor candidate (EMAX E3 2808 1300KV) has a
+// documented peak current of 56A at 6S — higher than the existing 5"
+// motors' own ~35-36A peak, not lower as initially assumed. Against that
+// real 56A figure, 2 of the 3 existing ESCs (both 55A continuous) would
+// have negative-to-zero margin, not comfortable headroom — extending
+// their tags would have been wrong. A genuine new entry
+// (esc-sequre-blueson-a2-65a-premium) was researched and added instead.
 export const escs: Esc[] = [
   {
     id: 'esc-speedybee-bls-55a-budget',
@@ -79,6 +81,28 @@ export const escs: Esc[] = [
       'مع محركات عالية KV و6S يعطي هامش أمان جيد، لكنه لا يعوض tune سيئ أو تبريد ضعيف.',
       'لم يُذكر burst rating منفصل لهذا المنتج في المصدر — فقط "60A مستمر"؛ تُرك الحقل فارغاً بدل تقدير رقم.',
       'ملاحظة جهد: النص المصدري "3S-6S" — نطاق مذكور مباشرة لهذا الصف.',
+    ],
+  },
+  {
+    id: 'esc-sequre-blueson-a2-65a-premium',
+    tier: 'premium',
+    nameAr: 'ESC رباعي 65A - احترافي',
+    nameEn: 'SEQURE Blueson A2 65A 4-in-1 ESC',
+    brand: 'SEQURE',
+    specs: { currentRatingA: 65, burstCurrentRatingA: 120, firmware: 'AM32', channels: 4, compatibleVoltages: [2, 3, 4, 5, 6], weightG: 17 },
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6] },
+    whyChoose: 'تصنيف مدى طويل هنا هندسي معتمد على أرقام حقيقية، وليس على نص تسويقي مخصص لمدى طويل (النص المصدري عام: سباق/طيران حر): 65A مستمر و120A ذروة يعطي هامشاً حقيقياً فوق ذروة تيار محرك EMAX E3 2808 1300KV (56A عند 6S حسب مصدرين مستقلين) — بخلاف الـ3 ESCs الأخرى في القاعدة (55A/55A/60A) التي هامشها ضيق أو معدوم أمام هذا المحرك تحديداً. AM32 مفتوح المصدر، مقاس تركيب 30.5×30.5mm، حساس تيار مدمج.',
+    notFor: 'لا تختارها إذا كنت تبحث عن نص تسويقي يذكر "مدى طويل" صراحة؛ هذا تصنيف هندسي معتمد على مقارنة أرقام التيار الحقيقية، وليس ادعاءً من الشركة المصنعة.',
+    upgradePath: 'لا يوجد حالياً بديل أعلى تياراً موثق في القاعدة.',
+    lastReviewed: '2026-07',
+    confidence: 'مؤكد',
+    beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ 65A/120A أعلى مما يحتاجه بناء بسيط، وهامشها الحقيقي مخصص لمحركات مدى طويل عالية التيار تحديداً.'],
+    safetyNotes: ['لا تلحم البطارية قبل التأكد من التبريد ومن توافق الجهد (2-6S)؛ راجع إعدادات AM32 قبل أول تشغيل.'],
+    buildNotes: [
+      'ملاحظة تصنيف: القرار معتمد على مقارنة حقيقية بين ذروة تيار المحرك (EMAX E3 2808 1300KV: 56A عند 6S) وتيار هذا الـESC (65A مستمر/120A ذروة) — هامش حقيقي، بخلاف الـ3 ESCs الأخرى التي هامشها ضيق أو سلبي أمام هذا المحرك تحديداً.',
+      'مقاس التركيب: 30.5×30.5mm، الوزن 17g، الأبعاد 45.5×42.5×6mm.',
+      'ملاحظة جهد: النص المصدري "2S-6S" — نطاق أوسع من الـ3 ESCs الأخرى في هذا الملف (3S-6S)؛ فرق حقيقي حسب مصدر هذا المنتج تحديداً، وليس خطأ في المطابقة أو عدم اتساق.',
+      'ملاحظة سعر: لم يُعثر على سعر مؤكد من أي مصدر رغم عدة محاولات بحث؛ تُرك priceRangeUSD فارغاً بدل اختراع رقم.',
     ],
   },
 ];
