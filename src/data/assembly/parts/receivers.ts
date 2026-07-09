@@ -24,6 +24,11 @@ export const receivers: Receiver[] = [
     upgradePath: 'Happymodel EP1 Dual TCXO',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'ELRS صغير موثوق لمعظم بنايات 5 إنش',
+      noteTag: 'لا يناسب مدى طويل جداً (2.4GHz فقط)',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار ممتاز كبداية: TX/RX عبر UART CRSF فقط، لا SBUS.'],
     safetyNotes: ['لا توصله على VBAT؛ هذا مستقبل 5V فقط.'],
     buildNotes: [
@@ -46,6 +51,11 @@ export const receivers: Receiver[] = [
     upgradePath: 'RadioMaster RP1 V2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'الأرخص والأخف (0.7g) — ELRS بدون تعقيد',
+      noteTag: 'لا TCXO ولا Diversity — وتوثيق مصنع محدود',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['جيد كخيار اقتصادي؛ الأهم ضبط UART وReceiver protocol في Betaflight.'],
     safetyNotes: ['تأكد من عزل أطراف الهوائي وعدم قصه.'],
     buildNotes: [
@@ -68,6 +78,11 @@ export const receivers: Receiver[] = [
     upgradePath: 'RadioMaster RP1 V2 إذا تريد أبسط وأخف',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'استقبال أثبت — Diversity مزدوج مع TCXO',
+      noteTag: 'أكبر من نانو عادي — ليس لبناء micro ضيق',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب لمن بدأ يفهم أهمية وضع الهوائي وليس فقط اختيار اسم القطعة.'],
     safetyNotes: ['ثبّت الهوائيين بزوايا مختلفة وبعيداً عن VTX والبطارية.'],
     buildNotes: [
@@ -90,6 +105,11 @@ export const receivers: Receiver[] = [
     upgradePath: 'TBS Crossfire Diversity Nano RX',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'مدى طويل معروف — 868/915MHz',
+      noteTag: 'يتطلب منظومة Crossfire كاملة — لا يعمل مع ELRS',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليس أفضل اختيار للمبتدئ إذا لم يكن لديه Crossfire TX module.'],
     safetyNotes: ['احترم قوانين التردد في بلدك واضبط region صحيح.'],
     buildNotes: [
@@ -112,6 +132,11 @@ export const receivers: Receiver[] = [
     upgradePath: 'ELRS Diversity مثل EP1 Dual إذا تريد 2.4GHz',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'ثبات أعلى للمسارات الطويلة — Diversity 900MHz',
+      noteTag: 'مبالغة للطيران القريب — تكلفة وهوائيات أكبر',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ممتاز للمدى الطويل لكن يحتاج فهم تركيب الهوائيات.'],
     safetyNotes: ['لا تطر مسافات طويلة بدون GPS وFailsafe مضبوطين.'],
     buildNotes: [
