@@ -21,6 +21,11 @@ export const buzzers: Buzzer[] = [
     upgradePath: 'VIFLY Finder 2',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أرخص حل لإنذار قرب الدرون',
+      noteTag: 'يصمت إذا انفصلت البطارية — بلا بطارية داخلية',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مفيد لكن ليس بديلاً عن buzzer ذاتي الطاقة.'],
     safetyNotes: ['لا تعتمد عليه وحده في أماكن عشب كثيف.'],
     buildNotes: [
@@ -42,6 +47,11 @@ export const buzzers: Buzzer[] = [
     upgradePath: 'VIFLY Finder 2',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'ذاتي الطاقة وخفيف — عندما يهم الوزن',
+      noteTag: 'ليس الأعلى صوتاً ولا الأطول تشغيلاً',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['جيد للـ 3-4 إنش.'],
     safetyNotes: ['تأكد من طريقة التشغيل/الإيقاف حتى لا يزعجك بعد الصيانة.'],
     buildNotes: [
@@ -63,6 +73,14 @@ export const buzzers: Buzzer[] = [
     upgradePath: 'VIFLY Finder Mini حسب الوزن',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    // whyTag drawn from buildNotes (not whyChoose) per the explicitly
+    // broadened rule: the internal-battery persistence mechanism is more
+    // specific than whyChoose's generic "best small part" phrasing.
+    quickTags: {
+      whyTag: 'يصفّر ببطاريته الداخلية حتى بعد فصل البطارية',
+      noteTag: 'وزن إضافي (~5g) — ليس لبناء micro يحسب كل غرام',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['أنصح به بقوة للمبتدئ على 5 إنش.'],
     safetyNotes: ['تأكد من شحنه وتوصيله قبل الطيران.'],
     buildNotes: [
