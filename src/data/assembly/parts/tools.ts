@@ -20,6 +20,14 @@ export const tools: Tool[] = [
     notFor: 'لا تختار kit رخيص بلا Smoke Stopper أو كاوية لا تضبط الحرارة.',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    // whyTag's Smoke Stopper clause drawn from the buildNotes contents list
+    // (not whyChoose) per the broadened whyTag rule — decision-valuable
+    // contrast against the premium kit, whose defining gap is missing it.
+    quickTags: {
+      whyTag: 'حزمة دخول كاملة لأول build — تشمل Smoke Stopper',
+      noteTag: 'تأكد أن الكاوية تضبط الحرارة فعلياً قبل الشراء',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['حزمة دخول جيدة لأول تجميع كامل.'],
     safetyNotes: ['تحقق أن الكاوية تضبط الحرارة فعلياً ولا تعتمد على نوع رخيص جداً.'],
     buildNotes: [
@@ -38,6 +46,11 @@ export const tools: Tool[] = [
     notFor: 'لا تختارها إذا ستشتري كل أداة مرة واحدة بدون معرفة استخدامها.',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'لمن سيبني أكثر من درون — لحام أنظف وأدوات أدق',
+      noteTag: 'ليست لمن سيبني مرة واحدة دون خطة استمرار',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسبة لمن تجاوز أول build ويريد أدوات أدق وأوثق.'],
     safetyNotes: ['تعلّم استخدام multimeter للفحص قبل كل توصيل بطارية جديد.'],
     buildNotes: [
@@ -56,6 +69,11 @@ export const tools: Tool[] = [
     notFor: 'لا تختارها كمبتدئ قبل أن تثبت أنك ستستمر في الهواية.',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'ورشة حقيقية للصيانة المستمرة لا build واحد',
+      noteTag: 'لا تتضمن Smoke Stopper — أضفه منفصلاً قبل أول تشغيل',
+      noteTagSource: 'safety',
+    },
     beginnerNotes: ['حزمة متقدمة، ليست ضرورية لأول تجميع بسيط.'],
     safetyNotes: [
       'تحتاج لإضافة Smoke Stopper بشكل منفصل — هذه الحزمة لا تتضمنه، وأول تشغيل بدونه غير آمن.',
