@@ -27,6 +27,11 @@ export const gps: Gps[] = [
     upgradePath: 'Matek M10Q-5883',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'صغير وخفيف (2.7g) — جيد لـRescue/RTH',
+      noteTag: 'بلا Compass — لا يناسب INAV/ArduPilot الاتجاهي',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ممتاز كأول GPS على 5 إنش بشرط فهم أنه لا يحتوي Compass.'],
     safetyNotes: ['GPS لا يعني أن الطائرة آمنة تلقائياً؛ اختبر Rescue/RTH في مكان مفتوح وبحذر.'],
     buildNotes: [
@@ -48,6 +53,11 @@ export const gps: Gps[] = [
     upgradePath: 'Matek M10Q-5883',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Compass مدمج لمشاريع الاتجاه المغناطيسي',
+      noteTag: 'أثقل (7.7g) — M100 Mini أبسط إن لم تحتج Compass',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['جيد عندما تعرف لماذا تحتاج Compass، وليس فقط لأن اسمه يبدو أفضل.'],
     safetyNotes: ['عاير الـ Compass في النظام الذي يدعمه ولا تفترض أن Betaflight سيستفيد منه مثل INAV.'],
     buildNotes: [
@@ -69,6 +79,11 @@ export const gps: Gps[] = [
     upgradePath: 'HGLRC M100 Mini GPS',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'موثوق لمدى طويل/INAV — GNSS مع Compass',
+      noteTag: 'مبالغة لمجرد GPS Rescue — أكبر وأغلى من اللازم',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار احترافي لمن يخطط لاستخدام Compass فعلاً.'],
     safetyNotes: ['وصل UART للـ GPS وI2C للـ Compass بشكل صحيح؛ الخلط بينهما يسبب فشل قراءة المستشعر.'],
     buildNotes: [
@@ -90,6 +105,11 @@ export const gps: Gps[] = [
     upgradePath: 'HGLRC M100 Mini أو Matek M10Q',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'الأخف في القاعدة (2.2g) لبناء ضيق',
+      noteTag: 'بلا Compass — اختر غيره إن أردت هوائياً أكبر',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب كـ GPS خفيف لـ Betaflight Rescue.'],
     safetyNotes: ['لا تعتمد عليه وحده للطيران بعيداً دون اختبار Rescue.'],
     buildNotes: [
@@ -112,6 +132,11 @@ export const gps: Gps[] = [
     upgradePath: 'Matek M10Q-5883',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أخف خيار مع Compass (2.6g) لبناء ضيق',
+      noteTag: 'إن لم تحتج Compass فالنسخة بدونه أبسط',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب لمن يعرف كيف يعاير compass ويبعده عن الضجيج.'],
     safetyNotes: ['لا تضع compass قرب أسلاك البطارية أو ESC.'],
     buildNotes: [
