@@ -8,12 +8,20 @@ import type { Motor } from '../types';
 // A conscious, protocol-adjacent decision, not inferred from prose — none
 // of the 4 entries' own research text mentions racing either way.
 //
-// This judgment does NOT extend to cinematic: none of the 4 KV values sit
-// in a smoother, less punchy range cinematic flight wants, and one entry
-// (motor-emax-eco-ii-2306-budget) explicitly disclaims being the "smoother"
-// option in its own notFor. Cinematic motor support remains a genuine
-// research gap, not covered by this decision.
+// This judgment does NOT extend to cinematic for these original 4 entries:
+// none of their KV values sit in a smoother, less punchy range cinematic
+// flight wants, and one entry (motor-emax-eco-ii-2306-budget) explicitly
+// disclaims being the "smoother" option in its own notFor.
 //
+// motor-newbeedrone-smoov-v2-2306-5-1750kv-premium was added as a new,
+// dedicated cinematic entry instead: its own real product name is
+// "...Cinematic FPV Motor 1750KV" — a direct, first-party claim, same
+// evidentiary standard as MEPS SZ5145's "designed for FPV racing" claim
+// for the racing propeller gap. Ring-magnet construction is independently
+// documented (multiple sources) as reducing vibration/noise vs. standard
+// square-magnet motors, reinforcing the cinematic-smoothness claim.
+//
+
 // specs.maxFrameSizeInch on motor-emax-eco-ii-2306-budget (5.5) rests on
 // real textual evidence: its own whyChoose states "يدعم مراوح 5-5.5 إنش" —
 // an explicit 5.5" claim. None of the other 3 motors make this claim (they
@@ -106,6 +114,29 @@ export const motors: Motor[] = [
       'مع 6S وProp عدواني قد يطلب تياراً عالياً؛ اجعله مع 55A ESC على الأقل في بناء قوي.',
       'الوزن: ~30.5g بسلك 3cm حسب المواصفات المنشورة؛ بعض البائعين يذكرون ~33g حسب طول السلك/النسخة.',
       'ملاحظة جهد: النص المصدري "5S-6S" — نطاق مذكور مباشرة لهذا الصف.',
+    ],
+  },
+  {
+    id: 'motor-newbeedrone-smoov-v2-2306-5-1750kv-premium',
+    tier: 'premium',
+    nameAr: 'محرك 2306.5 - احترافي',
+    nameEn: 'NewBeeDrone 2306.5 Smoov V2 Ring Magnet Cinematic FPV Motor 1750KV',
+    brand: 'NewBeeDrone',
+    specs: { kv: 1750, statorSize: '2306.5', weightG: 37, shaftDiameterMm: 5, compatibleVoltages: [6] },
+    compatibilityTags: { droneTypes: ['cinematic'], batteryVoltages: [6], frameSizeInch: 5 },
+    whyChoose: 'المسمى الرسمي من الشركة المصنعة هو "Cinematic FPV Motor"؛ تصميم Ring Magnet (بدل المغناطيس المربع التقليدي) موثق كمقلل لاهتزاز/ضوضاء المحرك، هيكل 7075 ألمنيوم أحادي القطعة (unibell)، 1750KV، 6S، تيار 30-60A، عمود M5، 14 قطباً (مرجع لضبط RPM filter في Betaflight).',
+    notFor: 'لا تختاره إذا لا تحتاج مزايا Ring Magnet الإضافية (تقليل الاهتزاز) ولا يهمك سعره غير المؤكد مقارنة ببدائل أرخص موثقة السعر في القاعدة.',
+    upgradePath: 'لا يوجد حالياً بديل آخر مخصص لهذا الاستخدام موثق في القاعدة.',
+    lastReviewed: '2026-07',
+    confidence: 'مؤكد',
+    beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ الميزة الأساسية (Ring Magnet) تفيد تحديداً من يريد نعومة تصوير أعلى، لا بناء بسيط عام.'],
+    safetyNotes: ['استخدم عزم ربط مناسباً لبراغي M5 ولا تفرط في الشد؛ اختبر اتجاه الدوران بدون مراوح أولاً.'],
+    buildNotes: [
+      'مقاس التركيب: قطر ستاتور 23mm، ارتفاع 6mm — من نفس فئة تركيب 2207/2306 الشائعة (M3، نمط 16×16mm) حسب الاصطلاح الصناعي الشائع لهذه الفئة؛ لم يُعثر على تأكيد صريح لهذا المقاس تحديداً من مصدر المنتج نفسه، وهذا استنتاج هندسي معتمد على الاصطلاح الصناعي الواسع لا نص مباشر.',
+      'الوزن: 37g مع الكابل حسب مصدرين مستقلين على الأقل.',
+      'عدد الأقطاب: 14 قطباً — مرجع لازم لضبط RPM filter في Betaflight بدقة.',
+      'ملاحظة مروحة: النص المصدري يذكر توافقاً حتى مراوح 6 إنش (مع ضبط Motor Output Limit في Betaflight) — أكبر من مروحة Cinematic الحالية في القاعدة (Ethix S5، 5 إنش). لا يمنع هذا استخدام المحرك مع مروحة 5 إنش؛ 1750KV هي الأساس الفعلي لملاءمته لبناء تصويري 5 إنش، لا تصنيف المروحة الأقصى المذكور.',
+      'ملاحظة سعر: لم يُعثر على سعر مؤكد من أي مصدر رغم عدة محاولات بحث؛ تُرك priceRangeUSD فارغاً بدل اختراع رقم.',
     ],
   },
 ];
