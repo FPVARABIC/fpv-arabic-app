@@ -41,9 +41,21 @@ import type { VideoSystem } from '../types';
 //   as the propeller-gemfan-f3s-5135-budget exclusion: real language,
 //   serving an adjacent but distinct purpose than the type's own goal.
 //
-// Long-range: no evidence found anywhere in this file, for any of the 4
-// systems, in either direction. Remains a full, undecided research gap —
-// not a judgment-call candidate.
+// Long-range tag on video-system-analog-58ghz-budget rests on documented
+// engineering judgment, not this entry's own prose (which is silent on
+// range) and not any single product's specific claim (PandaRC VT5804 V3's
+// 1000mW/10km+ figures belong to that specific videoUnits.ts product, not
+// this conceptual system-type entry). The basis is real, multi-product
+// category evidence: switchable power up to 800-1000mW is a common,
+// standard feature across independent analog VTX products from multiple
+// manufacturers (AKK, BetaFPV, T-Motor, among others), not exclusive to
+// any one SKU — proving analog as a technology category commonly reaches
+// long-range-capable power. specs.maxPowerMw is deliberately left
+// undefined rather than set to a bare number: real analog units span
+// roughly 25mW-2500mW+ depending on the specific product, and this is a
+// generic category entry, not one specific unit — asserting a single
+// figure here would overstate the evidence's actual precision. The
+// achievable ceiling is documented in buildNotes prose instead.
 export const videoSystems: VideoSystem[] = [
   {
     id: 'video-system-analog-58ghz-budget',
@@ -53,7 +65,7 @@ export const videoSystems: VideoSystem[] = [
     priceRangeUSD: [40, 120],
     protocolOrSystem: 'Analog',
     specs: { systemType: 'analog', frequencyBand: '5.8GHz' },
-    compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [4, 6] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'أفضل خيار رخيص للتعلم والسباقات والتجارب الخشنة.',
     notFor: 'لا تختاره إذا تريد جودة صورة HD أو تسجيل عالي داخل الوحدة.',
     upgradePath: 'HDZero إذا تريد latency منخفض مع HD',
@@ -64,6 +76,7 @@ export const videoSystems: VideoSystem[] = [
     buildNotes: [
       'مع VTX قوي بدون تبريد قد تحرق الوحدة على الطاولة.',
       'مواصفة إضافية: أقل latency وأسهل إصلاحاً؛ يتطلب كاميرا Analog + VTX + نظارة analog/receiver.',
+      'مدى طويل: بعض وحدات VTX من فئة Analog تدعم قدرة قابلة للتبديل تصل حتى 800-1000mW حسب المنتج المحدد (وليس كل المنتجات في هذه الفئة)؛ هذا هو أساس دعم مدى طويل هنا، وليس رقماً ثابتاً لكل نظام Analog.',
     ],
   },
   {
