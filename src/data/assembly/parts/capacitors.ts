@@ -27,6 +27,11 @@ export const capacitors: Capacitor[] = [
     upgradePath: 'Panasonic FR 1000uF 50V',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'مناسب لمعظم بنايات 4S/6S التقليدية',
+      noteTag: '35V — هامش غير كافٍ فوق 6S',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ركّبه مباشرة على أطراف بطارية ESC وبأقصر أطراف ممكنة.'],
     safetyNotes: ['انتبه للقطبية؛ عكس القطبية قد يسبب فرقعة أو انفجار المكثف.'],
     buildNotes: [
@@ -48,6 +53,11 @@ export const capacitors: Capacitor[] = [
     upgradePath: 'Panasonic FR 1000uF 50V',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Low impedance موثق — عمر 10,000h @105°C',
+      noteTag: '35V — للهامش الأكبر اختر نسخة 50V',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['اختيار جيد إذا كان متوفرًا محلياً بسعر مناسب.'],
     safetyNotes: [
       'لا تترك أرجل المكثف طويلة؛ هذا يقلل فعاليته.',
@@ -72,6 +82,11 @@ export const capacitors: Capacitor[] = [
     upgradePath: 'Rubycon ZLH 1000uF 35V عند ضيق المساحة',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'هامش جهد أعلى (50V) لأنظمة 6S القوية',
+      noteTag: 'حجمه أكبر — انتبه للتماس داخل فريم ضيق',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مفيد في بناء قوي أو عند استخدام محركات/ESC عالية الأداء.'],
     safetyNotes: [
       'اعزل جسم المكثف وثبته جيداً حتى لا يتقطع أثناء التصادم.',
