@@ -60,6 +60,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'HQ Ethix S5 5x4x3',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'ناعمة وكفوءة (Pitch 3) — مثالية للتعلم',
+      noteTag: 'ليست لأقصى تسارع أو السباقات',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ممتازة لمن يريد طيراناً ناعماً ومغفرة أكبر للمحركات.'],
     safetyNotes: ['لا تختبر المراوح داخل المنزل أو قرب الأشخاص.'],
     buildNotes: [
@@ -81,6 +86,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'Gemfan Hurricane 51466 V2 MCK',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'طيران ناعم ومستقر — Pitch 4 متوازن',
+      noteTag: 'ليست لأقصى punch في السباقات القصيرة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['خيار ممتاز لمن يفضّل التحكم الناعم على القفزات العنيفة.'],
     safetyNotes: ['المراوح التالفة تسبب اهتزازاً وتخرب الـ gyro/tune.'],
     buildNotes: [
@@ -101,6 +111,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'Gemfan Hurricane 51466 V2 MCK',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'توازن جيد بين grip والمتانة (Pitch 4.3)',
+      noteTag: 'Pitch أعلى من S5 — حرارة واستهلاك أعلى',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['تصلح كخطوة بعد مروحة ناعمة عندما تريد تحكم أكثر.'],
     safetyNotes: ['لا تركب مروحة مشقوقة؛ قد تنكسر في الهواء.'],
     buildNotes: [
@@ -121,6 +136,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'HQProp DP 5x4.3x3 V1S',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'قوية للطيران العدواني مع محركات 2207/2306',
+      noteTag: 'ليست للمبتدئ — ترفع الحمل والتيار على المحرك/ESC',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['استخدمها عندما تكون جاهزاً لتحمل استهلاك وحرارة أعلى مقابل استجابة قوية.'],
     safetyNotes: ['راقب حرارة المحرك بعد أول دقيقة طيران عند تغيير المروحة.'],
     buildNotes: [
@@ -141,6 +161,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'لا يوجد حالياً بديل سباقي أعلى في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'مصممة خصيصاً للسباق — وفق MEPS نفسها',
+      noteTag: 'PC عادية — غير مقوّاة لتصادمات شديدة متكررة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليست الخيار الأول لأول تجربة سباق؛ تفترض إطاراً وإعداداً سباقياً جاهزاً مثل AOS RC 5R، وليست موجّهة للطيران الحر العام.'],
     safetyNotes: ['لا تختبر المراوح داخل المنزل أو قرب الأشخاص؛ تأكد من إحكام ربط المروحة على عمود الموتور قبل أول طيران.'],
     buildNotes: [
@@ -163,6 +188,11 @@ export const propellers: Propeller[] = [
     upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'Bi-blade 7 إنش لمشاريع المدى الطويل',
+      noteTag: 'Pitch 4.5 عدواني نسبياً — يقايض بعض الكفاءة',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ مصممة لبناء مدى طويل 7 إنش تحديداً، ومقايضة الكفاءة/السيطرة تحتاج فهماً مسبقاً.'],
     safetyNotes: ['لا تختبر المراوح داخل المنزل أو قرب الأشخاص؛ تأكد من إحكام الربط على عمود الموتور 5mm قبل أول طيران.'],
     buildNotes: [
