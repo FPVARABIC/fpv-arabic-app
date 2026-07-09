@@ -32,6 +32,11 @@ export const batteries: Battery[] = [
     upgradePath: 'Tattu R-Line V6 1300mAh 6S',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '6S 1300mAh شائعة — 130C بسعر اقتصادي',
+      noteTag: 'الأثقل نسبياً (~223g) — ليست لأخف وزن',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسبة كبداية 6S إذا كان البناء كله مصممًا لـ6S.'],
     safetyNotes: ['اشحن داخل LiPo bag ولا تترك البطارية مشحونة بالكامل لأيام.'],
     buildNotes: [
@@ -53,6 +58,11 @@ export const batteries: Battery[] = [
     upgradePath: 'CNHL Black Series V2 1300mAh 6S',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أخف من 1300mAh — استجابة أفضل لبناء خفيف',
+      noteTag: 'نسختان مختلفتان فعلياً (LiPo/LiHV) — تأكد أيّهما تشتري',
+      noteTagSource: 'build',
+    },
     beginnerNotes: ['جيد لمن يريد تقليل الوزن بعد فهم استهلاك طائرته.'],
     safetyNotes: ['راقب الهبوط في الجهد؛ لا تطير حتى تفريغ عميق.'],
     buildNotes: [
@@ -74,6 +84,11 @@ export const batteries: Battery[] = [
     upgradePath: 'CNHL Black Series V2 1300mAh 6S',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: 'أداء عالٍ — 160C بوزن ~197g',
+      noteTag: 'ليست للتدريب الأول — كسرها مكلف',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['ترقية ممتازة بعد التأكد من أن الدرون مضبوط ولا يستهلك بشكل غير طبيعي.'],
     safetyNotes: ['لا تشحن بطارية منتفخة أو تالفة؛ تخلص منها بطريقة آمنة.'],
     buildNotes: [
@@ -95,6 +110,11 @@ export const batteries: Battery[] = [
     upgradePath: 'CNHL/Tattu 1300mAh 6S عند الانتقال لـ6S',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
+    quickTags: {
+      whyTag: '4S كلاسيكية 1550mAh لبناء 5 إنش',
+      noteTag: 'لا تناسب محركات KV المنخفضة المخصصة لـ6S',
+      noteTagSource: 'notFor',
+    },
     beginnerNotes: ['مناسب إذا قررت بناء 4S أبسط وأقل حدة.'],
     safetyNotes: ['لا تخلط بطاريات 4S و6S على نفس إعدادات المحرك دون فهم KV.'],
     buildNotes: [
