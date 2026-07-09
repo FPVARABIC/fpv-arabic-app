@@ -35,6 +35,16 @@ import type { Propeller } from '../types';
 // freestyle and cinematic use in multiple places (not just a secondary
 // Q&A aside) — considered and weighed, but the primary claim was judged
 // strong enough to stand on its own; cinematic/freestyle were not added.
+//
+// propeller-hqprop-7x45x2-biblade-budget was added as a new, dedicated
+// long-range entry — a softer evidentiary case than the racing addition
+// above, documented honestly: no single manufacturer naming states "long
+// range," but a second, independent retailer (RaceDayQuads) files this
+// exact SKU under its own "long-range-gear" category, corroborating a
+// different retailer's product-title use of the phrase. A genuine
+// tradeoff (this pitch is more aggressive than other bi-blade options,
+// trading efficiency for control) is documented in notFor rather than
+// treated as disqualifying.
 export const propellers: Propeller[] = [
   {
     id: 'propeller-gemfan-f3s-5135-budget',
@@ -138,6 +148,28 @@ export const propellers: Propeller[] = [
       'ملاحظة تصنيف: الوصف التسويقي الأساسي يذكرها صراحة كمروحة "مصممة خصيصاً لسباقات الـFPV" — وهذا أساس تصنيفها هنا كسباق فقط. نفس الشركة تسوّقها أيضاً، في مواد تسويقية أخرى غير قسم الأسئلة الثانوي فقط، كخيار مناسب لطيران حر وتصوير أيضاً؛ لم يُعتبر هذا كافياً لإضافة أي تصنيف آخر هنا.',
       'ملاحظة سعر: مصدر واحد فقط (DIYFPV) يذكر سعراً "يبدأ من" 4.90 دولار تقريباً، دون نطاق سعر مؤكد من مصادر متعددة؛ تُرك priceRangeUSD فارغاً بدل افتراض نطاق غير مؤكد.',
       'ملاحظة مادة: PC (بولي كاربونات) مؤكدة من صفحة الشركة المصنعة مباشرة ومصدر ثانٍ مستقل؛ ذكر "carbon fiber" في وصف عام لقائمة أمازون منفصلة لم يُعتمد لأنه على الأرجح نص عام غير خاص بهذا المنتج تحديداً.',
+    ],
+  },
+  {
+    id: 'propeller-hqprop-7x45x2-biblade-budget',
+    tier: 'budget',
+    nameAr: 'مروحة 7 إنش - اقتصادية',
+    nameEn: 'HQProp 7x4.5x2 Durable Bi-Blade',
+    brand: 'HQProp',
+    specs: { sizeInch: 7, pitchInch: 4.5, bladeCount: 2, material: 'PC', weightG: 6.6 },
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6] },
+    whyChoose: 'موزّعان مستقلان يربطانها بمشاريع مدى طويل: RaceDayQuads يصنّفها ضمن قسمه الخاص "long-range-gear"، وDroneTheoryFilms يستخدم "Long Range FPV Prop" في عنوان المنتج مباشرة — رغم أن الاسم الأساسي عند معظم المتاجر الأخرى (Pyrodrone، WREKD، وRaceDayQuads نفسها في عنوان المنتج) هو "Durable Bi-Blade" دون ذكر "مدى طويل" صراحة. 7 إنش، Pitch 4.5، شفرتان (bi-blade)، بولي كاربونات، وزن 6.6g.',
+    notFor: 'لا تختارها إذا تريد أقصى كفاءة/أطول زمن طيران ممكن ضمن فئة bi-blade تحديداً؛ تقارير مجتمعية تصف Pitch 4.5 هذا بأنه أكثر عدوانية (غطس أسرع، لفات أخف، سرعة قصوى أعلى) من خيارات bi-blade أخف Pitch، بمقايضة كفاءة حقيقية مقابل ذلك.',
+    upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
+    lastReviewed: '2026-07',
+    confidence: 'مؤكد',
+    beginnerNotes: ['ليست الخيار الأول لأول تجربة؛ مصممة لبناء مدى طويل 7 إنش تحديداً، ومقايضة الكفاءة/السيطرة تحتاج فهماً مسبقاً.'],
+    safetyNotes: ['لا تختبر المراوح داخل المنزل أو قرب الأشخاص؛ تأكد من إحكام الربط على عمود الموتور 5mm قبل أول طيران.'],
+    buildNotes: [
+      'قطرها 7 إنش يقع ضمن الحد الأقصى الموثق لإطار GEPRC MOZ7 V2 (8 إنش)، ويجتاز فحص التوافق الفعلي بين الإطار والمروحة (maxPropSizeInch) في الكود.',
+      'ملاحظة تصنيف: لا توجد تسمية موحدة من الشركة المصنعة نفسها لـ"مدى طويل"؛ الدليل هنا من تصنيف/تسمية موزّعين مستقلين، وليس ادعاء مصنّع واحد مباشر.',
+      'الوزن: 6.6g، سماكة hub 7.5mm، قطر hub 13.5mm، عمود 5mm.',
+      'ملاحظة سعر: سعر واحد فقط موثق (4.99 دولار لعبوة 4 مراوح من WREKD Co.) دون تكرار من مصدر آخر بسعر مختلف؛ تُرك priceRangeUSD فارغاً بدل افتراض نطاق.',
     ],
   },
 ];
