@@ -10,7 +10,7 @@ import type { CommunityUser, PostCategory } from '../types';
 
 interface CreatePostInput {
   text: string;
-  category: PostCategory;
+  category: PostCategory | null;
   imageFile: File | null;
   onUploadProgress?: (fullPct: number, thumbPct: number) => void;
 }
@@ -92,7 +92,7 @@ export const useComposer = (): UseComposerResult => {
           authorName,
           authorPhoto,
           text,
-          category,
+          ...(category ? { category } : {}),
           mediaType: media ? 'image' : 'none',
           mediaURL: media?.mediaURL ?? null,
           thumbnailURL: media?.thumbnailURL ?? null,

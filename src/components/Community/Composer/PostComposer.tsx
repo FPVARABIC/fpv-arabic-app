@@ -24,7 +24,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createPost, submitting, error } = useComposer();
 
-  const canSubmit = text.trim().length > 0 && category !== null && !submitting;
+  const canSubmit = text.trim().length > 0 && !submitting;
 
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,7 +40,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
   };
 
   const submit = async () => {
-    if (!canSubmit || !category) return;
+    if (!canSubmit) return;
     const postId = await createPost({
       text: text.trim(),
       category,

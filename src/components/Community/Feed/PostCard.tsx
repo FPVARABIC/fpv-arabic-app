@@ -21,7 +21,7 @@ const NEUTRAL_TINT = { bg: '#eef2f6', text: '#5a6b7c' };
 // not a refactor. 'none' renders with no image slot at all — no broken-image
 // box, no empty placeholder.
 export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }) => {
-  const tint = post.category in CATEGORY_TINTS
+  const tint = post.category && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
 
@@ -104,13 +104,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
-          background: tint.bg, color: tint.text,
-        }}>
-          {CATEGORY_LABELS[post.category]}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: post.category ? 'space-between' : 'flex-end' }}>
+        {post.category && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+            background: tint.bg, color: tint.text,
+          }}>
+            {CATEGORY_LABELS[post.category]}
+          </span>
+        )}
         <span style={{ fontSize: 12, color: '#5a6b7c' }} dir="ltr">{post.commentsCount} تعليق</span>
       </div>
     </div>

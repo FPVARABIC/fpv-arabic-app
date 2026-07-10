@@ -41,7 +41,7 @@ export interface Post {
   authorName: string;
   authorPhoto: string | null;
   text: string;
-  category: PostCategory;
+  category?: PostCategory;
   mediaType: MediaType;
   mediaURL: string | null;
   thumbnailURL: string | null;

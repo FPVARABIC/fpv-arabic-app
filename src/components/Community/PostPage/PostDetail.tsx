@@ -25,7 +25,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
   const { post, comments, loading, error, commentsLoading, commentsError, refresh } = usePost(postId);
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const tint = post && post.category in CATEGORY_TINTS
+  const tint = post && post.category && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
 
@@ -100,12 +100,14 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
             </div>
           )}
 
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
-            background: tint.bg, color: tint.text,
-          }}>
-            {CATEGORY_LABELS[post.category]}
-          </span>
+          {post.category && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+              background: tint.bg, color: tint.text,
+            }}>
+              {CATEGORY_LABELS[post.category]}
+            </span>
+          )}
 
           <div style={{ height: 1, background: '#e5eaf0', margin: '18px 0' }} />
 

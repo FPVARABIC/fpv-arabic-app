@@ -103,10 +103,14 @@ service cloud.firestore {
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 2000
-                    && request.resource.data.category in [
-                         'questions', 'parts', 'projects', 'flights',
-                         'betaflight', 'electronics', 'long-range', 'cinematic', 'freestyle'
-                       ]
+                    && (
+                         !('category' in request.resource.data)
+                         ||
+                         request.resource.data.category in [
+                           'questions', 'parts', 'projects', 'flights',
+                           'betaflight', 'electronics', 'long-range', 'cinematic', 'freestyle'
+                         ]
+                       )
                     && request.resource.data.commentsCount == 0
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.searchTokens is list

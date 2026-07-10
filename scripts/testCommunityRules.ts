@@ -70,6 +70,15 @@ const AUTHOR_NAMES: Record<string, string> = {
   uidBanned: 'Banned Pilot',
 };
 
+// Phase 2 (optional category) test helper — removes the category key
+// entirely, matching the app's real conditional-spread write shape for an
+// uncategorized post (never `category: undefined`, which Firestore rejects
+// client-side; never `category: null`/`''`, which the rules must reject).
+const withoutCategory = (postDoc: Record<string, unknown>) => {
+  const { category, ...rest } = postDoc;
+  return rest;
+};
+
 const validPostDoc = (authorId: string, overrides: Record<string, unknown> = {}) => ({
   authorId,
   authorName: AUTHOR_NAMES[authorId] ?? 'Pilot',
@@ -252,6 +261,35 @@ async function main() {
       mediaSize: 600 * 1024,
       mediaPath: 'community/posts/post-oversized-media',
     })));
+
+  console.log('\n=== 12. Optional category (Phase 2) ===');
+
+  await record('valid post create with no category field', 'allow', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-no-category'), withoutCategory(validPostDoc('uidB'))));
+
+  await record('reject post create with category: null', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-null'), validPostDoc('uidB', { category: null })));
+
+  await record('reject post create with category: "" (empty string)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-empty'), validPostDoc('uidB', { category: '' })));
+
+  await record('reject post create with category: "unknown-category"', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-unknown'), validPostDoc('uidB', { category: 'unknown-category' })));
+
+  await record('reject post create with category as a number', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-number'), validPostDoc('uidB', { category: 1 })));
+
+  await record('reject post create with category as an array', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-array'), validPostDoc('uidB', { category: ['questions'] })));
+
+  await record('reject post create with category as a map/object', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-map'), validPostDoc('uidB', { category: { id: 'questions' } })));
+
+  await record('reject post create with category as a boolean', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-category-bool'), validPostDoc('uidB', { category: true })));
+
+  await record('read an uncategorized post', 'allow', () =>
+    getDoc(doc(asA.firestore(), 'posts/post-no-category')));
 
   console.log('\n=== Bonus coverage: reports validation, banned-user writes ===');
 
