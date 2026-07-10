@@ -29,9 +29,7 @@ export const BottomNavigation: React.FC = () => {
         <nav
           className="w-full max-w-[390px]"
           style={{
-            background: 'rgba(255,255,255,0.06)',
-            backdropFilter: 'blur(24px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 12px), #5EEAD4',
             borderTop: '1px solid rgba(103,232,249,0.2)',
           }}
         >
