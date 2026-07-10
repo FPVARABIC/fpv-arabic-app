@@ -40,7 +40,7 @@ export const BottomNavigation: React.FC = () => {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl press transition-all ${active ? 'text-cyan-300' : 'text-slate-400 hover:text-slate-300'}`}
+                  className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
                   style={active ? { background: 'rgba(103,232,249,0.3)', boxShadow: '0 0 14px -4px rgba(103,232,249,0.7)' } : undefined}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center">
