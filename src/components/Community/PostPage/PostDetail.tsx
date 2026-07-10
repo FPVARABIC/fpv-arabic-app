@@ -22,12 +22,18 @@ const NEUTRAL_TINT = { bg: '#eef2f6', text: '#5a6b7c' };
 
 // Full-size image loads here only — feed/search show thumbnails (D5).
 export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAuthor }) => {
-  const { post, comments, loading, error, refresh } = usePost(postId);
+  const { post, comments, loading, error, commentsLoading, commentsError, refresh } = usePost(postId);
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const tint = post && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
+
+  // A single derived flag covers every CommentsList-visibility case: already
+  // having comments (even mid-refresh or mid-error, so the existing list
+  // never disappears), or a clean success with zero results (so the list's
+  // own built-in empty-state message can render).
+  const showCommentsList = comments.length > 0 || (!commentsLoading && !commentsError);
 
   const isOwnPost = !!currentUser && !!post && post.authorId === currentUser.uid;
 
@@ -103,7 +109,31 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
 
           <div style={{ height: 1, background: '#e5eaf0', margin: '18px 0' }} />
 
-          <CommentsList postId={postId} comments={comments} onOpenAuthor={onOpenAuthor} onCommentDeleted={refresh} />
+          {commentsLoading && comments.length === 0 && !commentsError && (
+            <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 12, padding: '8px 0' }}>جارٍ تحميل التعليقات...</p>
+          )}
+          {commentsLoading && comments.length > 0 && (
+            <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 11, padding: '4px 0' }}>جارٍ تحديث التعليقات...</p>
+          )}
+          {commentsError && (
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <p style={{ color: '#dc2626', fontSize: 12, margin: '0 0 6px' }}>{commentsError}</p>
+              <button
+                onClick={refresh}
+                disabled={commentsLoading}
+                style={{
+                  background: 'none', border: '0.5px solid #e5eaf0', borderRadius: 999,
+                  padding: '4px 14px', fontSize: 12, color: commentsLoading ? '#94a3b3' : '#0e7c86',
+                  cursor: commentsLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          )}
+          {showCommentsList && (
+            <CommentsList postId={postId} comments={comments} onOpenAuthor={onOpenAuthor} onCommentDeleted={refresh} />
+          )}
 
           {isGuest ? (
             <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b3', marginTop: 18 }}>
