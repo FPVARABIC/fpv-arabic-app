@@ -49,7 +49,7 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
           onClick={onOpenMenu}
           aria-label="القائمة"
           style={{
-            position: 'absolute', left: 16,
+            position: 'absolute', right: 16,
             width: 40, height: 40, borderRadius: '50%', border: 'none',
             background: '#0e7c86', boxShadow: '0 2px 8px rgba(14,124,134,0.35)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -60,7 +60,7 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
 
         <h1 style={{ fontSize: 18, fontWeight: 800, color: '#1a2b3c', margin: 0 }}>المجتمع</h1>
 
-        <div style={{ position: 'absolute', right: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'absolute', left: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={onOpenSaved}
             aria-label="المحفوظات"
@@ -84,16 +84,34 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
         </div>
       </div>
 
-      {/* Composer entry card (D12) — tapping any part opens the full
-          PostComposer screen; guests get a login prompt instead. */}
+      {/* Composer entry card (D12) — tapping the placeholder text opens the
+          full PostComposer screen; guests get a login prompt instead. The
+          avatar is its own tap target (signed-in users only) that opens the
+          current user's own PublicProfile — matching modern social apps'
+          "tap your own avatar to view your profile" convention. It reuses
+          the exact same onOpenAuthor navigation already wired for every
+          other author's avatar, just called with the current user's own
+          uid, so no new route or duplicated profile logic is introduced. */}
       <div style={{ margin: '0 16px 14px', background: '#ffffff', border: '0.5px solid #e5eaf0', borderRadius: 14, padding: 12 }}>
-        <button
-          onClick={handleComposeEntry}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 10 }}
-        >
-          <Avatar photoURL={currentUser?.photoURL ?? null} name={currentUser?.displayName ?? 'ز'} size={34} />
-          <span style={{ flex: 1, textAlign: 'right', fontSize: 13, color: '#94a3b3' }}>بماذا تحتاج المساعدة اليوم؟</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', marginBottom: 10 }}>
+          {isGuest ? (
+            <Avatar photoURL={null} name="ز" size={34} />
+          ) : (
+            <button
+              onClick={() => onOpenAuthor(currentUser!.uid)}
+              aria-label="ملفك الشخصي"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0 }}
+            >
+              <Avatar photoURL={currentUser?.photoURL ?? null} name={currentUser?.displayName ?? 'ز'} size={34} />
+            </button>
+          )}
+          <button
+            onClick={handleComposeEntry}
+            style={{ flex: 1, display: 'flex', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            <span style={{ flex: 1, textAlign: 'right', fontSize: 13, color: '#94a3b3' }}>بماذا تحتاج المساعدة اليوم؟</span>
+          </button>
+        </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={handleComposeEntry}
