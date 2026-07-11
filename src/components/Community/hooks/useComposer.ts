@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { userPath } from '../utils/firestorePaths';
+import { ensureCommunityUser } from '../utils/ensureCommunityUser';
 import { generateSearchTokens } from '../utils/searchSynonyms';
 import { secondsRemaining, POST_RATE_LIMIT_SECONDS, postRateLimitMessage } from '../utils/rateLimit';
 import { uploadMedia } from '../Composer/MediaUploader';
@@ -57,17 +58,13 @@ export const useComposer = (): UseComposerResult => {
         // lastPostAt==null at creation time — this must be its own write,
         // separate from the rate-limit-bumping update below, since a single
         // Firestore batch cannot apply two different operations to the same
-        // document.
+        // document. Normally already done by useEnsureCommunityUser at
+        // Community-entry; this call is a safe, idempotent fallback for the
+        // rare case a post is submitted before that bootstrap has finished.
         if (!userData) {
-          await setDoc(userRef, {
-            displayName: currentUser.displayName ?? 'مستخدم',
-            photoURL: currentUser.photoURL ?? null,
-            joinedAt: serverTimestamp(),
-            postsCount: 0,
-            role: 'user',
-            status: 'active',
-            lastPostAt: null,
-            lastCommentAt: null,
+          await ensureCommunityUser(currentUser.uid, {
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
           });
         }
 

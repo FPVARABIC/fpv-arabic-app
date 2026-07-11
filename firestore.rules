@@ -84,6 +84,62 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if isOwner(uid);
       }
+
+      // Follow system (Phase 5) — one canonical relation document per pair,
+      // nested under the follower's own user document. The document ID is
+      // exactly the followed user's uid — a single path segment, never a
+      // delimited concatenation of two uids. The follower's identity comes
+      // entirely from the parent path (uid, above) and request.auth.uid —
+      // never from the document ID or its content.
+      //
+      // Both the follower's own account AND the followed account must exist
+      // and be active. A Firestore subcollection document can exist even if
+      // its parent document does not (Firestore does not enforce parent
+      // existence for subcollections), so the follower's own existence is
+      // checked explicitly here — it is never assumed merely because this
+      // rule is reached via a path nested under users/{uid}.
+      //
+      // Privacy (Option B, approved by Ahmed — final for Phase 5): follow
+      // relationships and counts are authenticated-only. Guests can read
+      // public profile documents and active public posts, but never a
+      // follow relation, and never a follower/following count — both this
+      // block's direct-read rule and the recursive collection-group rule
+      // below require isSignedIn(), not public (`if true`) read access.
+      match /following/{followedUid} {
+        allow read: if isSignedIn();
+
+        allow create: if isOwner(uid)
+                      && uid != followedUid
+                      && exists(/databases/$(database)/documents/users/$(uid))
+                      && get(/databases/$(database)/documents/users/$(uid)).data.status == 'active'
+                      && exists(/databases/$(database)/documents/users/$(followedUid))
+                      && get(/databases/$(database)/documents/users/$(followedUid)).data.status == 'active'
+                      && request.resource.data.keys().hasOnly(['followedId', 'createdAt'])
+                      && request.resource.data.followedId == followedUid
+                      && request.resource.data.createdAt == request.time;
+
+        // Immutable — a relation is created or deleted, never edited.
+        allow update: if false;
+
+        // Only the follower who created the relation may remove it. No
+        // existence/status re-check on delete: removing a relation must
+        // always remain possible (e.g. unfollowing a user who was later
+        // banned), and idempotent delete-of-nonexistent must stay safe.
+        allow delete: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // Authenticated-only collection-group rule (Phase 5, Option B) —
+    // required specifically to permit a collectionGroup('following')
+    // aggregation query (used to compute a profile's authenticated-only
+    // follower count). Proven empirically: the specific nested match above
+    // does NOT, by itself, authorize a collection-group query — only an
+    // explicit match using the {path=**} recursive-wildcard form does.
+    // This block grants read only, and only to signed-in users; it cannot
+    // widen create/update/delete, which remain governed exclusively by the
+    // specific match above.
+    match /{path=**}/following/{followedUid} {
+      allow read: if isSignedIn();
     }
 
     match /posts/{postId} {

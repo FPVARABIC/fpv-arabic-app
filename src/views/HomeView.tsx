@@ -8,6 +8,7 @@ import { PostComposer } from '../components/Community/Composer/PostComposer';
 import { SavedPostsScreen } from '../components/Community/Saved/SavedPostsScreen';
 import { SavedPostIdsProvider } from '../components/Community/hooks/useSavedPostIds';
 import { useFeed } from '../components/Community/hooks/useFeed';
+import { useEnsureCommunityUser } from '../components/Community/hooks/useEnsureCommunityUser';
 import type { ChipValue } from '../components/Community/Feed/CategoryChips';
 import { useAuthContext } from '../contexts/AuthContext';
 import { HomeDashboardLegacy } from './HomeDashboardLegacy';
@@ -19,7 +20,13 @@ const RENDER_COMMUNITY = true;
 
 type Screen =
   | { name: 'feed' }
-  | { name: 'post'; postId: string }
+  // returnTo: where "back" should land. Optional and defaulting to undefined
+  // (which the render below treats as "return to feed") so every existing
+  // caller (feed/search/saved) keeps its exact current behavior unchanged;
+  // only profile-originated post navigation sets it, so returning from a
+  // post opened via a profile lands back on that same profile instead of
+  // always on the feed.
+  | { name: 'post'; postId: string; returnTo?: Screen }
   | { name: 'search' }
   | { name: 'saved' }
   | { name: 'compose' }
@@ -35,6 +42,13 @@ const CommunityHomeScreens: React.FC = () => {
   const [category, setCategory] = useState<ChipValue>('all');
   const { currentUser, isGuest } = useAuthContext();
   const feed = useFeed(category);
+  // Single dedicated lifecycle owner for the Community user-document
+  // bootstrap (Phase 5) — CommunityHomeScreens is the stable, never-
+  // unmounting Community-experience owner, matching the same architectural
+  // role it already plays for feed/category state (Phase 4). Its state is
+  // propagated down to PublicProfile so Follow can refuse to send a write
+  // known to fail while bootstrap hasn't finished.
+  const communityBootstrap = useEnsureCommunityUser();
 
   const scrollTopRef = useRef(0);
   const authKeyRef = useRef(isGuest ? 'guest' : (currentUser?.uid ?? null));
@@ -112,7 +126,7 @@ const CommunityHomeScreens: React.FC = () => {
       {screen.name === 'post' && (
         <PostDetail
           postId={screen.postId}
-          onBack={() => setScreen({ name: 'feed' })}
+          onBack={() => setScreen(screen.returnTo ?? { name: 'feed' })}
           onOpenAuthor={authorId => setScreen({ name: 'profile', authorId })}
         />
       )}
@@ -137,7 +151,14 @@ const CommunityHomeScreens: React.FC = () => {
         />
       )}
       {screen.name === 'profile' && (
-        <PublicProfile uid={screen.authorId} onBack={() => setScreen({ name: 'feed' })} />
+        <PublicProfile
+          uid={screen.authorId}
+          onBack={() => setScreen({ name: 'feed' })}
+          onOpenPost={postId => setScreen({ name: 'post', postId, returnTo: screen })}
+          onOpenAuthor={authorId => setScreen({ name: 'profile', authorId })}
+          bootstrapState={communityBootstrap.state}
+          onRetryBootstrap={communityBootstrap.retry}
+        />
       )}
       <ProfileSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>

@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { userPath, postPath, commentsPath } from '../utils/firestorePaths';
+import { ensureCommunityUser } from '../utils/ensureCommunityUser';
 import { secondsRemaining, COMMENT_RATE_LIMIT_SECONDS, commentRateLimitMessage } from '../utils/rateLimit';
 import type { CommunityUser } from '../types';
 
@@ -46,17 +47,14 @@ export const useCommentComposer = (): UseCommentComposerResult => {
 
         // Same bootstrap constraint as useComposer: create-rule requires
         // postsCount==0/lastPostAt==null/lastCommentAt==null at creation,
-        // which cannot share a batch with the update below.
+        // which cannot share a batch with the update below. Normally already
+        // done by useEnsureCommunityUser at Community-entry; this call is a
+        // safe, idempotent fallback for the rare case a comment is submitted
+        // before that bootstrap has finished.
         if (!userData) {
-          await setDoc(userRef, {
-            displayName: currentUser.displayName ?? 'مستخدم',
-            photoURL: currentUser.photoURL ?? null,
-            joinedAt: serverTimestamp(),
-            postsCount: 0,
-            role: 'user',
-            status: 'active',
-            lastPostAt: null,
-            lastCommentAt: null,
+          await ensureCommunityUser(currentUser.uid, {
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
           });
         }
 

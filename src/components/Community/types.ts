@@ -94,3 +94,5 @@ export interface SavedPost {
   postId: string;
   savedAt: Timestamp;
 }
+
+export type FollowStatus = 'loading' | 'not-following' | 'following';

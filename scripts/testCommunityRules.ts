@@ -15,6 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
 import {
   initializeTestEnvironment,
   assertSucceeds,
@@ -22,7 +23,8 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  doc, setDoc, updateDoc, getDoc, serverTimestamp, Timestamp,
+  doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, collectionGroup,
+  query, where, runTransaction, getCountFromServer, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
 
@@ -48,6 +50,20 @@ const record = async (label: string, expectation: 'allow' | 'deny', run: () => P
   } catch (err) {
     console.log(`  FAIL  [${expectation.toUpperCase()}]  ${label}`);
     console.log(`        ${(err as Error).message.split('\n')[0]}`);
+    failCount++;
+  }
+};
+
+// Real, throwing value assertion (node:assert/strict) — participates in the
+// same pass/fail totals and exit code as record() above, so an incorrect
+// value actually fails the suite instead of merely being printed.
+const assertValue = <T>(label: string, actual: T, expected: T) => {
+  try {
+    assert.strictEqual(actual, expected);
+    console.log(`  PASS  [VALUE]  ${label} (= ${String(actual)})`);
+    passCount++;
+  } catch {
+    console.log(`  FAIL  [VALUE]  ${label} (actual=${String(actual)}, expected=${String(expected)})`);
     failCount++;
   }
 };
@@ -327,6 +343,258 @@ async function main() {
       targetType: 'post', targetId: 'post-existing', postId: 'post-existing',
       reporterId: 'uidB', reason: 'dangerous', note: 'should not be allowed', resolved: false, createdAt: serverTimestamp(),
     }));
+
+  console.log('\n=== 12. Community-user bootstrap (Phase 5) ===');
+
+  const asBootstrapNew = testEnv.authenticatedContext('uidBootstrapNew');
+  const asNoDoc = testEnv.authenticatedContext('uidNoDoc');
+  const asGuest = testEnv.unauthenticatedContext();
+
+  async function ensureCommunityUserForTest(db, uid, identity) {
+    const userRef = doc(db, 'users', uid);
+    return runTransaction(db, async tx => {
+      const snap = await tx.get(userRef);
+      if (snap.exists()) return;
+      tx.set(userRef, {
+        displayName: identity.displayName ?? 'مستخدم',
+        photoURL: identity.photoURL ?? null,
+        joinedAt: serverTimestamp(),
+        postsCount: 0,
+        role: 'user',
+        status: 'active',
+        lastPostAt: null,
+        lastCommentAt: null,
+      });
+    });
+  }
+
+  await record('B1 signed-in user creates their own default Community user', 'allow', () =>
+    ensureCommunityUserForTest(asBootstrapNew.firestore(), 'uidBootstrapNew', { displayName: 'New Pilot', photoURL: null }));
+
+  const b1Doc = await getDoc(doc(asBootstrapNew.firestore(), 'users/uidBootstrapNew'));
+  assertValue('B1b bootstrap document exists', b1Doc.exists(), true);
+  assertValue('B1c bootstrap postsCount is exactly 0', b1Doc.data()?.postsCount, 0);
+  assertValue('B1d bootstrap role is exactly "user"', b1Doc.data()?.role, 'user');
+  assertValue('B1e bootstrap status is exactly "active"', b1Doc.data()?.status, 'active');
+  assertValue('B1f bootstrap lastPostAt is null', b1Doc.data()?.lastPostAt, null);
+  assertValue('B1g bootstrap lastCommentAt is null', b1Doc.data()?.lastCommentAt, null);
+
+  await record('B2 cannot create another uid\'s document', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidBootstrapForged'), validUserDoc({ displayName: 'Forged' })));
+
+  await record('B3 cannot create with role=moderator', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapMod').firestore(), 'users/uidBootstrapMod'), validUserDoc({ role: 'moderator' })));
+
+  await record('B4 cannot create with status=banned', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapBanned').firestore(), 'users/uidBootstrapBanned'), validUserDoc({ status: 'banned' })));
+
+  await record('B5 cannot create with nonzero postsCount', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapCount').firestore(), 'users/uidBootstrapCount'), validUserDoc({ postsCount: 5 })));
+
+  await record('B6 cannot create with non-null lastPostAt', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapLPA').firestore(), 'users/uidBootstrapLPA'), validUserDoc({ lastPostAt: serverTimestamp() })));
+
+  await record('B7 cannot create with non-null lastCommentAt', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapLCA').firestore(), 'users/uidBootstrapLCA'), validUserDoc({ lastCommentAt: serverTimestamp() })));
+
+  await record('B8 unknown keys on bootstrap create rejected', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapExtra').firestore(), 'users/uidBootstrapExtra'), validUserDoc({ extra: 'x' })));
+
+  await record('B9 invalid joinedAt (not request.time) rejected', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapJoined').firestore(), 'users/uidBootstrapJoined'), validUserDoc({ joinedAt: Timestamp.fromDate(new Date('2020-01-01')) })));
+
+  await record('B10 invalid displayName type rejected', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidBootstrapName').firestore(), 'users/uidBootstrapName'), validUserDoc({ displayName: 12345 })));
+
+  await record('B11 re-bootstrapping an existing document is rejected, not overwritten', 'deny', () =>
+    setDoc(doc(asBootstrapNew.firestore(), 'users/uidBootstrapNew'), validUserDoc({ displayName: 'New Pilot' })));
+
+  const b11DocAfter = await getDoc(doc(asBootstrapNew.firestore(), 'users/uidBootstrapNew'));
+  assertValue('B11b existing document unchanged after rejected re-bootstrap attempt', b11DocAfter.data()?.postsCount, 0);
+
+  await record('B12 two concurrent bootstrap transactions create exactly one unchanged valid document', 'allow', () =>
+    Promise.all([
+      ensureCommunityUserForTest(testEnv.authenticatedContext('uidBootstrapRace').firestore(), 'uidBootstrapRace', { displayName: 'Racer', photoURL: null }),
+      ensureCommunityUserForTest(testEnv.authenticatedContext('uidBootstrapRace').firestore(), 'uidBootstrapRace', { displayName: 'Racer', photoURL: null }),
+    ]));
+  const raceDoc = await getDoc(doc(testEnv.authenticatedContext('uidBootstrapRace').firestore(), 'users/uidBootstrapRace'));
+  assertValue('B12b postsCount after concurrent bootstrap race is exactly 0 (not corrupted)', raceDoc.data()?.postsCount, 0);
+
+  await record('B13 a never-posted user obtains a valid, readable profile after bootstrap', 'allow', () =>
+    getDoc(doc(asGuest.firestore(), 'users/uidBootstrapNew')));
+
+  await record('B14 guest cannot bootstrap a user document', 'deny', () =>
+    setDoc(doc(asGuest.firestore(), 'users/uidGuestBootstrap'), validUserDoc({ displayName: 'Ghost' })));
+
+  console.log('\n=== 13. Follow system (Phase 5) — nested canonical relation model, Option B ===');
+
+  await record('F1 guest create denied', 'deny', () =>
+    setDoc(doc(asGuest.firestore(), 'users/uidA/following/uidB'), { followedId: 'uidB', createdAt: serverTimestamp() }));
+
+  await record('F2 self-follow denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidA'), { followedId: 'uidA', createdAt: serverTimestamp() }));
+
+  await record('F3 valid active follower to active target allowed', 'allow', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidB'), { followedId: 'uidB', createdAt: serverTimestamp() }));
+
+  await record('F4 missing follower document denied', 'deny', () =>
+    setDoc(doc(asNoDoc.firestore(), 'users/uidNoDoc/following/uidB'), { followedId: 'uidB', createdAt: serverTimestamp() }));
+
+  await record('F5 banned follower denied', 'deny', () =>
+    setDoc(doc(asBanned.firestore(), 'users/uidBanned/following/uidB'), { followedId: 'uidB', createdAt: serverTimestamp() }));
+
+  await record('F6 missing followed document denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/ghost'), { followedId: 'ghost', createdAt: serverTimestamp() }));
+
+  await record('F7 banned followed user denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidBanned'), { followedId: 'uidBanned', createdAt: serverTimestamp() }));
+
+  await record('F8 writing another user\'s following path denied', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'users/uidA/following/uidMod'), { followedId: 'uidMod', createdAt: serverTimestamp() }));
+
+  await record('F9 mismatched followedId field vs. path segment denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidMod'), { followedId: 'uidB', createdAt: serverTimestamp() }));
+
+  await record('F10 unknown key denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidMod'), { followedId: 'uidMod', createdAt: serverTimestamp(), note: 'x' }));
+
+  await record('F11 invalid createdAt denied', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'users/uidA/following/uidMod'), { followedId: 'uidMod', createdAt: Timestamp.fromDate(new Date('2020-01-01')) }));
+
+  await record('F12 update denied', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA/following/uidB'), { createdAt: serverTimestamp() }));
+
+  console.log('\n--- Option B read-permission tests ---');
+
+  await record('F13 guest cannot directly read a follow relation', 'deny', () =>
+    getDoc(doc(asGuest.firestore(), 'users/uidA/following/uidB')));
+
+  await record('F14 authenticated user CAN directly read a follow relation', 'allow', () =>
+    getDoc(doc(asB.firestore(), 'users/uidA/following/uidB')));
+
+  await record('F15 guest cannot list/count a following subcollection directly', 'deny', () =>
+    getDocs(collection(asGuest.firestore(), 'users/uidA/following')));
+
+  await record('F16 authenticated user CAN list/count a following subcollection directly', 'allow', () =>
+    getDocs(collection(asB.firestore(), 'users/uidA/following')));
+
+  await record('F17 owner delete allowed', 'allow', () =>
+    deleteDoc(doc(asA.firestore(), 'users/uidA/following/uidB')));
+
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'users/uidA/following/uidB'), { followedId: 'uidB', createdAt: serverTimestamp() });
+  });
+
+  await record('F18 followed user cannot delete the relation', 'deny', () =>
+    deleteDoc(doc(asB.firestore(), 'users/uidA/following/uidB')));
+
+  await record('F19 third party cannot delete the relation', 'deny', () =>
+    deleteDoc(doc(asBanned.firestore(), 'users/uidA/following/uidB')));
+
+  console.log('\n=== 14. Transaction/idempotency (Phase 5) ===');
+
+  async function followForTest(db, followerUid, followedUid) {
+    const ref = doc(db, 'users', followerUid, 'following', followedUid);
+    return runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if (snap.exists()) return;
+      tx.set(ref, { followedId: followedUid, createdAt: serverTimestamp() });
+    });
+  }
+  async function unfollowForTest(db, followerUid, followedUid) {
+    const ref = doc(db, 'users', followerUid, 'following', followedUid);
+    return runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return;
+      tx.delete(ref);
+    });
+  }
+
+  await record('T1 duplicate Follow transaction succeeds (idempotent, no error)', 'allow', async () => {
+    await followForTest(asA.firestore(), 'uidA', 'uidB');
+    await followForTest(asA.firestore(), 'uidA', 'uidB');
+  });
+
+  await record('T2 duplicate Unfollow transaction succeeds (idempotent, no error)', 'allow', async () => {
+    await unfollowForTest(asA.firestore(), 'uidA', 'uidB');
+    await unfollowForTest(asA.firestore(), 'uidA', 'uidB');
+  });
+
+  const t3Results = await Promise.allSettled(Array.from({ length: 5 }, () => followForTest(asA.firestore(), 'uidA', 'uidB')));
+  assertValue('T3 all 5 concurrent Follow transactions resolved (none rejected)', t3Results.filter(r => r.status === 'rejected').length, 0);
+  const t3Doc = await getDoc(doc(asA.firestore(), 'users/uidA/following/uidB'));
+  assertValue('T3b exactly one relation exists after 5-way concurrent Follow', t3Doc.exists(), true);
+  const t3Listing = await getDocs(collection(asA.firestore(), 'users/uidA/following'));
+  assertValue('T3c following subcollection has exactly 1 document (no duplicates from the race)', t3Listing.docs.length, 1);
+
+  const t4Results = await Promise.allSettled(Array.from({ length: 5 }, () => unfollowForTest(asA.firestore(), 'uidA', 'uidB')));
+  assertValue('T4 all 5 concurrent Unfollow transactions resolved (none rejected)', t4Results.filter(r => r.status === 'rejected').length, 0);
+  const t4Doc = await getDoc(doc(asA.firestore(), 'users/uidA/following/uidB'));
+  assertValue('T4b relation gone after 5-way concurrent Unfollow', t4Doc.exists(), false);
+
+  console.log('\n=== 15. Aggregation/query (Phase 5) — deterministic, isolated fixtures ===');
+
+  // Dedicated, never-reused uids/posts for this section only, so counts are
+  // exact and do not depend on incidental state from earlier sections.
+  const aggF1 = testEnv.authenticatedContext('uidAggFollower1');
+  const aggF2 = testEnv.authenticatedContext('uidAggFollower2');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidAggFollower1'), validUserDoc({ displayName: 'Agg Follower 1' }));
+    await setDoc(doc(db, 'users/uidAggFollower2'), validUserDoc({ displayName: 'Agg Follower 2' }));
+    await setDoc(doc(db, 'users/uidAggTargetA'), validUserDoc({ displayName: 'Agg Target A' }));
+    await setDoc(doc(db, 'users/uidAggTargetB'), validUserDoc({ displayName: 'Agg Target B' }));
+  });
+
+  await followForTest(aggF1.firestore(), 'uidAggFollower1', 'uidAggTargetA');
+  await followForTest(aggF1.firestore(), 'uidAggFollower1', 'uidAggTargetB');
+  await followForTest(aggF2.firestore(), 'uidAggFollower2', 'uidAggTargetA');
+
+  const followingCountSnap = await getCountFromServer(collection(aggF1.firestore(), 'users/uidAggFollower1/following'));
+  assertValue('Q1 direct following count for uidAggFollower1 equals 2', followingCountSnap.data().count, 2);
+
+  const followersOfTargetA = await getCountFromServer(
+    query(collectionGroup(aggF1.firestore(), 'following'), where('followedId', '==', 'uidAggTargetA')));
+  assertValue('Q2 collection-group followers count for uidAggTargetA equals 2', followersOfTargetA.data().count, 2);
+
+  const followersOfTargetB = await getCountFromServer(
+    query(collectionGroup(aggF1.firestore(), 'following'), where('followedId', '==', 'uidAggTargetB')));
+  assertValue('Q3 followers count for uidAggTargetB (a different followedId) equals 1, excludes TargetA\'s followers', followersOfTargetB.data().count, 1);
+
+  const followersOfNobody = await getCountFromServer(
+    query(collectionGroup(aggF1.firestore(), 'following'), where('followedId', '==', 'uidAggFollowedByNobody')));
+  assertValue('Q4 followers count for a followed-by-nobody target equals 0', followersOfNobody.data().count, 0);
+
+  await record('Q5 guest CANNOT read collection-group followers query (Option B)', 'deny', () =>
+    getDocs(query(collectionGroup(asGuest.firestore(), 'following'), where('followedId', '==', 'uidAggTargetA'))));
+
+  await record('Q6 authenticated user CAN read collection-group followers query (Option B)', 'allow', () =>
+    getDocs(query(collectionGroup(aggF2.firestore(), 'following'), where('followedId', '==', 'uidAggTargetA'))));
+
+  await record('Q7 guest cannot run collection-group getCountFromServer either', 'deny', () =>
+    getCountFromServer(query(collectionGroup(asGuest.firestore(), 'following'), where('followedId', '==', 'uidAggTargetA'))));
+
+  // Dedicated, never-reused authors/posts for the active-post-count fixtures.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidAggAuthorMain'), validUserDoc({ displayName: 'Agg Author Main' }));
+    await setDoc(doc(db, 'users/uidAggAuthorOther'), validUserDoc({ displayName: 'Agg Author Other' }));
+    await setDoc(doc(db, 'posts/agg-post-1'), validPostDoc('uidAggAuthorMain', { text: 'agg post 1' }));
+    await setDoc(doc(db, 'posts/agg-post-2'), validPostDoc('uidAggAuthorMain', { text: 'agg post 2' }));
+    await setDoc(doc(db, 'posts/agg-post-other'), validPostDoc('uidAggAuthorOther', { text: 'other author post' }));
+    await setDoc(doc(db, 'posts/agg-post-deleted'), validPostDoc('uidAggAuthorMain', { text: 'soft deleted', status: 'deleted' }));
+  });
+
+  const activePostsMain = await getCountFromServer(
+    query(collection(asGuest.firestore(), 'posts'), where('authorId', '==', 'uidAggAuthorMain'), where('status', '==', 'active')));
+  assertValue('Q8 active post count for uidAggAuthorMain equals exactly 2 (excludes the soft-deleted post)', activePostsMain.data().count, 2);
+
+  const activePostsOther = await getCountFromServer(
+    query(collection(asGuest.firestore(), 'posts'), where('authorId', '==', 'uidAggAuthorOther'), where('status', '==', 'active')));
+  assertValue('Q9 active post count for uidAggAuthorOther equals exactly 1 (excludes uidAggAuthorMain\'s posts)', activePostsOther.data().count, 1);
+
+  await record('Q10 guest CAN read active-post-count aggregation (public)', 'allow', () =>
+    getCountFromServer(query(collection(asGuest.firestore(), 'posts'), where('authorId', '==', 'uidAggAuthorMain'), where('status', '==', 'active'))));
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
