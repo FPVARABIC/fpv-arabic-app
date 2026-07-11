@@ -160,7 +160,11 @@ const CommunityHomeScreens: React.FC = () => {
           onRetryBootstrap={communityBootstrap.retry}
         />
       )}
-      <ProfileSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <ProfileSheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onOpenProfile={uid => setScreen({ name: 'profile', authorId: uid })}
+      />
     </>
   );
 };

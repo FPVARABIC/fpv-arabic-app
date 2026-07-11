@@ -9,6 +9,11 @@ import { STORAGE_KEYS } from '../utils/storageKeys';
 interface ProfileSheetProps {
   open: boolean;
   onClose: () => void;
+  // Optional: navigates to the current user's existing PublicProfile
+  // (Community screen). Omitted by call sites with no Community profile
+  // screen to navigate to (e.g. the legacy dashboard) — in that case the
+  // avatar/name simply render as before, non-interactive.
+  onOpenProfile?: (uid: string) => void;
 }
 
 const getFrameRect = (): DOMRect | null => {
@@ -134,7 +139,7 @@ const MENU_BTN: React.CSSProperties = {
   cursor: 'pointer', fontFamily: 'inherit', borderRadius: 10,
 };
 
-export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose }) => {
+export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpenProfile }) => {
   const navigate = useNavigate();
   const { currentUser, isGuest, signInWithGoogle, signOut } = useAuthContext();
   const {
@@ -205,6 +210,17 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose }) => 
 
   const navAndClose = (path: string) => { onClose(); navigate(path); };
 
+  // Reuses the exact same Community profile navigation already wired for
+  // every other author (CommunityHome's own-avatar tap, PostCard/PostDetail/
+  // CommentsList's onOpenAuthor) — just called with the current user's own
+  // uid via the onOpenProfile callback passed down from HomeView. No new
+  // profile screen, route, or duplicated profile logic is introduced.
+  const openOwnProfile = () => {
+    if (!currentUser || !onOpenProfile) return;
+    onClose();
+    onOpenProfile(currentUser.uid);
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -269,7 +285,13 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose }) => 
             </AvatarHeaderWrap>
           ) : (
             <AvatarHeaderWrap>
-              <SignedInAvatar photoURL={currentUser?.photoURL ?? null} letter={displayName[0]} />
+              <button
+                onClick={openOwnProfile}
+                aria-label="فتح ملفك الشخصي"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
+              >
+                <SignedInAvatar photoURL={currentUser?.photoURL ?? null} letter={displayName[0]} />
+              </button>
 
               {/* Name + badge */}
               <div style={{ marginTop: 10, width: '100%' }}>
@@ -299,12 +321,18 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose }) => 
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                    <span style={{
-                      fontSize: 16, fontWeight: 700, color: '#0f2543',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220,
-                    }}>
-                      {displayName}
-                    </span>
+                    <button
+                      onClick={openOwnProfile}
+                      aria-label="فتح ملفك الشخصي"
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', minWidth: 0, display: 'inline-flex', fontFamily: 'inherit' }}
+                    >
+                      <span style={{
+                        fontSize: 16, fontWeight: 700, color: '#0f2543',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220,
+                      }}>
+                        {displayName}
+                      </span>
+                    </button>
                     <button onClick={startEditName}
                       style={{ color: '#60a5fa', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex' }}>
                       <Pencil size={14} />
