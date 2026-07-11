@@ -1,35 +1,37 @@
 import React, { useEffect, useRef } from 'react';
-import { useFeed, type FeedCategory } from '../hooks/useFeed';
+import type { UseFeedResult } from '../hooks/useFeed';
 import { PostCard } from './PostCard';
 
 interface FeedListProps {
-  category: FeedCategory;
+  feed: UseFeedResult;
   onOpenPost: (postId: string) => void;
   onOpenAuthor: (authorId: string) => void;
 }
 
-export const FeedList: React.FC<FeedListProps> = ({ category, onOpenPost, onOpenAuthor }) => {
-  const { posts, loading, hasMore, error, loadMore } = useFeed(category);
+export const FeedList: React.FC<FeedListProps> = ({ feed, onOpenPost, onOpenAuthor }) => {
+  const { posts, loading, hasMore, error, loadMoreError, loadMore } = feed;
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // True infinite scroll (D2), not a "load more" button — the sentinel
-  // triggers the next page as it approaches the viewport.
+  // triggers the next page as it approaches the viewport. Paused while
+  // loadMoreError is visible so the explicit retry button is the sole
+  // trigger until the user acts on it.
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting) loadMore(); },
+      entries => { if (entries[0].isIntersecting && !loadMoreError) loadMore(); },
       { rootMargin: '200px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, loadMoreError]);
 
-  if (error) {
+  if (error && posts.length === 0) {
     return <p style={{ padding: 16, color: '#dc2626', fontSize: 13, textAlign: 'center' }}>{error}</p>;
   }
 
-  if (!loading && posts.length === 0) {
+  if (!loading && !error && posts.length === 0) {
     return (
       <p style={{ padding: 32, textAlign: 'center', color: '#94a3b3', fontSize: 13 }}>
         لا توجد منشورات في هذا القسم بعد.
@@ -46,7 +48,21 @@ export const FeedList: React.FC<FeedListProps> = ({ category, onOpenPost, onOpen
       {loading && (
         <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 12, padding: 8 }}>جارٍ التحميل...</p>
       )}
-      {!loading && !hasMore && posts.length > 0 && (
+      {loadMoreError && (
+        <div style={{ textAlign: 'center', padding: 8 }}>
+          <p style={{ color: '#dc2626', fontSize: 12, margin: '0 0 6px' }}>{loadMoreError}</p>
+          <button
+            onClick={loadMore}
+            style={{
+              background: 'none', border: '0.5px solid #e5eaf0', borderRadius: 999,
+              padding: '4px 14px', fontSize: 12, color: '#0e7c86', cursor: 'pointer',
+            }}
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+      {!loading && !hasMore && !loadMoreError && posts.length > 0 && (
         <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 12, padding: 8 }}>
           لا مزيد من المنشورات.
         </p>

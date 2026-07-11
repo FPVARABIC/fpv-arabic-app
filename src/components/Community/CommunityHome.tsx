@@ -4,9 +4,13 @@ import { Search as SearchIcon, MoreVertical, Bookmark, Image as ImageIcon, Video
 import { useAuthContext } from '../../contexts/AuthContext';
 import { CategoryChips, type ChipValue } from './Feed/CategoryChips';
 import { FeedList } from './Feed/FeedList';
+import type { UseFeedResult } from './hooks/useFeed';
 import { Avatar } from './Avatar';
 
 interface CommunityHomeProps {
+  category: ChipValue;
+  onCategoryChange: (value: ChipValue) => void;
+  feed: UseFeedResult;
   onOpenPost: (postId: string) => void;
   onOpenAuthor: (authorId: string) => void;
   onOpenSearch: () => void;
@@ -21,9 +25,8 @@ interface CommunityHomeProps {
 // container in Phase 1 specifically so this addition wouldn't require
 // restructuring.
 export const CommunityHome: React.FC<CommunityHomeProps> = ({
-  onOpenPost, onOpenAuthor, onOpenSearch, onOpenMenu, onOpenSaved, onOpenCompose,
+  category, onCategoryChange, feed, onOpenPost, onOpenAuthor, onOpenSearch, onOpenMenu, onOpenSaved, onOpenCompose,
 }) => {
-  const [category, setCategory] = useState<ChipValue>('all');
   const { currentUser, isGuest } = useAuthContext();
   const [toast, setToast] = useState<string | null>(null);
 
@@ -121,8 +124,8 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
         document.body,
       )}
 
-      <CategoryChips value={category} onChange={setCategory} />
-      <FeedList category={category} onOpenPost={onOpenPost} onOpenAuthor={onOpenAuthor} />
+      <CategoryChips value={category} onChange={onCategoryChange} />
+      <FeedList feed={feed} onOpenPost={onOpenPost} onOpenAuthor={onOpenAuthor} />
     </div>
   );
 };
