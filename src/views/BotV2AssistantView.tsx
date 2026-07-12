@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { SafetyWarning } from '../components/SafetyWarning';
 import { BotIcon } from '../components/BotIcon';
-import { botColors } from '../components/botVisualTheme';
+import { botColors, botMotionDurations, botMotionEasing, botFocusRing } from '../components/botVisualTheme';
 import { analyzeAndComposeBotV2Answer, createEmptyContext, type AssistantSessionContext } from '../data/knowledge/botV2/engine';
 import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/botV2/types';
 import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
@@ -89,6 +89,56 @@ export const BotV2AssistantView: React.FC = () => {
 
   return (
     <AppShell>
+      <style>{`
+        @keyframes bv2-page-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bv2-msg-in-bot {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bv2-msg-in-user {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .bv2-page-in { animation: bv2-page-in 260ms ${botMotionEasing.decelerate}; }
+        .bv2-msg-bot { animation: bv2-msg-in-bot 220ms ${botMotionEasing.decelerate}; }
+        .bv2-msg-user { animation: bv2-msg-in-user 220ms ${botMotionEasing.standard}; }
+        .bv2-chip, .bv2-btn-secondary, .bv2-send-btn {
+          transition: background ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      border-color ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      color ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      transform ${botMotionDurations.fast}ms ${botMotionEasing.standard};
+        }
+        .bv2-chip:hover, .bv2-btn-secondary:hover {
+          background: rgba(37,99,235,0.16);
+          border-color: rgba(59,130,246,0.5);
+          color: ${botColors.accent};
+        }
+        .bv2-chip:hover:not(:active) { transform: translateY(-2px); }
+        .bv2-chip:active { transform: scale(0.96); }
+        .bv2-btn-secondary:active { transform: scale(0.96); }
+        .bv2-send-btn:active { transform: scale(0.94); }
+        .bv2-chip:focus-visible, .bv2-btn-secondary:focus-visible, .bv2-send-btn:focus-visible {
+          outline: ${botFocusRing.outline};
+          outline-offset: ${botFocusRing.outlineOffset};
+        }
+        .bv2-input:focus {
+          box-shadow: 0 0 0 2px ${botColors.accent};
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bv2-page-in, .bv2-msg-bot, .bv2-msg-user {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+          .bv2-chip:hover:not(:active), .bv2-chip:active,
+          .bv2-btn-secondary:active, .bv2-send-btn:active {
+            transform: none !important;
+          }
+        }
+      `}</style>
       <Header
         title="مساعد FPV"
         rightAction={
@@ -98,7 +148,7 @@ export const BotV2AssistantView: React.FC = () => {
         }
       />
       <div
-        className="flex flex-col h-[calc(100vh-9rem)]"
+        className="flex flex-col h-[calc(100vh-9rem)] bv2-page-in"
         style={{
           backgroundImage: `linear-gradient(180deg, rgba(2,8,15,0.88) 0%, rgba(2,8,15,0.72) 40%, rgba(2,8,15,0.65) 100%), url('/assets/bot-chat-background.png')`,
           backgroundSize: 'auto, cover',
@@ -113,7 +163,14 @@ export const BotV2AssistantView: React.FC = () => {
           className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar"
         >
           {msgs.map(msg => (
-            <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-start' : 'justify-end'}`}>
+            <div
+              key={msg.id}
+              className={`flex ${msg.from === 'user' ? 'justify-start' : 'justify-end'} ${
+                msg.from === 'bot'
+                  ? (msg.answer && getWarningCardProps(msg.answer) ? '' : 'bv2-msg-bot')
+                  : 'bv2-msg-user'
+              }`}
+            >
               {msg.from === 'bot' ? (
                 <div className="flex flex-row-reverse gap-2 max-w-[88%]">
                   <div className="w-8 h-8 rounded-full bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.2)] flex items-center justify-center flex-shrink-0 mt-1 text-[#60A5FA]">
@@ -150,7 +207,7 @@ export const BotV2AssistantView: React.FC = () => {
               <p className="text-xs text-slate-500 text-center">اسأل مثلاً:</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {SUGGESTIONS.map(q => (
-                  <button key={q} className="chip text-xs" onClick={() => sendQuery(q)}>
+                  <button key={q} className="chip bv2-chip text-xs" onClick={() => sendQuery(q)}>
                     {q}
                   </button>
                 ))}
@@ -177,12 +234,12 @@ export const BotV2AssistantView: React.FC = () => {
               onChange={e => setInput(e.target.value)}
               placeholder="اكتب سؤالك..."
               dir="auto"
-              className="flex-1 bg-[rgba(13,24,38,0.8)] border border-[rgba(59,130,246,0.2)] rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#3B82F6]/50 transition-colors"
+              className="bv2-input flex-1 bg-[rgba(13,24,38,0.8)] border border-[rgba(59,130,246,0.2)] rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#3B82F6]/50 transition-colors"
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="w-11 h-11 rounded-full bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.25)] flex items-center justify-center text-[#60A5FA] hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0"
+              className="bv2-send-btn w-11 h-11 rounded-full bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.25)] flex items-center justify-center text-[#60A5FA] hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0"
             >
               <Send size={16}/>
             </button>
@@ -239,7 +296,7 @@ const BotV2Bubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
       {answer.chips.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-0.5">
           {answer.chips.map((chip, i) => (
-            <button key={i} className="chip" onClick={() => onChip(chip)}>
+            <button key={i} className="chip bv2-chip" onClick={() => onChip(chip)}>
               {chip.label}
               {chip.route && <ChevronLeft size={11}/>}
             </button>
@@ -250,7 +307,7 @@ const BotV2Bubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
       {answer.links.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {answer.links.map((link, i) => (
-            <button key={i} className="btn-secondary text-xs py-1 px-3" onClick={() => onLink(link.route)}>
+            <button key={i} className="btn-secondary bv2-btn-secondary text-xs py-1 px-3" onClick={() => onLink(link.route)}>
               <ChevronLeft size={12}/>{link.label}
             </button>
           ))}

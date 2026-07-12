@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useBotOverlay } from '../contexts/BotOverlayContext';
-import { botColors, botShadows } from './botVisualTheme';
+import { botColors, botShadows, botMotionDurations, botMotionEasing, botFocusRing } from './botVisualTheme';
 
 const BUTTON_SIZE = 52;
 const DRAG_THRESHOLD = 5;
@@ -56,6 +56,7 @@ const CometRing: React.FC<{ idle: boolean }> = ({ idle }) => (
       pointerEvents: 'none',
       animation: idle ? 'ql-ring-spin 3.6s linear infinite' : 'none',
     }}
+    className="ql-motion"
     aria-hidden="true"
   >
     <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(96,165,250,0.18)" strokeWidth="1.2"
@@ -244,9 +245,31 @@ export const QuadcopterLauncher: React.FC = () => {
         .ql-blade {
           animation: ql-blade-pulse 1.5s ease-in-out infinite;
         }
+        .ql-launcher-btn:hover:not(:active) {
+          transform: scale(1.03);
+        }
+        .ql-launcher-btn:focus-visible {
+          outline: ${botFocusRing.outline};
+          outline-offset: ${botFocusRing.outlineOffset};
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ql-motion {
+            animation: none !important;
+          }
+          .ql-blade {
+            animation: none !important;
+          }
+          .ql-launcher-btn:hover:not(:active) {
+            transform: none;
+          }
+          .ql-launcher-btn:active {
+            transform: none !important;
+          }
+        }
       `}</style>
       {/* Wrapper: carries position:fixed and bob animation so ring+halo+button bob together */}
       <div
+        className="ql-motion"
         style={{
           position: 'fixed',
           left: `${frameLeft + position.x}px`,
@@ -260,6 +283,7 @@ export const QuadcopterLauncher: React.FC = () => {
         {/* Ambient halo */}
         <div
           aria-hidden
+          className="ql-motion"
           style={{
             position: 'absolute',
             inset: -16,
@@ -277,7 +301,7 @@ export const QuadcopterLauncher: React.FC = () => {
           onMouseDown={handleMouseDown}
           aria-label={isOpen ? 'إغلاق مساعد FPV' : 'فتح مساعد FPV'}
           aria-expanded={isOpen}
-          className="press"
+          className="press ql-launcher-btn"
           style={{
             position: 'absolute',
             inset: 0,
@@ -297,7 +321,7 @@ export const QuadcopterLauncher: React.FC = () => {
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             cursor: isDragging ? 'grabbing' : 'grab',
-            transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.2s',
+            transition: `border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.2s, transform ${botMotionDurations.fast}ms ${botMotionEasing.standard}`,
             boxShadow: isDragging
               ? '0 0 10px rgba(37,99,235,0.18), 0 4px 14px rgba(0,0,0,0.5)'
               : isOpen

@@ -7,7 +7,7 @@ import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/b
 import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
 import { SafetyWarning } from './SafetyWarning';
 import { BotIcon } from './BotIcon';
-import { botColors } from './botVisualTheme';
+import { botColors, botMotionDurations, botMotionEasing, botFocusRing } from './botVisualTheme';
 
 // ── Risk presentation ─────────────────────────────────────────────────────────
 
@@ -123,6 +123,55 @@ export const BotV2Overlay: React.FC = () => {
 
   return (
     <>
+      <style>{`
+        @keyframes bv2-msg-in-bot {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bv2-msg-in-user {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .bv2-msg-bot { animation: bv2-msg-in-bot 220ms ${botMotionEasing.decelerate}; }
+        .bv2-msg-user { animation: bv2-msg-in-user 220ms ${botMotionEasing.standard}; }
+        .bv2-chip, .bv2-btn-secondary, .bv2-icon-btn, .bv2-send-btn {
+          transition: background ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      border-color ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      color ${botMotionDurations.base}ms ${botMotionEasing.standard},
+                      transform ${botMotionDurations.fast}ms ${botMotionEasing.standard};
+        }
+        .bv2-chip:hover, .bv2-btn-secondary:hover {
+          background: rgba(37,99,235,0.16);
+          border-color: rgba(59,130,246,0.5);
+          color: ${botColors.accent};
+        }
+        .bv2-icon-btn:hover { background: rgba(255,255,255,0.16); }
+        .bv2-chip:hover:not(:active) { transform: translateY(-2px); }
+        .bv2-chip:active { transform: scale(0.96); }
+        .bv2-btn-secondary:active { transform: scale(0.96); }
+        .bv2-icon-btn:active { transform: scale(0.92); }
+        .bv2-send-btn:active { transform: scale(0.94); }
+        .bv2-chip:focus-visible, .bv2-btn-secondary:focus-visible,
+        .bv2-icon-btn:focus-visible, .bv2-send-btn:focus-visible {
+          outline: ${botFocusRing.outline};
+          outline-offset: ${botFocusRing.outlineOffset};
+        }
+        .bv2-input:focus {
+          box-shadow: 0 0 0 2px ${botColors.accent};
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bv2-panel { transition: opacity 120ms linear !important; }
+          .bv2-msg-bot, .bv2-msg-user {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+          .bv2-chip:hover:not(:active), .bv2-chip:active,
+          .bv2-btn-secondary:active, .bv2-icon-btn:active, .bv2-send-btn:active {
+            transform: none !important;
+          }
+        }
+      `}</style>
       {/* Backdrop */}
       <div
         style={{
@@ -160,6 +209,7 @@ export const BotV2Overlay: React.FC = () => {
 
       {/* Panel — slides up from bottom */}
       <div
+        className="bv2-panel"
         style={{
           position: 'fixed', top: '10vh', bottom: '96px',
           left: `${frameBox.left}px`, width: `${frameBox.width}px`,
@@ -171,7 +221,8 @@ export const BotV2Overlay: React.FC = () => {
           borderRadius: '22px 22px 16px 16px',
           border: `1px solid rgba(59,130,246,0.13)`,
           transform: isOpen ? 'translateY(0)' : 'translateY(120%)',
-          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+          opacity: isOpen ? 1 : 0,
+          transition: `transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity ${botMotionDurations.base}ms ${botMotionEasing.standard}`,
           pointerEvents: isOpen ? 'auto' : 'none',
           display: 'flex',
           flexDirection: 'column',
@@ -212,6 +263,7 @@ export const BotV2Overlay: React.FC = () => {
           <button
             onClick={closeBot}
             aria-label="إغلاق المساعد"
+            className="bv2-icon-btn"
             style={{
               width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
               background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.14)',
@@ -236,6 +288,11 @@ export const BotV2Overlay: React.FC = () => {
             <div
               key={msg.id}
               ref={i === msgs.length - 1 ? latestMsgRef : undefined}
+              className={
+                msg.from === 'bot'
+                  ? (msg.answer && getWarningCardProps(msg.answer) ? '' : 'bv2-msg-bot')
+                  : 'bv2-msg-user'
+              }
               style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-start' : 'flex-end' }}
             >
               {msg.from === 'bot' ? (
@@ -277,7 +334,7 @@ export const BotV2Overlay: React.FC = () => {
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>اسأل مثلاً:</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                 {SUGGESTIONS.map(q => (
-                  <button key={q} className="chip" style={{ fontSize: '12px' }} onClick={() => sendQuery(q)}>
+                  <button key={q} className="chip bv2-chip" style={{ fontSize: '12px' }} onClick={() => sendQuery(q)}>
                     {q}
                   </button>
                 ))}
@@ -314,7 +371,7 @@ export const BotV2Overlay: React.FC = () => {
                 color: '#fff',
                 outline: 'none',
               }}
-              className="placeholder:text-slate-500 focus:border-[#3B82F6]/50 transition-colors"
+              className="bv2-input placeholder:text-slate-500 focus:border-[#3B82F6]/50 transition-colors"
             />
             <button
               type="submit"
@@ -325,7 +382,7 @@ export const BotV2Overlay: React.FC = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: botColors.accent, cursor: 'pointer',
               }}
-              className="hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="bv2-send-btn hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <Send size={15}/>
             </button>
@@ -385,7 +442,7 @@ const OverlayBubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
       {answer.chips.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {answer.chips.map((chip, i) => (
-            <button key={i} className="chip" style={{ fontSize: '12px' }} onClick={() => onChip(chip)}>
+            <button key={i} className="chip bv2-chip" style={{ fontSize: '12px' }} onClick={() => onChip(chip)}>
               {chip.label}
               {chip.route && <ChevronLeft size={10}/>}
             </button>
@@ -398,7 +455,7 @@ const OverlayBubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
           {answer.links.map((link, i) => (
             <button
               key={i}
-              className="btn-secondary"
+              className="btn-secondary bv2-btn-secondary"
               style={{ fontSize: '12px', padding: '4px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
               onClick={() => onLink(link.route)}
             >
