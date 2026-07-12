@@ -79,6 +79,32 @@ const CheckpointCard: React.FC<{
   </div>
 );
 
+// ── Glossary retrieval card: term shown, definition hidden until requested ──
+
+const GlossaryRevealCard: React.FC<{ index: number; term: string; definition: string }> = ({ index, term, definition }) => {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="card-subtle p-3.5" style={{ background: CARD_BG }} data-testid={`glossary-item-${index}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold" style={{ color: ACCENT }}>{term}</p>
+        <button
+          onClick={() => setRevealed(r => !r)}
+          data-testid={`glossary-item-${index}-toggle`}
+          className="text-xs flex-shrink-0 underline press"
+          style={{ color: ACCENT }}
+        >
+          {revealed ? 'إخفاء التعريف' : 'اعرض التعريف'}
+        </button>
+      </div>
+      {revealed && (
+        <p className="text-sm leading-relaxed mt-2" style={{ color: '#CBD5E1' }} data-testid={`glossary-item-${index}-definition`}>
+          {definition}
+        </p>
+      )}
+    </div>
+  );
+};
+
 // ── Stage chrome shared by every stage ───────────────────────────────────────
 
 const StageShell: React.FC<{
@@ -322,13 +348,13 @@ export const Lesson01Journey: React.FC<Props> = ({ lesson, nextLesson }) => {
       )}
 
       {stage === STAGE.GLOSSARY && (
-        <StageShell stage={stage} title="قاموس مصغّر: راجع المصطلحات" onPrev={prev} onNext={next}>
+        <StageShell stage={stage} title="قاموس مصغّر: اختبر نفسك في كل مصطلح" onPrev={prev} onNext={next}>
+          <p className="text-sm" style={{ color: '#CBD5E1' }}>
+            حاول تذكّر معنى كل مصطلح بنفسك أولاً، ثم اضغط "اعرض التعريف" للتأكد.
+          </p>
           <div className="grid gap-2.5">
-            {GLOSSARY.map(g => (
-              <div key={g.term} className="card-subtle p-3.5" style={{ background: CARD_BG }}>
-                <p className="text-sm font-bold mb-1" style={{ color: ACCENT }}>{g.term}</p>
-                <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{g.definition}</p>
-              </div>
+            {GLOSSARY.map((g, i) => (
+              <GlossaryRevealCard key={g.term} index={i} term={g.term} definition={g.definition} />
             ))}
           </div>
         </StageShell>

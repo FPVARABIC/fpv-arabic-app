@@ -95,13 +95,27 @@ async function main() {
       const unmet = await page.locator('[data-testid^="requirement-"][data-met="false"]').count();
       ok('the readiness checklist lists at least one unmet requirement (never a bare unexplained disabled button)', unmet > 0);
 
-      // Glossary stage (13) — jump back via Prev to check Pitch/Roll are now defined.
+      // Glossary stage (13) — jump back via Prev to check the active-recall interaction.
       await page.locator('[data-testid="lesson01-prev"]').click();
       await page.locator('[data-testid="lesson01-prev"]').click();
       ok('navigated back to the glossary stage (13)', await currentStage(page) === 13);
       const glossaryText = await page.locator('[data-testid="lesson01-stage"]').textContent();
       ok('glossary now defines "Pitch"', (glossaryText ?? '').includes('Pitch'));
       ok('glossary now defines "Roll"', (glossaryText ?? '').includes('Roll'));
+      ok('all 8 glossary items are present', await page.locator('[data-testid^="glossary-item-"][data-testid$="-toggle"]').count() === 8);
+
+      ok('the first glossary definition is hidden initially', await page.locator('[data-testid="glossary-item-0-definition"]').count() === 0);
+      await page.locator('[data-testid="glossary-item-0-toggle"]').click();
+      ok('clicking "اعرض التعريف" reveals the definition', await page.locator('[data-testid="glossary-item-0-definition"]').count() === 1);
+      await page.locator('[data-testid="glossary-item-0-toggle"]').click();
+      ok('clicking again hides the definition (toggle, not one-way reveal)', await page.locator('[data-testid="glossary-item-0-definition"]').count() === 0);
+
+      // Keyboard activation: focus the toggle button and press Enter/Space.
+      await page.locator('[data-testid="glossary-item-1-toggle"]').focus();
+      await page.keyboard.press('Enter');
+      ok('keyboard Enter activates the glossary reveal toggle', await page.locator('[data-testid="glossary-item-1-definition"]').count() === 1);
+      await page.keyboard.press('Space');
+      ok('keyboard Space toggles it back closed', await page.locator('[data-testid="glossary-item-1-definition"]').count() === 0);
 
       await page.close();
     }
@@ -226,6 +240,47 @@ async function main() {
       const selectedAfter = await page.locator('[data-testid="checkpoint-definition-feedback"]').textContent();
       ok('the previously-recorded checkpoint answer/feedback survives a backward-then-forward navigation', selectedAfter === selectedBefore && !!selectedAfter);
       await page.close();
+    }
+
+    // ── Scenario E: prefers-reduced-motion stops the mandatory X-layout's
+    // ring-spin animation without breaking the interaction itself ───────────
+    {
+      // Normal motion first: the ring animation must still play for users who
+      // did NOT request reduced motion.
+      const normalPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await normalPage.goto(LESSON1_URL, { waitUntil: 'networkidle' });
+      await normalPage.waitForTimeout(400);
+      await clickNextTimes(normalPage, 6); // -> stage 7 (X-layout)
+      ok('reached the X-layout stage under normal motion settings', await currentStage(normalPage) === 7);
+      const normalAnim = await normalPage.locator('[data-testid="quad-x-motor-m3"] circle').first().evaluate(el => getComputedStyle(el).animationName);
+      ok('the ring-spin animation is ACTIVE under normal motion (unaffected for users who did not request reduced motion)', normalAnim !== 'none');
+      await normalPage.close();
+
+      // Reduced motion: the same stage, same interaction, but no spin.
+      const rmContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+      const rmPage = await rmContext.newPage();
+      await rmPage.goto(LESSON1_URL, { waitUntil: 'networkidle' });
+      await rmPage.waitForTimeout(400);
+      await clickNextTimes(rmPage, 6); // -> stage 7 (X-layout)
+      ok('reached the X-layout stage under reduced motion', await currentStage(rmPage) === 7);
+      const rmAnim = await rmPage.locator('[data-testid="quad-x-motor-m3"] circle').first().evaluate(el => getComputedStyle(el).animationName);
+      ok('the ring-spin animation is DISABLED under prefers-reduced-motion', rmAnim === 'none');
+
+      // Static CW/CCW cue must still be present and readable without animation.
+      const m3Text = await rmPage.locator('[data-testid="quad-x-motor-m3"]').textContent();
+      const m1Text = await rmPage.locator('[data-testid="quad-x-motor-m1"]').textContent();
+      ok('the CW label is still present as a static cue under reduced motion', (m3Text ?? '').includes('CW'));
+      ok('the CCW label is still present as a static cue under reduced motion', (m1Text ?? '').includes('CCW'));
+
+      // Motor exploration / completion tracking must still work with motion disabled.
+      await rmPage.locator('[data-testid="quad-x-motor-m3"]').click({ force: true });
+      await rmPage.locator('[data-testid="quad-x-motor-m1"]').click({ force: true });
+      await rmPage.waitForTimeout(150);
+      await clickNextTimes(rmPage, 8); // -> stage 15
+      const xLayoutReq = rmPage.locator('[data-testid="requirement-xLayout"]');
+      ok('X-layout completion is still tracked correctly under reduced motion (requirement shows met)', (await xLayoutReq.getAttribute('data-met')) === 'true');
+
+      await rmContext.close();
     }
 
     // ── Scenario D: Lesson 2 still renders generically; Lesson 9's existing
