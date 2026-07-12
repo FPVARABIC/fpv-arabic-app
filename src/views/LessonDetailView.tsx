@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { SafetyWarning } from '../components/SafetyWarning';
 import { EducationalDiagram } from '../components/EducationalDiagram';
-import { Lesson01Journey } from '../components/lessons/Lesson01Journey';
+import { InteractiveLessonJourney } from '../components/lessons/InteractiveLessonJourney';
+import { getLessonJourneyDefinition } from '../data/lessons/journeyRegistry';
 import { lessonsData } from '../data/lessonsData';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -39,7 +40,8 @@ export const LessonDetailView: React.FC = () => {
   const prevLesson = lessonIndex > 0 ? lessonsData[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < lessonsData.length - 1 ? lessonsData[lessonIndex + 1] : null;
 
-  if (lesson.id === 'lesson-quadcopter-intro') {
+  const journeyDefinition = getLessonJourneyDefinition(lesson.id);
+  if (journeyDefinition) {
     return (
       <AppShell>
         <div className="fade-in" style={{ background: 'linear-gradient(180deg, #0E2A36 0%, #123A46 100%)', minHeight: '100%' }}>
@@ -54,7 +56,7 @@ export const LessonDetailView: React.FC = () => {
             {isDone && <span className="badge-green flex-shrink-0">مكتمل</span>}
           </div>
           <div className="px-4 py-4">
-            <Lesson01Journey lesson={lesson} nextLesson={nextLesson} />
+            <InteractiveLessonJourney definition={journeyDefinition} lesson={lesson} nextLesson={nextLesson} />
           </div>
         </div>
       </AppShell>
