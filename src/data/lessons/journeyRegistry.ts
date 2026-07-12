@@ -6,9 +6,11 @@
  */
 import type { LessonJourneyDefinition } from '../../types/lessonJourney';
 import { lesson01JourneyDefinition } from './lesson01Journey.definition';
+import { lesson02JourneyDefinition } from './lesson02Journey.definition';
 
 const journeysByLessonId: Record<string, LessonJourneyDefinition> = {
   [lesson01JourneyDefinition.lessonId]: lesson01JourneyDefinition,
+  [lesson02JourneyDefinition.lessonId]: lesson02JourneyDefinition,
 };
 
 export function getLessonJourneyDefinition(lessonId: string): LessonJourneyDefinition | undefined {

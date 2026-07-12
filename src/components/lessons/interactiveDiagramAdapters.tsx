@@ -1,6 +1,7 @@
 import React from 'react';
 import type { DiagramType } from '../../types';
 import { QuadXLayout } from '../diagrams/QuadXLayout';
+import { SignalFlow } from '../diagrams/SignalFlow';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -10,5 +11,8 @@ import { QuadXLayout } from '../diagrams/QuadXLayout';
 export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ onVariant: (variant: string) => void }>>> = {
   'quad-x-layout': ({ onVariant }) => (
     <QuadXLayout onMotorExplore={(_motorId, cw) => onVariant(cw ? 'cw' : 'ccw')} />
+  ),
+  'signal-flow': ({ onVariant }) => (
+    <SignalFlow onNodeExplore={nodeId => onVariant(nodeId)} />
   ),
 };

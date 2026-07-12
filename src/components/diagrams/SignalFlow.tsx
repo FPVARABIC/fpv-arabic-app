@@ -32,11 +32,33 @@ const nodes = [
 const NODE_H = 50;
 const STEP = 72;
 
-export const SignalFlow: React.FC = () => {
+export interface SignalFlowProps {
+  /** Fired the first time a learner opens a given node — lets a consuming
+   *  lesson track "explored every stage of the chain" without duplicating
+   *  this diagram's own selection state. */
+  onNodeExplore?: (nodeId: string) => void;
+}
+
+export const SignalFlow: React.FC<SignalFlowProps> = ({ onNodeExplore }) => {
   const { sel, toggle } = useReveal<string>();
+  const handleToggle = (id: string) => {
+    toggle(id);
+    onNodeExplore?.(id);
+  };
   const lastY = 20 + 4 * STEP;
   return (
-    <DiagramFrame title="مسار الإشارة" hint="اضغط أي مرحلة لمعرفة دورها">
+    <>
+      {/* Component-scoped only (does not touch index.css's global .flow-dash/
+          .glow-node, which several other diagrams also rely on) — stops the
+          continuous flow/glow animations for users who requested reduced
+          motion, while every static cue (labels, numbering, click handling)
+          is untouched and still fully available. */}
+      <style>{`
+        @media (prefers-reduced-motion: reduce) {
+          .signal-flow-anim { animation: none !important; }
+        }
+      `}</style>
+      <DiagramFrame title="مسار الإشارة" hint="اضغط أي مرحلة لمعرفة دورها">
       <svg viewBox="0 0 300 400" className="w-full">
         {nodes.map((n, i) => {
           const y = 20 + i * STEP;
@@ -45,7 +67,7 @@ export const SignalFlow: React.FC = () => {
           return (
             <g key={n.id}>
               {/* Node box */}
-              <g onClick={() => toggle(n.id)} style={{ cursor: 'pointer' }}>
+              <g onClick={() => handleToggle(n.id)} style={{ cursor: 'pointer' }} data-testid={`signal-flow-node-${n.id}`}>
                 <rect
                   x="40" y={y} width="220" height={NODE_H} rx="10"
                   fill={active ? `${n.color}18` : 'rgba(15,23,42,0.7)'}
@@ -59,7 +81,7 @@ export const SignalFlow: React.FC = () => {
                 <text x="88" y={y + 16} fill={active ? '#fff' : '#e2e8f0'} fontSize="12" fontWeight="bold">{n.label}</text>
                 <text x="88" y={y + 37} fill="#64748b" fontSize="9">{n.sub}</text>
                 {/* Active glow dot */}
-                {active && <circle cx="248" cy={y + 25} r="4" fill={n.color} className="glow-node"/>}
+                {active && <circle cx="248" cy={y + 25} r="4" fill={n.color} className="glow-node signal-flow-anim"/>}
               </g>
 
               {/* Arrow to next node */}
@@ -68,7 +90,7 @@ export const SignalFlow: React.FC = () => {
                   {/* Arrow line */}
                   <line
                     x1="150" y1={y + NODE_H} x2="150" y2={y + NODE_H + 14}
-                    stroke={n.color} strokeWidth="2" className="flow-dash"
+                    stroke={n.color} strokeWidth="2" className="flow-dash signal-flow-anim"
                   />
                   {/* Signal label badge */}
                   <rect x="112" y={y + NODE_H + 1} width="76" height="14" rx="7"
@@ -86,13 +108,14 @@ export const SignalFlow: React.FC = () => {
 
         {/* Final arrow to lift */}
         <g>
-          <line x1="150" y1={lastY + NODE_H} x2="150" y2={lastY + NODE_H + 18} stroke={C.green} strokeWidth="2" className="flow-dash"/>
+          <line x1="150" y1={lastY + NODE_H} x2="150" y2={lastY + NODE_H + 18} stroke={C.green} strokeWidth="2" className="flow-dash signal-flow-anim"/>
           <polygon points={`150,${lastY + NODE_H + 24} 145,${lastY + NODE_H + 17} 155,${lastY + NODE_H + 17}`} fill={C.green} opacity="0.8"/>
           <text x="150" y={lastY + NODE_H + 36} textAnchor="middle" fill={C.green} fontSize="9">🚁 رفع وحركة</text>
         </g>
       </svg>
 
       <DiagramInfo text={sel ? nodes.find(n => n.id === sel)!.info : null} />
-    </DiagramFrame>
+      </DiagramFrame>
+    </>
   );
 };

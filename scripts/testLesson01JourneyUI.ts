@@ -283,18 +283,21 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Scenario D: Lesson 2 still renders generically; Lesson 9's existing
-    // diagram (its only diagram not shadowed by an image) still works ────────
+    // ── Scenario D: Lesson 3 still renders generically (Lesson 2 was
+    // deliberately migrated onto the journey architecture in Phase 4 — see
+    // testLesson02JourneyUI.ts — so Lesson 3 is now the nearest still-legacy
+    // lesson for this regression check); Lesson 9's existing diagram (its
+    // only diagram not shadowed by an image) still works ────────────────────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', e => consoleErrors.push(String(e)));
 
-      await page.goto(`${BASE}/lessons/lesson-quadcopter-how-it-works`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-drone-parts`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 2 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 2 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
-      ok('Lesson 2 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
+      ok('Lesson 3 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 3 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 3 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
 
       await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
