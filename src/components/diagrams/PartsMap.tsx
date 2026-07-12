@@ -13,15 +13,26 @@ const parts = [
   { id: 'props', label: 'Props', name: 'المراوح', Icon: CircleDot, info: 'Props: المراوح التي تحوّل دوران المحرك إلى دفع.' },
 ];
 
-export const PartsMap: React.FC = () => {
+export interface PartsMapProps {
+  /** Fired the first time a learner opens a given part — lets a consuming
+   *  lesson track "explored every part" without duplicating this diagram's
+   *  own selection state. */
+  onPartExplore?: (partId: string) => void;
+}
+
+export const PartsMap: React.FC<PartsMapProps> = ({ onPartExplore }) => {
   const { sel, toggle } = useReveal<string>();
+  const handleToggle = (id: string) => {
+    toggle(id);
+    onPartExplore?.(id);
+  };
   return (
     <DiagramFrame title="خريطة القطع الأساسية" hint="اضغط أي قطعة لمعرفة وظيفتها">
       <div className="grid grid-cols-4 gap-2">
         {parts.map(p => {
           const active = sel === p.id;
           return (
-            <button key={p.id} onClick={() => toggle(p.id)}
+            <button key={p.id} onClick={() => handleToggle(p.id)} data-testid={`parts-map-item-${p.id}`}
               className={`flex flex-col items-center gap-1 rounded-xl py-2.5 border transition-all press ${active ? 'bg-cyan-400/14 border-cyan-400/50' : 'bg-white/4 border-white/8 hover:border-cyan-400/30'}`}>
               <p.Icon size={20} className="text-cyan-400" />
               <span className="text-[10px] text-slate-300 leading-tight text-center">{p.name}</span>
