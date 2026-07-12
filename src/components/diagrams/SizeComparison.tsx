@@ -7,15 +7,26 @@ const sizes = [
   { id: '7', r: 54, label: '7"', name: '7 بوصة', info: '7 بوصة: أكبر وأثقل — لحمل كاميرات احترافية أو الطيران لمسافات طويلة.' },
 ];
 
-export const SizeComparison: React.FC = () => {
+export interface SizeComparisonProps {
+  /** Fired the first time a learner opens a given size — lets a consuming
+   *  lesson track "explored every size" without duplicating this diagram's
+   *  own selection state. */
+  onSizeExplore?: (sizeId: string) => void;
+}
+
+export const SizeComparison: React.FC<SizeComparisonProps> = ({ onSizeExplore }) => {
   const { sel, toggle } = useReveal<string>();
+  const handleToggle = (id: string) => {
+    toggle(id);
+    onSizeExplore?.(id);
+  };
   return (
     <DiagramFrame title="مقارنة الأحجام" hint="حجم نسبي حقيقي — اضغط أي حجم لمعرفة استخدامه">
       <div className="flex items-end justify-around gap-2 px-2 pt-4 pb-2">
         {sizes.map(s => {
           const active = sel === s.id;
           return (
-            <button key={s.id} onClick={() => toggle(s.id)} className="flex flex-col items-center gap-2 press">
+            <button key={s.id} onClick={() => handleToggle(s.id)} data-testid={`size-comparison-item-${s.id}`} className="flex flex-col items-center gap-2 press">
               <svg width={s.r * 2 + 8} height={s.r * 2 + 8} viewBox={`0 0 ${s.r * 2 + 8} ${s.r * 2 + 8}`}>
                 <circle cx={s.r + 4} cy={s.r + 4} r={s.r} fill={active ? 'rgba(24,230,230,0.18)' : 'rgba(24,230,230,0.06)'}
                   stroke={active || s.best ? C.cyan : 'rgba(34,211,238,0.4)'} strokeWidth={active ? 3 : 1.6} strokeDasharray={s.best ? '0' : '5 3'} />

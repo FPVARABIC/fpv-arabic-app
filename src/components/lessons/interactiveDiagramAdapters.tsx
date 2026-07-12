@@ -3,6 +3,7 @@ import type { DiagramType } from '../../types';
 import { QuadXLayout } from '../diagrams/QuadXLayout';
 import { SignalFlow } from '../diagrams/SignalFlow';
 import { PartsMap } from '../diagrams/PartsMap';
+import { SizeComparison } from '../diagrams/SizeComparison';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -18,5 +19,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'parts-map': ({ onVariant }) => (
     <PartsMap onPartExplore={partId => onVariant(partId)} />
+  ),
+  'size-comparison': ({ onVariant }) => (
+    <SizeComparison onSizeExplore={sizeId => onVariant(sizeId)} />
   ),
 };
