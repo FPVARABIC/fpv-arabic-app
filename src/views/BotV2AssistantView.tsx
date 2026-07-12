@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { SafetyWarning } from '../components/SafetyWarning';
-import { analyzeAndComposeBotV2Answer } from '../data/knowledge/botV2/engine';
+import { analyzeAndComposeBotV2Answer, createEmptyContext, type AssistantSessionContext } from '../data/knowledge/botV2/engine';
 import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/botV2/types';
+import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
 import { Send, ChevronLeft, FlaskConical } from 'lucide-react';
 
 // ── Quadcopter avatar (inline SVG, top-down view) ─────────────────────────────
@@ -66,6 +67,7 @@ export const BotV2AssistantView: React.FC = () => {
     text: 'مرحبًا! أنا مساعد FPV الذكي. اكتب سؤالك بالعربي أو الإنجليزي وسأجيبك:',
   }]);
   const [input, setInput] = useState('');
+  const [sessionContext, setSessionContext] = useState<AssistantSessionContext>(createEmptyContext());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,7 +80,9 @@ export const BotV2AssistantView: React.FC = () => {
     if (!q) return;
     let answer: BotV2Answer;
     try {
-      answer = analyzeAndComposeBotV2Answer(q);
+      const turn = analyzeAndComposeBotV2Answer(q, sessionContext);
+      answer = turn.answer;
+      setSessionContext(turn.nextContext);
     } catch {
       setMsgs(prev => [...prev,
         { id: Date.now().toString(), from: 'user', text: q },
@@ -226,12 +230,10 @@ const BotV2Bubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
         </div>
       )}
 
-      {answer.warning && (
-        <SafetyWarning
-          message={answer.warning}
-          type={answer.riskLevel === 'critical' ? 'danger' : 'warning'}
-        />
-      )}
+      {(() => {
+        const warningCard = getWarningCardProps(answer);
+        return warningCard && <SafetyWarning message={warningCard.message} type={warningCard.type} />;
+      })()}
 
       <p className="text-sm text-slate-200 leading-relaxed">{answer.shortAnswer}</p>
 

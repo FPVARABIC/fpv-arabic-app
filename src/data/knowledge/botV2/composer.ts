@@ -12,21 +12,32 @@
  *  - unmatched: 2–3 clarification chips.
  *  - No external sources in critical safety answers.
  *  - No lesson-body copying — only links/chips.
+ *  - warning / warningSeverity / warningKind are NEVER decided in this file
+ *    — every branch below spreads the SAME contextualWarning result computed
+ *    once in engine.ts (already deduplication-adjusted).
+ *  - Progressive broad-build clarification asks exactly ONE question per
+ *    turn (session-context driven), never the old four-questions-at-once
+ *    text block.
  */
 
 import type { BotConceptId } from '../botConceptRegistry';
 import type { QueryAnalysis } from '../botQueryAnalysis';
 import type { BotV2Answer, BotV2Chip } from './types';
 import type { V2SafetyResult } from './safety';
+import type { ContextualWarningResult } from './contextualWarning';
 import type { ModeSelection } from './modeSelector';
 import type { AklIndexEntry } from './aklLookup';
+import type { Intent } from './intentClassifier';
+import type { AssistantSessionContext } from './sessionContext';
 import {
   getKnowledgeForConcept,
   getKnowledgeChips,
   getKnowledgeLinks,
 } from './knowledgeResolver';
 
-// ── Hazard → short answer ─────────────────────────────────────────────────────
+// ── Hazard → short answer (main response body for safety_first — distinct
+//    from the warning card text, which comes entirely from
+//    contextualWarning.ts) ──────────────────────────────────────────────────
 
 const HAZARD_SHORT_ANSWER: Record<string, string> = {
   swollen_lipo:     'بطارية LiPo منتفخة = خطر حريق فوري. أبعدها الآن ولا تشحنها تحت أي ظرف.',
@@ -38,7 +49,8 @@ const HAZARD_SHORT_ANSWER: Record<string, string> = {
   generic_critical: 'خطر! أوقف كل شيء وافصل البطارية قبل المتابعة.',
 };
 
-// ── Hazard → knowledge concept ────────────────────────────────────────────────
+// ── Hazard → knowledge concept (steps/chips/links only — warning text for
+//    this same mapping lives in contextualWarning.ts) ────────────────────────
 
 const HAZARD_TO_CONCEPT: Partial<Record<string, BotConceptId>> = {
   swollen_lipo:     'lipo_safety',
@@ -57,13 +69,11 @@ const _GENERIC_SAFETY_STEPS = [
   'افحص المكونات بصرياً',
   'لا تعيد التشغيل حتى تحدد السبب',
 ];
-const _GENERIC_SAFETY_WARNING =
-  'لا تتجاهل تحذيرات الأمان — الكوادكابتر يمكن أن يسبب حريقاً أو إصابة.';
 const _GENERIC_SAFETY_CHIPS: BotV2Chip[] = [
   { label: 'Checklist السلامة', route: '/checklists' },
 ];
 
-// ── Clarification chips ───────────────────────────────────────────────────────
+// ── Clarification chips (out-of-domain / vague-FPV — unchanged) ──────────────
 
 const CLARIFICATION_FPV_CHIPS: BotV2Chip[] = [
   { label: 'أريد أبني درون', query: 'كيف أبني درون' },
@@ -76,6 +86,55 @@ const CLARIFICATION_OOD_CHIPS: BotV2Chip[] = [
   { label: 'مشاكل التوصيل', query: 'مشكلة في التوصيل' },
   { label: 'إعداد Betaflight', query: 'كيف أفتح Betaflight' },
 ];
+
+// ── Progressive broad-build clarification (one question per turn) ────────────
+
+const USE_CASE_LABEL_AR: Record<string, string> = {
+  racing: 'سباق', cinematic: 'تصوير سينمائي', freestyle: 'فريستايل',
+  long_range: 'مسافات طويلة', beginner_practice: 'تدريب للمبتدئين',
+};
+const EXPERIENCE_LABEL_AR: Record<string, string> = {
+  beginner: 'مبتدئ', intermediate: 'متوسط الخبرة', advanced: 'محترف',
+};
+
+const CLARIFY_USE_CASE_CHIPS: BotV2Chip[] = [
+  { label: 'سباق', query: 'سباق' },
+  { label: 'تصوير سينمائي', query: 'تصوير سينمائي' },
+  { label: 'فريستايل', query: 'فريستايل' },
+];
+const CLARIFY_BUDGET_CHIPS: BotV2Chip[] = [
+  { label: 'حوالي 300$', query: '300 دولار' },
+  { label: 'حوالي 600$', query: '600 دولار' },
+];
+const CLARIFY_EXPERIENCE_CHIPS: BotV2Chip[] = [
+  { label: 'مبتدئ', query: 'أنا مبتدئ' },
+  { label: 'لدي خبرة سابقة', query: 'لدي خبرة سابقة في الطيران' },
+];
+
+function composeClarificationStep(pending: 'intended_use' | 'budget' | 'experience_level'): {
+  shortAnswer: string;
+  chips: BotV2Chip[];
+} {
+  switch (pending) {
+    case 'intended_use':
+      return { shortAnswer: 'ما الاستخدام المقصود للدرون؟ (سباق، تصوير سينمائي، فريستايل، مسافات طويلة)', chips: CLARIFY_USE_CASE_CHIPS };
+    case 'budget':
+      return { shortAnswer: 'ما الميزانية التقريبية؟', chips: CLARIFY_BUDGET_CHIPS };
+    case 'experience_level':
+      return { shortAnswer: 'هل أنت مبتدئ أم لديك خبرة سابقة؟', chips: CLARIFY_EXPERIENCE_CHIPS };
+  }
+}
+
+function composeBuildRecommendationIntro(context: AssistantSessionContext): string {
+  const parts: string[] = [];
+  if (context.intendedUse) parts.push(USE_CASE_LABEL_AR[context.intendedUse] ?? context.intendedUse);
+  if (context.budgetAmount !== undefined) {
+    parts.push(`ميزانية ${context.budgetAmount}${context.budgetCurrency ? ' ' + context.budgetCurrency : ''}`);
+  }
+  if (context.experienceLevel) parts.push(EXPERIENCE_LABEL_AR[context.experienceLevel] ?? context.experienceLevel);
+  const summary = parts.length > 0 ? `(${parts.join('، ')})` : '';
+  return `بناءً على إجابتك ${summary}، إليك خطوات البناء:`.trim();
+}
 
 // ── Troubleshoot fallback (used only when no knowledge node is found) ─────────
 
@@ -92,9 +151,12 @@ export function composeV2Answer(
   analysis: QueryAnalysis,
   safety: V2SafetyResult,
   modeSelection: ModeSelection,
+  contextualWarning: ContextualWarningResult,
+  resolvedIntent: Intent,
+  context: AssistantSessionContext,
   aklEntry?: AklIndexEntry,
 ): BotV2Answer {
-  const { mode, isOutOfDomain } = modeSelection;
+  const { mode, isOutOfDomain, isBroadBuildIntent } = modeSelection;
   const conceptId = analysis.conceptId;
 
   const debug = {
@@ -106,6 +168,8 @@ export function composeV2Answer(
     confidence: analysis.confidence,
     isFpvDomain: analysis.isFpvDomain,
     modeReason: modeSelection.reason,
+    resolvedIntent,
+    topicChanged: false, // overwritten by engine.ts with the real value after compose
   };
 
   // ── safety_first ──────────────────────────────────────────────────────────
@@ -120,7 +184,7 @@ export function composeV2Answer(
       riskLevel: 'critical',
       shortAnswer,
       steps: node?.steps ?? _GENERIC_SAFETY_STEPS,
-      warning: node?.safetyNotes ?? _GENERIC_SAFETY_WARNING,
+      ...contextualWarning,
       chips: node?.chips ? [...node.chips] : _GENERIC_SAFETY_CHIPS,
       links: node?.internalLinks ? [...node.internalLinks] : [],
       debug,
@@ -130,13 +194,17 @@ export function composeV2Answer(
   // ── build_roadmap ─────────────────────────────────────────────────────────
   if (mode === 'build_roadmap') {
     const node = getKnowledgeForConcept('drone_build_basics');
+    const shortAnswer =
+      resolvedIntent === 'broad_planning'
+        ? composeBuildRecommendationIntro(context)
+        : node?.shortAnswer ?? 'لبناء كوادكابتر FPV، ابدأ خطوة بخطوة.';
     return {
       mode,
       conceptId,
       riskLevel: safety.riskLevel,
-      shortAnswer: node?.shortAnswer ?? 'لبناء كوادكابتر FPV، ابدأ خطوة بخطوة.',
+      shortAnswer,
       steps: node?.steps ? [...node.steps] : [],
-      warning: node?.safetyNotes,
+      ...contextualWarning,
       chips: getKnowledgeChips('drone_build_basics'),
       links: getKnowledgeLinks('drone_build_basics'),
       debug,
@@ -152,6 +220,7 @@ export function composeV2Answer(
       riskLevel: 'none',
       shortAnswer: node?.shortAnswer ?? 'التطبيق يحتوي على أقسام مترابطة — ابدأ بالبناء والدروس.',
       steps: node?.steps ? [...node.steps] : [],
+      ...contextualWarning,
       chips: getKnowledgeChips('app_navigation'),
       links: getKnowledgeLinks('app_navigation'),
       debug,
@@ -160,12 +229,27 @@ export function composeV2Answer(
 
   // ── clarification_menu ────────────────────────────────────────────────────
   if (mode === 'clarification_menu') {
+    if (isBroadBuildIntent) {
+      const pending = context.pendingClarification ?? 'intended_use';
+      const step = composeClarificationStep(pending);
+      return {
+        mode,
+        conceptId,
+        riskLevel: 'none',
+        shortAnswer: step.shortAnswer,
+        ...contextualWarning,
+        chips: step.chips,
+        links: [],
+        debug,
+      };
+    }
     if (isOutOfDomain) {
       return {
         mode,
         conceptId,
         riskLevel: 'none',
         shortAnswer: 'هذا التطبيق مخصص للـ FPV فقط. هل سؤالك عن بناء الدرون أو الطيران؟',
+        ...contextualWarning,
         chips: CLARIFICATION_OOD_CHIPS,
         links: [],
         debug,
@@ -176,6 +260,7 @@ export function composeV2Answer(
       conceptId,
       riskLevel: 'none',
       shortAnswer: 'سؤالك عن FPV — اختر ما يناسبك:',
+      ...contextualWarning,
       chips: CLARIFICATION_FPV_CHIPS,
       links: [],
       debug,
@@ -200,6 +285,7 @@ export function composeV2Answer(
       riskLevel: safety.riskLevel,
       shortAnswer,
       steps,
+      ...contextualWarning,
       chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
       links: conceptId ? getKnowledgeLinks(conceptId) : [],
       debug,
@@ -216,6 +302,7 @@ export function composeV2Answer(
       riskLevel: safety.riskLevel,
       shortAnswer: 'إليك خطوات التحقق من المشكلة:',
       steps: steps.slice(0, 6),
+      ...contextualWarning,
       chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
       links: conceptId ? getKnowledgeLinks(conceptId) : [],
       debug,
@@ -232,6 +319,7 @@ export function composeV2Answer(
       node?.shortAnswer ??
       aklEntry?.shortAnswer ??
       'لم أجد إجابة محددة. جرب صياغة سؤالك بشكل مختلف.',
+    ...contextualWarning,
     chips: conceptId ? getKnowledgeChips(conceptId) : CLARIFICATION_FPV_CHIPS,
     links: conceptId ? getKnowledgeLinks(conceptId) : [],
     debug,

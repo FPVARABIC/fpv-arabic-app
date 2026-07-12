@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Send, ChevronLeft, FlaskConical } from 'lucide-react';
 import { useBotOverlay } from '../contexts/BotOverlayContext';
-import { analyzeAndComposeBotV2Answer } from '../data/knowledge/botV2/engine';
+import { analyzeAndComposeBotV2Answer, createEmptyContext, type AssistantSessionContext } from '../data/knowledge/botV2/engine';
 import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/botV2/types';
+import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
 import { SafetyWarning } from './SafetyWarning';
 
 // ── Avatar SVG ────────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ export const BotV2Overlay: React.FC = () => {
     text: 'مرحبًا! أنا مساعد FPV الذكي. اكتب سؤالك بالعربي أو الإنجليزي وسأجيبك:',
   }]);
   const [input, setInput] = useState('');
+  const [sessionContext, setSessionContext] = useState<AssistantSessionContext>(createEmptyContext());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const latestMsgRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +109,9 @@ export const BotV2Overlay: React.FC = () => {
     if (!q) return;
     let answer: BotV2Answer;
     try {
-      answer = analyzeAndComposeBotV2Answer(q);
+      const turn = analyzeAndComposeBotV2Answer(q, sessionContext);
+      answer = turn.answer;
+      setSessionContext(turn.nextContext);
     } catch {
       setMsgs(prev => [...prev,
         { id: Date.now().toString(), from: 'user', text: q },
@@ -367,12 +371,10 @@ const OverlayBubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
         </div>
       )}
 
-      {answer.warning && (
-        <SafetyWarning
-          message={answer.warning}
-          type={answer.riskLevel === 'critical' ? 'danger' : 'warning'}
-        />
-      )}
+      {(() => {
+        const warningCard = getWarningCardProps(answer);
+        return warningCard && <SafetyWarning message={warningCard.message} type={warningCard.type} />;
+      })()}
 
       <p style={{ margin: 0, fontSize: '15px', color: '#e2e8f0', lineHeight: 1.6 }}>{answer.shortAnswer}</p>
 

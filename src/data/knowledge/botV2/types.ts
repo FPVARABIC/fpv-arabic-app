@@ -4,6 +4,8 @@
  * Isolated from live runtime. Not imported by any UI or bot service code.
  */
 
+import type { ContextualWarningKind, WarningSeverity } from './contextualWarning';
+
 // ── Answer modes ──────────────────────────────────────────────────────────────
 
 export type BotV2AnswerMode =
@@ -49,6 +51,12 @@ export interface BotV2Debug {
   confidence: 'matched' | 'unmatched';
   isFpvDomain: boolean;
   modeReason: string;
+  /** Resolved Intent for this turn, after context continuation/topic-switch
+   *  resolution — used by tests and by the "تجريبي" debug surface. */
+  resolvedIntent: string;
+  /** Whether this turn's context change was a topic switch (family
+   *  changed) vs. a continuation. */
+  topicChanged: boolean;
 }
 
 // ── Answer ────────────────────────────────────────────────────────────────────
@@ -62,8 +70,17 @@ export interface BotV2Answer {
   shortAnswer: string;
   /** Max 6 items. */
   steps?: string[];
-  /** Present for safety_first and build_roadmap modes. */
+  /**
+   * Single-authority warning result from contextualWarning.ts (already
+   * deduplication-adjusted by engine.ts), present on EVERY answer regardless
+   * of mode. warningSeverity is always set; `warning`/`warningKind` are set
+   * together or both omitted. Both UI consumers must render based on
+   * warningSeverity alone via getWarningCardProps() and must never
+   * independently decide whether to show this content.
+   */
   warning?: string;
+  warningSeverity: WarningSeverity;
+  warningKind?: ContextualWarningKind;
   chips: BotV2Chip[];
   links: BotV2Link[];
   debug: BotV2Debug;
