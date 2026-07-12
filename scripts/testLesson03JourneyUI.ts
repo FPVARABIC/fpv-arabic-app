@@ -218,12 +218,15 @@ async function main() {
       await ctx.close();
     }
     {
+      // Lesson 4 was deliberately migrated onto the journey architecture in
+      // Phase 6 (see testLesson04JourneyUI.ts) — Lesson 5 is now the nearest
+      // still-legacy lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-define-goal`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-drone-size`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 4 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 4 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 5 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 5 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
       await ctx.close();
     }
     {

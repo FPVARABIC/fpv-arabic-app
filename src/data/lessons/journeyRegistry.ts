@@ -8,11 +8,13 @@ import type { LessonJourneyDefinition } from '../../types/lessonJourney';
 import { lesson01JourneyDefinition } from './lesson01Journey.definition';
 import { lesson02JourneyDefinition } from './lesson02Journey.definition';
 import { lesson03JourneyDefinition } from './lesson03Journey.definition';
+import { lesson04JourneyDefinition } from './lesson04Journey.definition';
 
 const journeysByLessonId: Record<string, LessonJourneyDefinition> = {
   [lesson01JourneyDefinition.lessonId]: lesson01JourneyDefinition,
   [lesson02JourneyDefinition.lessonId]: lesson02JourneyDefinition,
   [lesson03JourneyDefinition.lessonId]: lesson03JourneyDefinition,
+  [lesson04JourneyDefinition.lessonId]: lesson04JourneyDefinition,
 };
 
 export function getLessonJourneyDefinition(lessonId: string): LessonJourneyDefinition | undefined {
