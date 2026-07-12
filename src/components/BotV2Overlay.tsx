@@ -6,28 +6,14 @@ import { analyzeAndComposeBotV2Answer, createEmptyContext, type AssistantSession
 import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/botV2/types';
 import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
 import { SafetyWarning } from './SafetyWarning';
-
-// ── Avatar SVG ────────────────────────────────────────────────────────────────
-
-const QuadcopterAvatar: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 10.5L6 5.5"   stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 10.5L18 5.5"  stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 13.5L6 18.5"  stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 13.5L18 18.5" stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor"/>
-    <circle cx="6"  cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="18" cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="6"  cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="18" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-  </svg>
-);
+import { BotIcon } from './BotIcon';
+import { botColors } from './botVisualTheme';
 
 // ── Risk presentation ─────────────────────────────────────────────────────────
 
 const RISK_BADGE_CLS: Record<BotV2RiskLevel, string | undefined> = {
   none:     undefined,
-  low:      'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400',
+  low:      'bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.2)] text-[#60A5FA]',
   medium:   'bg-amber-500/10 border border-amber-500/30 text-amber-400',
   critical: 'bg-red-500/10 border border-red-500/30 text-red-400',
 };
@@ -183,7 +169,7 @@ export const BotV2Overlay: React.FC = () => {
           backgroundPosition: 'center center, center 35%',
           backgroundRepeat: 'no-repeat, no-repeat',
           borderRadius: '22px 22px 16px 16px',
-          border: '1px solid rgba(34,211,238,0.13)',
+          border: `1px solid rgba(59,130,246,0.13)`,
           transform: isOpen ? 'translateY(0)' : 'translateY(120%)',
           transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
           pointerEvents: isOpen ? 'auto' : 'none',
@@ -201,16 +187,16 @@ export const BotV2Overlay: React.FC = () => {
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', padding: '10px 16px 12px', gap: '12px',
-          borderBottom: '1px solid rgba(34,211,238,0.08)', flexShrink: 0,
+          borderBottom: `1px solid rgba(59,130,246,0.08)`, flexShrink: 0,
         }}>
           <div style={{
             width: '36px', height: '36px', borderRadius: '12px', flexShrink: 0,
-            background: 'linear-gradient(135deg, rgba(24,230,230,0.18), rgba(0,160,255,0.12))',
-            border: '1px solid rgba(34,211,238,0.3)',
+            background: 'linear-gradient(135deg, rgba(37,99,235,0.18), rgba(30,64,175,0.12))', // botColors.primary → botColors.pressed
+            border: `1px solid rgba(59,130,246,0.3)`, // botColors.border
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#22d3ee',
+            color: botColors.accent,
           }}>
-            <QuadcopterAvatar/>
+            <BotIcon size={16} color={botColors.accent}/>
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#fff' }}>مساعد FPV</p>
@@ -256,11 +242,11 @@ export const BotV2Overlay: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'row-reverse', gap: '8px', maxWidth: '88%' }}>
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
-                    background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)',
+                    background: 'rgba(37,99,235,0.1)', border: `1px solid rgba(59,130,246,0.2)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginTop: '4px', color: '#22d3ee',
+                    marginTop: '4px', color: botColors.accent,
                   }}>
-                    <QuadcopterAvatar/>
+                    <BotIcon size={16} color={botColors.accent}/>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                     {msg.text && (
@@ -276,10 +262,10 @@ export const BotV2Overlay: React.FC = () => {
               ) : (
                 <div style={{ maxWidth: '75%' }}>
                   <div style={{
-                    background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.2)',
+                    background: 'rgba(37,99,235,0.1)', border: `1px solid rgba(59,130,246,0.2)`,
                     borderRadius: '16px', padding: '8px 12px',
                   }}>
-                    <p style={{ margin: 0, fontSize: '15px', color: '#67e8f9', lineHeight: 1.5 }}>{msg.text}</p>
+                    <p style={{ margin: 0, fontSize: '15px', color: botColors.softAccent, lineHeight: 1.5 }}>{msg.text}</p>
                   </div>
                 </div>
               )}
@@ -301,7 +287,7 @@ export const BotV2Overlay: React.FC = () => {
         </div>
 
         {/* Input bar */}
-        <div style={{ padding: '10px 16px 18px', borderTop: '1px solid rgba(34,211,238,0.08)', flexShrink: 0 }}>
+        <div style={{ padding: '10px 16px 18px', borderTop: `1px solid rgba(59,130,246,0.08)`, flexShrink: 0 }}>
           <form
             onSubmit={e => {
               e.preventDefault();
@@ -321,25 +307,25 @@ export const BotV2Overlay: React.FC = () => {
               style={{
                 flex: 1,
                 background: 'rgba(13,24,38,0.8)',
-                border: '1px solid rgba(34,211,238,0.2)',
+                border: `1px solid rgba(59,130,246,0.2)`,
                 borderRadius: '20px',
                 padding: '10px 16px',
                 fontSize: '14px',
                 color: '#fff',
                 outline: 'none',
               }}
-              className="placeholder:text-slate-500 focus:border-cyan-400/50 transition-colors"
+              className="placeholder:text-slate-500 focus:border-[#3B82F6]/50 transition-colors"
             />
             <button
               type="submit"
               disabled={!input.trim()}
               style={{
                 width: '42px', height: '42px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.25)',
+                background: 'rgba(37,99,235,0.1)', border: `1px solid rgba(59,130,246,0.25)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#22d3ee', cursor: 'pointer',
+                color: botColors.accent, cursor: 'pointer',
               }}
-              className="hover:bg-cyan-400/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <Send size={15}/>
             </button>
@@ -384,11 +370,11 @@ const OverlayBubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
             <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <div style={{
                 width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                background: 'rgba(34,211,238,0.1)',
+                background: 'rgba(37,99,235,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginTop: '2px',
               }}>
-                <span style={{ color: '#22d3ee', fontSize: '11px', fontWeight: 700 }}>{i + 1}</span>
+                <span style={{ color: botColors.accent, fontSize: '11px', fontWeight: 700 }}>{i + 1}</span>
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: '#cbd5e1', lineHeight: 1.6 }}>{step}</p>
             </li>

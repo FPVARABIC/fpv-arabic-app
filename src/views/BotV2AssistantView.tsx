@@ -3,32 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { SafetyWarning } from '../components/SafetyWarning';
+import { BotIcon } from '../components/BotIcon';
+import { botColors } from '../components/botVisualTheme';
 import { analyzeAndComposeBotV2Answer, createEmptyContext, type AssistantSessionContext } from '../data/knowledge/botV2/engine';
 import type { BotV2Answer, BotV2Chip, BotV2RiskLevel } from '../data/knowledge/botV2/types';
 import { getWarningCardProps } from '../data/knowledge/botV2/contextualWarning';
 import { Send, ChevronLeft, FlaskConical } from 'lucide-react';
 
-// ── Quadcopter avatar (inline SVG, top-down view) ─────────────────────────────
-
-const QuadcopterAvatar: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M12 10.5L6 5.5"   stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 10.5L18 5.5"  stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 13.5L6 18.5"  stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <path d="M12 13.5L18 18.5" stroke="currentColor" strokeWidth="2"   strokeLinecap="round"/>
-    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" fill="currentColor"/>
-    <circle cx="6"  cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="18" cy="5.5"  r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="6"  cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-    <circle cx="18" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.15"/>
-  </svg>
-);
-
 // ── Risk presentation ─────────────────────────────────────────────────────────
 
 const RISK_BADGE_CLS: Record<BotV2RiskLevel, string | undefined> = {
   none:     undefined,
-  low:      'bg-cyan-400/10 border border-cyan-400/20 text-cyan-400',
+  low:      'bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.2)] text-[#60A5FA]',
   medium:   'bg-amber-500/10 border border-amber-500/30 text-amber-400',
   critical: 'bg-red-500/10 border border-red-500/30 text-red-400',
 };
@@ -130,8 +116,8 @@ export const BotV2AssistantView: React.FC = () => {
             <div key={msg.id} className={`flex ${msg.from === 'user' ? 'justify-start' : 'justify-end'}`}>
               {msg.from === 'bot' ? (
                 <div className="flex flex-row-reverse gap-2 max-w-[88%]">
-                  <div className="w-8 h-8 rounded-full bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center flex-shrink-0 mt-1 text-cyan-400">
-                    <QuadcopterAvatar/>
+                  <div className="w-8 h-8 rounded-full bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.2)] flex items-center justify-center flex-shrink-0 mt-1 text-[#60A5FA]">
+                    <BotIcon size={16} color={botColors.accent}/>
                   </div>
                   <div className="space-y-2 min-w-0">
                     {msg.text && (
@@ -150,8 +136,8 @@ export const BotV2AssistantView: React.FC = () => {
                 </div>
               ) : (
                 <div className="max-w-[75%]">
-                  <div className="bg-cyan-400/10 border border-cyan-400/20 rounded-2xl px-3 py-2">
-                    <p className="text-sm text-cyan-300">{msg.text}</p>
+                  <div className="bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.2)] rounded-2xl px-3 py-2">
+                    <p className="text-sm text-[#93C5FD]">{msg.text}</p>
                   </div>
                 </div>
               )}
@@ -174,7 +160,7 @@ export const BotV2AssistantView: React.FC = () => {
         </div>
 
         {/* Input bar */}
-        <div className="px-4 pt-3 pb-5 border-t border-cyan-400/10">
+        <div className="px-4 pt-3 pb-5 border-t border-[rgba(59,130,246,0.1)]">
           <form
             onSubmit={e => {
               e.preventDefault();
@@ -191,12 +177,12 @@ export const BotV2AssistantView: React.FC = () => {
               onChange={e => setInput(e.target.value)}
               placeholder="اكتب سؤالك..."
               dir="auto"
-              className="flex-1 bg-[rgba(13,24,38,0.8)] border border-cyan-400/20 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/50 transition-colors"
+              className="flex-1 bg-[rgba(13,24,38,0.8)] border border-[rgba(59,130,246,0.2)] rounded-2xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#3B82F6]/50 transition-colors"
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="w-11 h-11 rounded-full bg-cyan-400/10 border border-cyan-400/25 flex items-center justify-center text-cyan-400 hover:bg-cyan-400/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0"
+              className="w-11 h-11 rounded-full bg-[rgba(37,99,235,0.1)] border border-[rgba(59,130,246,0.25)] flex items-center justify-center text-[#60A5FA] hover:bg-[#2563EB]/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex-shrink-0"
             >
               <Send size={16}/>
             </button>
@@ -241,8 +227,8 @@ const BotV2Bubble: React.FC<BubbleProps> = ({ answer, onChip, onLink }) => {
         <ol className="space-y-1.5 pt-0.5">
           {answer.steps.map((step, i) => (
             <li key={i} className="flex items-start gap-2">
-              <div className="w-5 h-5 rounded-full bg-cyan-400/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-cyan-400 text-xs font-bold">{i + 1}</span>
+              <div className="w-5 h-5 rounded-full bg-[rgba(37,99,235,0.1)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[#60A5FA] text-xs font-bold">{i + 1}</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">{step}</p>
             </li>

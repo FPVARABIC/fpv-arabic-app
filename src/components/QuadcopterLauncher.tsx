@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useBotOverlay } from '../contexts/BotOverlayContext';
+import { botColors, botShadows } from './botVisualTheme';
 
 const BUTTON_SIZE = 52;
 const DRAG_THRESHOLD = 5;
@@ -57,11 +58,11 @@ const CometRing: React.FC<{ idle: boolean }> = ({ idle }) => (
     }}
     aria-hidden="true"
   >
-    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="1.2"
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(96,165,250,0.18)" strokeWidth="1.2"
       strokeDasharray="75 107.21" strokeLinecap="round"/>
-    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.45)" strokeWidth="1.4"
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(96,165,250,0.45)" strokeWidth="1.4"
       strokeDasharray="45 137.21" strokeLinecap="round"/>
-    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(167,139,250,0.9)" strokeWidth="1.8"
+    <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(96,165,250,0.9)" strokeWidth="1.8"
       strokeDasharray="20 162.21" strokeLinecap="round"/>
   </svg>
 );
@@ -98,22 +99,25 @@ export const QuadcopterLauncher: React.FC = () => {
 
   // Mount: read frame geometry, restore saved position or compute default bottom-left
   useEffect(() => {
-    const rect = getFrameRect();
-    if (!rect) return;
-    setFrameLeft(rect.left);
-    const vp = window.innerHeight;
-    let pos: { x: number; y: number };
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : null;
-      pos = parsed
-        ? clampPos(parsed.x, parsed.y, rect.width, vp)
-        : { x: EDGE_MARGIN, y: vp - BUTTON_SIZE - NAV_HEIGHT - EDGE_MARGIN };
-    } catch {
-      pos = { x: EDGE_MARGIN, y: vp - BUTTON_SIZE - NAV_HEIGHT - EDGE_MARGIN };
-    }
-    posRef.current = pos;
-    setPosition(pos);
+    const init = () => {
+      const rect = getFrameRect();
+      if (!rect) return;
+      setFrameLeft(rect.left);
+      const vp = window.innerHeight;
+      let pos: { x: number; y: number };
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : null;
+        pos = parsed
+          ? clampPos(parsed.x, parsed.y, rect.width, vp)
+          : { x: EDGE_MARGIN, y: vp - BUTTON_SIZE - NAV_HEIGHT - EDGE_MARGIN };
+      } catch {
+        pos = { x: EDGE_MARGIN, y: vp - BUTTON_SIZE - NAV_HEIGHT - EDGE_MARGIN };
+      }
+      posRef.current = pos;
+      setPosition(pos);
+    };
+    init();
   }, []);
 
   // Recalculate frameLeft and re-clamp on resize / orientation change
@@ -260,7 +264,7 @@ export const QuadcopterLauncher: React.FC = () => {
             position: 'absolute',
             inset: -16,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.32) 0%, rgba(109,40,217,0.10) 55%, transparent 75%)',
+            background: 'radial-gradient(circle, rgba(37,99,235,0.32) 0%, rgba(30,64,175,0.10) 55%, transparent 75%)', // botColors.primary → botColors.pressed
             animation: idle ? 'ql-halo-pulse 5s ease-in-out infinite' : 'none',
             pointerEvents: 'none',
           }}
@@ -281,12 +285,12 @@ export const QuadcopterLauncher: React.FC = () => {
             height: '100%',
             borderRadius: '50%',
             background: isOpen
-              ? 'linear-gradient(135deg, rgba(139,92,246,0.28) 0%, rgba(109,40,217,0.18) 100%)'
-              : 'linear-gradient(135deg, rgba(20,10,40,0.92) 0%, rgba(14,6,30,0.96) 100%)',
+              ? 'linear-gradient(135deg, rgba(37,99,235,0.28) 0%, rgba(30,64,175,0.18) 100%)' // botColors.primary → botColors.pressed
+              : 'linear-gradient(135deg, rgba(10,16,36,0.92) 0%, rgba(6,11,26,0.96) 100%)',
             border: isOpen
-              ? '1px solid rgba(167,139,250,0.7)'
-              : '1px solid rgba(139,92,246,0.35)',
-            color: idle ? '#ddd6fe' : '#ffffff',
+              ? `1px solid rgba(96,165,250,0.7)` // botColors.accent
+              : `1px solid rgba(37,99,235,0.35)`, // botColors.primary
+            color: idle ? botColors.softAccent : botColors.text,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -295,10 +299,10 @@ export const QuadcopterLauncher: React.FC = () => {
             cursor: isDragging ? 'grabbing' : 'grab',
             transition: 'border-color 0.2s, background 0.2s, box-shadow 0.2s, opacity 0.2s',
             boxShadow: isDragging
-              ? '0 0 10px rgba(139,92,246,0.18), 0 4px 14px rgba(0,0,0,0.5)'
+              ? '0 0 10px rgba(37,99,235,0.18), 0 4px 14px rgba(0,0,0,0.5)'
               : isOpen
-                ? '0 0 28px rgba(139,92,246,0.65), 0 4px 14px rgba(0,0,0,0.5)'
-                : '0 0 18px rgba(139,92,246,0.42), 0 4px 14px rgba(0,0,0,0.5)',
+                ? `${botShadows.glowStrong}, 0 4px 14px rgba(0,0,0,0.5)`
+                : `${botShadows.glow}, 0 4px 14px rgba(0,0,0,0.5)`,
             opacity: isDragging ? 0.85 : 1,
             userSelect: 'none',
             WebkitUserSelect: 'none',
