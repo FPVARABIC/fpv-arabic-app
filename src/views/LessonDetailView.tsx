@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { SafetyWarning } from '../components/SafetyWarning';
 import { EducationalDiagram } from '../components/EducationalDiagram';
+import { Lesson01Journey } from '../components/lessons/Lesson01Journey';
 import { lessonsData } from '../data/lessonsData';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -14,6 +15,23 @@ export const LessonDetailView: React.FC = () => {
   const [showNotUnderstood, setShowNotUnderstood] = useState(false);
 
   const lesson = lessonsData.find(l => l.id === lessonId);
+  const effectiveLessonId = lesson?.id;
+
+  // Read the latest setLastOpenedLesson via a ref rather than the effect's
+  // own dependency array: that function is recreated on every render of
+  // useProgress() (it is not memoized there, and this fix must not touch
+  // ProgressContext/useProgress), so depending on it directly would re-fire
+  // this effect — and re-write the same value — on any unrelated progress
+  // state change elsewhere in the app while a lesson page stays mounted.
+  const setLastOpenedLessonRef = React.useRef(setLastOpenedLesson);
+  React.useEffect(() => {
+    setLastOpenedLessonRef.current = setLastOpenedLesson;
+  });
+
+  React.useEffect(() => {
+    if (effectiveLessonId) setLastOpenedLessonRef.current(effectiveLessonId);
+  }, [effectiveLessonId]);
+
   if (!lesson) return <div className="p-8 text-center text-slate-400">الدرس غير موجود</div>;
 
   const isDone = completedLessons.includes(lesson.id);
@@ -21,7 +39,27 @@ export const LessonDetailView: React.FC = () => {
   const prevLesson = lessonIndex > 0 ? lessonsData[lessonIndex - 1] : null;
   const nextLesson = lessonIndex < lessonsData.length - 1 ? lessonsData[lessonIndex + 1] : null;
 
-  React.useEffect(() => { setLastOpenedLesson(lesson.id); }, [lesson.id]);
+  if (lesson.id === 'lesson-quadcopter-intro') {
+    return (
+      <AppShell>
+        <div className="fade-in" style={{ background: 'linear-gradient(180deg, #0E2A36 0%, #123A46 100%)', minHeight: '100%' }}>
+          <div className="px-4 pt-4 pb-3 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(94,234,212,0.1)' }}>
+            <button onClick={() => navigate('/lessons')} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center press">
+              <ArrowRight size={18} className="text-slate-400"/>
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-slate-500">درس {lesson.number} من {lessonsData.length}</p>
+              <h1 className="text-lg font-extrabold truncate" style={{ color: '#F8FAFC' }}>{lesson.title}</h1>
+            </div>
+            {isDone && <span className="badge-green flex-shrink-0">مكتمل</span>}
+          </div>
+          <div className="px-4 py-4">
+            <Lesson01Journey lesson={lesson} nextLesson={nextLesson} />
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
