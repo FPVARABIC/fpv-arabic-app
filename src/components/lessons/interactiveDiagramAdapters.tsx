@@ -6,6 +6,7 @@ import { PartsMap } from '../diagrams/PartsMap';
 import { SizeComparison } from '../diagrams/SizeComparison';
 import { ElectricityBasics } from '../diagrams/ElectricityBasics';
 import { LipoCells } from '../diagrams/LipoCells';
+import { GndFiveVbat } from '../diagrams/GndFiveVbat';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -30,5 +31,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'lipo-cells': ({ onVariant }) => (
     <LipoCells onPackExplore={packId => onVariant(packId)} />
+  ),
+  'gnd-5v-vbat': ({ onVariant }) => (
+    <GndFiveVbat onRailExplore={railId => onVariant(railId)} />
   ),
 };

@@ -221,16 +221,17 @@ async function main() {
       await ctx.close();
     }
     {
-      // Lessons 5, 6, and 7 were deliberately migrated onto the journey
-      // architecture in Phases 7-9 (see testLesson05JourneyUI.ts /
-      // testLesson06JourneyUI.ts / testLesson07JourneyUI.ts) — Lesson 8 is
-      // now the nearest still-legacy lesson for this regression check.
+      // Lessons 5, 6, 7, and 8 were deliberately migrated onto the journey
+      // architecture in Phases 7-10 (see testLesson05JourneyUI.ts /
+      // testLesson06JourneyUI.ts / testLesson07JourneyUI.ts /
+      // testLesson08JourneyUI.ts) — Lesson 9 is now the nearest still-legacy
+      // lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-power-rails`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 8 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 8 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 9 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 9 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
       await ctx.close();
     }
     {

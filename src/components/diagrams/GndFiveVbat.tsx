@@ -8,10 +8,31 @@ const info: Record<string, string> = {
 };
 
 
-export const GndFiveVbat: React.FC = () => {
+export interface GndFiveVbatProps {
+  /** Fired the first time a learner opens a given rail — lets a consuming
+   *  lesson track "explored every rail" without duplicating this diagram's
+   *  own selection state. */
+  onRailExplore?: (railId: string) => void;
+}
+
+export const GndFiveVbat: React.FC<GndFiveVbatProps> = ({ onRailExplore }) => {
   const { sel, toggle } = useReveal<string>();
+  const handleToggle = (id: string) => {
+    toggle(id);
+    onRailExplore?.(id);
+  };
   return (
-    <DiagramFrame title="مصادر الطاقة: GND / 5V / VBAT" hint="اضغط أي مسار لمعرفة استخدامه">
+    <>
+      {/* Component-scoped only (does not touch index.css's global .flow-dash,
+          which several other diagrams also rely on) — stops the continuous
+          VBAT/5V flow animations for users who requested reduced motion,
+          while every static cue (labels, click handling) is untouched. */}
+      <style>{`
+        @media (prefers-reduced-motion: reduce) {
+          .gnd-five-vbat-anim { animation: none !important; }
+        }
+      `}</style>
+      <DiagramFrame title="مصادر الطاقة: GND / 5V / VBAT" hint="اضغط أي مسار لمعرفة استخدامه">
       <svg viewBox="0 0 320 200" className="w-full">
         {/* Central FC/ESC board */}
         <rect x="115" y="50" width="90" height="100" rx="10" fill={C.frame} stroke={C.stroke} strokeWidth="1.6"/>
@@ -19,10 +40,10 @@ export const GndFiveVbat: React.FC = () => {
         <text x="160" y="105" textAnchor="middle" fill="#475569" fontSize="9">Power Distribution</text>
 
         {/* VBAT rail — thick red */}
-        <g onClick={() => toggle('vbat')} style={{cursor:'pointer'}}>
+        <g onClick={() => handleToggle('vbat')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-vbat">
           <rect x="0" y="55" width="320" height="18" rx="4" fill={sel==='vbat' ? 'rgba(248,113,113,0.15)' : 'transparent'}/>
-          <line x1="20" y1="64" x2="115" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash"/>
-          <line x1="205" y1="64" x2="300" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash"/>
+          <line x1="20" y1="64" x2="115" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
+          <line x1="205" y1="64" x2="300" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
           <circle cx="20" cy="64" r="7" fill={C.red} opacity="0.85"/>
           <circle cx="300" cy="64" r="7" fill={C.red} opacity="0.85"/>
           <text x="8" y="56" fill={C.red} fontSize="9" fontWeight="bold">VBAT</text>
@@ -35,10 +56,10 @@ export const GndFiveVbat: React.FC = () => {
         </g>
 
         {/* 5V rail — amber */}
-        <g onClick={() => toggle('v5')} style={{cursor:'pointer'}}>
+        <g onClick={() => handleToggle('v5')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-v5">
           <rect x="0" y="96" width="320" height="18" rx="4" fill={sel==='v5' ? 'rgba(251,191,36,0.15)' : 'transparent'}/>
-          <line x1="20" y1="105" x2="115" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash"/>
-          <line x1="205" y1="105" x2="300" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash"/>
+          <line x1="20" y1="105" x2="115" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
+          <line x1="205" y1="105" x2="300" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
           <circle cx="20" cy="105" r="7" fill={C.amber} opacity="0.85"/>
           <circle cx="300" cy="105" r="7" fill={C.amber} opacity="0.85"/>
           <text x="8" y="97" fill={C.amber} fontSize="9" fontWeight="bold">5V</text>
@@ -51,7 +72,7 @@ export const GndFiveVbat: React.FC = () => {
         </g>
 
         {/* GND rail — gray */}
-        <g onClick={() => toggle('gnd')} style={{cursor:'pointer'}}>
+        <g onClick={() => handleToggle('gnd')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-gnd">
           <rect x="0" y="137" width="320" height="18" rx="4" fill={sel==='gnd' ? 'rgba(148,163,184,0.15)' : 'transparent'}/>
           <line x1="20" y1="146" x2="115" y2="146" stroke={C.ground} strokeWidth={sel==='gnd' ? 6 : 4} strokeDasharray="4,3"/>
           <line x1="205" y1="146" x2="300" y2="146" stroke={C.ground} strokeWidth={sel==='gnd' ? 6 : 4} strokeDasharray="4,3"/>
@@ -74,6 +95,7 @@ export const GndFiveVbat: React.FC = () => {
       ]}/>
       <DiagramInfo text={sel ? info[sel] : null}/>
       <DiagramWarn>🔴 لا توصل VBAT مباشرة إلى دخل 5V — ستحرق الجهاز فورًا</DiagramWarn>
-    </DiagramFrame>
+      </DiagramFrame>
+    </>
   );
 };
