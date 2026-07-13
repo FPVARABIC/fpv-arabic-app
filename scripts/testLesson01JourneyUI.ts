@@ -283,23 +283,23 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Scenario D: Lesson 6 still renders generically (Lessons 2, 3, 4, and
-    // 5 were deliberately migrated onto the journey architecture in Phases
-    // 4-7 — see testLesson02JourneyUI.ts / testLesson03JourneyUI.ts /
-    // testLesson04JourneyUI.ts / testLesson05JourneyUI.ts — so Lesson 6 is
-    // now the nearest still-legacy lesson for this regression check);
-    // Lesson 9's existing diagram (its only diagram not shadowed by an
-    // image) still works ────────────────────────────────────────────────────
+    // ── Scenario D: Lesson 7 still renders generically (Lessons 2, 3, 4, 5,
+    // and 6 were deliberately migrated onto the journey architecture in
+    // Phases 4-8 — see testLesson02JourneyUI.ts / testLesson03JourneyUI.ts /
+    // testLesson04JourneyUI.ts / testLesson05JourneyUI.ts /
+    // testLesson06JourneyUI.ts — so Lesson 7 is now the nearest still-legacy
+    // lesson for this regression check); Lesson 9's existing diagram (its
+    // only diagram not shadowed by an image) still works ────────────────────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', e => consoleErrors.push(String(e)));
 
-      await page.goto(`${BASE}/lessons/lesson-electricity-basics`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-lipo-batteries`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 6 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 6 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
-      ok('Lesson 6 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
+      ok('Lesson 7 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 7 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 7 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
 
       await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);

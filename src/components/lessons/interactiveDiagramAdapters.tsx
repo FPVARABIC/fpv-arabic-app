@@ -4,6 +4,7 @@ import { QuadXLayout } from '../diagrams/QuadXLayout';
 import { SignalFlow } from '../diagrams/SignalFlow';
 import { PartsMap } from '../diagrams/PartsMap';
 import { SizeComparison } from '../diagrams/SizeComparison';
+import { ElectricityBasics } from '../diagrams/ElectricityBasics';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -22,5 +23,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'size-comparison': ({ onVariant }) => (
     <SizeComparison onSizeExplore={sizeId => onVariant(sizeId)} />
+  ),
+  'electricity-basics': ({ onVariant }) => (
+    <ElectricityBasics onConceptExplore={conceptId => onVariant(conceptId)} />
   ),
 };
