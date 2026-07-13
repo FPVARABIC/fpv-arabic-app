@@ -56,7 +56,7 @@ export const LessonDetailView: React.FC = () => {
             {isDone && <span className="badge-green flex-shrink-0">مكتمل</span>}
           </div>
           <div className="px-4 py-4">
-            <InteractiveLessonJourney definition={journeyDefinition} lesson={lesson} nextLesson={nextLesson} />
+            <InteractiveLessonJourney key={lesson.id} definition={journeyDefinition} lesson={lesson} nextLesson={nextLesson} />
           </div>
         </div>
       </AppShell>

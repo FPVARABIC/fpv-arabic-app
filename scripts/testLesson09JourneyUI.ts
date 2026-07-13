@@ -171,6 +171,39 @@ async function main() {
       await page.waitForTimeout(400);
       ok('clicking the transition action navigates to Lesson 10\'s real route', page.url().includes('/lessons/lesson-pre-battery-safety'));
 
+      // ── Regression: same-tab (client-side) navigation from Lesson 9 (16
+      // stages) directly into Lesson 10 (15 stages) must remount the journey
+      // with a fresh session state, not crash or leak Lesson 9's stale
+      // currentStageIndex into Lesson 10's shorter stage array. This exact
+      // transition previously threw "Cannot read properties of undefined
+      // (reading 'type')" because <InteractiveLessonJourney> was rendered
+      // without a `key` prop, so React reused the component instance across
+      // the route change and its useState-initialized session state (from
+      // Lesson 9, last stage index 15) survived into Lesson 10's render pass
+      // (only 15 stages, valid indices 0-14) — LessonDetailView.tsx now adds
+      // `key={lesson.id}` so the journey remounts fresh on every lesson id
+      // change. ─────────────────────────────────────────────────────────────
+      ok('Lesson 10 opens at stage 1 immediately after the same-tab transition from Lesson 9 (no stale session state/index leaks across the remount)', await currentStage(page) === 1);
+      ok('no console/page error occurred during the Lesson 9 → Lesson 10 client-side transition (regression test for the stale-state crash)',
+        consoleErrors.filter(e => !e.includes('net::ERR') && !e.includes('Failed to load resource')).length === 0);
+      const lesson10InitialText = await page.locator('[data-testid="lesson01-stage"]').textContent();
+      ok('Lesson 10\'s own orientation content is shown, not any leftover Lesson 9 content', (lesson10InitialText ?? '').includes('السلامة قبل البطارية') || (lesson10InitialText ?? '').includes('نزع المراوح') || (lesson10InitialText ?? '').includes('Smoke Stopper'));
+      ok('no Lesson 9 checkpoint testids leaked into the Lesson 10 render', await page.locator('[data-testid="checkpoint-txConnectsToRxReasoning"]').count() === 0);
+
+      // Forward/backward navigation still works correctly on the freshly
+      // remounted journey, all the way to Lesson 10's real final stage (15,
+      // not Lesson 9's stale 16) and back.
+      await clickNextTimes(page, 14);
+      ok('forward navigation reaches Lesson 10\'s real final stage (15) — not out of bounds, not Lesson 9\'s stage count', await currentStage(page) === 15);
+      await page.locator('[data-testid="lesson01-prev"]').click();
+      await page.waitForTimeout(30);
+      ok('backward navigation works correctly after the remount (stage 14)', await currentStage(page) === 14);
+      for (let i = 0; i < 13; i++) {
+        await page.locator('[data-testid="lesson01-prev"]').click();
+        await page.waitForTimeout(20);
+      }
+      ok('navigated all the way back to Lesson 10\'s stage 1 after the remount', await currentStage(page) === 1);
+
       // ── Refresh semantics (same page/context, so localStorage carries over) ──
       await page.goto(LESSON9_URL, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
@@ -186,7 +219,7 @@ async function main() {
       await page.close();
     }
 
-    // ── Regression: Lessons 1-8 still use their own journeys; Lesson 10 legacy intact ──
+    // ── Regression: Lessons 1-8 still use their own journeys; Lesson 11 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -268,14 +301,19 @@ async function main() {
       await ctx.close();
     }
     {
+      // Lesson 10 was deliberately migrated onto the journey architecture in
+      // Phase 12 (see testLesson10JourneyUI.ts) — Lesson 11 is now the
+      // nearest still-legacy lesson for this regression check. Unlike
+      // Lessons 09/10, Lesson 11 has a real `image` field, so its legacy
+      // page renders a hero <img>, not an SVG diagram.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-frame-assembly`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 10 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 10 (pre-battery-safety) still renders its existing diagram (no regression from this phase)', await page.locator('svg').count() > 0);
+      ok('Lesson 11 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 11 (frame-assembly) still renders its hero image (no regression from this phase)', await page.locator('img').count() > 0);
       const overflow10 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 10 either', !overflow10);
+      ok('no horizontal overflow on Lesson 11 either', !overflow10);
       await ctx.close();
     }
     {

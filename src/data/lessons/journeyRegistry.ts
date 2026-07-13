@@ -14,6 +14,7 @@ import { lesson06JourneyDefinition } from './lesson06Journey.definition';
 import { lesson07JourneyDefinition } from './lesson07Journey.definition';
 import { lesson08JourneyDefinition } from './lesson08Journey.definition';
 import { lesson09JourneyDefinition } from './lesson09Journey.definition';
+import { lesson10JourneyDefinition } from './lesson10Journey.definition';
 
 const journeysByLessonId: Record<string, LessonJourneyDefinition> = {
   [lesson01JourneyDefinition.lessonId]: lesson01JourneyDefinition,
@@ -25,6 +26,7 @@ const journeysByLessonId: Record<string, LessonJourneyDefinition> = {
   [lesson07JourneyDefinition.lessonId]: lesson07JourneyDefinition,
   [lesson08JourneyDefinition.lessonId]: lesson08JourneyDefinition,
   [lesson09JourneyDefinition.lessonId]: lesson09JourneyDefinition,
+  [lesson10JourneyDefinition.lessonId]: lesson10JourneyDefinition,
 };
 
 export function getLessonJourneyDefinition(lessonId: string): LessonJourneyDefinition | undefined {
