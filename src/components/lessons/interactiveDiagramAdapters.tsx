@@ -11,6 +11,7 @@ import { FrameAssembly } from '../diagrams/FrameAssembly';
 import { EscPlacement } from '../diagrams/EscPlacement';
 import { FcOrientation } from '../diagrams/FcOrientation';
 import { ReceiverUart } from '../diagrams/ReceiverUart';
+import { CameraVtx } from '../diagrams/CameraVtx';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -50,5 +51,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'receiver-uart': ({ onVariant }) => (
     <ReceiverUart onPartExplore={partId => onVariant(partId)} />
+  ),
+  'camera-vtx': ({ onVariant }) => (
+    <CameraVtx onPartExplore={partId => onVariant(partId)} />
   ),
 };

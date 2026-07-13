@@ -233,7 +233,7 @@ async function main() {
       await page.close();
     }
 
-    // ── Regression: Lessons 1-11 still use their own journeys; Lesson 16 legacy intact ──
+    // ── Regression: Lessons 1-11 still use their own journeys; Lesson 17 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -347,12 +347,12 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-video-system`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-motor-test`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 16 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 16 (video-system) still renders its hero image (it has an image field, so no SVG diagram is expected)', await page.locator('img').count() > 0);
+      ok('Lesson 17 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 17 (motor-test) still renders its hero image (it has an image field, so no SVG diagram is expected)', await page.locator('img').count() > 0);
       const overflow13 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 16 either', !overflow13);
+      ok('no horizontal overflow on Lesson 17 either', !overflow13);
       await ctx.close();
     }
     {
