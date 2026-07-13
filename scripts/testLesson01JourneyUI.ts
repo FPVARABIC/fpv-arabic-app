@@ -283,31 +283,32 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Scenario D: Lesson 9 still renders generically (Lessons 2, 3, 4, 5,
-    // 6, 7, and 8 were deliberately migrated onto the journey architecture in
-    // Phases 4-10 — see testLesson02JourneyUI.ts / testLesson03JourneyUI.ts /
+    // ── Scenario D: Lesson 10 still renders generically (Lessons 2, 3, 4, 5,
+    // 6, 7, 8, and 9 were deliberately migrated onto the journey architecture
+    // in Phases 4-11 — see testLesson02JourneyUI.ts / testLesson03JourneyUI.ts /
     // testLesson04JourneyUI.ts / testLesson05JourneyUI.ts /
     // testLesson06JourneyUI.ts / testLesson07JourneyUI.ts /
-    // testLesson08JourneyUI.ts — so Lesson 9 is now the nearest still-legacy
-    // lesson for this regression check); Lesson 9's existing diagram (its
-    // only diagram not shadowed by an image) still works ────────────────────
+    // testLesson08JourneyUI.ts / testLesson09JourneyUI.ts — so Lesson 10 is
+    // now the nearest still-legacy lesson for this regression check);
+    // Lesson 10's existing diagram (its only diagram not shadowed by an
+    // image) still works ────────────────────────────────────────────────────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', e => consoleErrors.push(String(e)));
 
-      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 9 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 9 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
-      ok('Lesson 9 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
+      ok('Lesson 10 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 10 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 10 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
 
-      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 9 (tx-rx) still renders its existing interactive diagram (no regression from the QuadXLayout prop addition)', await page.locator('svg').count() > 0);
+      ok('Lesson 10 (pre-battery-safety) still renders its existing interactive diagram (no regression from the QuadXLayout prop addition)', await page.locator('svg').count() > 0);
 
       const overflowX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 9 either', !overflowX);
+      ok('no horizontal overflow on Lesson 10 either', !overflowX);
 
       await page.close();
     }

@@ -196,7 +196,7 @@ async function main() {
       await page.close();
     }
 
-    // ── Regression: Lesson 1 & 2 still use their own journeys; Lesson 9 diagram intact ──
+    // ── Regression: Lesson 1 & 2 still use their own journeys; Lesson 10 diagram intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -218,27 +218,28 @@ async function main() {
       await ctx.close();
     }
     {
-      // Lessons 4, 5, 6, 7, and 8 were deliberately migrated onto the journey
-      // architecture in Phases 6-10 (see testLesson04JourneyUI.ts /
+      // Lessons 4, 5, 6, 7, 8, and 9 were deliberately migrated onto the
+      // journey architecture in Phases 6-11 (see testLesson04JourneyUI.ts /
       // testLesson05JourneyUI.ts / testLesson06JourneyUI.ts /
-      // testLesson07JourneyUI.ts / testLesson08JourneyUI.ts) — Lesson 9 is
-      // now the nearest still-legacy lesson for this regression check.
+      // testLesson07JourneyUI.ts / testLesson08JourneyUI.ts /
+      // testLesson09JourneyUI.ts) — Lesson 10 is now the nearest still-legacy
+      // lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 9 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 9 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 10 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 10 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
       await ctx.close();
     }
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 9 (tx-rx) still renders its existing interactive diagram (no regression from the PartsMap prop addition)', await page.locator('svg').count() > 0);
+      ok('Lesson 10 (pre-battery-safety) still renders its existing interactive diagram (no regression from the PartsMap prop addition)', await page.locator('svg').count() > 0);
       const overflow9 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 9 either', !overflow9);
+      ok('no horizontal overflow on Lesson 10 either', !overflow9);
       await ctx.close();
     }
     {

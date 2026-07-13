@@ -235,7 +235,7 @@ async function main() {
       await ctxRm.close();
     }
 
-    // ── Regression: Lessons 1-7 still use their own journeys; Lesson 9 diagram intact ──
+    // ── Regression: Lessons 1-7 still use their own journeys; Lesson 10 diagram intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -307,14 +307,17 @@ async function main() {
       await ctx.close();
     }
     {
+      // Lesson 9 was deliberately migrated onto the journey architecture in
+      // Phase 11 (see testLesson09JourneyUI.ts) — Lesson 10 is now the
+      // nearest still-legacy lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 9 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 9 (tx-rx) still renders its existing interactive diagram (no regression from this phase)', await page.locator('svg').count() > 0);
+      ok('Lesson 10 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 10 (pre-battery-safety) still renders its existing interactive diagram (no regression from this phase)', await page.locator('svg').count() > 0);
       const overflow9 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 9 either', !overflow9);
+      ok('no horizontal overflow on Lesson 10 either', !overflow9);
       await ctx.close();
     }
     {
