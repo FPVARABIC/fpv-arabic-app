@@ -7,6 +7,7 @@ import { SizeComparison } from '../diagrams/SizeComparison';
 import { ElectricityBasics } from '../diagrams/ElectricityBasics';
 import { LipoCells } from '../diagrams/LipoCells';
 import { GndFiveVbat } from '../diagrams/GndFiveVbat';
+import { FrameAssembly } from '../diagrams/FrameAssembly';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -34,5 +35,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'gnd-5v-vbat': ({ onVariant }) => (
     <GndFiveVbat onRailExplore={railId => onVariant(railId)} />
+  ),
+  'frame-assembly': ({ onVariant }) => (
+    <FrameAssembly onPartExplore={partId => onVariant(partId)} />
   ),
 };

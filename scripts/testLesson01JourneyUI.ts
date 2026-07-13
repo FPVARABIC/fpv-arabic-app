@@ -283,33 +283,34 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Scenario D: Lesson 11 still renders generically (Lessons 2, 3, 4, 5,
-    // 6, 7, 8, 9, and 10 were deliberately migrated onto the journey
-    // architecture in Phases 4-12 — see testLesson02JourneyUI.ts /
+    // ── Scenario D: Lesson 12 still renders generically (Lessons 2, 3, 4, 5,
+    // 6, 7, 8, 9, 10, and 11 were deliberately migrated onto the journey
+    // architecture in Phases 4-13 — see testLesson02JourneyUI.ts /
     // testLesson03JourneyUI.ts / testLesson04JourneyUI.ts /
     // testLesson05JourneyUI.ts / testLesson06JourneyUI.ts /
     // testLesson07JourneyUI.ts / testLesson08JourneyUI.ts /
-    // testLesson09JourneyUI.ts / testLesson10JourneyUI.ts — so Lesson 11 is
-    // now the nearest still-legacy lesson for this regression check).
-    // Unlike Lessons 09/10, Lesson 11 has a real `image` field, so its
-    // legacy page renders a hero <img>, not an SVG diagram ─────────────────
+    // testLesson09JourneyUI.ts / testLesson10JourneyUI.ts /
+    // testLesson11JourneyUI.ts — so Lesson 12 is now the nearest
+    // still-legacy lesson for this regression check). Lesson 12 has a real
+    // `image` field, so its legacy page renders a hero <img>, not an SVG
+    // diagram ────────────────────────────────────────────────────────────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', e => consoleErrors.push(String(e)));
 
-      await page.goto(`${BASE}/lessons/lesson-frame-assembly`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-motor-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 11 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 11 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
-      ok('Lesson 11 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
+      ok('Lesson 12 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 12 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 12 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
 
-      await page.goto(`${BASE}/lessons/lesson-frame-assembly`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-motor-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 11 (frame-assembly) still renders its hero image (no regression from the QuadXLayout prop addition)', await page.locator('img').count() > 0);
+      ok('Lesson 12 (motor-install) still renders its hero image (no regression from the QuadXLayout prop addition)', await page.locator('img').count() > 0);
 
       const overflowX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 11 either', !overflowX);
+      ok('no horizontal overflow on Lesson 12 either', !overflowX);
 
       await page.close();
     }

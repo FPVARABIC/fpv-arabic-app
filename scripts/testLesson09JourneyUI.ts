@@ -219,7 +219,7 @@ async function main() {
       await page.close();
     }
 
-    // ── Regression: Lessons 1-8 still use their own journeys; Lesson 11 legacy intact ──
+    // ── Regression: Lessons 1-8 still use their own journeys; Lesson 12 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -301,19 +301,20 @@ async function main() {
       await ctx.close();
     }
     {
-      // Lesson 10 was deliberately migrated onto the journey architecture in
-      // Phase 12 (see testLesson10JourneyUI.ts) — Lesson 11 is now the
-      // nearest still-legacy lesson for this regression check. Unlike
-      // Lessons 09/10, Lesson 11 has a real `image` field, so its legacy
-      // page renders a hero <img>, not an SVG diagram.
+      // Lessons 10 and 11 were deliberately migrated onto the journey
+      // architecture in Phases 12-13 (see testLesson10JourneyUI.ts and
+      // testLesson11JourneyUI.ts) — Lesson 12 is now the nearest
+      // still-legacy lesson for this regression check. Like Lesson 11,
+      // Lesson 12 has a real `image` field, so its legacy page renders a
+      // hero <img>, not an SVG diagram.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-frame-assembly`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-motor-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 11 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 11 (frame-assembly) still renders its hero image (no regression from this phase)', await page.locator('img').count() > 0);
+      ok('Lesson 12 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 12 (motor-install) still renders its hero image (no regression from this phase)', await page.locator('img').count() > 0);
       const overflow10 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 11 either', !overflow10);
+      ok('no horizontal overflow on Lesson 12 either', !overflow10);
       await ctx.close();
     }
     {
