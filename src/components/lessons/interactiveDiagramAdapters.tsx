@@ -9,6 +9,7 @@ import { LipoCells } from '../diagrams/LipoCells';
 import { GndFiveVbat } from '../diagrams/GndFiveVbat';
 import { FrameAssembly } from '../diagrams/FrameAssembly';
 import { EscPlacement } from '../diagrams/EscPlacement';
+import { FcOrientation } from '../diagrams/FcOrientation';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -42,5 +43,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'esc-placement': ({ onVariant }) => (
     <EscPlacement onPartExplore={partId => onVariant(partId)} />
+  ),
+  'fc-orientation': ({ onVariant }) => (
+    <FcOrientation onPartExplore={partId => onVariant(partId)} />
   ),
 };

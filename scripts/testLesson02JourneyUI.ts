@@ -221,7 +221,7 @@ async function main() {
       await ctxRm.close();
     }
 
-    // ── Regression: Lesson 1 still uses its own journey; Lesson 14 legacy intact ──
+    // ── Regression: Lesson 1 still uses its own journey; Lesson 15 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -240,24 +240,24 @@ async function main() {
       // testLesson07JourneyUI.ts / testLesson08JourneyUI.ts /
       // testLesson09JourneyUI.ts / testLesson10JourneyUI.ts /
       // testLesson11JourneyUI.ts / testLesson12JourneyUI.ts /
-      // testLesson13JourneyUI.ts) — Lesson 14 is now the nearest still-legacy
-      // lesson for this regression check.
+      // testLesson13JourneyUI.ts / testLesson14JourneyUI.ts) — Lesson 15 is
+      // now the nearest still-legacy lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-fc-install`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-receiver-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 14 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 14 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
+      ok('Lesson 15 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 15 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
       await ctx.close();
     }
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-fc-install`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-receiver-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 14 (fc-install) still renders its hero image (it has an image field, so no SVG diagram is expected; no regression from the SignalFlow prop addition)', await page.locator('img').count() > 0);
+      ok('Lesson 15 (receiver-install) still renders its hero image (it has an image field, so no SVG diagram is expected; no regression from the SignalFlow prop addition)', await page.locator('img').count() > 0);
       const overflow9 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 14 either', !overflow9);
+      ok('no horizontal overflow on Lesson 15 either', !overflow9);
       await ctx.close();
     }
 
