@@ -10,6 +10,7 @@ import { GndFiveVbat } from '../diagrams/GndFiveVbat';
 import { FrameAssembly } from '../diagrams/FrameAssembly';
 import { EscPlacement } from '../diagrams/EscPlacement';
 import { FcOrientation } from '../diagrams/FcOrientation';
+import { ReceiverUart } from '../diagrams/ReceiverUart';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -46,5 +47,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'fc-orientation': ({ onVariant }) => (
     <FcOrientation onPartExplore={partId => onVariant(partId)} />
+  ),
+  'receiver-uart': ({ onVariant }) => (
+    <ReceiverUart onPartExplore={partId => onVariant(partId)} />
   ),
 };
