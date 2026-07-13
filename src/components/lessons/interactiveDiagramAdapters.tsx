@@ -5,6 +5,7 @@ import { SignalFlow } from '../diagrams/SignalFlow';
 import { PartsMap } from '../diagrams/PartsMap';
 import { SizeComparison } from '../diagrams/SizeComparison';
 import { ElectricityBasics } from '../diagrams/ElectricityBasics';
+import { LipoCells } from '../diagrams/LipoCells';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -26,5 +27,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'electricity-basics': ({ onVariant }) => (
     <ElectricityBasics onConceptExplore={conceptId => onVariant(conceptId)} />
+  ),
+  'lipo-cells': ({ onVariant }) => (
+    <LipoCells onPackExplore={packId => onVariant(packId)} />
   ),
 };

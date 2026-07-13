@@ -6,15 +6,26 @@ const packs = [
   { id: '6s', cells: 6, v: '22.2V', name: '6S', info: '6S = 6 خلايا × 3.7V = 22.2V (حتى 25.2V مشحونة بالكامل). أعلى كفاءة.' },
 ];
 
-export const LipoCells: React.FC = () => {
+export interface LipoCellsProps {
+  /** Fired the first time a learner opens a given pack — lets a consuming
+   *  lesson track "explored every pack" without duplicating this diagram's
+   *  own selection state. */
+  onPackExplore?: (packId: string) => void;
+}
+
+export const LipoCells: React.FC<LipoCellsProps> = ({ onPackExplore }) => {
   const { sel, toggle } = useReveal<string>();
+  const handleToggle = (id: string) => {
+    toggle(id);
+    onPackExplore?.(id);
+  };
   return (
     <DiagramFrame title="بطارية LiPo" hint="كل خلية 3.7V — اضغط أي بطارية لتفاصيلها">
       <div className="space-y-3">
         {packs.map(p => {
           const active = sel === p.id;
           return (
-            <button key={p.id} onClick={() => toggle(p.id)}
+            <button key={p.id} onClick={() => handleToggle(p.id)} data-testid={`lipo-cells-item-${p.id}`}
               className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-all press ${active ? 'bg-cyan-400/10 border-cyan-400/50' : 'bg-white/4 border-white/8'}`}>
               <span className="text-sm font-bold text-cyan-400 w-8">{p.name}</span>
               <div className="flex gap-1 flex-1">
