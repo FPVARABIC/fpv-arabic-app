@@ -8,6 +8,7 @@ import { ElectricityBasics } from '../diagrams/ElectricityBasics';
 import { LipoCells } from '../diagrams/LipoCells';
 import { GndFiveVbat } from '../diagrams/GndFiveVbat';
 import { FrameAssembly } from '../diagrams/FrameAssembly';
+import { EscPlacement } from '../diagrams/EscPlacement';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -38,5 +39,8 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'frame-assembly': ({ onVariant }) => (
     <FrameAssembly onPartExplore={partId => onVariant(partId)} />
+  ),
+  'esc-placement': ({ onVariant }) => (
+    <EscPlacement onPartExplore={partId => onVariant(partId)} />
   ),
 };

@@ -235,7 +235,7 @@ async function main() {
       await ctxRm.close();
     }
 
-    // ── Regression: Lessons 1-7 still use their own journeys; Lesson 13 legacy intact ──
+    // ── Regression: Lessons 1-7 still use their own journeys; Lesson 14 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -307,19 +307,19 @@ async function main() {
       await ctx.close();
     }
     {
-      // Lessons 9, 10, 11, and 12 were deliberately migrated onto the journey
-      // architecture in Phases 11-14 (see testLesson09JourneyUI.ts /
+      // Lessons 9, 10, 11, 12, and 13 were deliberately migrated onto the
+      // journey architecture in Phases 11-15 (see testLesson09JourneyUI.ts /
       // testLesson10JourneyUI.ts / testLesson11JourneyUI.ts /
-      // testLesson12JourneyUI.ts) — Lesson 13 is now the nearest still-legacy
-      // lesson for this regression check.
+      // testLesson12JourneyUI.ts / testLesson13JourneyUI.ts) — Lesson 14 is
+      // now the nearest still-legacy lesson for this regression check.
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/lessons/lesson-esc-install`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-fc-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 13 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 13 (esc-install) still renders its hero image (it has an image field, so no SVG diagram is expected; no regression from this phase)', await page.locator('img').count() > 0);
+      ok('Lesson 14 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
+      ok('Lesson 14 (fc-install) still renders its hero image (it has an image field, so no SVG diagram is expected; no regression from this phase)', await page.locator('img').count() > 0);
       const overflow9 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 13 either', !overflow9);
+      ok('no horizontal overflow on Lesson 14 either', !overflow9);
       await ctx.close();
     }
     {
