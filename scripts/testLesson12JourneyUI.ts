@@ -1,22 +1,24 @@
 /**
- * Real UI-interaction proof for Lesson 09's journey, built on the same
- * generic interactive-lesson architecture as Lessons 01–08 (no fork, no
+ * Real UI-interaction proof for Lesson 12's journey, built on the same
+ * generic interactive-lesson architecture as Lessons 01-11 (no fork, no
  * special-casing). Drives the actual built app in a real browser
  * (Playwright) rather than relying on source-text grep.
  *
- * Lesson 09 has no interactive_diagram stage (its existing diagram,
- * TxRxCross.tsx, is passive — no interaction was invented for it); the
- * correct-vs-wrong wiring contrast is instead taught via a comparison stage.
+ * Unlike Lesson 11, Lesson 12's existing diagram (MotorMount.tsx) is
+ * entirely passive (no click handlers, no state), so no interactive_diagram
+ * stage was used and no adapter entry was added. The diagram's built-in
+ * "correct vs wrong screw length" contrast is instead re-expressed through
+ * this journey's comparison stage.
  *
- * Complements scripts/testLesson09Journey.ts (pure gating/readiness logic).
+ * Complements scripts/testLesson12Journey.ts (pure gating/readiness logic).
  */
 import assert from 'node:assert/strict';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { chromium, type Page } from 'playwright';
 
-const PORT = 4328;
+const PORT = 4331;
 const BASE = `http://localhost:${PORT}`;
-const LESSON9_URL = `${BASE}/lessons/lesson-tx-rx`;
+const LESSON12_URL = `${BASE}/lessons/lesson-motor-install`;
 
 let passed = 0;
 function ok(label: string, cond: boolean) {
@@ -64,17 +66,16 @@ async function main() {
     const consoleErrors: string[] = [];
 
     // ── Scenario A: full walkthrough — every stage, checkpoints (all wrong on
-    // purpose), comparison, glossary, recall, readiness, completion ──────────
+    // purpose), comparison stage, glossary, recall, readiness, completion ────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
       page.on('pageerror', e => consoleErrors.push(String(e)));
-      await page.goto(LESSON9_URL, { waitUntil: 'networkidle' });
+      await page.goto(LESSON12_URL, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
 
-      ok('Lesson 09 opens directly on stage 1 (orientation)', await currentStage(page) === 1);
+      ok('Lesson 12 opens directly on stage 1 (orientation)', await currentStage(page) === 1);
       ok('the completion button does not exist yet at initial render', await page.locator('[data-testid="lesson01-complete-btn"]').count() === 0);
-      ok('no interactive-diagram hint markup is rendered anywhere (no interactive_diagram stage exists)', await page.locator('[data-testid^="gnd-five-vbat-item-"], [data-testid^="lipo-cells-item-"], [data-testid^="quad-x-motor-"]').count() === 0);
 
       const pillStats = await page.locator('.pill-stat').allTextContents();
       ok('the level badge ("مبتدئ") is visible using real lesson data', pillStats.some(t => t.includes('مبتدئ')));
@@ -83,47 +84,68 @@ async function main() {
       const overflowX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
       ok('no horizontal overflow on the mobile viewport at initial render', !overflowX);
 
-      await clickNextTimes(page, 4);
-      ok('reached the crossing-reasoning checkpoint (stage 5)', await currentStage(page) === 5);
-      await page.locator('[data-testid="checkpoint-txConnectsToRxReasoning-option-a"]').click();
-      const fb1 = page.locator('[data-testid="checkpoint-txConnectsToRxReasoning-feedback"]');
+      await clickNextTimes(page, 3);
+      ok('reached the screw-length checkpoint (stage 4)', await currentStage(page) === 4);
+      await page.locator('[data-testid="checkpoint-whyScrewLengthMatters-option-a"]').click();
+      const fb1 = page.locator('[data-testid="checkpoint-whyScrewLengthMatters-feedback"]');
       ok('a wrong answer immediately shows explanatory feedback', await fb1.count() === 1);
       ok('feedback is substantive, not a bare "incorrect"', ((await fb1.textContent()) ?? '').length > 30);
-      await page.locator('[data-testid="checkpoint-txConnectsToRxReasoning-option-b"]').click();
+      await page.locator('[data-testid="checkpoint-whyScrewLengthMatters-option-b"]').click();
       ok('retry after a wrong answer is possible and updates the shown feedback', ((await fb1.textContent()) ?? '').includes('صحيح تمامًا'));
 
       await clickNextTimes(page, 1);
-      ok('reached the first worked example (stage 6)', await currentStage(page) === 6);
+      ok('reached the long-screw worked example (stage 5)', await currentStage(page) === 5);
       const worked1 = await page.locator('[data-testid="lesson01-stage"]').textContent();
-      ok('first worked example describes FC TX to Receiver RX', (worked1 ?? '').includes('FC') && (worked1 ?? '').includes('Receiver'));
+      ok('worked example describes the screw contacting the windings', (worked1 ?? '').includes('يلامس الملفات'));
 
       await clickNextTimes(page, 1);
-      ok('reached the second worked example (stage 7)', await currentStage(page) === 7);
+      ok('reached the too-short-screw explanation (stage 6)', await currentStage(page) === 6);
 
       await clickNextTimes(page, 1);
-      ok('reached the comparison stage (stage 8)', await currentStage(page) === 8);
+      ok('reached the correct-choice checkpoint (stage 7)', await currentStage(page) === 7);
+      const optionDText = await page.locator('[data-testid="checkpoint-correctScrewChoice-option-d"]').textContent();
+      ok('the weak "screw color matches frame color" distractor is gone from the rendered UI', !(optionDText ?? '').includes('لون المسمار'));
+      ok('the replacement distractor (reusing a screw safe on another frame/motor) is rendered instead', (optionDText ?? '').includes('فريم أو محرك آخر'));
+      await page.locator('[data-testid="checkpoint-correctScrewChoice-option-d"]').click();
+      const fbD = page.locator('[data-testid="checkpoint-correctScrewChoice-feedback"]');
+      ok('the replacement distractor shows substantive, targeted feedback naming frame+motor thickness', ((await fbD.textContent()) ?? '').includes('سمك ذراع الفريم والمحرك'));
+      await page.locator('[data-testid="checkpoint-correctScrewChoice-option-a"]').click(); // wrong on purpose, final recorded answer
+
+      await clickNextTimes(page, 1);
+      ok('reached the tightening explanation (stage 8)', await currentStage(page) === 8);
+
+      await clickNextTimes(page, 1);
+      ok('reached the loose-motor worked example (stage 9)', await currentStage(page) === 9);
+      const worked2 = await page.locator('[data-testid="lesson01-stage"]').textContent();
+      ok('worked example describes vibration from an incompletely tightened screw', (worked2 ?? '').includes('اهتزازًا'));
+
+      await clickNextTimes(page, 1);
+      ok('reached the tightening checkpoint (stage 10)', await currentStage(page) === 10);
+      await page.locator('[data-testid="checkpoint-tighteningPrinciple-option-a"]').click(); // wrong on purpose
+
+      await clickNextTimes(page, 1);
+      ok('reached the motor-position/CW-CCW explanation (stage 11)', await currentStage(page) === 11);
+      const positionText = await page.locator('[data-testid="lesson01-stage"]').textContent();
+      ok('position explanation mentions CW/CCW awareness', (positionText ?? '').includes('CW') && (positionText ?? '').includes('CCW'));
+
+      await clickNextTimes(page, 1);
+      ok('reached the mounting comparison stage (12)', await currentStage(page) === 12);
       const comparisonText = await page.locator('[data-testid="lesson01-stage"]').textContent();
-      ok('comparison stage shows the correct crossed wiring label', (comparisonText ?? '').includes('الصحيح'));
-      ok('comparison stage shows the common wrong wiring label', (comparisonText ?? '').includes('الخطأ الشائع'));
+      ok('comparison stage shows the correct mounting label', (comparisonText ?? '').includes('الصحيح'));
+      ok('comparison stage shows the unsafe mounting label', (comparisonText ?? '').includes('غير الآمن'));
 
       await clickNextTimes(page, 1);
-      ok('reached the correct-mapping checkpoint (stage 9)', await currentStage(page) === 9);
-      await page.locator('[data-testid="checkpoint-correctMappingIdentification-option-b"]').click(); // wrong on purpose
-
-      await clickNextTimes(page, 2);
-      ok('reached the consequence checkpoint (stage 11)', await currentStage(page) === 11);
-      await page.locator('[data-testid="checkpoint-communicationFailureNotDamage-option-a"]').click(); // wrong on purpose
-
-      await clickNextTimes(page, 2);
-      ok('reached the GND-still-required checkpoint (stage 13)', await currentStage(page) === 13);
-      await page.locator('[data-testid="checkpoint-sharedGndStillRequired-option-a"]').click(); // wrong on purpose
+      ok('reached the wiring explanation (stage 13)', await currentStage(page) === 13);
 
       await clickNextTimes(page, 1);
-      ok('reached the glossary stage (stage 14)', await currentStage(page) === 14);
+      ok('reached the routing checkpoint (stage 14)', await currentStage(page) === 14);
+      await page.locator('[data-testid="checkpoint-whyRoutingAndPinchPointsMatter-option-a"]').click(); // wrong on purpose
+
+      await clickNextTimes(page, 1);
+      ok('reached the glossary stage (15)', await currentStage(page) === 15);
       const glossaryText = await page.locator('[data-testid="lesson01-stage"]').textContent();
-      ok('glossary defines "TX"', (glossaryText ?? '').includes('TX'));
-      ok('glossary defines "RX"', (glossaryText ?? '').includes('RX'));
-      ok('all 6 glossary items are present', await page.locator('[data-testid^="glossary-item-"][data-testid$="-toggle"]').count() === 6);
+      ok('glossary defines motor windings', (glossaryText ?? '').includes('ملفات المحرك'));
+      ok('all 5 glossary items are present', await page.locator('[data-testid^="glossary-item-"][data-testid$="-toggle"]').count() === 5);
 
       ok('the first glossary definition is hidden initially', await page.locator('[data-testid="glossary-item-0-definition"]').count() === 0);
       await page.locator('[data-testid="glossary-item-0-toggle"]').click();
@@ -131,7 +153,7 @@ async function main() {
       await page.locator('[data-testid="glossary-item-0-toggle"]').click();
       ok('clicking again hides the definition (toggle, not one-way reveal)', await page.locator('[data-testid="glossary-item-0-definition"]').count() === 0);
 
-      // Keyboard activation check on the glossary toggle (parity with Lessons 01/03-08).
+      // Keyboard activation check on the glossary toggle (parity with Lessons 01/03-11).
       await page.locator('[data-testid="glossary-item-1-toggle"]').focus();
       await page.keyboard.press('Enter');
       ok('keyboard Enter activates the glossary reveal toggle', await page.locator('[data-testid="glossary-item-1-definition"]').count() === 1);
@@ -139,77 +161,48 @@ async function main() {
       ok('keyboard Space toggles it back closed', await page.locator('[data-testid="glossary-item-1-definition"]').count() === 0);
 
       await clickNextTimes(page, 1);
-      ok('reached the final recall stage (stage 15)', await currentStage(page) === 15);
-      for (const id of ['whyCrossNotMatch', 'whyNoDamageUsually', 'whyGndStillNeeded']) {
+      ok('reached the final recall stage (stage 16)', await currentStage(page) === 16);
+      for (const id of ['whyMotorPositionAndCwCcwRecall', 'whyModerateTighteningRecall', 'whyRoutingMattersRecall']) {
         await page.locator(`[data-testid="recall-${id}-reveal"]`).click();
         const answer = page.locator(`[data-testid="recall-${id}-answer"]`);
         ok(`recall prompt "${id}" reveals its model answer on demand`, await answer.count() === 1);
       }
+      const cwccwAnswer = await page.locator('[data-testid="recall-whyMotorPositionAndCwCcwRecall-answer"]').textContent();
+      ok('the CW/CCW recall answer explains position/direction is placement-determined, not arbitrary', (cwccwAnswer ?? '').includes('وليس اختيارًا عشوائيًا'));
+      ok('the CW/CCW recall answer defers software verification/correction to a separate later lesson', (cwccwAnswer ?? '').includes('لاحق منفصل') && (cwccwAnswer ?? '').includes('البرمجيات'));
+      ok('the CW/CCW recall answer does not name Betaflight or any specific software tool', !(cwccwAnswer ?? '').toLowerCase().includes('betaflight'));
 
       await clickNextTimes(page, 1);
-      ok('reached the readiness gate (stage 16)', await currentStage(page) === 16);
+      ok('reached the readiness gate (stage 17)', await currentStage(page) === 17);
+      ok('no interactive-diagram element was ever rendered anywhere in the 17-stage walkthrough (no frame-assembly-part or motor-mount-part testids)', await page.locator('[data-testid*="-part-"]').count() === 0);
 
-      const completeBtn = page.locator('[data-testid="lesson01-complete-btn"]');
-      ok('completion button exists at the readiness-gate stage', await completeBtn.count() === 1);
       const stillUnmet = await page.locator('[data-testid^="requirement-"][data-met="false"]').count();
       ok('all requirements are now met (all 4 checkpoints, even though every answer was wrong, + final recall)', stillUnmet === 0);
+      const completeBtn = page.locator('[data-testid="lesson01-complete-btn"]');
       ok('completion button is now ENABLED after full engagement, despite every checkpoint answer being wrong', await completeBtn.isEnabled());
 
       const beforeClick = await page.evaluate(() => localStorage.getItem('fpv_progress_lessons'));
-      ok('completedLessons storage does NOT yet contain lesson 9 before the button is clicked', !(beforeClick ?? '').includes('lesson-tx-rx'));
+      ok('completedLessons storage does NOT yet contain lesson 12 before the button is clicked', !(beforeClick ?? '').includes('lesson-motor-install'));
       await completeBtn.click();
       await page.waitForTimeout(100);
       const afterClick = await page.evaluate(() => localStorage.getItem('fpv_progress_lessons'));
-      ok('clicking completion calls the existing completeLesson path — completedLessons now contains lesson 9', (afterClick ?? '').includes('lesson-tx-rx'));
+      ok('clicking completion calls the existing completeLesson path — completedLessons now contains lesson 12', (afterClick ?? '').includes('lesson-motor-install'));
 
       const bridge = page.locator('[data-testid="lesson01-next-lesson-bridge"]');
-      ok('the Lesson 10 transition bridge appears after completion', await bridge.count() === 1);
+      ok('the Lesson 13 transition bridge appears after completion', await bridge.count() === 1);
       const bridgeText = (await bridge.textContent()) ?? '';
-      ok('the transition bridge text contains Lesson 10\'s real title from lessonsData', bridgeText.includes('السلامة قبل البطارية'));
+      ok('the transition bridge text contains Lesson 13\'s real title from lessonsData', bridgeText.includes('تركيب ESC'));
 
       await page.locator('[data-testid="lesson01-open-next"]').click();
       await page.waitForTimeout(400);
-      ok('clicking the transition action navigates to Lesson 10\'s real route', page.url().includes('/lessons/lesson-pre-battery-safety'));
-
-      // ── Regression: same-tab (client-side) navigation from Lesson 9 (16
-      // stages) directly into Lesson 10 (15 stages) must remount the journey
-      // with a fresh session state, not crash or leak Lesson 9's stale
-      // currentStageIndex into Lesson 10's shorter stage array. This exact
-      // transition previously threw "Cannot read properties of undefined
-      // (reading 'type')" because <InteractiveLessonJourney> was rendered
-      // without a `key` prop, so React reused the component instance across
-      // the route change and its useState-initialized session state (from
-      // Lesson 9, last stage index 15) survived into Lesson 10's render pass
-      // (only 15 stages, valid indices 0-14) — LessonDetailView.tsx now adds
-      // `key={lesson.id}` so the journey remounts fresh on every lesson id
-      // change. ─────────────────────────────────────────────────────────────
-      ok('Lesson 10 opens at stage 1 immediately after the same-tab transition from Lesson 9 (no stale session state/index leaks across the remount)', await currentStage(page) === 1);
-      ok('no console/page error occurred during the Lesson 9 → Lesson 10 client-side transition (regression test for the stale-state crash)',
-        consoleErrors.filter(e => !e.includes('net::ERR') && !e.includes('Failed to load resource')).length === 0);
-      const lesson10InitialText = await page.locator('[data-testid="lesson01-stage"]').textContent();
-      ok('Lesson 10\'s own orientation content is shown, not any leftover Lesson 9 content', (lesson10InitialText ?? '').includes('السلامة قبل البطارية') || (lesson10InitialText ?? '').includes('نزع المراوح') || (lesson10InitialText ?? '').includes('Smoke Stopper'));
-      ok('no Lesson 9 checkpoint testids leaked into the Lesson 10 render', await page.locator('[data-testid="checkpoint-txConnectsToRxReasoning"]').count() === 0);
-
-      // Forward/backward navigation still works correctly on the freshly
-      // remounted journey, all the way to Lesson 10's real final stage (15,
-      // not Lesson 9's stale 16) and back.
-      await clickNextTimes(page, 14);
-      ok('forward navigation reaches Lesson 10\'s real final stage (15) — not out of bounds, not Lesson 9\'s stage count', await currentStage(page) === 15);
-      await page.locator('[data-testid="lesson01-prev"]').click();
-      await page.waitForTimeout(30);
-      ok('backward navigation works correctly after the remount (stage 14)', await currentStage(page) === 14);
-      for (let i = 0; i < 13; i++) {
-        await page.locator('[data-testid="lesson01-prev"]').click();
-        await page.waitForTimeout(20);
-      }
-      ok('navigated all the way back to Lesson 10\'s stage 1 after the remount', await currentStage(page) === 1);
+      ok('clicking the transition action navigates to Lesson 13\'s real route', page.url().includes('/lessons/lesson-esc-install'));
 
       // ── Refresh semantics (same page/context, so localStorage carries over) ──
-      await page.goto(LESSON9_URL, { waitUntil: 'networkidle' });
+      await page.goto(LESSON12_URL, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
       ok('after a fresh navigation, the journey session starts over at stage 1 (temporary interactions are not persisted)', await currentStage(page) === 1);
       const completed = await page.evaluate(() => localStorage.getItem('fpv_progress_lessons'));
-      ok('completedLessons storage still contains lesson 9 from the earlier completion (existing storage architecture is untouched)', (completed ?? '').includes('lesson-tx-rx'));
+      ok('completedLessons storage still contains lesson 12 from the earlier completion (existing storage architecture is untouched)', (completed ?? '').includes('lesson-motor-install'));
 
       // Keyboard focus check.
       await page.locator('[data-testid="lesson01-next"]').focus();
@@ -219,13 +212,34 @@ async function main() {
       await page.close();
     }
 
-    // ── Regression: Lessons 1-8 still use their own journeys; Lesson 13 legacy intact ──
+    // ── Scenario B: backward navigation preserves progress across stages ─────
+    {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.goto(LESSON12_URL, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await clickNextTimes(page, 3);
+      await page.locator('[data-testid="checkpoint-whyScrewLengthMatters-option-b"]').click();
+      await clickNextTimes(page, 10);
+      ok('navigated forward to the routing checkpoint (stage 14)', await currentStage(page) === 14);
+      for (let i = 0; i < 13; i++) {
+        await page.locator('[data-testid="lesson01-prev"]').click();
+        await page.waitForTimeout(20);
+      }
+      ok('navigated all the way back to stage 1', await currentStage(page) === 1);
+      await clickNextTimes(page, 3);
+      ok('back at the screw-length checkpoint (stage 4)', await currentStage(page) === 4);
+      const fb = page.locator('[data-testid="checkpoint-whyScrewLengthMatters-feedback"]');
+      ok('the earlier recorded answer\'s feedback is still shown after round-tripping through the whole journey', (await fb.textContent() ?? '').includes('صحيح تمامًا'));
+      await page.close();
+    }
+
+    // ── Regression: Lessons 1-11 still use their own journeys; Lesson 13 legacy intact ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-quadcopter-intro`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 1 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 1 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 6); // -> stage 7 (X-layout)
       ok('Lesson 1\'s X-layout diagram is unaffected (quad-x-motor testids still present)', await page.locator('[data-testid="quad-x-motor-m1"]').count() === 1);
       await ctx.close();
@@ -235,7 +249,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-quadcopter-how-it-works`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 2 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 2 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 8); // -> stage 9 (signal-flow diagram)
       ok('Lesson 2\'s signal-flow diagram is unaffected (signal-flow-node testids still present)', await page.locator('[data-testid="signal-flow-node-fc"]').count() === 1);
       await ctx.close();
@@ -245,7 +259,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-drone-parts`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 3 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 3 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 8); // -> stage 9 (parts-map diagram)
       ok('Lesson 3\'s parts-map diagram is unaffected (parts-map-item testids still present)', await page.locator('[data-testid="parts-map-item-frame"]').count() === 1);
       await ctx.close();
@@ -255,7 +269,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-define-goal`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 4 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 4 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 10); // -> stage 11 (compatibility comparison stage)
       ok('Lesson 4\'s comparison stage still renders both chains (unaffected)', (await page.locator('[data-testid="lesson01-stage"]').textContent() ?? '').includes('سلسلة متوافقة'));
       await ctx.close();
@@ -265,7 +279,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-drone-size`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 5 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 5 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 7); // -> stage 8 (size-comparison diagram)
       ok('Lesson 5\'s size-comparison diagram is unaffected (size-comparison-item testids still present)', await page.locator('[data-testid="size-comparison-item-5"]').count() === 1);
       await ctx.close();
@@ -275,7 +289,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-electricity-basics`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 6 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 6 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 10); // -> stage 11 (electricity-basics diagram)
       ok('Lesson 6\'s electricity-basics diagram is unaffected (electricity-basics-item testids still present)', await page.locator('[data-testid="electricity-basics-item-voltage"]').count() === 1);
       await ctx.close();
@@ -285,7 +299,7 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-lipo-batteries`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 7 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 7 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 8); // -> stage 9 (lipo-cells diagram)
       ok('Lesson 7\'s lipo-cells diagram is unaffected (lipo-cells-item testids still present)', await page.locator('[data-testid="lipo-cells-item-4s"]').count() === 1);
       await ctx.close();
@@ -295,26 +309,50 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-power-rails`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 8 still renders its own journey (unaffected by Lesson 9\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      ok('Lesson 8 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
       await clickNextTimes(page, 10); // -> stage 11 (gnd-5v-vbat diagram)
       ok('Lesson 8\'s gnd-5v-vbat diagram is unaffected (gnd-five-vbat-item testids still present)', await page.locator('[data-testid^="gnd-five-vbat-item-"]').count() === 3);
       await ctx.close();
     }
     {
-      // Lessons 10, 11, and 12 were deliberately migrated onto the journey
-      // architecture in Phases 12-14 (see testLesson10JourneyUI.ts,
-      // testLesson11JourneyUI.ts, and testLesson12JourneyUI.ts) — Lesson 13
-      // is now the nearest still-legacy lesson for this regression check.
-      // Like Lesson 12, Lesson 13 has a real `image` field, so its legacy
-      // page renders a hero <img>, not an SVG diagram.
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await page.goto(`${BASE}/lessons/lesson-tx-rx`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      ok('Lesson 9 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      await clickNextTimes(page, 7); // -> stage 8 (comparison stage)
+      ok('Lesson 9\'s comparison stage still renders (unaffected)', (await page.locator('[data-testid="lesson01-stage"]').textContent() ?? '').includes('الصحيح'));
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await page.goto(`${BASE}/lessons/lesson-pre-battery-safety`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      ok('Lesson 10 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      await clickNextTimes(page, 10); // -> stage 11 (sequence comparison stage)
+      ok('Lesson 10\'s comparison stage still renders (unaffected)', (await page.locator('[data-testid="lesson01-stage"]').textContent() ?? '').includes('الصحيح'));
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await page.goto(`${BASE}/lessons/lesson-frame-assembly`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      ok('Lesson 11 still renders its own journey (unaffected by Lesson 12\'s registration)', await page.locator('[data-testid="lesson01-stage"]').count() === 1);
+      await clickNextTimes(page, 9); // -> stage 10 (frame-assembly interactive diagram)
+      ok('Lesson 11\'s frame-assembly diagram is unaffected (frame-assembly-part testids still present)', await page.locator('[data-testid^="frame-assembly-part-"]').count() === 3);
+      await ctx.close();
+    }
+    {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-esc-install`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
       ok('Lesson 13 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 13 (esc-install) still renders its hero image (no regression from this phase)', await page.locator('img').count() > 0);
-      const overflow10 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 13 either', !overflow10);
+      ok('Lesson 13 (esc-install) still renders its hero image (it has an image field, so no SVG diagram is expected)', await page.locator('img').count() > 0);
+      const overflow13 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow on Lesson 13 either', !overflow13);
       await ctx.close();
     }
     {
@@ -335,17 +373,17 @@ async function main() {
       await ctx.close();
     }
 
-    // ── Layout regression across viewports for Lesson 9 ──
+    // ── Layout regression across viewports for Lesson 12 ──
     for (const [label, viewport] of Object.entries({
       tablet: { width: 768, height: 1024 },
       desktop: { width: 1280, height: 900 },
     })) {
       const ctx = await browser.newContext({ viewport });
       const page = await ctx.newPage();
-      await page.goto(LESSON9_URL, { waitUntil: 'networkidle' });
+      await page.goto(LESSON12_URL, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok(`no horizontal overflow on Lesson 9 at ${label} width`, !overflow);
+      ok(`no horizontal overflow on Lesson 12 at ${label} width`, !overflow);
       await ctx.close();
     }
 
@@ -353,7 +391,7 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(LESSON9_URL, { waitUntil: 'networkidle' });
+      await page.goto(LESSON12_URL, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
       const dir = await page.evaluate(() => document.documentElement.dir);
       ok('page renders right-to-left', dir === 'rtl');
