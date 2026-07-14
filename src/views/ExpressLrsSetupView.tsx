@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, RotateCcw, Settings2 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
@@ -12,12 +12,21 @@ export const ExpressLrsSetupView: React.FC = () => {
   const navigate = useNavigate();
   const progress = useExpressLrsSetupProgress();
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const stepTopRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = Math.max(0, setupSteps.findIndex(s => s.id === progress.currentStepId));
   const currentStep = setupSteps[currentIndex] ?? setupSteps[0];
   const prevStep = currentIndex > 0 ? setupSteps[currentIndex - 1] : null;
   const nextStep = currentIndex < setupSteps.length - 1 ? setupSteps[currentIndex + 1] : null;
   const prerequisiteReminderTitle = prevStep && !progress.isStepDone(prevStep.id) ? prevStep.title : undefined;
+
+  // Keyed only to the active step's identity — Next/Previous/direct-jump all
+  // change currentStep.id, so replacement content always opens at its own
+  // top. Checklist toggles, step-complete, onboarding edits, and reset-armed
+  // state never touch currentStep.id, so they never re-trigger this.
+  useLayoutEffect(() => {
+    stepTopRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [currentStep.id]);
 
   const exit = () => navigate('/programming/expresslrs');
 
@@ -90,7 +99,7 @@ export const ExpressLrsSetupView: React.FC = () => {
                 </nav>
               </div>
 
-              <div className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+              <div ref={stepTopRef} className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
                 <ExpressLrsStepCard
                   step={currentStep}
                   receiverArchitecture={progress.onboarding.receiverArchitecture}

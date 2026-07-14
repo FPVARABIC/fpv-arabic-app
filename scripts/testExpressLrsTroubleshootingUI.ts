@@ -326,6 +326,56 @@ async function main() {
       await ctx.close();
     }
 
+    // ── Scroll position resets to the new issue's top when switching ────
+    {
+      const ctx = await freshContext(browser);
+      const page = await ctx.newPage();
+      await page.goto(TS_URL, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+
+      // start on a long issue, scroll down into it
+      await page.locator('[data-testid="expresslrs-troubleshooting-nav-recovery-after-bad-flash"]').click();
+      await page.waitForTimeout(200);
+      await page.mouse.wheel(0, 2500);
+      await page.waitForTimeout(150);
+      const scrolledDown = await page.evaluate(() => (document.querySelector('main')?.scrollTop ?? 0) > 0 || window.scrollY > 0);
+      ok('scrolled down into the long issue before switching', scrolledDown);
+
+      // switch to a different (short) issue
+      await page.locator('[data-testid="expresslrs-troubleshooting-nav-no-power"]').click();
+      await page.waitForTimeout(250);
+      ok('the issue changed after switching', await page.locator('[data-testid="expresslrs-issue-card-no-power"]').count() === 1);
+      const headingVisible = await page.evaluate(() => {
+        const h2 = document.querySelector('[data-testid="expresslrs-issue-card-no-power"] h2');
+        if (!h2) return false;
+        const r = h2.getBoundingClientRect();
+        return r.top >= 0 && r.top < 844;
+      });
+      ok('the new issue begins at its intended top (heading visible, not left scrolled deep into the old issue\'s position)', headingVisible);
+
+      await ctx.close();
+    }
+
+    // ── Changing a check outcome inside the same issue does not reset scroll ──
+    {
+      const ctx = await freshContext(browser);
+      const page = await ctx.newPage();
+      await page.goto(TS_URL, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await page.locator('[data-testid="expresslrs-troubleshooting-nav-recovery-after-bad-flash"]').click();
+      await page.waitForTimeout(200);
+      await page.mouse.wheel(0, 800);
+      await page.waitForTimeout(150);
+      const before = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0);
+
+      await page.locator('[data-testid="expresslrs-check-option-recovery-1-passed"]').click();
+      await page.waitForTimeout(150);
+      const after = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0);
+      ok('changing a diagnostic check outcome inside the same issue does not reset scroll position', after === before);
+
+      await ctx.close();
+    }
+
     // ── Regression: setup guide, hub, and Programming hub still work ─────
     {
       const ctx = await freshContext(browser);

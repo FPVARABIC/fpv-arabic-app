@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, RotateCcw } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
@@ -13,10 +13,19 @@ export const ExpressLrsTroubleshootingView: React.FC = () => {
   const navigate = useNavigate();
   const progress = useExpressLrsTroubleshootingProgress();
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const issueTopRef = useRef<HTMLDivElement>(null);
 
   const currentIssue = progress.currentIssueId
     ? troubleshootingIssues.find(i => i.id === progress.currentIssueId) ?? null
     : null;
+
+  // Keyed only to the active issue's identity — switching issues always
+  // opens the new one at its own top. Changing a check's outcome inside the
+  // same issue, or the reset-all confirmation state, never touch
+  // currentIssueId, so neither re-triggers this.
+  useLayoutEffect(() => {
+    issueTopRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [currentIssue?.id]);
 
   const exit = () => navigate('/programming/expresslrs');
 
@@ -79,7 +88,7 @@ export const ExpressLrsTroubleshootingView: React.FC = () => {
           </nav>
 
           {currentIssue && (
-            <div className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+            <div ref={issueTopRef} className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
               <ExpressLrsTroubleshootingIssueCard
                 issue={currentIssue}
                 getCheckOutcome={progress.getCheckOutcome}

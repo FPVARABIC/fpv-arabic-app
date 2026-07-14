@@ -55,10 +55,14 @@ export const BotV2AssistantView: React.FC = () => {
   const [input, setInput] = useState('');
   const [sessionContext, setSessionContext] = useState<AssistantSessionContext>(createEmptyContext());
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const latestMsgRef = useRef<HTMLDivElement>(null);
 
+  // Anchors on the newest message specifically (by its position as the last
+  // entry in msgs, the same stable identity used by BotV2Overlay.tsx), so a
+  // long assistant response opens at its own beginning instead of jumping to
+  // the absolute bottom of the whole thread.
   useEffect(() => {
-    const el = scrollAreaRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    latestMsgRef.current?.scrollIntoView({ block: 'start' });
   }, [msgs]);
 
   const sendQuery = (query: string) => {
@@ -162,9 +166,10 @@ export const BotV2AssistantView: React.FC = () => {
           ref={scrollAreaRef}
           className="flex-1 overflow-y-auto px-4 py-4 space-y-4 no-scrollbar"
         >
-          {msgs.map(msg => (
+          {msgs.map((msg, i) => (
             <div
               key={msg.id}
+              ref={i === msgs.length - 1 ? latestMsgRef : undefined}
               className={`flex ${msg.from === 'user' ? 'justify-start' : 'justify-end'} ${
                 msg.from === 'bot'
                   ? (msg.answer && getWarningCardProps(msg.answer) ? '' : 'bv2-msg-bot')

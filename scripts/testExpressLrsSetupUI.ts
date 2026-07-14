@@ -440,6 +440,87 @@ async function main() {
       await ctx.close();
     }
 
+    // ── Scroll position resets to the new step's top on Next/Prev/jump ──
+    {
+      const ctx = await freshContext(browser);
+      const page = await ctx.newPage();
+      await page.goto(SETUP_URL, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await completeOnboarding(page);
+
+      async function scrollState() {
+        return page.evaluate(() => ({
+          mainScrollTop: document.querySelector('main')?.scrollTop ?? 0,
+          windowScrollY: window.scrollY,
+        }));
+      }
+      async function headingVisible(stepId: string) {
+        return page.evaluate((id) => {
+          const h2 = document.querySelector(`[data-testid="expresslrs-step-card-${id}"] h2`);
+          if (!h2) return false;
+          const r = h2.getBoundingClientRect();
+          return r.top >= 0 && r.top < 844;
+        }, stepId);
+      }
+
+      // Next
+      await page.mouse.wheel(0, 1500);
+      await page.waitForTimeout(150);
+      const beforeNext = await scrollState();
+      ok('scrolled down on step 1 before Next (scrollTop or windowScrollY > 0)', beforeNext.mainScrollTop > 0 || beforeNext.windowScrollY > 0);
+      await page.locator('[data-testid="expresslrs-setup-next"]').click();
+      await page.waitForTimeout(250);
+      ok('active step changed after Next', await page.locator('[data-testid="expresslrs-step-card-prepare-radio"]').count() === 1);
+      ok('the new step heading is visible after Next (owner reset to top)', await headingVisible('prepare-radio'));
+
+      // Previous
+      await page.mouse.wheel(0, 1500);
+      await page.waitForTimeout(150);
+      await page.locator('[data-testid="expresslrs-setup-prev"]').click();
+      await page.waitForTimeout(250);
+      ok('active step changed after Previous', await page.locator('[data-testid="expresslrs-step-card-identify-hardware"]').count() === 1);
+      ok('the new step heading is visible after Previous (owner reset to top)', await headingVisible('identify-hardware'));
+
+      // Direct step selection (jump to a distant, long step)
+      await page.mouse.wheel(0, 1500);
+      await page.waitForTimeout(150);
+      await page.locator('[data-testid="expresslrs-setup-step-nav-final-verification"]').click();
+      await page.waitForTimeout(250);
+      ok('active step changed after direct jump', await page.locator('[data-testid="expresslrs-step-card-final-verification"]').count() === 1);
+      ok('the new step heading is visible after direct jump (owner reset to top)', await headingVisible('final-verification'));
+
+      await ctx.close();
+    }
+
+    // ── Scroll position is NOT reset by same-step state changes ─────────
+    {
+      const ctx = await freshContext(browser);
+      const page = await ctx.newPage();
+      await page.goto(SETUP_URL, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await completeOnboarding(page);
+      await page.locator('[data-testid="expresslrs-setup-step-nav-final-verification"]').click();
+      await page.waitForTimeout(200);
+
+      await page.mouse.wheel(0, 800);
+      await page.waitForTimeout(150);
+      const before = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0);
+
+      // toggling a checklist item on the same step must not reset scroll
+      await page.locator('[data-testid="expresslrs-checklist-item-fv-1"] input').check();
+      await page.waitForTimeout(150);
+      const afterChecklist = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0);
+      ok('checking a checklist item does not reset scroll position', afterChecklist === before);
+
+      // marking the step complete must not reset scroll
+      await page.locator('[data-testid="expresslrs-step-mark-complete"]').click();
+      await page.waitForTimeout(150);
+      const afterComplete = await page.evaluate(() => document.querySelector('main')?.scrollTop ?? 0);
+      ok('marking the step complete does not reset scroll position', afterComplete === before);
+
+      await ctx.close();
+    }
+
     // ── Regression: hub and Programming pages still function ────────────
     {
       const ctx = await freshContext(browser);
