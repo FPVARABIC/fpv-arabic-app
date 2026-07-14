@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { roadmapData } from '../data/roadmapData';
+import { getRoadmapStageContent } from '../data/roadmapStageContent';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckSquare, Square, ChevronDown, ChevronUp, Package, Wrench, Cpu, Zap, Shield, Settings, Activity, Wind, CheckCircle2, BookOpen } from 'lucide-react';
 
@@ -37,19 +38,6 @@ const stageMaterials: Record<string, { parts: string[]; tools: string[] }> = {
   'build-gps': { parts: ['GPS module', 'حامل GPS', 'كابل GPS'], tools: ['مفك', 'cable ties'] },
   'build-vtx': { parts: ['FPV كاميرا', 'VTX', 'هوائي VTX', 'كابل توصيل'], tools: ['مفك صغير', 'كاوي لحام', 'قصدير / Flux', 'cable ties'] },
   'build-pre-battery': { parts: ['Smoke Stopper', 'LiPo'], tools: ['Multimeter'] },
-};
-
-const stageGuidance: Record<string, string> = {
-  'build-soldering-basics': 'نقطة اللحام الجيدة لامعة وملساء كالتلة الصغيرة. نقطة اللحام الباهتة أو الحبيبية سيئة — درّب نفسك على لوح احتياطي قبل اللحام على القطع الحقيقية.',
-  'build-parts-tools': 'افتح الكراتين وتحقق من كل قطعة. القطعة المكسورة أو الناقصة اكتشفها الآن لا في منتصف البناء.',
-  'build-frame': 'ركّب الأذرع بالترتيب الصحيح حسب تعليمات الفريم. لا تشد البراغي نهائياً حتى تتأكد من محاذاة كل الأذرع — تغيير الاتجاه لاحقاً أصعب.',
-  'build-motors': 'تأكد من اتجاه دوران كل محرك (CW/CCW) قبل التثبيت. مسامير الموتور لا يجب أن تدخل أعمق من المحدد — إذا لمست الملفات تتلف الموتور فوراً.',
-  'build-esc': 'اترك الأسلاك بطول كافٍ للوصول للمحركات والـ FC دون شد. الأسلاك المشدودة تنكسر عند أول اهتزاز.',
-  'build-fc': 'سهم FC يشير للأمام دائماً — هذا يحدد كيف يفهم Betaflight اتجاهات الطيران. الجيروسكوب حساس للاهتزاز لذلك Grommets ليست اختيارية.',
-  'build-receiver': 'TX من طرف يذهب إلى RX في الطرف الآخر — هذا التقاطع ضروري وأكثر خطأ شائع للمبتدئين. هوائي داخل الفريم يضعف الإشارة بشكل كبير.',
-  'build-gps': 'GPS في أعلى نقطة ممكنة بعيداً عن ESC والأسلاك الرئيسية. الحرارة والتشويش الإلكتروني من ESC يضعفان دقة GPS.',
-  'build-vtx': 'تحقق من الجهد المطلوب للـ VTX قبل التوصيل — 5V أو 9V أو 12V. جهد خاطئ يحرق VTX فوراً ولا يمكن إصلاحه.',
-  'build-pre-battery': 'لا توصل LiPo مباشرة في أول مرة — الـ Smoke Stopper يحميك من القصر غير المرئي. إذا اشتعل الضوء الأحمر افصل فوراً وابحث عن الخطأ.',
 };
 
 const stageSafety: Record<string, StageSafety> = {
@@ -116,12 +104,43 @@ export const BuildRoadmapView: React.FC = () => {
   const { completedRoadmapSteps, getRoadmapStepProgress, toggleRoadmapChecklistItem, isRoadmapItemDone, completeRoadmapStep, setLastOpenedRoadmapStep } = useProgressContext();
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [zoomedImage, setZoomedImage] = useState<{ src: string; alt: string } | null>(null);
+  const activeStageRef = useRef<HTMLDivElement>(null);
+
+  const stageIds = roadmapData.map(s => s.id);
+  const openIndex = openStep ? stageIds.indexOf(openStep) : -1;
+  const canGoPrevStage = openIndex > 0;
+  const canGoNextStage = openIndex >= 0 && openIndex < stageIds.length - 1;
+
+  // Opens a stage and records it as last-opened — shared by direct header
+  // taps and by Previous/Next so both go through the exact same persistence
+  // call.
+  const openStage = (id: string) => {
+    setOpenStep(id);
+    setLastOpenedRoadmapStep(id);
+  };
 
   const toggleStep = (id: string) => {
-    const next = openStep === id ? null : id;
-    setOpenStep(next);
-    if (next) setLastOpenedRoadmapStep(id);
+    if (openStep === id) {
+      setOpenStep(null);
+    } else {
+      openStage(id);
+    }
   };
+
+  const goToPrevStage = () => { if (canGoPrevStage) openStage(stageIds[openIndex - 1]); };
+  const goToNextStage = () => { if (canGoNextStage) openStage(stageIds[openIndex + 1]); };
+
+  // Keyed only to which stage is open — direct header taps and Previous/Next
+  // both change openStep, so the newly revealed stage always opens at its
+  // own top. Checklist toggles, safety content, and the completion button
+  // never touch openStep, so they never re-trigger this. Mirrors the proven
+  // pattern already used in ExpressLrsSetupView.tsx / BotV2Overlay.tsx —
+  // scrollIntoView transparently handles whichever ancestor is actually
+  // scrollable (on this page that is window/document, confirmed in a real
+  // browser: <main> itself never overflows internally here).
+  useLayoutEffect(() => {
+    if (openStep) activeStageRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [openStep]);
 
   return (
     <AppShell tint="cyan">
@@ -144,8 +163,10 @@ export const BuildRoadmapView: React.FC = () => {
             const safety = stageSafety[step.id];
             const links = stageLearningLinks[step.id] || [];
             const imgSrc = stageImages[step.id];
+            const content = getRoadmapStageContent(step.id);
+            const panelId = `roadmap-stage-panel-${step.id}`;
             return (
-              <div key={step.id} className="relative">
+              <div key={step.id} className="relative" ref={active ? activeStageRef : undefined}>
                 {/* timeline node */}
                 <div className={`absolute right-[-30px] top-4 z-10 w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-extrabold text-sm ${done ? 'bg-green-400/25 border border-green-400/50 text-green-300' : active ? 'bg-cyan-400/25 border border-cyan-400/55 text-cyan-200 pulse-glow' : 'bg-slate-800 border border-cyan-400/30 text-cyan-300'}`}>
                   {done ? <CheckCircle2 size={18} className="text-green-300"/> : step.number}
@@ -157,7 +178,12 @@ export const BuildRoadmapView: React.FC = () => {
                     : { background: 'rgba(7,16,28,0.78)' }
                   }
                 >
-                  <button className="w-full p-4 flex items-center gap-3 text-right" onClick={() => toggleStep(step.id)}>
+                  <button
+                    className="w-full p-4 flex items-center gap-3 text-right"
+                    onClick={() => toggleStep(step.id)}
+                    aria-expanded={active}
+                    aria-controls={panelId}
+                  >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${done ? 'bg-green-400/20' : 'bg-cyan-400/10'}`}>
                       {done ? <CheckCircle2 size={20} className="text-green-400"/> : <Icon size={20} className="text-cyan-400"/>}
                     </div>
@@ -178,9 +204,9 @@ export const BuildRoadmapView: React.FC = () => {
                   </button>
 
                   {active && (
-                    <div className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/20 pt-3" style={{ background: 'rgba(34,211,238,0.012)' }}>
+                    <div id={panelId} className="px-4 pb-4 space-y-3.5 border-t border-cyan-400/20 pt-3" style={{ background: 'rgba(34,211,238,0.012)' }}>
 
-                      {/* 0. Educational image */}
+                      {/* 2. Existing educational image */}
                       {imgSrc && (
                         <button
                           className="w-full focus:outline-none"
@@ -199,17 +225,17 @@ export const BuildRoadmapView: React.FC = () => {
                         </button>
                       )}
 
-                      {/* 1. Goal card */}
+                      {/* 3. ماذا ستنجز؟ */}
                       <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(24,230,230,0.06)', borderTop: '1px solid rgba(34,211,238,0.12)', borderLeft: '1px solid rgba(34,211,238,0.12)', borderBottom: '1px solid rgba(34,211,238,0.12)', borderRight: '2px solid rgba(34,211,238,0.38)' }}>
-                        <p className="text-[10px] text-cyan-400 font-bold mb-1">🎯 هدف المرحلة</p>
+                        <p className="text-[10px] text-cyan-400 font-bold mb-1">🎯 ماذا ستنجز؟</p>
                         <p className="text-xs text-slate-300 leading-relaxed">{stageGoals[step.id]}</p>
                       </div>
 
-                      {/* 2. Parts / tools chips */}
-                      {materials && (materials.parts.length > 0 || materials.tools.length > 0) && (
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-500 font-bold mb-1.5">القطع والأدوات</p>
-                          <div className="flex flex-wrap gap-1.5 justify-end">
+                      {/* 4. قبل أن تبدأ (existing parts/tools chips + new immediate preparation) */}
+                      <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(148,163,184,0.05)', border: '1px solid rgba(148,163,184,0.15)' }}>
+                        <p className="text-[10px] text-slate-400 font-bold mb-1.5">📋 قبل أن تبدأ</p>
+                        {materials && (materials.parts.length > 0 || materials.tools.length > 0) && (
+                          <div className="flex flex-wrap gap-1.5 justify-end mb-2">
                             {materials.parts.map(p => (
                               <span key={p} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(24,230,230,0.08)', border: '1px solid rgba(34,211,238,0.2)', color: '#cbd5e1' }}>{p}</span>
                             ))}
@@ -217,16 +243,98 @@ export const BuildRoadmapView: React.FC = () => {
                               <span key={t} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.22)', color: '#fbbf24' }}>{t}</span>
                             ))}
                           </div>
+                        )}
+                        {content.preparation.length > 0 && (
+                          <ul className="space-y-1">
+                            {content.preparation.map((item, i) => (
+                              <li key={i} className="text-xs text-slate-300 leading-relaxed">• {item}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {/* 5. خطوات التنفيذ */}
+                      {content.practicalSteps.length > 0 && (
+                        <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(251,191,36,0.05)', borderTop: '1px solid rgba(251,191,36,0.1)', borderLeft: '1px solid rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.1)', borderRight: '2px solid rgba(251,191,36,0.35)' }}>
+                          <p className="text-[10px] text-amber-400 font-bold mb-1.5">🛠 خطوات التنفيذ</p>
+                          <ol className="space-y-1.5">
+                            {content.practicalSteps.map((s, i) => (
+                              <li key={i} className="text-xs text-slate-300 leading-relaxed flex gap-2">
+                                <span className="text-amber-400 font-bold flex-shrink-0">{i + 1}.</span>
+                                <span>{s}</span>
+                              </li>
+                            ))}
+                          </ol>
                         </div>
                       )}
 
-                      {/* 3. Practical guidance */}
-                      <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(251,191,36,0.05)', borderTop: '1px solid rgba(251,191,36,0.1)', borderLeft: '1px solid rgba(251,191,36,0.1)', borderBottom: '1px solid rgba(251,191,36,0.1)', borderRight: '2px solid rgba(251,191,36,0.35)' }}>
-                        <p className="text-[10px] text-amber-400 font-bold mb-1">⚡ ماذا تفعل هنا؟</p>
-                        <p className="text-xs text-slate-300 leading-relaxed">{stageGuidance[step.id]}</p>
+                      {/* 6. انتبه */}
+                      {content.warnings.length > 0 && (
+                        <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(251,191,36,0.08)', borderTop: '1px solid rgba(251,191,36,0.2)', borderLeft: '1px solid rgba(251,191,36,0.2)', borderBottom: '1px solid rgba(251,191,36,0.2)', borderRight: '3px solid rgba(251,191,36,0.55)' }}>
+                          <p className="text-[10px] font-bold mb-1 text-amber-400">⚠ انتبه</p>
+                          <ul className="space-y-1">
+                            {content.warnings.map((w, i) => (
+                              <li key={i} className="text-xs text-amber-200/90 leading-relaxed">• {w}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Existing safety callout — kept adjacent to انتبه, same visual convention */}
+                      {safety && (
+                        <div
+                          className="rounded-xl px-3 py-2.5 text-right"
+                          style={safety.level === 'danger'
+                            ? { background: 'rgba(248,113,113,0.08)', borderTop: '1px solid rgba(248,113,113,0.2)', borderLeft: '1px solid rgba(248,113,113,0.2)', borderBottom: '1px solid rgba(248,113,113,0.2)', borderRight: '3px solid rgba(248,113,113,0.6)' }
+                            : { background: 'rgba(251,191,36,0.08)', borderTop: '1px solid rgba(251,191,36,0.2)', borderLeft: '1px solid rgba(251,191,36,0.2)', borderBottom: '1px solid rgba(251,191,36,0.2)', borderRight: '3px solid rgba(251,191,36,0.55)' }
+                          }
+                        >
+                          <p className={`text-[10px] font-bold mb-1 ${safety.level === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>
+                            {safety.level === 'danger' ? '🔴 تحذير' : '⚠ تنبيه'}
+                          </p>
+                          <p className={`text-xs leading-relaxed ${safety.level === 'danger' ? 'text-red-200/90' : 'text-amber-200/90'}`}>{safety.text}</p>
+                        </div>
+                      )}
+
+                      {/* 7. أخطاء شائعة */}
+                      {content.commonMistakes.length > 0 && (
+                        <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(248,113,113,0.05)', border: '1px solid rgba(248,113,113,0.15)' }}>
+                          <p className="text-[10px] font-bold mb-1 text-red-300">🚫 أخطاء شائعة</p>
+                          <ul className="space-y-1">
+                            {content.commonMistakes.map((m, i) => (
+                              <li key={i} className="text-xs text-red-200/80 leading-relaxed">• {m}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 8. كيف تتأكد أن كل شيء صحيح؟ */}
+                      {content.acceptanceChecks.length > 0 && (
+                        <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.18)' }}>
+                          <p className="text-[10px] font-bold mb-1.5 text-green-300">✅ كيف تتأكد أن كل شيء صحيح؟</p>
+                          <ul className="space-y-1">
+                            {content.acceptanceChecks.map((c, i) => (
+                              <li key={i} className="text-xs text-slate-300 leading-relaxed">• {c}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* 9. توقف ولا تكمل إذا... */}
+                      <div className="rounded-xl px-3 py-2.5 text-right" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)' }}>
+                        <p className="text-[10px] font-bold mb-1.5 text-red-400">⛔ توقف ولا تكمل إذا...</p>
+                        {content.stopConditions.length > 0 ? (
+                          <ul className="space-y-1">
+                            {content.stopConditions.map((s, i) => (
+                              <li key={i} className="text-xs text-red-200/90 leading-relaxed">• {s}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-slate-400 leading-relaxed">لا توجد حالة توقف إضافية لهذه المرحلة بخلاف ما ورد أعلاه في "انتبه".</p>
+                        )}
                       </div>
 
-                      {/* 4. Learning links */}
+                      {/* 10. Learning links */}
                       {links.length > 0 && (
                         <div className="text-right">
                           <p className="text-[10px] text-slate-500 font-bold mb-1.5 flex items-center justify-end gap-1"><BookOpen size={10}/>راجع بسرعة:</p>
@@ -245,23 +353,7 @@ export const BuildRoadmapView: React.FC = () => {
                         </div>
                       )}
 
-                      {/* 5. Safety callout */}
-                      {safety && (
-                        <div
-                          className="rounded-xl px-3 py-2.5 text-right"
-                          style={safety.level === 'danger'
-                            ? { background: 'rgba(248,113,113,0.08)', borderTop: '1px solid rgba(248,113,113,0.2)', borderLeft: '1px solid rgba(248,113,113,0.2)', borderBottom: '1px solid rgba(248,113,113,0.2)', borderRight: '3px solid rgba(248,113,113,0.6)' }
-                            : { background: 'rgba(251,191,36,0.08)', borderTop: '1px solid rgba(251,191,36,0.2)', borderLeft: '1px solid rgba(251,191,36,0.2)', borderBottom: '1px solid rgba(251,191,36,0.2)', borderRight: '3px solid rgba(251,191,36,0.55)' }
-                          }
-                        >
-                          <p className={`text-[10px] font-bold mb-1 ${safety.level === 'danger' ? 'text-red-400' : 'text-amber-400'}`}>
-                            {safety.level === 'danger' ? '🔴 تحذير' : '⚠ تنبيه'}
-                          </p>
-                          <p className={`text-xs leading-relaxed ${safety.level === 'danger' ? 'text-red-200/90' : 'text-amber-200/90'}`}>{safety.text}</p>
-                        </div>
-                      )}
-
-                      {/* 6. Checklist */}
+                      {/* 11. Checklist */}
                       <div className="rounded-xl p-3" style={{ background: 'rgba(34,211,238,0.025)', border: '1px solid rgba(34,211,238,0.1)' }}>
                         <p className="text-[10px] font-bold mb-2 text-right" style={{ color: 'rgba(34,211,238,0.65)' }}>قائمة التحقق</p>
                         <div className="space-y-1.5">
@@ -277,13 +369,43 @@ export const BuildRoadmapView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 7. Complete stage / done */}
+                      {/* 12. Complete stage / done */}
                       {!done && checklistDoneCount === step.checklist.length && checklistDoneCount > 0 && (
                         <button className="btn-primary w-full text-sm py-2" onClick={() => completeRoadmapStep(step.id)}>
                           <CheckCircle2 size={16}/> إتمام المرحلة
                         </button>
                       )}
                       {done && <div className="success-card text-center text-sm text-green-400 font-semibold flex items-center justify-center gap-2"><CheckCircle2 size={16}/>المرحلة مكتملة</div>}
+
+                      {/* 13. Previous / Next navigation */}
+                      <div className="flex items-center gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          data-testid={`roadmap-stage-prev-${step.id}`}
+                          disabled={!canGoPrevStage}
+                          aria-label={canGoPrevStage ? `المرحلة السابقة: ${roadmapData[openIndex - 1].title}` : 'لا توجد مرحلة سابقة'}
+                          onClick={goToPrevStage}
+                          className="flex-1 py-2.5 rounded-xl font-bold text-sm"
+                          style={canGoPrevStage
+                            ? { background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', border: '1px solid rgba(148,163,184,0.25)' }
+                            : { background: 'rgba(255,255,255,0.03)', color: '#475569', border: '1px solid rgba(148,163,184,0.12)', cursor: 'not-allowed' }}
+                        >
+                          السابق
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={`roadmap-stage-next-${step.id}`}
+                          disabled={!canGoNextStage}
+                          aria-label={canGoNextStage ? `المرحلة التالية: ${roadmapData[openIndex + 1].title}` : 'لا توجد مرحلة تالية'}
+                          onClick={goToNextStage}
+                          className="flex-1 py-2.5 rounded-xl font-bold text-sm"
+                          style={canGoNextStage
+                            ? { background: '#0891b2', color: '#ffffff' }
+                            : { background: 'rgba(255,255,255,0.03)', color: '#475569', border: '1px solid rgba(148,163,184,0.12)', cursor: 'not-allowed' }}
+                        >
+                          التالي
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -291,6 +413,43 @@ export const BuildRoadmapView: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Final completion state — shown once all 10 stages are complete.
+            Does not auto-navigate; only offers currently-available destinations. */}
+        {completedRoadmapSteps.length >= roadmapData.length && (
+          <div
+            data-testid="roadmap-final-completion"
+            className="mt-5 rounded-2xl p-4 text-right"
+            style={{ background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.25)' }}
+          >
+            <div className="flex items-center gap-2 justify-end mb-2">
+              <h2 className="font-bold text-green-300 text-sm">تم إكمال التجميع المادي للدرون</h2>
+              <CheckCircle2 size={18} className="text-green-400 flex-shrink-0"/>
+            </div>
+            <p className="text-xs text-amber-200/90 leading-relaxed mb-1">⚠ الدرون ليس جاهزًا للطيران بعد.</p>
+            <p className="text-xs text-slate-300 leading-relaxed mb-1">يجب أن تبقى المراوح غير مركبة.</p>
+            <p className="text-xs text-slate-300 leading-relaxed mb-3">المرحلة التالية هي البرمجة والإعداد والاختبارات الآمنة.</p>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                data-testid="roadmap-final-completion-programming"
+                onClick={() => navigate('/programming')}
+                className="btn-primary text-sm py-2 px-4"
+              >
+                الانتقال إلى البرمجة
+              </button>
+              <button
+                type="button"
+                data-testid="roadmap-final-completion-expresslrs"
+                onClick={() => navigate('/programming/expresslrs')}
+                className="text-sm py-2 px-4 rounded-xl font-bold"
+                style={{ background: 'rgba(167,139,250,0.12)', color: '#c4b5fd', border: '1px solid rgba(167,139,250,0.3)' }}
+              >
+                إعداد ExpressLRS (اختياري)
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {/* Zoom image overlay */}
       {zoomedImage && (
