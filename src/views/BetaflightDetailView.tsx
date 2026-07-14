@@ -4,10 +4,41 @@ import { AppShell } from '../components/AppShell';
 import { betaflightData } from '../data/betaflightData';
 import { BetaflightDetailVisual } from '../components/BetaflightDetailVisual';
 import { ArrowRight, Star, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { bfPageRegistry } from '../data/betaflight/pageRegistry';
+import { BF_VERSION_CONTEXT } from '../data/betaflight/sourceHelpers';
+import { BetaflightPageRenderer } from '../components/betaflight/BetaflightPageRenderer';
+import { BetaflightNotStartedPage } from '../components/betaflight/BetaflightNotStartedPage';
 
 export const BetaflightDetailView: React.FC = () => {
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
+
+  // New-architecture pages (Phase 1 fixtures: 'setup' and 'ports') take
+  // priority over the legacy ten-article lookup below.
+  const registryEntry = bfPageRegistry.find(e => e.id === sectionId);
+  if (registryEntry?.page) {
+    return (
+      <AppShell tint="purple">
+        <BetaflightPageRenderer page={registryEntry.page} backTo="/betaflight" />
+      </AppShell>
+    );
+  }
+
+  // Several registry IDs (receiver/modes/motors/failsafe/osd/blackbox/cli)
+  // intentionally share their ID with one of the original ten legacy
+  // articles. Those nine must keep rendering exactly as before — only a
+  // registry entry with NO legacy counterpart (e.g. 'power', 'gps') is a
+  // genuinely new page, and only for those do we show the honest
+  // not-started state instead of falling through to "section not found."
+  const isLegacyId = betaflightData.some(s => s.id === sectionId);
+  if (registryEntry && !isLegacyId) {
+    return (
+      <AppShell tint="purple">
+        <BetaflightNotStartedPage entry={registryEntry} versionContext={BF_VERSION_CONTEXT} backTo="/betaflight" />
+      </AppShell>
+    );
+  }
+
   const section = betaflightData.find(s => s.id === sectionId);
   if (!section) return <div className="p-8 text-center text-slate-400">القسم غير موجود</div>;
 
