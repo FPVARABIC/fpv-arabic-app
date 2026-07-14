@@ -4,7 +4,7 @@
 
 ## المميزات
 
-- **18 درسًا تفاعليًا** بمخططات SVG تعليمية قابلة للنقر
+- **16 درسًا تفاعليًا** بمخططات SVG تعليمية قابلة للنقر
 - **مساعد FPV العائم** — يظهر في كل صفحة للوصول السريع (FloatingAssistant)
 - **Betaflight بالعربي** — شرح مرئي لكل قسم من أقسام Betaflight Configurator
 - **خريطة البناء** — خطوات مرتبة من الصفر حتى الطيران
@@ -32,7 +32,7 @@ npm run build
 
 | الملف | المحتوى |
 |---|---|
-| `src/data/lessonsData.ts` | 18 درساً مع حقل `diagramType` لكل درس |
+| `src/data/lessonsData.ts` | 16 درساً مع حقل `diagramType` لكل درس |
 | `src/data/betaflightData.ts` | 10 أقسام Betaflight مع شرح ونقاط مهمة |
 | `src/data/botResponses.ts` | ردود المساعد الذكي (11 سؤالاً شائعاً) |
 | `src/data/checklistsData.ts` | قوائم الفحص قبل الشراء والطيران |

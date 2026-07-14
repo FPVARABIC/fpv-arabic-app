@@ -1,6 +1,6 @@
 import type { Lesson } from '../types';
 
-export const TOTAL_LESSONS = 18;
+export const TOTAL_LESSONS = 16;
 
 export const lessonsData: Lesson[] = [
   {
@@ -294,43 +294,5 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'شراء نظام فيديو قبل إتقان الأساسيات',
     conceptIds: ['vtx_basic'],
-  },
-  {
-    id: 'lesson-motor-test', number: 17,
-    title: 'اختبار المحركات بدون مراوح',
-    description: 'ترتيب المحركات واتجاه الدوران في Betaflight',
-    level: 'مبتدئ', duration: '15 دقائق',
-    objective: 'التحقق من عمل المحركات وترتيبها واتجاهها في Betaflight',
-    explanation: 'قبل اختبار المحركات: تأكد أن لا مراوح مركبة إطلاقاً. في Betaflight افتح تبويب Motors. ستظهر رسالة تحذير: وافق عليها فقط إذا كنت متأكدًا من غياب المراوح. تحريك زلاقة محرك واحد يجب أن يحرك محركًا واحدًا فقط. تأكد من الترتيب: Motor 1 أمام يمين، Motor 2 خلف يسار، Motor 3 أمام يسار، Motor 4 خلف يمين. اتجاه الدوران يمكن تغييره من Betaflight Motor Mixer أو بتبديل سلكين من أسلاك الموتور.',
-    imagePlaceholder: 'مخطط: ترتيب Motor 1-4 في Betaflight',
-    image: '/assets/lesson-images/lesson-17-motor-test-no-props.png',
-    diagramType: 'motor-test',
-    importantPoints: [
-      'لا مراوح أبدًا أثناء اختبار المحركات',
-      'وافق على التحذير في Betaflight فقط بعد التأكد',
-      'اختبر كل محرك منفردًا',
-    ],
-    commonMistake: 'اختبار المحركات مع وجود المراوح',
-    warning: 'مروحة دوارة بدون حماية خطيرة جداً - لا تختبر المحركات مع المراوح أبدًا',
-    conceptIds: ['motor_basic', 'betaflight_basics'],
-  },
-  {
-    id: 'lesson-first-flight', number: 18,
-    title: 'أول طيران آمن',
-    description: 'كيف تطير لأول مرة بأمان وبثقة',
-    level: 'مبتدئ', duration: '20 دقائق',
-    objective: 'إجراء أول رحلة طيران آمنة',
-    explanation: 'أنت الآن جاهز لأول طيران! اختر مكانًا مفتوحًا بعيدًا عن الأشخاص والأشجار والكابلات الكهربائية. تأكد من شحن البطارية وتثبيتها جيدًا. فعّل وضع Angle Mode لأنه يساعد المبتدئين على الاستقرار. افحص Failsafe: أطفئ جهاز التحكم وتأكد أن الدرون يتوقف. جرّب Arm/Disarm قبل الطيران. ابدأ بارتفاع منخفض جداً (نصف متر) وتعود على ردة فعل الدرون. لا تطر فوق الناس. لا تحاول الحركات المعقدة في أول رحلة. والأهم: استمتع وتعلم من كل تجربة.',
-    imagePlaceholder: 'صورة: مكان طيران مفتوح وآمن',
-    image: '/assets/lesson-images/lesson-18-first-safe-flight.png',
-    diagramType: 'first-flight',
-    importantPoints: [
-      'Angle Mode للمبتدئين يجعل التحكم أسهل',
-      'Failsafe يجب أن يكون مضبوطاً قبل الطيران',
-      'ابدأ منخفضاً وتعلم قبل أن ترتفع',
-    ],
-    commonMistake: 'محاولة التحكم بوضع Acro في أول رحلة',
-    warning: 'لا تطر فوق الناس أو بالقرب منهم - الدرون قد يفقد التحكم',
-    conceptIds: ['betaflight_basics'],
   },
 ];

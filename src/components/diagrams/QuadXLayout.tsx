@@ -41,7 +41,7 @@ export const QuadXLayout: React.FC<QuadXLayoutProps> = ({ onMotorExplore }) => {
   return (
     <>
       {/* Component-scoped only (does not touch index.css's global .spin-slow/
-          .spin-rev, which MotorTest.tsx also relies on) — stops the
+          .spin-rev, which BottomNavigation.tsx also relies on) — stops the
           continuous ring-spin animation for users who requested reduced
           motion, while every static cue (CW/CCW text, direction arc, click
           handling) is untouched and still fully available. */}

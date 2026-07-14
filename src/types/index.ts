@@ -34,9 +34,7 @@ export type DiagramType =
   | 'esc-placement'
   | 'fc-orientation'
   | 'receiver-uart'
-  | 'camera-vtx'
-  | 'motor-test'
-  | 'first-flight';
+  | 'camera-vtx';
 
 export interface RoadmapStep {
   id: string;

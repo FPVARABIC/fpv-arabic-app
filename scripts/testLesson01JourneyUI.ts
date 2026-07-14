@@ -283,8 +283,8 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Scenario D: Lesson 17 still renders generically (Lessons 2, 3, 4, 5,
-    // 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, and 16 were deliberately migrated
+    // ── Scenario D: Lessons 17 and 18 (and their containing section) were
+    // removed from the app entirely (Lessons 2-16 were deliberately migrated
     // onto the journey architecture in Phases 4-18 — see testLesson02JourneyUI.ts /
     // testLesson03JourneyUI.ts / testLesson04JourneyUI.ts /
     // testLesson05JourneyUI.ts / testLesson06JourneyUI.ts /
@@ -292,10 +292,8 @@ async function main() {
     // testLesson09JourneyUI.ts / testLesson10JourneyUI.ts /
     // testLesson11JourneyUI.ts / testLesson12JourneyUI.ts /
     // testLesson13JourneyUI.ts / testLesson14JourneyUI.ts /
-    // testLesson15JourneyUI.ts / testLesson16JourneyUI.ts — so Lesson 17 is
-    // now the nearest still-legacy lesson for this regression check). Lesson 17 has a real
-    // `image` field, so its legacy page renders a hero <img>, not an SVG
-    // diagram ────────────────────────────────────────────────────────────
+    // testLesson15JourneyUI.ts / testLesson16JourneyUI.ts — Lesson 16 is now
+    // the final lesson in the app) ──────────────────────────────────────────
     {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
@@ -303,16 +301,12 @@ async function main() {
 
       await page.goto(`${BASE}/lessons/lesson-motor-test`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 17 does NOT use the stage-based journey UI', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 17 still shows the generic "الشرح" explanation heading', await page.locator('text=الشرح').count() === 1);
-      ok('Lesson 17 still shows its level/duration pill-stat badges', await page.locator('.pill-stat').count() === 2);
+      ok('the removed Lesson 17 route (lesson-motor-test) now shows normal not-found behavior', await page.locator('text=الدرس غير موجود').count() === 1);
+      ok('the not-found page for the removed Lesson 17 route renders no journey stage', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
 
-      await page.goto(`${BASE}/lessons/lesson-motor-test`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/lessons/lesson-first-flight`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
-      ok('Lesson 17 (motor-test) still renders its hero image (no regression from the QuadXLayout prop addition)', await page.locator('img').count() > 0);
-
-      const overflowX = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 17 either', !overflowX);
+      ok('the removed Lesson 18 route (lesson-first-flight) now shows normal not-found behavior', await page.locator('text=الدرس غير موجود').count() === 1);
 
       await page.close();
     }

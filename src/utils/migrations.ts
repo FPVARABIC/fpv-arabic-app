@@ -17,8 +17,6 @@ const LESSON_ID_MAP: Readonly<Record<string, string>> = {
   'lesson-14': 'lesson-fc-install',
   'lesson-15': 'lesson-receiver-install',
   'lesson-16': 'lesson-video-system',
-  'lesson-17': 'lesson-motor-test',
-  'lesson-18': 'lesson-first-flight',
 };
 
 function migrateId(id: string): string {

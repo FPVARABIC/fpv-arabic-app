@@ -14,7 +14,6 @@ export const LessonsView: React.FC = () => {
     { title: 'الأساسيات', subtitle: 'افهم الفكرة والقطع قبل الشراء', lessons: lessonsData.slice(0, 5) },
     { title: 'الكهرباء والسلامة', subtitle: 'تعلّم الطاقة والتوصيل الآمن قبل البطارية', lessons: lessonsData.slice(5, 10) },
     { title: 'التركيب', subtitle: 'ركّب القطع خطوة بخطوة', lessons: lessonsData.slice(10, 16) },
-    { title: 'الاختبار والطيران', subtitle: 'افحص بأمان واستعد لأول طيران', lessons: lessonsData.slice(16, 18) },
   ];
 
   return (

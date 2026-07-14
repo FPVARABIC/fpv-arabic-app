@@ -17,6 +17,7 @@ import { lesson16JourneyDefinition as def } from '../src/data/lessons/lesson16Jo
 import type { CheckpointStage, RecallStage, GlossaryStage, ComparisonStage, InteractiveDiagramStage } from '../src/types/lessonJourney';
 import { lessonsData } from '../src/data/lessonsData';
 import { getLessonJourneyDefinition } from '../src/data/lessons/journeyRegistry';
+import type { Lesson } from '../src/types';
 
 let passed = 0;
 function ok(label: string, cond: boolean) {
@@ -226,15 +227,32 @@ console.log('\n[15] Content-boundary check: Lesson 16 stays at physical/conceptu
   }
 }
 
-console.log('\n[16] Lesson 16\'s transition bridge to Lesson 17 is built from real lessonsData, not hardcoded text');
+console.log('\n[16] Lesson 16 is now the final lesson — its generic nextLessonBridge template still works, but has no real next lesson to receive it');
 {
-  const lesson17 = lessonsData.find(l => l.id === 'lesson-motor-test')!;
+  ok('lesson-motor-test no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-motor-test') === undefined);
+  ok('lesson-first-flight no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-first-flight') === undefined);
+  ok('lessonsData has exactly 16 lessons', lessonsData.length === 16);
+  ok('lesson-video-system (Lesson 16) is now the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-video-system');
+
+  // The completion stage's nextLessonBridge is a generic reusable template
+  // (shared shape across every lesson's journey definition) — it is only ever
+  // invoked by InteractiveLessonJourney.tsx when a real `nextLesson` exists.
+  // LessonDetailView.tsx computes nextLesson from lessonsData[lessonIndex+1],
+  // which is now null for Lesson 16, so this function is never called at
+  // runtime. A synthetic lesson (not read from lessonsData) is used here to
+  // prove the template itself is still correctly generic, independent of
+  // whether Lesson 17 exists.
+  const syntheticNextLesson: Lesson = {
+    id: 'lesson-synthetic-next', number: 99, title: 'عنوان تجريبي', description: 'وصف تجريبي',
+    level: 'مبتدئ', duration: '10 دقائق', objective: '', explanation: '',
+    imagePlaceholder: '', diagramType: 'camera-vtx', importantPoints: [], commonMistake: '',
+  };
   const completionStage = def.stages[def.stages.length - 1];
   ok('the final stage is a completion stage', completionStage.type === 'completion');
   if (completionStage.type === 'completion') {
-    const bridgeText = completionStage.nextLessonBridge(lesson17);
-    ok('bridge text contains Lesson 17\'s real title', bridgeText.includes(lesson17.title));
-    ok('bridge text contains Lesson 17\'s real description', bridgeText.includes(lesson17.description));
+    const bridgeText = completionStage.nextLessonBridge(syntheticNextLesson);
+    ok('bridge text is built generically from whatever lesson is passed in (title)', bridgeText.includes(syntheticNextLesson.title));
+    ok('bridge text is built generically from whatever lesson is passed in (description)', bridgeText.includes(syntheticNextLesson.description));
   }
 }
 

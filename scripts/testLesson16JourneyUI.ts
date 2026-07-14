@@ -213,14 +213,14 @@ async function main() {
       const afterClick = await page.evaluate(() => localStorage.getItem('fpv_progress_lessons'));
       ok('clicking completion calls the existing completeLesson path — completedLessons now contains lesson 16', (afterClick ?? '').includes('lesson-video-system'));
 
+      // Lesson 16 is now the final lesson (Lessons 17/18 were removed) — the
+      // generic completion component only renders the next-lesson bridge when
+      // a real nextLesson is passed in (InteractiveLessonJourney.tsx), and
+      // LessonDetailView.tsx now computes nextLesson as null for Lesson 16.
       const bridge = page.locator('[data-testid="lesson01-next-lesson-bridge"]');
-      ok('the Lesson 17 transition bridge appears after completion', await bridge.count() === 1);
-      const bridgeText = (await bridge.textContent()) ?? '';
-      ok('the transition bridge text contains Lesson 17\'s real title from lessonsData', bridgeText.includes('اختبار المحركات'));
-
-      await page.locator('[data-testid="lesson01-open-next"]').click();
-      await page.waitForTimeout(400);
-      ok('clicking the transition action navigates to Lesson 17\'s real route', page.url().includes('/lessons/lesson-motor-test'));
+      ok('no next-lesson bridge appears after completing Lesson 16, since it is now the final lesson', await bridge.count() === 0);
+      const openNextBtn = page.locator('[data-testid="lesson01-open-next"]');
+      ok('no "open next lesson" button appears either', await openNextBtn.count() === 0);
 
       // ── Refresh semantics (same page/context, so localStorage carries over) ──
       await page.goto(LESSON16_URL, { waitUntil: 'networkidle' });
@@ -273,7 +273,7 @@ async function main() {
       await rmContext.close();
     }
 
-    // ── Regression: Lessons 1-15 still use their own journeys; Lesson 17 legacy intact ──
+    // ── Regression: Lessons 1-15 still use their own journeys; Lessons 17/18 and their section are gone ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -429,10 +429,8 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-motor-test`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 17 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 17 (motor-test) still renders its hero image (it has an image field, so no SVG diagram is expected)', await page.locator('img').count() > 0);
-      const overflow17 = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow on Lesson 17 either', !overflow17);
+      ok('the removed Lesson 17 route (lesson-motor-test) now shows normal not-found behavior', await page.locator('text=الدرس غير موجود').count() === 1);
+      ok('the not-found page for the removed Lesson 17 route renders no journey stage', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
       await ctx.close();
     }
     {
@@ -440,8 +438,8 @@ async function main() {
       const page = await ctx.newPage();
       await page.goto(`${BASE}/lessons/lesson-first-flight`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
-      ok('Lesson 18 still uses the generic legacy lesson page (no journey stage rendered)', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
-      ok('Lesson 18 still shows a completion button', await page.locator('button:has-text("فهمت وأكملت الدرس")').count() === 1);
+      ok('the removed Lesson 18 route (lesson-first-flight) now shows normal not-found behavior', await page.locator('text=الدرس غير موجود').count() === 1);
+      ok('the not-found page for the removed Lesson 18 route renders no journey stage', await page.locator('[data-testid="lesson01-stage"]').count() === 0);
       await ctx.close();
     }
     {
@@ -450,6 +448,9 @@ async function main() {
       await page.goto(`${BASE}/lessons`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(300);
       ok('lessons list loads correctly', await page.locator('text=درسًا مكتملًا').count() === 1);
+      ok('lessons list shows exactly 16 total lessons', (await page.locator('text=درسًا مكتملًا').textContent() ?? '').includes('16'));
+      ok('the removed "الاختبار والطيران" section heading no longer appears', await page.locator('text=الاختبار والطيران').count() === 0);
+      ok('Lesson 16 ("تركيب نظام الفيديو") is present in the lessons list and is the last lesson card', await page.locator('text=تركيب نظام الفيديو').count() === 1);
       await ctx.close();
     }
 

@@ -172,23 +172,22 @@ console.log('\n[10] Glossary defines Pitch and Roll (previously used in the less
   ok('existing glossary structure (term/definition shape) is preserved for the new entries', typeof pitch!.term === 'string' && typeof pitch!.definition === 'string' && typeof roll!.term === 'string' && typeof roll!.definition === 'string');
 }
 
-console.log('\n[11] Lesson 1 duration was corrected; Lessons 2-18 metadata is untouched');
+console.log('\n[11] Lesson 1 duration was corrected; Lessons 2-16 metadata is untouched');
 {
   const lesson1 = lessonsData.find(l => l.id === 'lesson-quadcopter-intro')!;
   ok('Lesson 1 duration is no longer the stale "10 دقائق"', lesson1.duration !== '10 دقائق');
   ok('Lesson 1 duration is a non-empty, plausible value for a 15-stage journey', lesson1.duration.length > 0 && /\d/.test(lesson1.duration));
   ok('Lesson 1 level is unchanged ("مبتدئ")', lesson1.level === 'مبتدئ');
   const otherLessons = lessonsData.filter(l => l.id !== 'lesson-quadcopter-intro');
-  ok('every other lesson (2-18) still has a duration string', otherLessons.every(l => typeof l.duration === 'string' && l.duration.length > 0));
+  ok('every other lesson (2-16) still has a duration string', otherLessons.every(l => typeof l.duration === 'string' && l.duration.length > 0));
   const expectedOtherDurations: Record<string, string> = {
     'lesson-quadcopter-how-it-works': '12 دقائق', 'lesson-drone-parts': '15 دقائق', 'lesson-define-goal': '10 دقائق',
     'lesson-drone-size': '10 دقائق', 'lesson-electricity-basics': '15 دقائق', 'lesson-lipo-batteries': '15 دقائق',
     'lesson-power-rails': '12 دقائق', 'lesson-tx-rx': '10 دقائق', 'lesson-pre-battery-safety': '12 دقائق',
     'lesson-frame-assembly': '20 دقائق', 'lesson-motor-install': '20 دقائق', 'lesson-esc-install': '15 دقائق',
     'lesson-fc-install': '15 دقائق', 'lesson-receiver-install': '12 دقائق', 'lesson-video-system': '12 دقائق',
-    'lesson-motor-test': '15 دقائق', 'lesson-first-flight': '20 دقائق',
   };
-  ok('Lessons 2-18 durations are byte-identical to before this correction (only Lesson 1 changed)',
+  ok('Lessons 2-16 durations are byte-identical to before this correction (only Lesson 1 changed)',
     otherLessons.every(l => expectedOtherDurations[l.id] === l.duration));
 }
 
