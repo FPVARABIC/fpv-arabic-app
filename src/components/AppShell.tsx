@@ -26,14 +26,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showNav = true, ti
           maxWidth: '390px',
           minHeight: '100vh',
           zIndex: 1,
-          background: 'linear-gradient(160deg, #040d1a 0%, #061827 55%, #04101e 100%)',
+          background: '#FFFFFF',
           boxShadow: '0 0 0 1px rgba(34,211,238,0.13), 0 0 70px rgba(24,230,230,0.08), 0 0 120px rgba(0,0,0,0.9)',
           overflow: 'hidden',
         }}
       >
-        {/* hero background — below all content layers */}
-        <div className="absolute" style={{ top: 0, left: 0, right: 0, height: '100vh', backgroundImage: "url('/assets/home-hero-canyon.png')", backgroundSize: '100% 100%', backgroundPosition: 'center center', zIndex: -1 }} aria-hidden />
-        <div className="absolute inset-0" style={{ background: 'rgba(2,8,15,0.45)', zIndex: -1 }} aria-hidden />
         {/* ambient orbs — absolute, clipped to column */}
         <div className="orbs" aria-hidden>
           <div className="orb orb-1"/>
