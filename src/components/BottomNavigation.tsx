@@ -2,11 +2,11 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { House, Wrench, BookOpen, CircuitBoard, Package } from 'lucide-react';
 
-const mainNav = [
+const mainNav: { icon: typeof House; label: string; path: string; activeMatchPrefixes?: string[] }[] = [
   { icon: House,        label: 'الرئيسية', path: '/home' },
   { icon: Wrench,       label: 'البناء',   path: '/roadmap' },
   { icon: BookOpen,     label: 'الدروس',   path: '/lessons' },
-  { icon: CircuitBoard, label: 'Betaflight', path: '/betaflight' },
+  { icon: CircuitBoard, label: 'البرمجة',  path: '/programming', activeMatchPrefixes: ['/programming', '/betaflight'] },
   { icon: Package,      label: 'التجميع',  path: '/assembly' },
 ];
 
@@ -14,8 +14,12 @@ export const BottomNavigation: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path: string) =>
-    location.pathname === path || (path !== '/home' && location.pathname.startsWith(path));
+  const isActive = (item: (typeof mainNav)[number]) => {
+    if (item.activeMatchPrefixes) {
+      return item.activeMatchPrefixes.some(prefix => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
+    }
+    return location.pathname === item.path || (item.path !== '/home' && location.pathname.startsWith(item.path));
+  };
 
   return (
     <>
@@ -35,7 +39,7 @@ export const BottomNavigation: React.FC = () => {
         >
           <div className="flex items-center justify-around px-1 pt-3 pb-3" style={{ minHeight: 64 }}>
             {mainNav.map(item => {
-              const active = isActive(item.path);
+              const active = isActive(item);
               return (
                 <button
                   key={item.path}
