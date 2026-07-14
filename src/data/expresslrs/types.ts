@@ -102,3 +102,42 @@ export const FC_SOFTWARE_LABELS: Record<FlightControllerSoftware, string> = {
   other: 'نظام آخر',
   unknown: 'لا أعرف',
 };
+
+/**
+ * Data model for the ExpressLRS troubleshooting guide
+ * (src/views/ExpressLrsTroubleshootingView.tsx). Kept in this shared
+ * expresslrs/types.ts module (the domain's single type source) but the
+ * troubleshooting *data* itself lives in its own file, separate from
+ * setupSteps.ts.
+ */
+
+/** Tri-state outcome of a single diagnostic check. */
+export type CheckOutcome = 'not-checked' | 'passed' | 'failed';
+
+/** Which receiver architecture(s) an issue applies to. */
+export type IssueApplicability = 'uart' | 'spi' | 'both';
+
+export interface DiagnosticCheck {
+  id: string;
+  instruction: string;
+  expectedResult: string;
+  /** What to do next if this specific check fails. */
+  ifFailed: string;
+}
+
+export interface TroubleshootingIssue {
+  id: string;
+  order: number;
+  category: string;
+  title: string;
+  symptom: string;
+  applicability: IssueApplicability;
+  safetyWarning?: StepWarning;
+  likelyCauses: string[];
+  /** Ordered — must be worked through in sequence, one change at a time. */
+  checks: DiagnosticCheck[];
+  resolvedWhen: string;
+  nextIfUnresolved: string;
+  sources: SourceRef[];
+  reviewedAt: string;
+}

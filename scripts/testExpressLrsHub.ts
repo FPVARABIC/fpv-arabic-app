@@ -30,13 +30,14 @@ const betaflightViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightView.tsx'
 const betaflightDetailViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
 const betaflightDataTs = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 'utf8');
 
-console.log('\n[1] /programming/expresslrs route exists; a real /programming/expresslrs/setup child route now exists too');
+console.log('\n[1] /programming/expresslrs route exists; both /setup and /troubleshooting child routes now exist');
 {
   ok('App.tsx imports ExpressLrsView', /import\s*\{\s*ExpressLrsView\s*\}\s*from\s*'\.\/views\/ExpressLrsView';/.test(appTsx));
   ok('App.tsx imports ExpressLrsSetupView', /import\s*\{\s*ExpressLrsSetupView\s*\}\s*from\s*'\.\/views\/ExpressLrsSetupView';/.test(appTsx));
+  ok('App.tsx imports ExpressLrsTroubleshootingView', /import\s*\{\s*ExpressLrsTroubleshootingView\s*\}\s*from\s*'\.\/views\/ExpressLrsTroubleshootingView';/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs rendering ExpressLrsView', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs/setup rendering ExpressLrsSetupView', /<Route path="\/programming\/expresslrs\/setup" element=\{<ExpressLrsSetupView\/>\}\/>/.test(appTsx));
-  ok('no /programming/expresslrs/troubleshooting child route exists', !/\/programming\/expresslrs\/troubleshooting/.test(appTsx));
+  ok('App.tsx registers /programming/expresslrs/troubleshooting rendering ExpressLrsTroubleshootingView', /<Route path="\/programming\/expresslrs\/troubleshooting" element=\{<ExpressLrsTroubleshootingView\/>\}\/>/.test(appTsx));
   ok('/programming still exists unchanged', /<Route path="\/programming" element=\{<ProgrammingView\/>\}\/>/.test(appTsx));
   ok('/betaflight still exists unchanged', /<Route path="\/betaflight" element=\{<BetaflightView\/>\}\/>/.test(appTsx));
   ok('/betaflight/:sectionId still exists unchanged', /<Route path="\/betaflight\/:sectionId" element=\{<BetaflightDetailView\/>\}\/>/.test(appTsx));
@@ -87,15 +88,15 @@ console.log('\n[5] Exactly two structural sections, exact order, exact content')
   ok('section 2 supporting label is exactly "تشخيص منظم"', /id:\s*'troubleshooting'[\s\S]*?supportingLabel:\s*'تشخيص منظم'/.test(sectionsSrc));
 
   ok('the setup section has a `route` field pointing at /programming/expresslrs/setup', /id:\s*'setup'[\s\S]*?route:\s*'\/programming\/expresslrs\/setup'/.test(sectionsSrc));
-  ok('the troubleshooting section has no `route` field (still structural-only)', !/route\s*:/.test(sectionsSrc.slice(sectionsSrc.indexOf("id: 'troubleshooting'"))));
+  ok('the troubleshooting section now has a `route` field pointing at /programming/expresslrs/troubleshooting', /id:\s*'troubleshooting'[\s\S]*?route:\s*'\/programming\/expresslrs\/troubleshooting'/.test(sectionsSrc));
 }
 
-console.log('\n[6] The setup section is a real interactive control; troubleshooting remains honest non-interactive content');
+console.log('\n[6] Both sections are now real interactive controls, honestly (no fake handlers)');
 {
   ok('the view imports useNavigate', /import\s*\{\s*useNavigate\s*\}\s*from\s*'react-router-dom';/.test(viewTsx));
   ok('a real <button> is rendered when a section has a route', /if\s*\(section\.route\)\s*\{[\s\S]*?<button/.test(viewTsx));
   ok('the interactive branch navigates via navigate(section.route!)', /onClick=\{\(\)\s*=>\s*navigate\(section\.route!\)\}/.test(viewTsx));
-  ok('the non-interactive branch still renders a plain <div>, not a <button>', /return\s*\(\s*<div\s*$/m.test(viewTsx) || /<div\s*\n\s*key=\{section\.id\}\s*\n\s*data-testid=\{`expresslrs-section-\$\{section\.id\}`\}/.test(viewTsx));
+  ok('the generic non-interactive <div> branch still exists in source (still reachable for any future section without a route)', /<div\s*\n\s*key=\{section\.id\}\s*\n\s*data-testid=\{`expresslrs-section-\$\{section\.id\}`\}/.test(viewTsx));
   ok('no <a> element is used for a section', !/<a\b/.test(viewTsx));
   ok('no role="button" is used anywhere (native <button> is used instead)', !/role="button"/.test(viewTsx));
   ok('no disabled attribute is used anywhere on this page (nothing here is a disabled control)', !/disabled/.test(viewTsx));
@@ -103,10 +104,10 @@ console.log('\n[6] The setup section is a real interactive control; troubleshoot
   ok('each section renders its title in a semantic subheading (<h2>, once in source, applied per mapped section)', /<h2\b[^>]*>\{section\.title\}<\/h2>/.test(viewTsx));
 }
 
-console.log('\n[7] No detailed setup steps or troubleshooting flow content exists yet (structural phase only)');
+console.log('\n[7] No detailed setup/troubleshooting flow content lives in this hub page (it lives in dedicated views/data files)');
 {
   ok('no numbered step-by-step content beyond the "10 خطوات عملية" summary label exists', !/الخطوة\s*\d/.test(viewTsx));
-  ok('no troubleshooting decision-tree/diagnostic question content exists yet', !/(هل تواجه|جرّب التالي|إذا لم يعمل)/.test(viewTsx));
+  ok('no troubleshooting decision-tree/diagnostic question content exists in this file', !/(هل تواجه|جرّب التالي|إذا لم يعمل)/.test(viewTsx));
 }
 
 console.log('\n[8] Betaflight preservation — content files are structurally untouched');

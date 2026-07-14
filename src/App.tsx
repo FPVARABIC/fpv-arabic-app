@@ -10,6 +10,7 @@ import { ChecklistView } from './views/ChecklistView';
 import { ProgrammingView } from './views/ProgrammingView';
 import { ExpressLrsView } from './views/ExpressLrsView';
 import { ExpressLrsSetupView } from './views/ExpressLrsSetupView';
+import { ExpressLrsTroubleshootingView } from './views/ExpressLrsTroubleshootingView';
 import { BetaflightView } from './views/BetaflightView';
 import { BetaflightDetailView } from './views/BetaflightDetailView';
 import { TroubleshootingView } from './views/TroubleshootingView';
@@ -38,6 +39,7 @@ export const App: React.FC = () => (
     <Route path="/programming" element={<ProgrammingView/>}/>
     <Route path="/programming/expresslrs" element={<ExpressLrsView/>}/>
     <Route path="/programming/expresslrs/setup" element={<ExpressLrsSetupView/>}/>
+    <Route path="/programming/expresslrs/troubleshooting" element={<ExpressLrsTroubleshootingView/>}/>
     <Route path="/betaflight" element={<BetaflightView/>}/>
     <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
     <Route path="/troubleshooting" element={<TroubleshootingView/>}/>

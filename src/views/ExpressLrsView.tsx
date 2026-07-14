@@ -24,6 +24,7 @@ const sections: ExpressLrsSection[] = [
     title: 'حل المشاكل',
     description: 'إذا واجهت مشكلة، ابدأ من هنا وشخّص السبب خطوة بخطوة.',
     supportingLabel: 'تشخيص منظم',
+    route: '/programming/expresslrs/troubleshooting',
   },
 ];
 
