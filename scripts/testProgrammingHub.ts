@@ -93,7 +93,7 @@ console.log('\n[4] "قريبًا" badge text (Binding/INAV only) and no placehol
   ok('a real (non-placeholder) /programming/expresslrs route now exists in App.tsx', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
   ok('no placeholder route for Binding exists in App.tsx', !/\/binding/i.test(appTsx));
   ok('no placeholder route for INAV exists in App.tsx', !/\/inav/i.test(appTsx));
-  ok('no ExpressLRS setup child route exists yet', !/\/programming\/expresslrs\/setup/i.test(appTsx));
+  ok('a real (non-placeholder) /programming/expresslrs/setup route now exists in App.tsx', /<Route path="\/programming\/expresslrs\/setup" element=\{<ExpressLrsSetupView\/>\}\/>/.test(appTsx));
   ok('no ExpressLRS troubleshooting child route exists yet', !/\/programming\/expresslrs\/troubleshooting/i.test(appTsx));
 }
 

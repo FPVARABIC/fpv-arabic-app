@@ -30,11 +30,12 @@ const betaflightViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightView.tsx'
 const betaflightDetailViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
 const betaflightDataTs = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 'utf8');
 
-console.log('\n[1] /programming/expresslrs route exists; no child routes exist yet');
+console.log('\n[1] /programming/expresslrs route exists; a real /programming/expresslrs/setup child route now exists too');
 {
   ok('App.tsx imports ExpressLrsView', /import\s*\{\s*ExpressLrsView\s*\}\s*from\s*'\.\/views\/ExpressLrsView';/.test(appTsx));
+  ok('App.tsx imports ExpressLrsSetupView', /import\s*\{\s*ExpressLrsSetupView\s*\}\s*from\s*'\.\/views\/ExpressLrsSetupView';/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs rendering ExpressLrsView', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
-  ok('no /programming/expresslrs/setup child route exists', !/\/programming\/expresslrs\/setup/.test(appTsx));
+  ok('App.tsx registers /programming/expresslrs/setup rendering ExpressLrsSetupView', /<Route path="\/programming\/expresslrs\/setup" element=\{<ExpressLrsSetupView\/>\}\/>/.test(appTsx));
   ok('no /programming/expresslrs/troubleshooting child route exists', !/\/programming\/expresslrs\/troubleshooting/.test(appTsx));
   ok('/programming still exists unchanged', /<Route path="\/programming" element=\{<ProgrammingView\/>\}\/>/.test(appTsx));
   ok('/betaflight still exists unchanged', /<Route path="\/betaflight" element=\{<BetaflightView\/>\}\/>/.test(appTsx));
@@ -85,16 +86,18 @@ console.log('\n[5] Exactly two structural sections, exact order, exact content')
   ok('section 2 description matches exactly', sectionsSrc.includes('إذا واجهت مشكلة، ابدأ من هنا وشخّص السبب خطوة بخطوة.'));
   ok('section 2 supporting label is exactly "تشخيص منظم"', /id:\s*'troubleshooting'[\s\S]*?supportingLabel:\s*'تشخيص منظم'/.test(sectionsSrc));
 
-  ok('neither section object has a `route` field', !/route\s*:/.test(sectionsSrc));
+  ok('the setup section has a `route` field pointing at /programming/expresslrs/setup', /id:\s*'setup'[\s\S]*?route:\s*'\/programming\/expresslrs\/setup'/.test(sectionsSrc));
+  ok('the troubleshooting section has no `route` field (still structural-only)', !/route\s*:/.test(sectionsSrc.slice(sectionsSrc.indexOf("id: 'troubleshooting'"))));
 }
 
-console.log('\n[6] Section cards are honest non-interactive content, not fake controls');
+console.log('\n[6] The setup section is a real interactive control; troubleshooting remains honest non-interactive content');
 {
-  ok('sections are rendered as plain <div> elements, not <button>', /\{sections\.map\(section => \(\s*<div/.test(viewTsx));
-  ok('no <button> element wraps a section', !/<button[^>]*>\s*\{sections/.test(viewTsx) && !/sections\.map[\s\S]*?<button/.test(viewTsx.slice(viewTsx.indexOf('sections.map'), viewTsx.indexOf('sections.map') + 800)));
+  ok('the view imports useNavigate', /import\s*\{\s*useNavigate\s*\}\s*from\s*'react-router-dom';/.test(viewTsx));
+  ok('a real <button> is rendered when a section has a route', /if\s*\(section\.route\)\s*\{[\s\S]*?<button/.test(viewTsx));
+  ok('the interactive branch navigates via navigate(section.route!)', /onClick=\{\(\)\s*=>\s*navigate\(section\.route!\)\}/.test(viewTsx));
+  ok('the non-interactive branch still renders a plain <div>, not a <button>', /return\s*\(\s*<div\s*$/m.test(viewTsx) || /<div\s*\n\s*key=\{section\.id\}\s*\n\s*data-testid=\{`expresslrs-section-\$\{section\.id\}`\}/.test(viewTsx));
   ok('no <a> element is used for a section', !/<a\b/.test(viewTsx));
-  ok('no onClick handler exists inside the sections.map block', !/sections\.map[\s\S]{0,800}onClick/.test(viewTsx));
-  ok('no role="button" is used for a section', !/role="button"/.test(viewTsx));
+  ok('no role="button" is used anywhere (native <button> is used instead)', !/role="button"/.test(viewTsx));
   ok('no disabled attribute is used anywhere on this page (nothing here is a disabled control)', !/disabled/.test(viewTsx));
   ok('no "قريبًا" label appears anywhere on this page (ExpressLRS is available, these are structural sections, not a future feature)', !/قريبًا/.test(viewTsx));
   ok('each section renders its title in a semantic subheading (<h2>, once in source, applied per mapped section)', /<h2\b[^>]*>\{section\.title\}<\/h2>/.test(viewTsx));

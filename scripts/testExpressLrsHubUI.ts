@@ -114,27 +114,59 @@ async function main() {
       ok('section 2 description matches exactly', (await page.locator('[data-testid="expresslrs-section-troubleshooting"]').textContent() ?? '').includes('إذا واجهت مشكلة، ابدأ من هنا وشخّص السبب خطوة بخطوة.'));
       ok('section 2 supporting label is exactly "تشخيص منظم"', (await page.locator('[data-testid="expresslrs-label-troubleshooting"]').textContent())?.trim() === 'تشخيص منظم');
 
-      // ── Honesty: section cards are not buttons/links and cannot be keyboard-activated ──
+      // ── Honesty: section 1 (setup) is now a real interactive control; section 2 (troubleshooting) is not ──
       const tag1 = await page.locator('[data-testid="expresslrs-section-setup"]').evaluate(el => el.tagName);
-      ok('section 1 is a plain element (DIV), not a BUTTON or A', tag1 === 'DIV');
+      ok('section 1 (setup) is a real BUTTON now', tag1 === 'BUTTON');
       const tag2 = await page.locator('[data-testid="expresslrs-section-troubleshooting"]').evaluate(el => el.tagName);
-      ok('section 2 is a plain element (DIV), not a BUTTON or A', tag2 === 'DIV');
+      ok('section 2 (troubleshooting) remains a plain element (DIV), not a BUTTON or A', tag2 === 'DIV');
 
-      const urlBefore = page.url();
-      await page.locator('[data-testid="expresslrs-section-setup"]').click({ force: true });
-      await page.waitForTimeout(150);
-      ok('clicking section 1 causes no navigation', page.url() === urlBefore);
-
-      // Tabbing from the last real interactive element (Betaflight would be the
-      // origin on the hub; here we just confirm the section elements never
-      // receive focus even when explicitly asked to).
-      const canFocusSection = await page.locator('[data-testid="expresslrs-section-setup"]').evaluate(el => {
+      const canFocusSetup = await page.locator('[data-testid="expresslrs-section-setup"]').evaluate(el => {
         (el as HTMLElement).focus();
         return document.activeElement === el;
       });
-      ok('section 1 cannot receive keyboard focus (it is not an interactive control)', !canFocusSection);
+      ok('section 1 (setup) can receive keyboard focus', canFocusSetup);
+
+      const urlBeforeTroubleshooting = page.url();
+      await page.locator('[data-testid="expresslrs-section-troubleshooting"]').click({ force: true });
+      await page.waitForTimeout(150);
+      ok('clicking section 2 (troubleshooting) causes no navigation', page.url() === urlBeforeTroubleshooting);
+
+      const canFocusTroubleshooting = await page.locator('[data-testid="expresslrs-section-troubleshooting"]').evaluate(el => {
+        (el as HTMLElement).focus();
+        return document.activeElement === el;
+      });
+      ok('section 2 (troubleshooting) cannot receive keyboard focus (it is not an interactive control)', !canFocusTroubleshooting);
 
       ok('no "قريبًا" label appears anywhere on this page', await page.locator('text=قريبًا').count() === 0);
+
+      await ctx.close();
+    }
+
+    // ── Setup card is genuinely keyboard-activatable and routes correctly ──
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+
+      await page.goto(`${BASE}/programming/expresslrs`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+
+      await page.locator('[data-testid="expresslrs-section-setup"]').click();
+      await page.waitForTimeout(300);
+      ok('clicking the setup card navigates to /programming/expresslrs/setup', page.url() === `${BASE}/programming/expresslrs/setup`);
+
+      await page.goto(`${BASE}/programming/expresslrs`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await page.locator('[data-testid="expresslrs-section-setup"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      ok('pressing Enter on the focused setup card navigates to /programming/expresslrs/setup', page.url() === `${BASE}/programming/expresslrs/setup`);
+
+      await page.goto(`${BASE}/programming/expresslrs`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await page.locator('[data-testid="expresslrs-section-setup"]').focus();
+      await page.keyboard.press(' ');
+      await page.waitForTimeout(300);
+      ok('pressing Space on the focused setup card navigates to /programming/expresslrs/setup', page.url() === `${BASE}/programming/expresslrs/setup`);
 
       await ctx.close();
     }
