@@ -34,6 +34,7 @@ const betaflightDataTs = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 
 console.log('\n[1] /programming route exists and is registered before /betaflight');
 {
   ok('App.tsx imports ProgrammingView', /import\s*\{\s*ProgrammingView\s*\}\s*from\s*'\.\/views\/ProgrammingView';/.test(appTsx));
+  ok('App.tsx imports ExpressLrsView', /import\s*\{\s*ExpressLrsView\s*\}\s*from\s*'\.\/views\/ExpressLrsView';/.test(appTsx));
   ok('App.tsx registers a /programming route rendering ProgrammingView', /<Route path="\/programming" element=\{<ProgrammingView\/>\}\/>/.test(appTsx));
   ok('App.tsx still registers /betaflight unchanged', /<Route path="\/betaflight" element=\{<BetaflightView\/>\}\/>/.test(appTsx));
   ok('App.tsx still registers /betaflight/:sectionId unchanged', /<Route path="\/betaflight\/:sectionId" element=\{<BetaflightDetailView\/>\}\/>/.test(appTsx));
@@ -70,12 +71,12 @@ console.log('\n[3] Hub contains exactly four cards, in the required order, with 
   ok('INAV card title is exactly "INAV" (not Arabized)', /id:\s*'inav'[\s\S]*?title:\s*'INAV'/.test(cardsSrc));
 
   ok('Betaflight card is available: true', /id:\s*'betaflight'[\s\S]*?available:\s*true/.test(cardsSrc));
-  ok('ExpressLRS card is available: false', /id:\s*'expresslrs'[\s\S]*?available:\s*false/.test(cardsSrc));
+  ok('ExpressLRS card is available: true', /id:\s*'expresslrs'[\s\S]*?available:\s*true/.test(cardsSrc));
   ok('Binding card is available: false', /id:\s*'binding'[\s\S]*?available:\s*false/.test(cardsSrc));
   ok('INAV card is available: false', /id:\s*'inav'[\s\S]*?available:\s*false/.test(cardsSrc));
 
-  ok('only the Betaflight card has a route field', /id:\s*'betaflight'[\s\S]*?route:\s*'\/betaflight'/.test(cardsSrc));
-  ok('ExpressLRS card has no route field (no placeholder route)', !/id:\s*'expresslrs'[\s\S]*?route:/.test(cardsSrc.slice(cardsSrc.indexOf("id: 'expresslrs'"), cardsSrc.indexOf("id: 'binding'"))));
+  ok('the Betaflight card has a route field', /id:\s*'betaflight'[\s\S]*?route:\s*'\/betaflight'/.test(cardsSrc));
+  ok('the ExpressLRS card has a route field pointing at /programming/expresslrs', /id:\s*'expresslrs'[\s\S]*?route:\s*'\/programming\/expresslrs'/.test(cardsSrc));
   ok('Binding card has no route field (no placeholder route)', !/route:/.test(cardsSrc.slice(cardsSrc.indexOf("id: 'binding'"), cardsSrc.indexOf("id: 'inav'"))));
   ok('INAV card has no route field (no placeholder route)', !/route:/.test(cardsSrc.slice(cardsSrc.indexOf("id: 'inav'"))));
 
@@ -85,13 +86,15 @@ console.log('\n[3] Hub contains exactly four cards, in the required order, with 
   ok('INAV description matches the approved wording', cardsSrc.includes('إعداد نظام INAV للملاحة والمهام المتقدمة.'));
 }
 
-console.log('\n[4] "قريبًا" badge text and no placeholder routes exist anywhere in the app router');
+console.log('\n[4] "قريبًا" badge text (Binding/INAV only) and no placeholder routes for still-unavailable tools');
 {
   const badgeCount = (programmingViewTsx.match(/قريبًا/g) || []).length;
-  ok('the exact string "قريبًا" appears in the view (rendered badge text)', badgeCount >= 1);
-  ok('no placeholder route for ExpressLRS exists in App.tsx', !/expresslrs/i.test(appTsx));
+  ok('the exact string "قريبًا" appears in the view (rendered badge text for Binding/INAV)', badgeCount >= 1);
+  ok('a real (non-placeholder) /programming/expresslrs route now exists in App.tsx', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
   ok('no placeholder route for Binding exists in App.tsx', !/\/binding/i.test(appTsx));
   ok('no placeholder route for INAV exists in App.tsx', !/\/inav/i.test(appTsx));
+  ok('no ExpressLRS setup child route exists yet', !/\/programming\/expresslrs\/setup/i.test(appTsx));
+  ok('no ExpressLRS troubleshooting child route exists yet', !/\/programming\/expresslrs\/troubleshooting/i.test(appTsx));
 }
 
 console.log('\n[5] Disabled cards use genuinely disabled native buttons, not fake links');

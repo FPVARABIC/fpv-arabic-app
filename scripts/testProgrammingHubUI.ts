@@ -140,8 +140,27 @@ async function main() {
       await page.goBack();
       await page.waitForTimeout(300);
 
-      // ── Coming-soon cards: disabled, badged, non-navigable ──
-      for (const id of ['expresslrs', 'binding', 'inav']) {
+      // ── ExpressLRS card: now enabled and functional (no longer قريبًا) ──
+      ok('ExpressLRS card is enabled (not disabled)', !(await page.locator('[data-testid="programming-card-expresslrs"]').isDisabled()));
+      ok('ExpressLRS card no longer shows a "قريبًا" badge', await page.locator('[data-testid="programming-badge-expresslrs"]').count() === 0);
+      await page.locator('[data-testid="programming-card-expresslrs"]').focus();
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(300);
+      ok('keyboard Enter on the focused ExpressLRS card opens /programming/expresslrs', page.url() === `${BASE}/programming/expresslrs`);
+      ok('the ExpressLRS page title renders', await page.locator('h1', { hasText: 'ExpressLRS' }).count() === 1);
+
+      await page.goto(`${BASE}/programming`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+      await page.locator('[data-testid="programming-card-expresslrs"]').focus();
+      await page.keyboard.press(' ');
+      await page.waitForTimeout(300);
+      ok('keyboard Space on the focused ExpressLRS card also opens /programming/expresslrs', page.url() === `${BASE}/programming/expresslrs`);
+
+      await page.goto(`${BASE}/programming`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(300);
+
+      // ── Coming-soon cards: disabled, badged, non-navigable (Binding/INAV only) ──
+      for (const id of ['binding', 'inav']) {
         const card = page.locator(`[data-testid="programming-card-${id}"]`);
         ok(`${id} card is disabled`, await card.isDisabled());
         ok(`${id} card shows a "قريبًا" badge`, (await page.locator(`[data-testid="programming-badge-${id}"]`).textContent())?.trim() === 'قريبًا');
@@ -154,10 +173,10 @@ async function main() {
 
       // ── Keyboard: disabled buttons cannot receive focus, so they are
       // unreachable by Tab and cannot be activated with Enter/Space ──
-      await page.locator('[data-testid="programming-card-expresslrs"]').evaluate(el => (el as HTMLButtonElement).focus());
-      const focusedIsExpresslrs = await page.locator('[data-testid="programming-card-expresslrs"]').evaluate(el => el === document.activeElement);
-      ok('a disabled "قريبًا" card cannot be focused (native disabled semantics keep it out of the tab order)', !focusedIsExpresslrs);
-      const disabledProp = await page.locator('[data-testid="programming-card-expresslrs"]').evaluate(el => (el as HTMLButtonElement).disabled);
+      await page.locator('[data-testid="programming-card-binding"]').evaluate(el => (el as HTMLButtonElement).focus());
+      const focusedIsBinding = await page.locator('[data-testid="programming-card-binding"]').evaluate(el => el === document.activeElement);
+      ok('a disabled "قريبًا" card cannot be focused (native disabled semantics keep it out of the tab order)', !focusedIsBinding);
+      const disabledProp = await page.locator('[data-testid="programming-card-binding"]').evaluate(el => (el as HTMLButtonElement).disabled);
       ok('the disabled property is genuinely set (not just visual styling)', disabledProp === true);
 
       await ctx.close();
@@ -179,8 +198,8 @@ async function main() {
       const outline = await betaflightCard.evaluate(el => getComputedStyle(el).outlineStyle);
       ok('a visible focus outline is present on the focused Betaflight card', outline !== 'none' || (await betaflightCard.evaluate(el => getComputedStyle(el).boxShadow)) !== 'none');
 
-      const expresslrsDisabledAttr = await page.locator('[data-testid="programming-card-expresslrs"]').evaluate(el => (el as HTMLButtonElement).disabled);
-      ok('the ExpressLRS card exposes native disabled state to assistive tech', expresslrsDisabledAttr === true);
+      const bindingDisabledAttr = await page.locator('[data-testid="programming-card-binding"]').evaluate(el => (el as HTMLButtonElement).disabled);
+      ok('the Binding card exposes native disabled state to assistive tech', bindingDisabledAttr === true);
 
       ok('Latin product names remain readable (not mirrored/reversed) inside RTL content', (await page.locator('[data-testid="programming-card-expresslrs"]').textContent() ?? '').includes('ExpressLRS'));
 

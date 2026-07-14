@@ -33,7 +33,8 @@ const cards: ProgrammingCard[] = [
     icon: Radio,
     colorClass: 'text-purple-300',
     accent: '#a78bfa',
-    available: false,
+    available: true,
+    route: '/programming/expresslrs',
   },
   {
     id: 'binding',

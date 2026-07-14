@@ -8,6 +8,7 @@ import { LessonsView } from './views/LessonsView';
 import { LessonDetailView } from './views/LessonDetailView';
 import { ChecklistView } from './views/ChecklistView';
 import { ProgrammingView } from './views/ProgrammingView';
+import { ExpressLrsView } from './views/ExpressLrsView';
 import { BetaflightView } from './views/BetaflightView';
 import { BetaflightDetailView } from './views/BetaflightDetailView';
 import { TroubleshootingView } from './views/TroubleshootingView';
@@ -34,6 +35,7 @@ export const App: React.FC = () => (
     <Route path="/lessons/:lessonId" element={<LessonDetailView/>}/>
     <Route path="/checklists" element={<ChecklistView/>}/>
     <Route path="/programming" element={<ProgrammingView/>}/>
+    <Route path="/programming/expresslrs" element={<ExpressLrsView/>}/>
     <Route path="/betaflight" element={<BetaflightView/>}/>
     <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
     <Route path="/troubleshooting" element={<TroubleshootingView/>}/>
