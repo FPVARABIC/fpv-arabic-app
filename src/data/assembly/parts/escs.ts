@@ -105,7 +105,12 @@ export const escs: Esc[] = [
     nameEn: 'SEQURE Blueson A2 65A 4-in-1 ESC',
     brand: 'SEQURE',
     specs: { currentRatingA: 65, burstCurrentRatingA: 120, firmware: 'AM32', channels: 4, compatibleVoltages: [2, 3, 4, 5, 6], weightG: 17 },
-    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6] },
+    // batteryVoltages: [4, 6] — matches this exact entry's own already-
+    // authored specs.compatibleVoltages: [2, 3, 4, 5, 6] above (sourced
+    // "2S-6S", see buildNotes below); the category tag was under-populated
+    // relative to the spec field for this same ESC. A data-consistency
+    // fix, not a new current/thermal claim.
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'تصنيف مدى طويل هنا هندسي معتمد على أرقام حقيقية، وليس على نص تسويقي مخصص لمدى طويل (النص المصدري عام: سباق/طيران حر): 65A مستمر و120A ذروة يعطي هامشاً حقيقياً فوق ذروة تيار محرك EMAX E3 2808 1300KV (56A عند 6S حسب مصدرين مستقلين) — بخلاف الـ3 ESCs الأخرى في القاعدة (55A/55A/60A) التي هامشها ضيق أو معدوم أمام هذا المحرك تحديداً. AM32 مفتوح المصدر، مقاس تركيب 30.5×30.5mm، حساس تيار مدمج.',
     notFor: 'لا تختارها إذا كنت تبحث عن نص تسويقي يذكر "مدى طويل" صراحة؛ هذا تصنيف هندسي معتمد على مقارنة أرقام التيار الحقيقية، وليس ادعاءً من الشركة المصنعة.',
     upgradePath: 'لا يوجد حالياً بديل أعلى تياراً موثق في القاعدة.',

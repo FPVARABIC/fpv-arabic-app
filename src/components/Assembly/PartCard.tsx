@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Info } from 'lucide-react';
 import type { BasePart } from '../../data/assembly/types';
 
 // Generic hardcoded fallback — used whenever part.placeholderIcon is
@@ -22,19 +23,21 @@ interface PartCardProps {
 // same 1px border (color changes only, width never does). This is a
 // deliberate, exact match — not an adaptation — per explicit decision.
 // The only additions beyond AssemblyHome's card are what a part needs that
-// a drone type doesn't: a price line (appended below the label) and an
-// info tap-target (a 32x32 corner overlay on the image, opposite corner
-// from the tier badge — sized deliberately larger than an earlier attempt
-// this session that measured a 20x20 corner icon as too small to tap).
-// Both additions overlay/append; neither resizes the image, badge, or
-// label. This card intentionally does NOT fit the worst-case (videoUnits,
-// 7 entries) grid within the real no-scroll ceiling on its own — see
+// a drone type doesn't: a price line (appended below the label) and a
+// details action below the card's own content. The details trigger used to
+// be a 32x32 corner overlay ON the image; it was moved off the image
+// entirely (own row below name/price, inside the same bordered card) so a
+// future real product photo is never obscured by any control. Neither the
+// image nor the label/price resizes because of this. This card
+// intentionally does NOT fit the worst-case (videoUnits, 7 entries) grid
+// within the real no-scroll ceiling on its own — see
 // PartCardsContainer.tsx's comment for the verified overflow amount and
 // the clearance fix that makes the resulting scroll actually work.
 export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const specEntries = Object.entries(part.specs ?? {});
+  const detailContentId = `part-detail-content-${part.id}`;
 
   return (
     <div>
@@ -70,17 +73,6 @@ export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) 
           }}>
             {part.tier}
           </span>
-          <button
-            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-            style={{
-              position: 'absolute', top: 4, insetInlineEnd: 4, width: 32, height: 32,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.85)',
-              color: '#0e7c86', fontSize: 15, cursor: 'pointer', padding: 0,
-            }}
-          >
-            ⓘ
-          </button>
         </div>
         <div style={{
           fontSize: 12.5, fontWeight: 700, color: '#3a2e1f',
@@ -93,9 +85,30 @@ export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) 
             {part.priceRangeUSD[0]}–{part.priceRangeUSD[1]} USD
           </div>
         )}
+        <button
+          type="button"
+          data-testid={`part-detail-toggle-${part.id}`}
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+          aria-expanded={expanded}
+          aria-controls={detailContentId}
+          aria-label={`عرض تفاصيل ${part.nameEn}`}
+          style={{
+            width: '100%', marginTop: 6, padding: '7px 6px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+            borderRadius: 8, border: '1px solid #D4A574', background: '#fffbf7',
+            color: '#0e7c86', fontSize: 10.5, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          <Info size={13} aria-hidden="true" />
+          عرض تفاصيل القطعة
+        </button>
       </div>
       {expanded && (
-        <div style={{ marginTop: 4, padding: '6px 8px', fontSize: 10.5, color: '#5a4e3a', textAlign: 'start' }}>
+        <div
+          id={detailContentId}
+          data-testid={`part-detail-content-${part.id}`}
+          style={{ marginTop: 4, padding: '6px 8px', fontSize: 10.5, color: '#5a4e3a', textAlign: 'start' }}
+        >
           {part.whyChoose && <p style={{ margin: '1px 0' }}>✅ {part.whyChoose}</p>}
           {part.notFor && <p style={{ margin: '1px 0' }}>🚫 {part.notFor}</p>}
           {specEntries.map(([key, value]) => (

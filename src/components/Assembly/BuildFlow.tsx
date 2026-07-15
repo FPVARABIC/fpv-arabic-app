@@ -48,15 +48,23 @@ interface OptionCardProps {
   imagePath?: string;
   placeholderIcon?: string;
   disabled?: boolean;
+  testId?: string;
 }
 
 // Compact icon-card shared by Stage 2 (size) and Stage 4 (battery voltage) —
 // same fixed-4:3-container + emoji-fallback pattern used everywhere else.
-// disabled mirrors AssemblyHome's locked-type cards (dimmed + "قريباً" badge).
-const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconKind, imagePath, placeholderIcon, disabled }) => (
+// disabled mirrors AssemblyHome's locked-type cards (dimmed + "قريباً"
+// badge) — genuinely data-driven (voltageHasFullCoverage), never a
+// hardcoded per-option flag; whichever voltage a drone type's real part
+// data doesn't yet cover end-to-end renders disabled, exactly like any
+// other not-yet-buildable option elsewhere in Assembly.
+const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconKind, imagePath, placeholderIcon, disabled, testId }) => (
   <button
+    type="button"
+    data-testid={testId}
     disabled={disabled}
     onClick={() => !disabled && onClick()}
+    aria-pressed={selected}
     style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
       padding: 8, borderRadius: 10, textAlign: 'center',
@@ -155,6 +163,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
           {droneSizeOptions.map(opt => (
             <OptionCard
               key={opt.sizeInch}
+              testId={`assembly-size-${opt.sizeInch}`}
               label={opt.labelAr}
               selected={selections.sizeInch === opt.sizeInch}
               onClick={() => selectSize(opt.sizeInch)}
@@ -185,6 +194,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
           {batteryVoltageOptions.map(opt => (
             <OptionCard
               key={opt.sCount}
+              testId={`assembly-battery-voltage-${opt.sCount}s`}
               label={opt.labelAr}
               selected={selections.batteryVoltage === opt.sCount}
               onClick={() => selectBatteryVoltage(opt.sCount)}
@@ -194,6 +204,22 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
               disabled={!voltageHasFullCoverage(opt.sCount)}
             />
           ))}
+        </div>
+        {/* Honest, general voltage facts — same content for both options
+            (mirrors the "category-level option, no per-card detail action"
+            presentation batteryVoltageOptions already used before this
+            task; not a new product-card-style detail pattern forced onto
+            it). Numbers come directly from batteryVoltageOptions.ts, not
+            invented here. */}
+        <div data-testid="assembly-battery-voltage-info" style={{ margin: '10px 16px 0', padding: 10, borderRadius: 10, background: '#f5f1e8' }}>
+          {batteryVoltageOptions.map(opt => (
+            <p key={opt.sCount} style={{ fontSize: 11, color: '#5a4e3a', margin: '2px 0' }} dir="ltr">
+              {opt.sCount}S — nominal {opt.nominalVoltage}V / full charge {opt.maxVoltage}V
+            </p>
+          ))}
+          <p style={{ fontSize: 10.5, color: '#7a6a52', margin: '6px 0 0' }}>
+            يتطلب اختيار أي فولتية أن تكون المحركات والـESC والإلكترونيات المختارة لاحقاً مصممة لتحمّلها. توافق القطع يعتمد على منظومة الطاقة الكاملة، وليس فولتية البطارية وحدها — اختيار فولتية هنا لا يثبت تلقائياً توافق البناء بالكامل.
+          </p>
         </div>
         <StageNavigation canGoPrev canGoNext={selections.batteryVoltage !== undefined} isLastStage={false} onPrev={goPrev} onNext={goNext} />
       </div>

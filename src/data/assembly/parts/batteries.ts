@@ -10,13 +10,19 @@ import type { Battery } from '../types';
 // which rests on actual researched prose evidence. Flagged here so this
 // distinction stays traceable.
 //
-// The 4S entry (battery-tattu-rline-1550-4s-budget) deliberately excludes
-// long-range: this is a genuine engineering judgment call, not settled
-// physics — long-range builds conventionally pair lower-KV motors with
-// higher voltage (6S) for efficient cruising thrust, a motor/voltage
-// pairing convention rather than an airtight wiring-efficiency argument.
-// Revisit this specific exclusion if dedicated long-range motor research
-// later suggests otherwise.
+// The 4S entry (battery-tattu-rline-1550-4s-budget) originally excluded
+// long-range as a genuine engineering judgment call, not settled physics —
+// long-range builds conventionally pair lower-KV motors with higher
+// voltage (6S) for efficient cruising thrust. That original comment
+// flagged this exclusion for revisit "if dedicated long-range motor
+// research later suggests otherwise" — which is exactly what happened:
+// motor-emax-e3-2808-1300kv-premium (motors.ts, the long-range motor) has
+// its own already-authored specs.compatibleVoltages: [3, 4, 5, 6], i.e.
+// genuine documented 4S support from that motor's own real spec data, not
+// a new assumption. droneTypes now includes 'long-range' below on that
+// basis — the same real 4S-capable motor (plus the matching ESC/frame/
+// propeller category-tag fixes made alongside it) is what makes a 4S
+// long-range build genuinely, not just nominally, selectable end-to-end.
 export const batteries: Battery[] = [
   {
     id: 'battery-cnhl-black-series-v2-1300-6s-budget',
@@ -104,7 +110,7 @@ export const batteries: Battery[] = [
     brand: 'Tattu',
     priceRangeUSD: [25, 35],
     specs: { sCount: 4, capacityMah: 1550, cRating: 95, connector: 'XT60' },
-    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic'], batteryVoltages: [4] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4] },
     whyChoose: 'بطارية 4S كلاسيكية: 1550mAh، 14.8V، وزن حوالي 192-193g وموصل XT60، مناسبة لبناء 4S 5 إنش.',
     notFor: 'لا تختارها مع محركات KV منخفضة مخصصة غالباً لـ6S؛ الأداء سيكون ضعيفاً.',
     upgradePath: 'CNHL/Tattu 1300mAh 6S عند الانتقال لـ6S',

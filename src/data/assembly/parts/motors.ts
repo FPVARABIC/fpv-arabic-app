@@ -180,7 +180,14 @@ export const motors: Motor[] = [
     nameEn: 'EMAX E3 Series 2808 Motor 1300KV',
     brand: 'EMAX',
     specs: { kv: 1300, statorSize: '2808', weightG: 53.6, shaftDiameterMm: 5, compatibleVoltages: [3, 4, 5, 6] },
-    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6], frameSizeInch: 7 },
+    // batteryVoltages: [4, 6] — matches this exact entry's own already-
+    // authored specs.compatibleVoltages: [3, 4, 5, 6] above; the category
+    // tag (used for stage-level filtering) was under-populated relative to
+    // the spec field (used by validateMotorBattery for final compatibility
+    // checks) for this same motor. A data-consistency fix, not a new
+    // performance or KV claim — no other motor in this file has a
+    // multi-voltage spec, so no other motor's tag changes.
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6], frameSizeInch: 7 },
     whyChoose: 'المسمى الرسمي من الشركة المصنعة: "مصمم لطائرات FPV مدى طويل...، مثالي لإعدادات مراوح 7 إنش" — ادعاء مباشر من الشركة نفسها. مغناطيس N52SH قوسي، محامل NSK يابانية، جسم ألمنيوم، 12N14P (12 سن ستاتور/14 قطباً)، عمود 5mm.',
     notFor: 'لا تختاره لبناء 5 إنش عادي؛ 1300KV منخفض جداً لهذا الحجم ومصمم خصيصاً لمراوح 6-7 إنش.',
     upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',

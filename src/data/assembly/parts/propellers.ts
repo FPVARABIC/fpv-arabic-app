@@ -182,7 +182,14 @@ export const propellers: Propeller[] = [
     nameEn: 'HQProp 7x4.5x2 Durable Bi-Blade',
     brand: 'HQProp',
     specs: { sizeInch: 7, pitchInch: 4.5, bladeCount: 2, material: 'PC', weightG: 6.6 },
-    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [6] },
+    // batteryVoltages: [4, 6] — a propeller has no electrical dependency on
+    // battery cell count (PropellerSpec has no voltage field, and no
+    // propeller-battery compatibility rule exists in compatibility/rules.ts,
+    // only frame-propeller size); every other propeller in this file already
+    // carries [4, 6] for the same reason. This entry was the sole outlier,
+    // tagged [6] only; corrected to match the category's own established
+    // pattern, not a new claim.
+    compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'موزّعان مستقلان يربطانها بمشاريع مدى طويل: RaceDayQuads يصنّفها ضمن قسمه الخاص "long-range-gear"، وDroneTheoryFilms يستخدم "Long Range FPV Prop" في عنوان المنتج مباشرة — رغم أن الاسم الأساسي عند معظم المتاجر الأخرى (Pyrodrone، WREKD، وRaceDayQuads نفسها في عنوان المنتج) هو "Durable Bi-Blade" دون ذكر "مدى طويل" صراحة. 7 إنش، Pitch 4.5، شفرتان (bi-blade)، بولي كاربونات، وزن 6.6g.',
     notFor: 'لا تختارها إذا تريد أقصى كفاءة/أطول زمن طيران ممكن ضمن فئة bi-blade تحديداً؛ تقارير مجتمعية تصف Pitch 4.5 هذا بأنه أكثر عدوانية (غطس أسرع، لفات أخف، سرعة قصوى أعلى) من خيارات bi-blade أخف Pitch، بمقايضة كفاءة حقيقية مقابل ذلك.',
     upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
