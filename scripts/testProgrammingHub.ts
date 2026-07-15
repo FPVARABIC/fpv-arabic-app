@@ -27,6 +27,7 @@ function ok(label: string, cond: boolean) {
 const appTsx = readFileSync(join(ROOT, 'src/App.tsx'), 'utf8');
 const bottomNavTsx = readFileSync(join(ROOT, 'src/components/BottomNavigation.tsx'), 'utf8');
 const programmingViewTsx = readFileSync(join(ROOT, 'src/views/ProgrammingView.tsx'), 'utf8');
+const indexCss = readFileSync(join(ROOT, 'src/index.css'), 'utf8');
 const betaflightViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightView.tsx'), 'utf8');
 const betaflightDetailViewTsx = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
 const betaflightDataTs = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 'utf8');
@@ -89,7 +90,7 @@ console.log('\n[3] Hub contains exactly four cards, in the required order, with 
 console.log('\n[4] "قريبًا" badge text (Binding/INAV only) and no placeholder routes for still-unavailable tools');
 {
   const badgeCount = (programmingViewTsx.match(/قريبًا/g) || []).length;
-  ok('the exact string "قريبًا" appears in the view (rendered badge text for Binding/INAV)', badgeCount >= 1);
+  ok('the exact string "قريبًا" appears in the view (rendered badge text for Binding/INAV)', badgeCount >= 2);
   ok('a real (non-placeholder) /programming/expresslrs route now exists in App.tsx', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
   ok('no placeholder route for Binding exists in App.tsx', !/\/binding/i.test(appTsx));
   ok('no placeholder route for INAV exists in App.tsx', !/\/inav/i.test(appTsx));
@@ -113,6 +114,73 @@ console.log('\n[6] Betaflight preservation — legacy compatibility files are st
   ok('betaflightData.ts still defines exactly 10 sections (still used by BetaflightDetailView.tsx for legacy deep-link compatibility)', sectionIds.length === 10);
   ok('betaflightData.ts section order is unchanged', JSON.stringify(sectionIds) === JSON.stringify(['interface', 'firmware', 'ports', 'receiver', 'modes', 'motors', 'failsafe', 'osd', 'blackbox', 'cli']));
   ok('BetaflightDetailView.tsx still imports betaflightData for its legacy fallback branch (untouched)', /import\s*\{\s*betaflightData\s*\}\s*from\s*'\.\.\/data\/betaflightData';/.test(betaflightDetailViewTsx));
+}
+
+console.log('\n[7] Programming hub dark shell — visual redesign structure');
+{
+  ok('ProgrammingView renders the new .programming-shell wrapper', /className="programming-shell/.test(programmingViewTsx));
+  ok('ProgrammingView no longer uses the shared light <Header> component (custom dark header instead, avoiding the white/dark seam)', !/<Header\b/.test(programmingViewTsx));
+  ok('.programming-shell is defined in index.css with an opaque (non-transparent) background', /\.programming-shell\s*\{[^}]*background:/s.test(indexCss));
+  ok('.programming-card shared panel class is defined in index.css', /\.programming-card\s*\{/.test(indexCss));
+  ok('.programming-card-icon shared icon-tile class is defined in index.css', /\.programming-card-icon\s*\{/.test(indexCss));
+  ok('.programming-status shared badge class is defined in index.css', /\.programming-status\s*\{/.test(indexCss));
+  ok('ProgrammingView binds card.accentKey dynamically to the shared programming-card--* class (one system, not four unrelated designs)', /programming-card--\$\{card\.accentKey\}/.test(programmingViewTsx));
+  for (const key of ['betaflight', 'expresslrs', 'binding', 'inav']) {
+    ok(`.programming-card--${key} accent variant is defined in index.css`, new RegExp(`\\.programming-card--${key}\\b`).test(indexCss));
+  }
+  ok('exactly one h1 is rendered in the source (single literal <h1)', (programmingViewTsx.match(/<h1\b/g) || []).length === 1);
+  ok('the h1 text is "البرمجة" (existing meaning preserved)', /<h1[^>]*>البرمجة<\/h1>/.test(programmingViewTsx));
+}
+
+console.log('\n[8] Binding/INAV are genuine announcement cards — no click handler, no route, no chevron');
+{
+  // Isolate the disabled-card render branch (shared by Binding and INAV — both
+  // are driven by the same `!card.available` JSX branch, not per-card markup).
+  // Anchored on the `disabled` boolean JSX prop (unique to this branch — the
+  // enabled branch has no such prop) back to its enclosing `return (`, through
+  // its own closing `</button>` — so it can never bleed into the enabled
+  // branch's onClick/navigate/ChevronLeft above it.
+  const disabledPropIndex = programmingViewTsx.indexOf('\n                disabled\n');
+  const branchStart = disabledPropIndex > -1 ? programmingViewTsx.lastIndexOf('return (', disabledPropIndex) : -1;
+  const disabledBranchEnd = disabledPropIndex > -1 ? programmingViewTsx.indexOf('</button>', disabledPropIndex) : -1;
+  const disabledBranch = branchStart > -1 && disabledBranchEnd > -1
+    ? programmingViewTsx.slice(branchStart, disabledBranchEnd)
+    : '';
+  ok('the disabled-card branch is present', disabledBranch.length > 0);
+  ok('the disabled-card branch has no onClick handler', !/onClick/.test(disabledBranch));
+  ok('the disabled-card branch never calls navigate(...)', !/navigate\(/.test(disabledBranch));
+  ok('the disabled-card branch does not render a ChevronLeft affordance', !/ChevronLeft/.test(disabledBranch));
+  ok('the disabled-card branch renders the "قريبًا" status badge', /قريبًا/.test(disabledBranch));
+  ok('the disabled-card branch does not reduce the whole card via a low opacity style (no blanket opacity/fade)', !/opacity:\s*0\.\d/.test(disabledBranch));
+}
+
+console.log('\n[9] Icon system — lucide-react only, no raw emoji');
+{
+  ok('lucide-react is imported for icons', /from\s*'lucide-react'/.test(programmingViewTsx));
+  ok('no second icon library is imported', !/from\s*'(react-icons|@heroicons|@mui\/icons-material|@fortawesome)/.test(programmingViewTsx));
+  const EMOJI_RANGE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+  ok('no raw emoji characters in ProgrammingView.tsx', !EMOJI_RANGE.test(programmingViewTsx));
+  ok('decorative card icons are aria-hidden (both the enabled and disabled render branches)', (programmingViewTsx.match(/<Icon size=\{22\} aria-hidden\/>/g) || []).length === 2);
+  ok('the chevron affordance icon is aria-hidden', /<ChevronLeft[^>]*aria-hidden/.test(programmingViewTsx));
+}
+
+console.log('\n[10] Scope — only the expected files are dirty; no Betaflight/ExpressLRS content file was touched');
+{
+  const { execSync } = await import('node:child_process');
+  const diffNames = execSync('git diff --name-only HEAD', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const untrackedNames = execSync('git ls-files --others --exclude-standard', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const allChanged = [...diffNames, ...untrackedNames];
+  const ALLOWED_SCOPE = new Set([
+    'scripts/testProgrammingHub.ts',
+    'scripts/testProgrammingHubUI.ts',
+    'src/index.css',
+    'src/views/ProgrammingView.tsx',
+  ]);
+  const outOfScope = allChanged.filter(f => !ALLOWED_SCOPE.has(f));
+  ok('no file outside the known Programming-hub-redesign scope is dirty', outOfScope.length === 0);
+  if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
+  ok('no Betaflight data/component/page file appears in the diff', !allChanged.some(f => f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' || f === 'src/views/BetaflightDetailView.tsx'));
+  ok('no ExpressLRS data/view file appears in the diff', !allChanged.some(f => f.startsWith('src/data/expresslrs/') || f.startsWith('src/components/expresslrs/') || f.startsWith('src/views/ExpressLrs')));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

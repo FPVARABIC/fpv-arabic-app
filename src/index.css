@@ -281,6 +281,85 @@
       linear-gradient(180deg, #0b1620 0%, #060d13 100%);
   }
 
+  /* =====================================================================
+     Programming hub — dedicated dark shell (programming-* namespace)
+     Scoped so it never touches the shared card/chip/badge classes used
+     elsewhere in the app. All four system cards share one geometry/panel
+     construction; only the accent gradient on the icon tile (and, for
+     disabled cards, the status badge) previews that system's own identity
+     — this is a preview, not a copy of each system's full internal theme.
+     ===================================================================== */
+  .programming-shell {
+    position: relative;
+    min-height: 100%;
+    background:
+      radial-gradient(120% 45% at 100% 0%, rgba(167,139,250,0.06) 0%, transparent 55%),
+      radial-gradient(90% 40% at 0% 0%, rgba(255,187,0,0.04) 0%, transparent 60%),
+      linear-gradient(180deg, #11151c 0%, #0a0d12 100%);
+  }
+
+  .programming-header {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .programming-card {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border-radius: 20px;
+    background: linear-gradient(155deg, rgba(26,32,41,0.92) 0%, rgba(17,21,28,0.92) 100%);
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 8px 26px -14px rgba(0,0,0,0.6);
+    transition: transform 0.15s, border-color 0.18s, box-shadow 0.18s;
+  }
+  .programming-card:not(:disabled):hover {
+    border-color: var(--pc-accent-1, rgba(255,255,255,0.22));
+    box-shadow: 0 12px 30px -14px var(--pc-glow, rgba(0,0,0,0.5));
+  }
+  .programming-card:not(:disabled):focus-visible {
+    outline: 2px solid var(--pc-accent-1, rgba(255,255,255,0.4));
+    outline-offset: 2px;
+  }
+  .programming-card:not(:disabled):active { transform: scale(0.98); }
+  .programming-card:disabled { cursor: not-allowed; }
+
+  .programming-card-icon {
+    width: 46px; height: 46px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .programming-status {
+    display: inline-flex; align-items: center;
+    font-size: 12px; font-weight: 800;
+    padding: 3px 10px; border-radius: 999px;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.16);
+  }
+
+  .programming-card--betaflight { --pc-accent-1: rgba(255,187,0,0.4); --pc-glow: rgba(255,187,0,0.18); }
+  .programming-card--betaflight .programming-card-icon { background: linear-gradient(135deg, rgba(255,187,0,0.24), rgba(34,211,238,0.16)); border: 1px solid rgba(255,187,0,0.35); }
+  .programming-card--betaflight .programming-card-icon svg { color: #ffcf4d; }
+
+  .programming-card--expresslrs { --pc-accent-1: rgba(167,139,250,0.4); --pc-glow: rgba(167,139,250,0.18); }
+  .programming-card--expresslrs .programming-card-icon { background: linear-gradient(135deg, rgba(167,139,250,0.24), rgba(232,121,249,0.16)); border: 1px solid rgba(167,139,250,0.35); }
+  .programming-card--expresslrs .programming-card-icon svg { color: #c4b5fd; }
+
+  .programming-card--binding { --pc-accent-1: rgba(45,212,191,0.35); --pc-glow: rgba(45,212,191,0.15); }
+  .programming-card--binding .programming-card-icon { background: linear-gradient(135deg, rgba(45,212,191,0.18), rgba(74,222,128,0.13)); border: 1px solid rgba(45,212,191,0.3); }
+  .programming-card--binding .programming-card-icon svg { color: #5eead4; }
+  .programming-card--binding .programming-status { background: rgba(45,212,191,0.16); color: #5eead4; border: 1px solid rgba(45,212,191,0.35); }
+
+  .programming-card--inav { --pc-accent-1: rgba(251,191,36,0.35); --pc-glow: rgba(251,191,36,0.15); }
+  .programming-card--inav .programming-card-icon { background: linear-gradient(135deg, rgba(251,191,36,0.2), rgba(251,146,60,0.15)); border: 1px solid rgba(251,191,36,0.3); }
+  .programming-card--inav .programming-card-icon svg { color: #fcd34d; }
+  .programming-card--inav .programming-status { background: rgba(251,191,36,0.16); color: #fcd34d; border: 1px solid rgba(251,191,36,0.35); }
+
+  .programming-card--disabled {
+    border-style: dashed;
+    border-color: rgba(255,255,255,0.14);
+  }
+
   .bf-header {
     border-bottom: 1px solid rgba(255,187,0,0.28);
     background: linear-gradient(180deg, rgba(255,255,255,0.035) 0%, transparent 100%);
