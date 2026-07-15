@@ -32,6 +32,7 @@ import { gpsPage } from '../src/data/betaflight/pages/gps';
 import { ledStripPage } from '../src/data/betaflight/pages/led_strip';
 import { servosPage } from '../src/data/betaflight/pages/servos';
 import { cliPage } from '../src/data/betaflight/pages/cli';
+import { firmwareFlasherPage } from '../src/data/betaflight/pages/firmware_flasher';
 import { betaflightData } from '../src/data/betaflightData';
 import type { BfPage } from '../src/data/betaflight/types';
 
@@ -39,7 +40,8 @@ const PHASE_2_PAGES = [setupPage, portsPage, motorsPage, failsafePage] as BfPage
 const PHASE_3_PAGES = [configurationPage, powerPage, receiverPage, modesPage] as BfPage[];
 const PHASE_4_PAGES = [pidTuningPage, presetsPage, adjustmentsPage] as BfPage[];
 const PHASE_5_PAGES = [osdPage, vtxPage, sensorsPage, gpsPage, ledStripPage, servosPage, cliPage] as BfPage[];
-const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES, ...PHASE_4_PAGES, ...PHASE_5_PAGES];
+const FINAL_CONTENT_PAGES = [firmwareFlasherPage] as BfPage[];
+const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES, ...PHASE_4_PAGES, ...PHASE_5_PAGES, ...FINAL_CONTENT_PAGES];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -447,8 +449,8 @@ console.log('\n[7i] Modes (auxiliary): honest no-reboot save, ARM-cannot-be-link
   ok('Modes: officialId is "auxiliary" (internal tab ID), while officialTitle is the visible "Modes"', modesPage.officialId === 'auxiliary' && modesPage.officialTitle === 'Modes');
   ok('Modes: page-level safetyLevel is "critical" (governs ARM among other modes)', modesPage.safetyLevel === 'critical');
 
-  ok('all 18 reviewed pages (Phases 2-5) are honestly marked "reviewed"', ALL_REVIEWED_PAGES.every(p => p.contentStatus === 'reviewed'));
-  ok('all 18 reviewed pages (Phases 2-5) carry a real 40-char verified source commit hash', ALL_REVIEWED_PAGES.every(p => /^[0-9a-f]{40}$/.test(p.source.commit ?? '')));
+  ok('all 19 reviewed pages (Phases 2-5 + Firmware Flasher) are honestly marked "reviewed"', ALL_REVIEWED_PAGES.every(p => p.contentStatus === 'reviewed'));
+  ok('all 19 reviewed pages (Phases 2-5 + Firmware Flasher) carry a real 40-char verified source commit hash', ALL_REVIEWED_PAGES.every(p => /^[0-9a-f]{40}$/.test(p.source.commit ?? '')));
 }
 
 console.log('\n[7n] OSD, VTX, Sensors, GPS, LED Strip, Servos, CLI (Phase 5): honest "reviewed" status, real source-backed fields, no invented data');
@@ -489,10 +491,10 @@ console.log('\n[7n] OSD, VTX, Sensors, GPS, LED Strip, Servos, CLI (Phase 5): ho
   ok('cliPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'cli')?.page === cliPage);
 
   ok('exactly 26 registry entries exist total', bfPageRegistry.length === 26);
-  ok('exactly 18 registry entries are "reviewed" after Phase 5', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
-  ok('exactly 8 registry entries remain honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
-  ok('the 8 not-started IDs match the verified out-of-scope Phase 5 list', JSON.stringify(bfPageRegistry.filter(e => e.contentStatus === 'not-started').map(e => e.id).sort())
-    === JSON.stringify(['landing', 'firmware-flasher', 'privacy-policy', 'options', 'help', 'tethered-logging', 'blackbox', 'transponder'].sort()));
+  ok('exactly 19 registry entries are "reviewed" (Phase 5 + Firmware Flasher)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 19);
+  ok('exactly 7 registry entries remain honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 7);
+  ok('the 7 not-started IDs match the verified out-of-scope list (Firmware Flasher is now reviewed, no longer in this list)', JSON.stringify(bfPageRegistry.filter(e => e.contentStatus === 'not-started').map(e => e.id).sort())
+    === JSON.stringify(['landing', 'privacy-policy', 'options', 'help', 'tethered-logging', 'blackbox', 'transponder'].sort()));
 }
 
 console.log('\n[7o] OSD: dead/permanently-hidden source elements correctly excluded, plain-Save-vs-Upload-Font-reboot semantics kept distinct');
@@ -1027,9 +1029,9 @@ console.log('\n[14] LIVE HUB INTEGRATION — /betaflight is registry-driven, not
   ok('BetaflightView.tsx renders <BetaflightHubRenderer with entries={bfPageRegistry}', /<BetaflightHubRenderer[\s\S]*?entries=\{bfPageRegistry\}/.test(betaflightViewSrc));
   ok('BetaflightView.tsx is genuinely a thin wrapper (under 40 lines)', betaflightViewSrc.split('\n').length < 40);
 
-  ok('exactly 26 registry entries exist total (unchanged by this task)', bfPageRegistry.length === 26);
-  ok('exactly 18 registry entries are "reviewed" (unchanged by this task)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
-  ok('exactly 8 registry entries are "not-started" (unchanged by this task)', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
+  ok('exactly 26 registry entries exist total', bfPageRegistry.length === 26);
+  ok('exactly 19 registry entries are "reviewed" (Phase 5 + Firmware Flasher)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 19);
+  ok('exactly 7 registry entries are "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 7);
 
   // ── every registry ID appears in exactly one of the 5 hub groups, no duplicates, no invented IDs ──
   const groupBlockMatches = [...hubRendererSrc.matchAll(/id:\s*'([a-z-]+)',\s*titleAr:\s*'[^']*',\s*icon:\s*\w+,\s*pageIds:\s*\[([^\]]*)\]/g)];
@@ -1101,8 +1103,8 @@ console.log('\n[16] HUB VISIBILITY — the live hub intentionally hides four dis
   const EXPECTED_HIDDEN = ['landing', 'privacy-policy', 'options', 'help'];
 
   ok('registry still has exactly 26 total entries (this task adds/removes none)', bfPageRegistry.length === 26);
-  ok('registry still has exactly 18 "reviewed" entries (unchanged)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
-  ok('registry still has exactly 8 "not-started" entries (unchanged)', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
+  ok('registry has exactly 19 "reviewed" entries (Firmware Flasher is now reviewed)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 19);
+  ok('registry has exactly 7 "not-started" entries (Firmware Flasher moved out of this list)', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 7);
   for (const id of EXPECTED_HIDDEN) {
     ok(`hidden page "${id}" still exists in the registry (only hub visibility changed, not the data)`, bfPageRegistry.some(e => e.id === id));
   }
@@ -1120,13 +1122,14 @@ console.log('\n[16] HUB VISIBILITY — the live hub intentionally hides four dis
   const hiddenSet = new Set(declaredHidden);
   const visibleEntries = bfPageRegistry.filter(e => !hiddenSet.has(e.id));
   ok('the live hub shows exactly 22 visible cards (26 registry entries minus the 4 hidden)', visibleEntries.length === 22);
-  ok('the live hub shows exactly 18 visible "reviewed" cards (none of the hidden 4 are reviewed)', visibleEntries.filter(e => e.contentStatus === 'reviewed').length === 18);
-  ok('the live hub shows exactly 4 visible "not-started" cards', visibleEntries.filter(e => e.contentStatus === 'not-started').length === 4);
+  ok('the live hub shows exactly 19 visible "reviewed" cards (Firmware Flasher is now among them)', visibleEntries.filter(e => e.contentStatus === 'reviewed').length === 19);
+  ok('the live hub shows exactly 3 visible "not-started" cards', visibleEntries.filter(e => e.contentStatus === 'not-started').length === 3);
   ok(
-    'the 4 visible not-started cards are exactly firmware-flasher/tethered-logging/blackbox/transponder',
+    'the 3 visible not-started cards are exactly tethered-logging/blackbox/transponder',
     JSON.stringify(visibleEntries.filter(e => e.contentStatus === 'not-started').map(e => e.id).sort())
-      === JSON.stringify(['blackbox', 'firmware-flasher', 'tethered-logging', 'transponder'].sort()),
+      === JSON.stringify(['blackbox', 'tethered-logging', 'transponder'].sort()),
   );
+  ok('"firmware-flasher" is visible and reviewed (not counted among not-started)', visibleEntries.find(e => e.id === 'firmware-flasher')?.contentStatus === 'reviewed');
 
   // ── the "قبل الاتصال" (disconnected) group's *visible* membership is exactly one card ──
   const groupBlockMatches2 = [...hubRendererSrc.matchAll(/id:\s*'([a-z-]+)',\s*titleAr:\s*'[^']*',\s*icon:\s*\w+,\s*pageIds:\s*\[([^\]]*)\]/g)];
@@ -1158,6 +1161,191 @@ console.log('\n[16] HUB VISIBILITY — the live hub intentionally hides four dis
   const detailViewSrc2 = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
   ok('BetaflightDetailView.tsx still has a not-started dispatch branch that any registry entry (hidden or not) reaches via direct URL', /if \(registryEntry\) \{/.test(detailViewSrc2));
   ok('BetaflightHubRenderer.tsx does not delete or mutate registry data (filters a local computed array only)', /entries\.filter\(e => !HUB_HIDDEN_IDS\.has\(e\.id\)\)/.test(hubRendererSrc));
+}
+
+console.log('\n[17] FIRMWARE FLASHER — the final authored companion page: structural quality, honesty, and safety-content checks');
+{
+  const ffFields = firmwareFlasherPage.groups.flatMap(g => g.fields);
+
+  ok('firmware-flasher: contentStatus is explicitly "reviewed"', firmwareFlasherPage.contentStatus === 'reviewed');
+  ok('firmware-flasher: officialId is "firmware_flasher" (internal tab ID)', firmwareFlasherPage.officialId === 'firmware_flasher');
+  ok('firmware-flasher: officialTitle is exactly "Firmware Flasher"', firmwareFlasherPage.officialTitle === 'Firmware Flasher');
+  ok('firmware-flasher: page-level safetyLevel is "critical"', firmwareFlasherPage.safetyLevel === 'critical');
+  ok('firmware-flasher: connectionState is "disconnected" (usable before connecting to an FC)', firmwareFlasherPage.connectionState === 'disconnected');
+  ok('firmware-flasher: has a non-empty source.url', firmwareFlasherPage.source.url.length > 0);
+  ok('firmware-flasher: source.url matches the verified officialDocUrl pattern', firmwareFlasherPage.source.url === officialDocUrl(firmwareFlasherPage.officialId));
+  ok('firmware-flasher: source.commit is a real 40-char git hash', /^[0-9a-f]{40}$/.test(firmwareFlasherPage.source.commit ?? ''));
+  ok('firmware-flasher: has at least 5 groups (rich multi-section page)', firmwareFlasherPage.groups.length >= 5);
+  ok('firmware-flasher: every group has at least one field', firmwareFlasherPage.groups.every(g => g.fields.length > 0));
+
+  ok('firmware-flasher: field IDs are unique within the page', new Set(ffFields.map(f => f.id)).size === ffFields.length);
+  ok('firmware-flasher: group IDs are unique within the page', new Set(firmwareFlasherPage.groups.map(g => g.id)).size === firmwareFlasherPage.groups.length);
+  ok('firmware-flasher: every field has a non-empty englishLabel', ffFields.every(f => f.englishLabel.length > 0));
+  ok('firmware-flasher: every field has a non-empty arabicMeaning', ffFields.every(f => f.arabicMeaning.length > 0));
+  ok('firmware-flasher: every field has a non-empty arabicExplanation', ffFields.every(f => f.arabicExplanation.length > 0));
+  ok('firmware-flasher: every field has a valid safetyLevel', ffFields.every(f => SAFETY_LEVELS.has(f.safetyLevel)));
+  ok('firmware-flasher: every field has a valid controlType', ffFields.every(f => ['toggle', 'select', 'number', 'text', 'button', 'table', 'graph', 'status', 'action'].includes(f.controlType)));
+  ok('firmware-flasher: every field carries its own source with a non-empty url', ffFields.every(f => f.source.url.length > 0));
+  ok('firmware-flasher: every field source.repoPath is a real, non-empty path', ffFields.every(f => (f.source.repoPath ?? '').length > 0));
+  ok('firmware-flasher: every field source.commit is a real 40-char git hash', ffFields.every(f => /^[0-9a-f]{40}$/.test(f.source.commit ?? '')));
+  ok('firmware-flasher: every field with scope !== "universal" has a conditionNote', ffFields.every(f => f.scope === 'universal' || (f.conditionNote ?? '').length > 0));
+  ok('firmware-flasher: every field explicitly states requiresSave (boolean)', ffFields.every(f => typeof f.requiresSave === 'boolean'));
+  ok('firmware-flasher: every field explicitly states requiresReboot (boolean)', ffFields.every(f => typeof f.requiresReboot === 'boolean'));
+  ok('firmware-flasher: no field invents a numeric range without min AND max together', ffFields.every(f => !f.range || (f.range.min === undefined) === (f.range.max === undefined)));
+  ok('firmware-flasher: every group has a valid content level', firmwareFlasherPage.groups.every(g => CONTENT_LEVELS.has(g.level)));
+  ok('firmware-flasher: dependsOnFieldIds (if present) reference real field IDs on the same page', ffFields.every(f => (f.dependsOnFieldIds ?? []).every(depId => ffFields.some(other => other.id === depId))));
+
+  // ── every source.repoPath actually exists in the pinned clone (no fabricated file references) ──
+  const FF_CLONE_DIR = '/tmp/betaflight-official-audit/configurator';
+  const repoPaths = new Set(ffFields.map(f => f.source.repoPath).filter((p): p is string => !!p));
+  repoPaths.add(firmwareFlasherPage.source.repoPath ?? '');
+  for (const p of repoPaths) {
+    ok(`firmware-flasher: source.repoPath "${p}" exists in the pinned Configurator clone`, existsSync(join(FF_CLONE_DIR, p)));
+  }
+
+  ok('firmwareFlasherPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'firmware-flasher')?.page === firmwareFlasherPage);
+  ok('only firmware-flasher changed status among the previously not-started IDs (the other 7 remain not-started)', bfPageRegistry.filter(e => e.id !== 'firmware-flasher' && ['landing', 'privacy-policy', 'options', 'help', 'tethered-logging', 'blackbox', 'transponder'].includes(e.id)).every(e => e.contentStatus === 'not-started'));
+
+  // ── required content coverage: task-mandated concepts must each be represented by a real field, not merely implied ──
+  ok('Target selection is represented (board-select)', ffFields.some(f => f.id === 'board-select'));
+  ok('Full chip erase is represented as its own distinct field', ffFields.some(f => f.id === 'full-chip-erase-toggle'));
+  ok('Online firmware loading is represented, distinct from local loading', ffFields.some(f => f.id === 'load-online-button') && ffFields.some(f => f.id === 'load-local-button') && 'load-online-button' !== 'load-local-button');
+  ok('The flash action itself is represented', ffFields.some(f => f.id === 'flash-firmware-button'));
+  ok('Progress/status reporting is represented', ffFields.some(f => f.id === 'flash-progress-status'));
+  ok('DFU/recovery guidance is represented', ffFields.some(f => f.id === 'recovery-guidance') && ffFields.some(f => f.id === 'exit-dfu-button'));
+  ok('Manual baud rate is represented as a distinct expert option (not folded into another field)', ffFields.some(f => f.id === 'manual-baud-rate-toggle'));
+  ok('No reboot sequence and Flash on connect are represented as two distinct fields (not merged)', ffFields.some(f => f.id === 'no-reboot-toggle') && ffFields.some(f => f.id === 'flash-on-connect-toggle'));
+  ok('Cloud Build configuration is represented as its own group, not force-merged into "options"', firmwareFlasherPage.groups.some(g => g.id === 'build-configuration'));
+  ok('The board-mismatch dialog, backup-reminder dialog, and unstable-firmware dialog are each represented separately (three real distinct dialogs)',
+    ffFields.some(f => f.id === 'verify-board-mismatch-dialog') && ffFields.some(f => f.id === 'backup-reminder-dialog') && ffFields.some(f => f.id === 'unstable-firmware-acknowledgement-dialog'));
+
+  // ── critical warnings are present and appear first (adjacent to the top of the page, before any interactive control) ──
+  ok('the "warnings" group is the first group on the page (order 1)', firmwareFlasherPage.groups.find(g => g.id === 'warnings')?.order === 1);
+  ok('every field in the "warnings" group is critical', firmwareFlasherPage.groups.find(g => g.id === 'warnings')?.fields.every(f => f.safetyLevel === 'critical'));
+  ok('Target selection (board-select) carries a critical safetyLevel', ffFields.find(f => f.id === 'board-select')?.safetyLevel === 'critical');
+  ok('Full chip erase carries a critical safetyLevel', ffFields.find(f => f.id === 'full-chip-erase-toggle')?.safetyLevel === 'critical');
+  ok('Flash Firmware carries a critical safetyLevel', ffFields.find(f => f.id === 'flash-firmware-button')?.safetyLevel === 'critical');
+  ok('Loading a local firmware file carries a critical safetyLevel', ffFields.find(f => f.id === 'load-local-button')?.safetyLevel === 'critical');
+  ok('Recovery guidance carries a critical safetyLevel', ffFields.find(f => f.id === 'recovery-guidance')?.safetyLevel === 'critical');
+
+  // ── no forbidden universal/absolute safety claims (the task explicitly forbids these) ──
+  const ffAllText = ffFields.map(f => `${f.arabicExplanation} ${f.beginnerGuidance ?? ''} ${f.conditionNote ?? ''}`).join(' ') + firmwareFlasherPage.summaryAr;
+  ok('does not claim flashing is risk-free', !/فلاش (آمن تمامًا|خالٍ من المخاطر|بدون أي مخاطر)/.test(ffAllText));
+  ok('does not claim the wrong Target is harmless', !/هدف خاطئ.*(غير ضار|لا يسبب مشكلة|آمن)/.test(ffAllText));
+  ok('does not claim Full chip erase is always required for every flash', !/المسح الكامل.*(مطلوب دائمًا لكل|إجباري في كل الحالات)/.test(ffAllText));
+  ok('does not claim one baud rate works for all boards', !/معدل نقل واحد.*(يعمل مع كل اللوحات|مناسب لكل اللوحات)/.test(ffAllText));
+  ok('does not claim every FC enters DFU the same way (recovery text explicitly says steps differ per board)', /تختلف باختلاف كل لوحة/.test(ffAllText));
+  ok('does not claim a completed progress bar alone proves flight-readiness', !/جاهزة للطيران/.test(ffAllText));
+  ok('does not claim local and online firmware are always identical', !/متطابقان دائمًا|نفس الشيء دائمًا/.test(ffAllText));
+  ok('does not claim a flash always preserves settings (the opposite is stated: it wipes them)', /يمسح|مسح كامل|wipe/i.test(ffAllText) && !/يحافظ على الإعدادات دائمًا/.test(ffAllText));
+
+  // ── the honest "erase happens invisibly in non-expert mode" nuance is explicitly documented, not omitted ──
+  const eraseField = ffFields.find(f => f.id === 'full-chip-erase-toggle');
+  ok('full-chip-erase field explicitly documents that erase is forced even when the checkbox is hidden (non-expert mode)', /غير الخبير.*(المسح الكامل|erase)|erase.*(غير الخبير)/.test(eraseField?.arabicExplanation ?? '') || /يُنفَّذ المسح الكامل تلقائيًا/.test(eraseField?.arabicExplanation ?? ''));
+}
+
+console.log('\n[18] OFFICIAL-SOURCE CROSS-CHECK — Firmware Flasher, read live against the real cloned Configurator source (not authored data)');
+{
+  const CLONE_DIR = '/tmp/betaflight-official-audit/configurator';
+  const EXPECTED_COMMIT = 'a2d0f50623cbb4fd492bc94eac2aec3acc8b2c5a';
+  const EXPECTED_TAG = '2025.12.2';
+
+  ok('official-source cross-check: read-only audit clone exists at /tmp/betaflight-official-audit/configurator', existsSync(CLONE_DIR));
+  const commit = execSync('git rev-parse HEAD', { cwd: CLONE_DIR }).toString().trim();
+  const tag = execSync('git describe --tags', { cwd: CLONE_DIR }).toString().trim();
+  ok('official-source cross-check: clone HEAD is the expected commit', commit === EXPECTED_COMMIT);
+  ok('official-source cross-check: clone is checked out at the expected tag (2025.12.2)', tag === EXPECTED_TAG);
+
+  const ffHtmlPath = join(CLONE_DIR, 'src/tabs/firmware_flasher.html');
+  const ffJsPath = join(CLONE_DIR, 'src/js/tabs/firmware_flasher.js');
+  const autoDetectPath = join(CLONE_DIR, 'src/js/utils/AutoDetect.js');
+  const stm32Path = join(CLONE_DIR, 'src/js/protocols/webstm32.js');
+  const dfuPath = join(CLONE_DIR, 'src/js/protocols/webusbdfu.js');
+  const localePath = join(CLONE_DIR, 'locales/en/messages.json');
+  ok('official-source cross-check: real src/tabs/firmware_flasher.html exists in the clone', existsSync(ffHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/firmware_flasher.js exists in the clone', existsSync(ffJsPath));
+  ok('official-source cross-check: real src/js/utils/AutoDetect.js exists in the clone', existsSync(autoDetectPath));
+  ok('official-source cross-check: real src/js/protocols/webstm32.js exists in the clone', existsSync(stm32Path));
+  ok('official-source cross-check: real src/js/protocols/webusbdfu.js exists in the clone', existsSync(dfuPath));
+
+  const locale = JSON.parse(readFileSync(localePath, 'utf8')) as Record<string, { message?: string } | string>;
+  const realLabel = (key: string): string | undefined => {
+    const v = locale[key];
+    return typeof v === 'string' ? v : v?.message;
+  };
+
+  const realTabTitle = realLabel('tabFirmwareFlasher');
+  const realFullChipErase = realLabel('firmwareFlasherFullChipErase');
+  const realFlashFirmware = realLabel('firmwareFlasherFlashFirmware');
+  const realLoadOnline = realLabel('firmwareFlasherButtonLoadOnline');
+  const realLoadLocal = realLabel('firmwareFlasherButtonLoadLocal');
+  const realExitDfu = realLabel('firmwareFlasherExitDfu');
+  const realManualBaud = realLabel('firmwareFlasherManualBaud');
+  const realWarningTitle = realLabel('warningTitle');
+  const realRecoveryHead = realLabel('firmwareFlasherRecoveryHead');
+  const realReleaseSummaryHead = realLabel('firmwareFlasherReleaseSummaryHead');
+  const realBuildConfigHead = realLabel('firmwareFlasherBuildConfigurationHead');
+  const realDetectButton = realLabel('firmwareFlasherDetectBoardButton');
+
+  for (const [key, val] of Object.entries({
+    tabFirmwareFlasher: realTabTitle,
+    firmwareFlasherFullChipErase: realFullChipErase,
+    firmwareFlasherFlashFirmware: realFlashFirmware,
+    firmwareFlasherButtonLoadOnline: realLoadOnline,
+    firmwareFlasherButtonLoadLocal: realLoadLocal,
+    firmwareFlasherExitDfu: realExitDfu,
+    firmwareFlasherManualBaud: realManualBaud,
+    warningTitle: realWarningTitle,
+    firmwareFlasherRecoveryHead: realRecoveryHead,
+    firmwareFlasherReleaseSummaryHead: realReleaseSummaryHead,
+    firmwareFlasherBuildConfigurationHead: realBuildConfigHead,
+    firmwareFlasherDetectBoardButton: realDetectButton,
+  })) {
+    ok(`official-source cross-check: the real locale actually defines "${key}"`, typeof val === 'string' && val.length > 0);
+  }
+
+  ok('official-source cross-check: page officialTitle matches the live-read real locale string exactly ("Firmware Flasher")', firmwareFlasherPage.officialTitle === realTabTitle);
+
+  const ffFields2 = firmwareFlasherPage.groups.flatMap(g => g.fields);
+  const fullChipEraseField = ffFields2.find(f => f.id === 'full-chip-erase-toggle');
+  const flashFirmwareField = ffFields2.find(f => f.id === 'flash-firmware-button');
+  const loadOnlineField = ffFields2.find(f => f.id === 'load-online-button');
+  const loadLocalField = ffFields2.find(f => f.id === 'load-local-button');
+  const exitDfuField = ffFields2.find(f => f.id === 'exit-dfu-button');
+  const manualBaudField = ffFields2.find(f => f.id === 'manual-baud-rate-toggle');
+  const detectButtonField = ffFields2.find(f => f.id === 'detect-board-button');
+
+  ok('Full chip erase englishLabel matches the live-read real locale string exactly', fullChipEraseField?.englishLabel === realFullChipErase);
+  ok('Flash Firmware englishLabel matches the live-read real locale string exactly', flashFirmwareField?.englishLabel === realFlashFirmware);
+  ok('Load Firmware [Online] englishLabel matches the live-read real locale string exactly', loadOnlineField?.englishLabel === realLoadOnline);
+  ok('Load Firmware [Local] englishLabel matches the live-read real locale string exactly', loadLocalField?.englishLabel === realLoadLocal);
+  ok('Exit DFU Mode englishLabel matches the live-read real locale string exactly', exitDfuField?.englishLabel === realExitDfu);
+  ok('Manual baud rate englishLabel matches the live-read real locale string exactly', manualBaudField?.englishLabel === realManualBaud);
+  ok('Detect (board) englishLabel matches the live-read real locale string exactly', detectButtonField?.englishLabel === realDetectButton);
+
+  const stripHtmlFF = (s: string | undefined) => (s ?? '').replace(/<[^>]+>/g, '');
+  const warningsGroup = firmwareFlasherPage.groups.find(g => g.id === 'warnings');
+  const recoveryGroup = firmwareFlasherPage.groups.find(g => g.id === 'recovery');
+  const releaseInfoGroup = firmwareFlasherPage.groups.find(g => g.id === 'release-info');
+  const buildConfigGroup = firmwareFlasherPage.groups.find(g => g.id === 'build-configuration');
+  ok('"warnings" group officialTitle matches the live-read real locale string exactly ("Warning")', warningsGroup?.officialTitle === realWarningTitle);
+  ok('"recovery" group officialTitle matches the live-read real locale string exactly ("Recovery / Lost communication", HTML stripped)', recoveryGroup?.officialTitle === stripHtmlFF(realRecoveryHead));
+  ok('"release-info" group officialTitle matches the live-read real locale string exactly ("Release and Build info")', releaseInfoGroup?.officialTitle === realReleaseSummaryHead);
+  ok('"build-configuration" group officialTitle matches the live-read real locale string exactly ("Build Configuration")', buildConfigGroup?.officialTitle === realBuildConfigHead);
+
+  // ── the manual baud rate options in source match the live-read HTML <option> values exactly (no invented list) ──
+  const ffHtmlSrc = readFileSync(ffHtmlPath, 'utf8');
+  const baudSelectBlock = ffHtmlSrc.match(/<select id="flash_manual_baud_rate"[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? '';
+  const realBaudOptions = [...baudSelectBlock.matchAll(/<option value="(\d+)"/g)].map(m => m[1]);
+  ok('official-source cross-check: the real HTML actually defines baud rate <option> values', realBaudOptions.length > 0);
+  ok('Manual baud rate field options match the live-read real HTML option values exactly (no fabricated list)', JSON.stringify(manualBaudField?.range?.options) === JSON.stringify(realBaudOptions));
+
+  // ── no invented fixed list for genuinely dynamic selects (board/version/radio/telemetry/osd/motor protocol, other options) ──
+  const dynamicSelectIds = ['board-select', 'firmware-version-select', 'radio-protocol-select', 'telemetry-protocol-select', 'osd-protocol-select', 'motor-protocol-select', 'other-options-select'];
+  for (const id of dynamicSelectIds) {
+    const field = ffFields2.find(f => f.id === id);
+    ok(`"${id}" does not fabricate a fixed range.options list (genuinely dynamic, loaded live from the build API)`, !field?.range?.options);
+  }
 }
 
 console.log(`\nAll ${passed} structural assertions passed.`);

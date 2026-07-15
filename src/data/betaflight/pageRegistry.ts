@@ -17,6 +17,7 @@ import { ledStripPage } from './pages/led_strip';
 import { osdPage } from './pages/osd';
 import { servosPage } from './pages/servos';
 import { vtxPage } from './pages/vtx';
+import { firmwareFlasherPage } from './pages/firmware_flasher';
 
 /**
  * Official page/tab registry — verified directly against the cloned
@@ -57,7 +58,7 @@ import { vtxPage } from './pages/vtx';
 export const bfPageRegistry: BfRegistryEntry[] = [
   // ── Disconnected-state tabs ──
   { id: 'landing', officialId: 'landing', officialTitle: 'Welcome', titleAr: 'مرحبًا', officialOrder: 1, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },
-  { id: 'firmware-flasher', officialId: 'firmware_flasher', officialTitle: 'Firmware Flasher', titleAr: 'محدّث الفيرموير', officialOrder: 2, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'not-started' },
+  { id: 'firmware-flasher', officialId: 'firmware_flasher', officialTitle: 'Firmware Flasher', titleAr: 'محدّث الفيرموير', officialOrder: 2, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'reviewed', page: firmwareFlasherPage },
   { id: 'privacy-policy', officialId: 'privacy_policy', officialTitle: 'Privacy Policy', titleAr: 'سياسة الخصوصية (Betaflight)', officialOrder: 3, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },
   { id: 'options', officialId: 'options', officialTitle: 'Options', titleAr: 'خيارات التطبيق', officialOrder: 4, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },
   { id: 'help', officialId: 'help', officialTitle: 'Documentation & Support', titleAr: 'التوثيق والدعم', officialOrder: 5, connectionState: 'disconnected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },

@@ -223,8 +223,8 @@ async function main() {
       ok('the hub uses the dark bf-shell theme (not the old white-frame layout)', await page.evaluate(() => document.querySelector('[data-testid="betaflight-hub-renderer"]')?.classList.contains('bf-shell')) === true);
 
       const summaryText = (await page.locator('[data-testid="betaflight-hub-summary"]').textContent()) ?? '';
-      ok('summary shows exactly "18 صفحة مراجعة" (all 18 reviewed pages are visible; none are hidden)', summaryText.includes('18 صفحة مراجعة'));
-      ok('summary shows exactly "4 صفحات قيد الإعداد" (visible-only count, not the registry\'s full 8)', summaryText.includes('4 صفحات قيد الإعداد'));
+      ok('summary shows exactly "19 صفحة مراجعة" (Firmware Flasher is now reviewed)', summaryText.includes('19 صفحة مراجعة'));
+      ok('summary shows exactly "3 صفحات قيد الإعداد" (visible-only count, not the registry\'s full 7)', summaryText.includes('3 صفحات قيد الإعداد'));
 
       // ── the "قبل الاتصال" group renders with exactly one visible card (Firmware Flasher); 4 other groups remain unaffected ──
       const groupIds = ['disconnected', 'basic-setup', 'tuning-control', 'video-sensors', 'advanced-tools'];
@@ -249,6 +249,7 @@ async function main() {
       // ── reviewed vs not-started cards are honestly marked ──
       ok('a reviewed card (Ports) shows the "مراجَع" status', (await page.locator('[data-testid="betaflight-hub-card-ports"]').textContent() ?? '').includes('مراجَع'));
       ok('a not-started card (Tethered Logging) shows the "لم يُبدأ بعد" status', (await page.locator('[data-testid="betaflight-hub-card-tethered-logging"]').textContent() ?? '').includes('لم يُبدأ بعد'));
+      ok('the Firmware Flasher card shows the "مراجَع" status (no longer not-started)', (await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').textContent() ?? '').includes('مراجَع'));
 
       // ── search: Arabic and English ──
       const searchInput = page.locator('[data-testid="betaflight-hub-search-input"]');
@@ -288,14 +289,15 @@ async function main() {
       await page.locator('[data-testid="betaflight-hub-filter-reviewed"]').click();
       await page.waitForTimeout(150);
       let filteredCount = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
-      ok('the "مراجَع" filter shows exactly 18 cards', filteredCount === 18);
+      ok('the "مراجَع" filter shows exactly 19 cards (Firmware Flasher is now among them)', filteredCount === 19);
       ok('a not-started card is absent under the reviewed filter', await page.locator('[data-testid="betaflight-hub-card-tethered-logging"]').count() === 0);
+      ok('Firmware Flasher IS visible under the reviewed filter', await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').count() === 1);
 
       await page.locator('[data-testid="betaflight-hub-filter-not-started"]').click();
       await page.waitForTimeout(150);
       filteredCount = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
-      ok('the "لم يُبدأ بعد" filter shows exactly 4 visible cards (not the registry\'s full 8)', filteredCount === 4);
-      ok('Firmware Flasher is visible under the not-started filter', await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').count() === 1);
+      ok('the "لم يُبدأ بعد" filter shows exactly 3 visible cards (not the registry\'s full 7)', filteredCount === 3);
+      ok('Firmware Flasher is absent under the not-started filter (it is reviewed now)', await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').count() === 0);
       ok('a hidden not-started page (landing) is absent under the not-started filter', await page.locator('[data-testid="betaflight-hub-card-landing"]').count() === 0);
 
       await page.locator('[data-testid="betaflight-hub-filter-all"]').click();
@@ -357,6 +359,67 @@ async function main() {
         ok(`/betaflight/${id}: does NOT show the generic "not found" message`, await page.locator('text=القسم غير موجود').count() === 0);
         ok(`/betaflight/${id}: Programming nav tab remains active`, await navButtonIsActive(page, 'البرمجة'));
       }
+      await ctx.close();
+    }
+
+    // ── [6c] /betaflight/firmware-flasher: the final authored "reviewed" page, and /betaflight/firmware (legacy) is unaffected ──
+    console.log('\n[6c] /betaflight/firmware-flasher renders the complete "reviewed" Firmware Flasher page; legacy /betaflight/firmware is unaffected');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      // ── reached from the live hub ──
+      await page.goto(`${BASE}/betaflight`, { waitUntil: 'networkidle' });
+      await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').click();
+      await page.waitForLoadState('networkidle');
+      await page.locator('h1').first().waitFor({ state: 'visible' });
+      ok('clicking the Firmware Flasher card navigates to /betaflight/firmware-flasher', page.url() === `${BASE}/betaflight/firmware-flasher`);
+
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Firmware Flasher"', (await page.locator('h1').textContent())?.trim() === 'Firmware Flasher');
+      ok('Arabic title "محدّث الفيرموير" renders', await page.locator('text=محدّث الفيرموير').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed)', await page.locator('text=مراجَع').count() >= 1);
+      ok('does NOT show the not-started "لم يُبدأ بعد" badge', await page.locator('text=لم يُبدأ بعد').count() === 0);
+      ok('does NOT show the not-started explanation text', await page.locator('text=لم يتم بعد بناء المحتوى العربي').count() === 0);
+      ok('does NOT show the generic "not found" message', await page.locator('text=القسم غير موجود').count() === 0);
+      ok('a critical safety badge renders on the page header', await page.locator('text=حرِج').count() >= 1);
+
+      // ── required content sections are visible ──
+      ok('the general warning text renders', await page.locator('text=Warning').count() >= 1);
+      ok('target-selection (board) content is visible', await page.locator('text=اختيار اللوحة').count() >= 1);
+      ok('online firmware loading is visible ("Load Firmware [Online]")', await page.locator('text=Load Firmware [Online]').count() >= 1);
+      ok('local firmware loading is visible ("Load Firmware [Local]"), distinct from online', await page.locator('text=Load Firmware [Local]').count() >= 1);
+      ok('Full chip erase warning is visible', await page.locator('text=Full chip erase').count() >= 1);
+      ok('the flash action is visible ("Flash Firmware")', await page.locator('text=Flash Firmware').count() >= 1);
+      ok('a progress/status area is visible', await page.locator('text=Progress bar and status message').count() >= 1);
+      ok('DFU/recovery guidance is visible', await page.locator('text=Recovery').count() >= 1);
+      ok('Exit DFU Mode is visible', await page.locator('text=Exit DFU Mode').count() >= 1);
+
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/firmware-flasher-tab"]').count()) === 1);
+      ok('version/release-line context renders', await page.locator('text=2025.12').count() >= 1);
+      ok('Programming nav tab is active on /betaflight/firmware-flasher', await navButtonIsActive(page, 'البرمجة'));
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return-to-hub works from the reviewed Firmware Flasher page', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [6d] Legacy /betaflight/firmware remains a completely separate, unchanged route ──
+    console.log('\n[6d] Legacy /betaflight/firmware (different ID) still renders its old content unchanged');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await page.goto(`${BASE}/betaflight/firmware`, { waitUntil: 'networkidle' });
+      ok('legacy route /betaflight/firmware still renders its old content unchanged', await page.locator('h1', { hasText: 'Firmware / تحديث' }).count() === 1);
+      ok('legacy "الشرح" explanation heading renders (old template, not the new renderer)', await page.locator('text=الشرح').count() === 1);
+      ok('no new-architecture "مراجَع" badge appears on the legacy route', await page.locator('text=مراجَع').count() === 0);
       await ctx.close();
     }
 

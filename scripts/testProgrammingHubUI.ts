@@ -136,7 +136,7 @@ async function main() {
       ok('clicking the Betaflight card opens the existing /betaflight page', page.url() === `${BASE}/betaflight`);
       ok('the existing Betaflight heading renders', await page.locator('text=Betaflight بالعربي').count() === 1);
       ok('the live registry-driven hub renderer is now wired in', await page.locator('[data-testid="betaflight-hub-renderer"]').count() === 1);
-      ok('the hub summary shows 18 reviewed pages', await page.locator('[data-testid="betaflight-hub-summary"]').textContent().then(t => (t ?? '').includes('18 صفحة مراجعة')));
+      ok('the hub summary shows 19 reviewed pages', await page.locator('[data-testid="betaflight-hub-summary"]').textContent().then(t => (t ?? '').includes('19 صفحة مراجعة')));
       ok('a real reviewed page card (Ports) renders in the hub', await page.locator('[data-testid="betaflight-hub-card-ports"]').count() === 1);
 
       await page.goBack();
