@@ -261,8 +261,8 @@ async function main() {
       ok('Programming is ACTIVE (real color match) on /betaflight/setup', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/betaflight/ports`, { waitUntil: 'networkidle' });
       ok('Programming is ACTIVE (real color match) on /betaflight/ports', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
-      await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
-      ok('Programming is ACTIVE (real color match) on /betaflight/adjustments (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
+      await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
+      ok('Programming is ACTIVE (real color match) on /betaflight/sensors (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' });
       ok('Programming is INACTIVE (real color match) on /home', (await navButtonColor(page, 'البرمجة')) === INACTIVE_NAV_COLOR);
       await ctx.close();
@@ -273,7 +273,7 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
       const backArrow = page.locator('button[aria-label="العودة"]');
       ok('icon back-button has an aria-label on the not-started page', await backArrow.count() === 1);
       await backArrow.focus();
@@ -295,7 +295,7 @@ async function main() {
       for (const vp of viewports) {
         const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
         const page = await ctx.newPage();
-        await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
+        await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
         ok(`[${vp.name}] no horizontal overflow on the not-started page`, !overflow);
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -484,15 +484,109 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [15] Responsive: Motors, Failsafe, Configuration, Power, Receiver, Modes at 3 viewports ──
-    console.log('\n[15] All Phase 2 + Phase 3 reviewed pages are responsive at mobile/tablet/desktop viewports');
+    // ── [19] /betaflight/pid-tuning: complete "reviewed" page (Phase 4), the largest tab in the app ──
+    console.log('\n[19] /betaflight/pid-tuning renders the complete "reviewed" PID Tuning page (Phase 4)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/pid-tuning`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "PID Tuning"', (await page.locator('h1').textContent())?.trim() === 'PID Tuning');
+      ok('Arabic title "ضبط PID" renders', await page.locator('text=ضبط PID').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 4 complete)', await page.locator('text=مراجَع').count() >= 1);
+      ok('critical safety badge renders (PID Tuning is the highest-safety, most complex page)', await page.locator('text=حرِج').count() >= 1);
+      ok('a main PID field renders (Proportional)', await page.locator('text=P (Proportional)').count() >= 1);
+      ok('a filter field renders (Gyro Notch Filter 1)', await page.locator('text=Gyro Notch Filter 1').count() >= 1);
+      ok('the Dynamic Notch Filter group renders', await page.locator('text=Dynamic Notch Filter').count() >= 1);
+      ok('the plain "Save" action renders (no-reboot save)', await page.locator('text=Save').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/pid-tuning-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow (verified even on the largest page in the app)', !overflow);
+      ok('Programming nav tab remains active on /betaflight/pid-tuning', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [20] /betaflight/presets: complete "reviewed" page (Phase 4), a full preset browser, not a dropdown ──
+    console.log('\n[20] /betaflight/presets renders the complete "reviewed" Presets page (Phase 4)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/presets`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Presets"', (await page.locator('h1').textContent())?.trim() === 'Presets');
+      ok('Arabic title "الإعدادات الجاهزة" renders', await page.locator('text=الإعدادات الجاهزة').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 4 complete)', await page.locator('text=مراجَع').count() >= 1);
+      ok('critical safety badge renders (arbitrary third-party CLI execution)', await page.locator('text=حرِج').count() >= 1);
+      ok('the "Save backup" action renders', await page.locator('text=Save backup').count() >= 1);
+      ok('the "Preset sources..." action renders', await page.locator('text=Preset sources...').count() >= 1);
+      ok('the "Save and Reboot" action renders', await page.locator('text=Save and Reboot').count() >= 1);
+      ok('the "Pick" action renders (two-stage pick-then-apply, not a plain dropdown)', await page.locator('text=Pick').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/presets-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/presets', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [21] /betaflight/adjustments: complete "reviewed" page (Phase 4, was not-started) ──
+    console.log('\n[21] /betaflight/adjustments renders the complete "reviewed" Adjustments page (Phase 4)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Adjustments"', (await page.locator('h1').textContent())?.trim() === 'Adjustments');
+      ok('Arabic title "التعديلات أثناء التحكم" renders', await page.locator('text=التعديلات أثناء التحكم').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 4 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('does NOT show the not-started explanation text anymore', await page.locator('text=لم يتم بعد بناء المحتوى العربي').count() === 0);
+      ok('the "then apply" function field renders', await page.locator('text=then apply').count() >= 1);
+      ok('the plain "Save" action renders (no-reboot save)', await page.locator('text=Save').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/adjustments-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/adjustments', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [15] Responsive: all Phase 2 + Phase 3 + Phase 4 reviewed pages at 3 viewports ──
+    console.log('\n[15] All Phase 2 + Phase 3 + Phase 4 reviewed pages are responsive at mobile/tablet/desktop viewports');
     {
       const viewports = [
         { name: 'mobile 390x844', width: 390, height: 844 },
         { name: 'tablet 768x1024', width: 768, height: 1024 },
         { name: 'desktop 1440x900', width: 1440, height: 900 },
       ];
-      for (const routeId of ['motors', 'failsafe', 'configuration', 'power', 'receiver', 'modes']) {
+      for (const routeId of ['motors', 'failsafe', 'configuration', 'power', 'receiver', 'modes', 'pid-tuning', 'presets', 'adjustments']) {
         for (const vp of viewports) {
           const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
           const page = await ctx.newPage();

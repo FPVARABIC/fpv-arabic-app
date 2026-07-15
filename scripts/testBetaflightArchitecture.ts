@@ -22,12 +22,16 @@ import { configurationPage } from '../src/data/betaflight/pages/configuration';
 import { powerPage } from '../src/data/betaflight/pages/power';
 import { receiverPage } from '../src/data/betaflight/pages/receiver';
 import { modesPage } from '../src/data/betaflight/pages/modes';
+import { pidTuningPage } from '../src/data/betaflight/pages/pid_tuning';
+import { presetsPage } from '../src/data/betaflight/pages/presets';
+import { adjustmentsPage } from '../src/data/betaflight/pages/adjustments';
 import { betaflightData } from '../src/data/betaflightData';
 import type { BfPage } from '../src/data/betaflight/types';
 
 const PHASE_2_PAGES = [setupPage, portsPage, motorsPage, failsafePage] as BfPage[];
 const PHASE_3_PAGES = [configurationPage, powerPage, receiverPage, modesPage] as BfPage[];
-const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES];
+const PHASE_4_PAGES = [pidTuningPage, presetsPage, adjustmentsPage] as BfPage[];
+const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES, ...PHASE_4_PAGES];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -183,8 +187,83 @@ console.log('\n[7e] Configuration, Power, Receiver, Modes (Phase 3): honest "rev
   ok('receiverPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'receiver')?.page === receiverPage);
   ok('modesPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'modes')?.page === modesPage);
 
-  ok('exactly 8 registry entries are "reviewed" (Setup, Ports, Motors, Failsafe, Configuration, Power, Receiver, Modes)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 8);
-  ok('the remaining 18 registry entries are honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 18);
+  ok('no registry entry is left at "architecture-preview" (Phase 1 preview status fully retired)', bfPageRegistry.filter(e => e.contentStatus === 'architecture-preview').length === 0);
+}
+
+console.log('\n[7j] PID Tuning, Presets, Adjustments (Phase 4): honest "reviewed" status, real source-backed fields, no invented data');
+{
+  for (const page of PHASE_4_PAGES) {
+    ok(`${page.id}: contentStatus is explicitly "reviewed" (Phase 4 complete pages)`, page.contentStatus === 'reviewed');
+    ok(`${page.id}: has a non-empty source.url`, page.source.url.length > 0);
+    ok(`${page.id}: source.url matches the verified officialDocUrl pattern`, page.source.url === officialDocUrl(page.officialId));
+    ok(`${page.id}: has a non-empty source.repoPath (real file, not invented)`, (page.source.repoPath ?? '').length > 0);
+    ok(`${page.id}: source.commit is a real 40-char git hash`, /^[0-9a-f]{40}$/.test(page.source.commit ?? ''));
+    ok(`${page.id}: has at least one group`, page.groups.length > 0);
+    ok(`${page.id}: every group has at least one field`, page.groups.every(g => g.fields.length > 0));
+
+    const allFields = page.groups.flatMap(g => g.fields);
+    ok(`${page.id}: field IDs are unique within the page`, new Set(allFields.map(f => f.id)).size === allFields.length);
+    ok(`${page.id}: group IDs are unique within the page`, new Set(page.groups.map(g => g.id)).size === page.groups.length);
+    ok(`${page.id}: every field has a non-empty englishLabel`, allFields.every(f => f.englishLabel.length > 0));
+    ok(`${page.id}: every field has a non-empty arabicMeaning`, allFields.every(f => f.arabicMeaning.length > 0));
+    ok(`${page.id}: every field has a non-empty arabicExplanation`, allFields.every(f => f.arabicExplanation.length > 0));
+    ok(`${page.id}: every field has a valid safetyLevel`, allFields.every(f => SAFETY_LEVELS.has(f.safetyLevel)));
+    ok(`${page.id}: every field has a valid controlType`, allFields.every(f => ['toggle', 'select', 'number', 'text', 'button', 'table', 'graph', 'status', 'action'].includes(f.controlType)));
+    ok(`${page.id}: every field carries its own source`, allFields.every(f => f.source.url.length > 0));
+    ok(`${page.id}: every field's source.repoPath is a real path (non-empty)`, allFields.every(f => (f.source.repoPath ?? '').length > 0));
+    ok(`${page.id}: every field with scope !== 'universal' has a conditionNote`, allFields.every(f => f.scope === 'universal' || (f.conditionNote ?? '').length > 0));
+    ok(`${page.id}: every field explicitly states requiresSave (boolean)`, allFields.every(f => typeof f.requiresSave === 'boolean'));
+    ok(`${page.id}: every field explicitly states requiresReboot (boolean)`, allFields.every(f => typeof f.requiresReboot === 'boolean'));
+    ok(`${page.id}: no field invents a numeric range without min AND max together`, allFields.every(f => !f.range || (f.range.min === undefined) === (f.range.max === undefined)));
+    ok(`${page.id}: every group has a valid content level`, page.groups.every(g => CONTENT_LEVELS.has(g.level)));
+    ok(`${page.id}: dependsOnFieldIds (if present) reference real field IDs on the same page`, allFields.every(f => (f.dependsOnFieldIds ?? []).every(depId => allFields.some(other => other.id === depId))));
+  }
+
+  ok('pidTuningPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'pid-tuning')?.page === pidTuningPage);
+  ok('presetsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'presets')?.page === presetsPage);
+  ok('adjustmentsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'adjustments')?.page === adjustmentsPage);
+
+  ok('exactly 11 registry entries are "reviewed" (Setup, Ports, Motors, Failsafe, Configuration, Power, Receiver, Modes, PID Tuning, Presets, Adjustments)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 11);
+  ok('the remaining 15 registry entries are honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 15);
+  ok('no Phase 5+ page was started (only exactly these 11 ids are reviewed)', JSON.stringify(bfPageRegistry.filter(e => e.contentStatus === 'reviewed').map(e => e.id).sort())
+    === JSON.stringify(['adjustments', 'configuration', 'failsafe', 'modes', 'motors', 'pid-tuning', 'ports', 'power', 'presets', 'receiver', 'setup'].sort()));
+}
+
+console.log('\n[7k] PID Tuning: dead/permanently-hidden source elements correctly excluded, real save-without-reboot semantics, no fabricated Launch Control section');
+{
+  const allPidFields = pidTuningPage.groups.flatMap(g => g.fields);
+  ok('PID Tuning: no field references a "controller" PID-controller-type select (verified unconditionally hidden in source)', !allPidFields.some(f => f.id.includes('controller-select') || f.englishLabel === 'PID Controller'));
+  ok('PID Tuning: no field models "Yaw Jump Prevention" (verified unconditionally hidden in source)', !allPidFields.some(f => /yaw.?jump/i.test(f.id)));
+  ok('PID Tuning: no field models "Launch Control" (verified absent from the real source entirely)', !allPidFields.some(f => /launch.?control/i.test(f.id) || /launch.?control/i.test(f.englishLabel)));
+  ok('PID Tuning: no field models "Smart Feedforward" (verified unconditionally hidden in source)', !allPidFields.some(f => /smart.?feedforward/i.test(f.id)));
+  const saveField = allPidFields.find(f => f.id === 'pid-save-button');
+  ok('PID Tuning: Save action exists and correctly does NOT require reboot (verified: MSP_EEPROM_WRITE only, no reboot call in source)', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  ok('PID Tuning: main PID table has all 15 real per-axis fields (Roll/Pitch/Yaw × P/I/D/D-Max/F), not merged', pidTuningPage.groups.find(g => g.id === 'pid-main-table')?.fields.length === 15);
+  ok('PID Tuning: D-term fields carry critical safety level (verified real motor-heat/overheating warnings in source help text)', allPidFields.filter(f => f.id.startsWith('pid-') && f.id.endsWith('-d')).every(f => f.safetyLevel === 'critical'));
+  ok('PID Tuning page-level safetyLevel is "critical" (highest — largest and most safety-sensitive tuning surface)', pidTuningPage.safetyLevel === 'critical');
+}
+
+console.log('\n[7l] Presets: not a simple dropdown, sources dialog modeled, no explicit reboot command but Save-and-Reboot honestly reflects the real outcome');
+{
+  const allPresetsFields = presetsPage.groups.flatMap(g => g.fields);
+  ok('Presets: more than one field models the page (not collapsed into a single dropdown)', allPresetsFields.length > 10);
+  ok('Presets: sources dialog fields exist (user-editable preset source list)', presetsPage.groups.some(g => g.id === 'sources-dialog'));
+  ok('Presets: official sources cannot be edited/deleted, only activated — captured in source-name/source-url conditionNote', /رسمي/.test(allPresetsFields.find(f => f.id === 'source-name')?.conditionNote ?? '') || /رسمي/.test(allPresetsFields.find(f => f.id === 'source-name')?.arabicExplanation ?? ''));
+  const saveAndReboot = allPresetsFields.find(f => f.id === 'presets-save-and-reboot');
+  ok('Presets: "Save and Reboot" action exists and is modeled as requiring reboot (the real outcome, even though no explicit reboot command is sent)', saveAndReboot?.requiresReboot === true);
+  ok('Presets: the no-explicit-reboot-command fact is documented honestly in the explanation text', /Rebooting/.test(saveAndReboot?.arabicExplanation ?? ''));
+  ok('Presets page-level safetyLevel is "critical" (arbitrary third-party CLI execution against a real flight controller)', presetsPage.safetyLevel === 'critical');
+  ok('Presets: the verbatim third-party-source danger warning is preserved', /Malicious or bad preset sources will break your aircraft configuration/.test(allPresetsFields.find(f => f.id === 'sources-dialog-warning')?.arabicExplanation ?? ''));
+}
+
+console.log('\n[7m] Adjustments: no fabricated add/remove slot action, enable/disable sentinel documented honestly, no-reboot save');
+{
+  const allAdjFields = adjustmentsPage.groups.flatMap(g => g.fields);
+  ok('Adjustments: no field models a fabricated "add slot" or "remove slot" action (verified absent from the real source)', !allAdjFields.some(f => /add.?slot|remove.?slot|delete.?slot/i.test(f.id)));
+  ok('Adjustments: the real 32-function adjustmentsFunction list is present in full, not truncated', allAdjFields.find(f => f.id === 'adjustment-apply-function')?.range?.options?.length === 32);
+  const saveField = allAdjFields.find(f => f.id === 'adjustments-save');
+  ok('Adjustments: Save action exists and correctly does NOT require reboot (verified: MSP_EEPROM_WRITE only, no reboot call in source)', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  ok('Adjustments: the enable/disable sentinel (range start===end) is documented honestly, not glossed over', /Start\s*=\s*End/i.test(adjustmentsPage.groups.flatMap(g => g.fields).find(f => f.id === 'adjustment-enable')?.arabicExplanation ?? ''));
 }
 
 console.log('\n[7b] Motors: highest safety level, propeller warning adjacent to the enable-control, DShot/ESC-telemetry/battery/order coverage');
@@ -621,6 +700,87 @@ console.log('\n[11] OFFICIAL-SOURCE CROSS-CHECK (Phase 3) — Configuration, Pow
   ok('official-source cross-check: msp_box.c really registers BOXARM (arming is a real, verified mode)', /BME\(BOXARM\)/.test(mspBoxCSrc));
   ok('official-source cross-check: msp_box.c really registers BOXFAILSAFE (failsafe status is a real, verified mode)', /BME\(BOXFAILSAFE\)/.test(mspBoxCSrc));
   ok('official-source cross-check: msp_box.c really registers BOXGPSRESCUE (GPS Rescue is a real, verified mode)', /BME\(BOXGPSRESCUE\)/.test(mspBoxCSrc));
+}
+
+console.log('\n[12] OFFICIAL-SOURCE CROSS-CHECK (Phase 4) — PID Tuning, Presets, Adjustments read live against the real cloned Configurator source');
+{
+  const CLONE_DIR = '/tmp/betaflight-official-audit/configurator';
+  const localePath = join(CLONE_DIR, 'locales/en/messages.json');
+  const locale = JSON.parse(readFileSync(localePath, 'utf8')) as Record<string, { message?: string } | string>;
+  const realLabel = (key: string): string | undefined => {
+    const v = locale[key];
+    return typeof v === 'string' ? v : v?.message;
+  };
+
+  // ── PID Tuning ──
+  const pidHtmlPath = join(CLONE_DIR, 'src/tabs/pid_tuning.html');
+  const pidJsPath = join(CLONE_DIR, 'src/js/tabs/pid_tuning.js');
+  ok('official-source cross-check: real src/tabs/pid_tuning.html exists in the clone', existsSync(pidHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/pid_tuning.js exists in the clone', existsSync(pidJsPath));
+  const pidJsSrc = readFileSync(pidJsPath, 'utf8');
+  ok('official-source cross-check: pid_tuning.js really force-hides the PID Controller select container (confirms it is correctly excluded as a field)', /div\.controller.*\.hide\(\)|controller.*hide/.test(pidJsSrc.replace(/\s+/g, ' ')));
+  ok('official-source cross-check: pid_tuning.js really force-hides the YAW_JUMP_PREVENTION row (confirms it is correctly excluded as a field)', /YAW_JUMP_PREVENTION.*hide/.test(pidJsSrc.replace(/\s+/g, ' ')));
+  ok('official-source cross-check: pid_tuning.js contains no reference to "Launch Control" anywhere (confirms it is correctly absent from the page)', !/Launch Control/i.test(pidJsSrc));
+  ok('official-source cross-check: pid_tuning.html contains no reference to "Launch Control" anywhere', !/Launch Control/i.test(readFileSync(pidHtmlPath, 'utf8')));
+
+  const realPidTuningTitle = realLabel('tabPidTuning');
+  const realProportionalHelp = realLabel('pidTuningProportionalHelp');
+  const realDerivativeHelp = realLabel('pidTuningDerivativeHelp');
+  ok('official-source cross-check: the real locale actually defines "tabPidTuning"', realPidTuningTitle === 'PID Tuning');
+  ok('official-source cross-check: the real locale actually defines "pidTuningProportionalHelp"', typeof realProportionalHelp === 'string' && realProportionalHelp.length > 0);
+  ok('official-source cross-check: pidTuningDerivativeHelp locale text contains the verbatim motor-heat/burnout warning', /burn out motors/i.test(realDerivativeHelp ?? ''));
+
+  const allPidFieldsCheck = pidTuningPage.groups.flatMap(g => g.fields);
+  const pidRollD = allPidFieldsCheck.find(f => f.id === 'pid-roll-d');
+  ok('official-source cross-check: PID Tuning "Roll — D" field references the real motor-heat danger from pidTuningDerivativeHelp', /burn out motors|حرق المحركات/i.test(pidRollD?.arabicExplanation ?? ''));
+
+  ok('official-source cross-check: pid_tuning.js really calls MSP_EEPROM_WRITE on save with no reboot MSP call in the same handler region', /MSP_EEPROM_WRITE/.test(pidJsSrc));
+
+  const realCellCount1S = realLabel('pidTuningCellCount1S');
+  const cellCountField = allPidFieldsCheck.find(f => f.id === 'cell-count-select');
+  ok('official-source cross-check: the real locale defines "pidTuningCellCount1S" as "1S"', realCellCount1S === '1S');
+  ok('official-source cross-check: PID Tuning cell-count-select includes the real "1S" option', (cellCountField?.range?.options ?? []).includes('1S'));
+
+  // ── Presets ──
+  const presetsHtmlPath = join(CLONE_DIR, 'src/tabs/presets/presets.html');
+  const presetsJsPath = join(CLONE_DIR, 'src/tabs/presets/presets.js');
+  const cliEnginePath = join(CLONE_DIR, 'src/tabs/presets/CliEngine.js');
+  ok('official-source cross-check: real src/tabs/presets/presets.html exists in the clone', existsSync(presetsHtmlPath));
+  ok('official-source cross-check: real src/tabs/presets/presets.js exists in the clone', existsSync(presetsJsPath));
+  ok('official-source cross-check: real src/tabs/presets/CliEngine.js exists in the clone', existsSync(cliEnginePath));
+  const cliEngineSrc = readFileSync(cliEnginePath, 'utf8');
+  ok('official-source cross-check: CliEngine.js really sends the literal CLI command "save" (s_commandSave)', /s_commandSave\s*=\s*"save"/.test(cliEngineSrc));
+  ok('official-source cross-check: CliEngine.js really detects reboot only by watching for the literal substring "Rebooting" in serial output (no explicit reboot command)', /Rebooting/.test(cliEngineSrc));
+  ok('official-source cross-check: CliEngine.js contains no explicit MSP reboot command constant', !/s_command.*[Rr]eboot\s*=/.test(cliEngineSrc));
+
+  const realPresetsButtonSave = realLabel('presetsButtonSave');
+  const realSourcesDialogWarning = realLabel('presets_sources_dialog_warning');
+  ok('official-source cross-check: the real locale defines "presetsButtonSave" as "Save and Reboot"', realPresetsButtonSave === 'Save and Reboot');
+  ok('official-source cross-check: the real locale actually defines "presets_sources_dialog_warning"', typeof realSourcesDialogWarning === 'string' && realSourcesDialogWarning.length > 0);
+  ok('official-source cross-check: presets_sources_dialog_warning locale text contains the verbatim "harm your devices" warning', /harm your devices/i.test(realSourcesDialogWarning ?? ''));
+
+  const allPresetsFieldsCheck = presetsPage.groups.flatMap(g => g.fields);
+  const presetsSaveField2 = allPresetsFieldsCheck.find(f => f.id === 'presets-save-and-reboot');
+  ok('official-source cross-check: Presets "Save and Reboot" englishLabel matches the live-read real locale string exactly', presetsSaveField2?.englishLabel === realPresetsButtonSave);
+  ok('official-source cross-check: Presets sources-dialog-warning field references the real "harm your devices" verbatim text', /harm your devices/i.test(allPresetsFieldsCheck.find(f => f.id === 'sources-dialog-warning')?.arabicExplanation ?? ''));
+
+  // ── Adjustments ──
+  const adjHtmlPath = join(CLONE_DIR, 'src/tabs/adjustments.html');
+  const adjJsPath = join(CLONE_DIR, 'src/js/tabs/adjustments.js');
+  ok('official-source cross-check: real src/tabs/adjustments.html exists in the clone', existsSync(adjHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/adjustments.js exists in the clone', existsSync(adjJsPath));
+  const adjHtmlSrc = readFileSync(adjHtmlPath, 'utf8');
+  const adjJsSrc = readFileSync(adjJsPath, 'utf8');
+  ok('official-source cross-check: adjustments.html really has no add/remove-slot button anywhere (confirms the absence is a verified fact, not an oversight)', !/add.?slot|remove.?slot|delete.?slot/i.test(adjHtmlSrc));
+  ok('official-source cross-check: adjustments.js really has no add/remove-slot function anywhere', !/add.?slot|remove.?slot|delete.?slot/i.test(adjJsSrc));
+  ok('official-source cross-check: adjustments.js really uses the {start:900,end:900} sentinel for the disabled state', /start:\s*900/.test(adjJsSrc) && /end:\s*900/.test(adjJsSrc));
+  ok('official-source cross-check: adjustments.js really has no reboot-related MSP call anywhere', !/reboot/i.test(adjJsSrc));
+
+  const realAdjustmentsFunction31 = realLabel('adjustmentsFunction31');
+  ok('official-source cross-check: the real locale defines "adjustmentsFunction31" as "LED Brightness Adjust" (the real last function)', realAdjustmentsFunction31 === 'LED Brightness Adjust');
+  const allAdjFieldsCheck = adjustmentsPage.groups.flatMap(g => g.fields);
+  const adjFunctionField = allAdjFieldsCheck.find(f => f.id === 'adjustment-apply-function');
+  ok('official-source cross-check: Adjustments apply-function options include the real last function "LED Brightness Adjust"', (adjFunctionField?.range?.options ?? []).includes('LED Brightness Adjust'));
 }
 
 console.log(`\nAll ${passed} structural assertions passed.`);
