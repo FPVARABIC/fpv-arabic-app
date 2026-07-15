@@ -4,6 +4,7 @@ import { SplashView } from './views/SplashView';
 // import { SafetyGateView } from './views/SafetyGateView'; // reserved for BuildRoadmap flow
 import { HomeView } from './views/HomeView';
 import { BuildRoadmapView } from './views/BuildRoadmapView';
+import { BuildRoadmapStageDetailView } from './views/BuildRoadmapStageDetailView';
 import { LessonsView } from './views/LessonsView';
 import { LessonDetailView } from './views/LessonDetailView';
 import { ChecklistView } from './views/ChecklistView';
@@ -33,6 +34,7 @@ export const App: React.FC = () => (
     {/* <Route path="/safety" element={<SafetyGateView/>}/> */}{/* reserved for BuildRoadmap flow */}
     <Route path="/home" element={<HomeView/>}/>
     <Route path="/roadmap" element={<BuildRoadmapView/>}/>
+    <Route path="/roadmap/:stageId" element={<BuildRoadmapStageDetailView/>}/>
     <Route path="/lessons" element={<LessonsView/>}/>
     <Route path="/lessons/:lessonId" element={<LessonDetailView/>}/>
     <Route path="/checklists" element={<ChecklistView/>}/>

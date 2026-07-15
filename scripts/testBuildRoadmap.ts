@@ -90,20 +90,24 @@ console.log('\n[3] Brevity limits respected (stage 1 and 10 may exceed the norma
 
 console.log('\n[4] All 10 original image paths remain exactly unchanged; no new/deleted image');
 {
-  const viewTsx = readFileSync(join(ROOT, 'src/views/BuildRoadmapView.tsx'), 'utf8');
+  // Images moved from BuildRoadmapView.tsx (now the stage list) to
+  // BuildRoadmapStageDetailView.tsx (the new per-stage detail page) as part
+  // of the list->detail redesign — still the same 10 real files.
+  const detailTsx = readFileSync(join(ROOT, 'src/views/BuildRoadmapStageDetailView.tsx'), 'utf8');
   for (const path of ORIGINAL_IMAGE_PATHS) {
-    ok(`image path present unchanged: ${path}`, viewTsx.includes(`'${path}'`));
+    ok(`image path present unchanged: ${path}`, detailTsx.includes(`'${path}'`));
     ok(`image file exists on disk: ${path}`, existsSync(join(ROOT, 'public', path.replace(/^\//, ''))));
   }
-  const imagePathMatches = [...viewTsx.matchAll(/'\/build-images\/[^']+\.png'/g)].map(m => m[0].slice(1, -1));
+  const imagePathMatches = [...detailTsx.matchAll(/'\/build-images\/[^']+\.png'/g)].map(m => m[0].slice(1, -1));
   const uniquePaths = new Set(imagePathMatches);
   ok('no new /build-images path was introduced beyond the original 10', uniquePaths.size === 10 && ORIGINAL_IMAGE_PATHS.every(p => uniquePaths.has(p)));
+  ok('BuildRoadmapView.tsx (the new stage list) no longer embeds stage images directly', !readFileSync(join(ROOT, 'src/views/BuildRoadmapView.tsx'), 'utf8').includes('/build-images/'));
 }
 
 console.log('\n[5] Content-accuracy mandatory checks');
 {
   const gps = roadmapStageContent['build-gps'];
-  const gpsLinksBlock = readFileSync(join(ROOT, 'src/views/BuildRoadmapView.tsx'), 'utf8')
+  const gpsLinksBlock = readFileSync(join(ROOT, 'src/views/BuildRoadmapStageDetailView.tsx'), 'utf8')
     .match(/'build-gps':\s*\[[\s\S]*?\](?=,\s*\n\s*'build-vtx')/);
   ok('Stage 8 (GPS) does not reference a fake/nonexistent GPS lesson (no learning links entry for build-gps)', !gpsLinksBlock);
   ok('Stage 8 practical content is self-contained (has its own preparation/steps/checks, not just a link)', gps.practicalSteps.length > 0 && gps.acceptanceChecks.length > 0);
@@ -176,6 +180,54 @@ console.log('\n[7] Scope boundaries — diff must not touch /assembly, Lessons, 
   const violations = allChanged.filter(f => forbiddenPrefixes.some(p => f.startsWith(p)));
   ok('no forbidden-scope file appears in the diff', violations.length === 0);
   if (violations.length > 0) console.log('  VIOLATIONS:', violations);
+}
+
+console.log('\n[8] Invalid-stage route correction (final review corrections)');
+{
+  const detailTsx = readFileSync(join(ROOT, 'src/views/BuildRoadmapStageDetailView.tsx'), 'utf8');
+  const invalidBlockMatch = detailTsx.match(/if \(!step\) \{([\s\S]*?)\n\s{2}\}\n\n\s{2}const done/);
+  const invalidBlock = invalidBlockMatch?.[1] ?? '';
+  ok('invalid-stage fallback block is present and isolated', invalidBlock.length > 0);
+  ok('invalid-stage fallback renders inside AppShell', /<AppShell/.test(invalidBlock));
+  ok('invalid-stage fallback shows the honest Arabic message', invalidBlock.includes('المرحلة غير موجودة'));
+  ok('invalid-stage fallback exposes a native return-to-roadmap button', /<button[\s\S]*?العودة إلى خريطة البناء/.test(invalidBlock));
+  ok('invalid-stage fallback uses fixed navigation to /roadmap (not a dynamic/derived path)', /navigate\('\/roadmap'\)/.test(invalidBlock));
+  ok('invalid-stage fallback has an accessible back icon with an Arabic aria-label', /aria-label="العودة"/.test(invalidBlock));
+  ok('invalid-stage fallback contains exactly one h1 (no nested/duplicate heading)', (invalidBlock.match(/<h1/g) || []).length === 1);
+
+  // No raw emoji introduced anywhere in the redesign's own files (lucide-react icons only).
+  // The single U+2715 ("✕") is excluded deliberately: it is the zoom-overlay's
+  // functional close-icon glyph, inherited byte-for-byte unchanged from the
+  // original accordion implementation (not a decorative emoji this redesign
+  // introduced), and is present identically in the committed pre-redesign file.
+  const EMOJI_RANGE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{2714}\u{2716}-\u{27BF}]/u;
+  for (const relPath of ['src/views/BuildRoadmapView.tsx', 'src/views/BuildRoadmapStageDetailView.tsx']) {
+    const text = readFileSync(join(ROOT, relPath), 'utf8');
+    ok(`${relPath}: no raw emoji characters`, !EMOJI_RANGE.test(text));
+  }
+}
+
+console.log('\n[9] Route architecture unchanged; scope is exactly the known Build Roadmap file set');
+{
+  const appTsx = readFileSync(join(ROOT, 'src/App.tsx'), 'utf8');
+  ok('/roadmap route still present', /path="\/roadmap"\s+element=\{<BuildRoadmapView\/>\}/.test(appTsx));
+  ok('/roadmap/:stageId route still present', /path="\/roadmap\/:stageId"\s+element=\{<BuildRoadmapStageDetailView\/>\}/.test(appTsx));
+
+  const { execSync } = await import('node:child_process');
+  const diffNames = execSync('git diff --name-only HEAD', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const untrackedNames = execSync('git ls-files --others --exclude-standard', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const allChanged = [...diffNames, ...untrackedNames];
+  const ALLOWED_SCOPE = new Set([
+    'scripts/testBuildRoadmap.ts',
+    'scripts/testBuildRoadmapUI.ts',
+    'src/App.tsx',
+    'src/index.css',
+    'src/views/BuildRoadmapView.tsx',
+    'src/views/BuildRoadmapStageDetailView.tsx',
+  ]);
+  const outOfScope = allChanged.filter(f => !ALLOWED_SCOPE.has(f));
+  ok('no file outside the known 6-file Build Roadmap scope is dirty', outOfScope.length === 0);
+  if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
 }
 
 console.log(`\nAll ${passed} structural assertions passed.`);

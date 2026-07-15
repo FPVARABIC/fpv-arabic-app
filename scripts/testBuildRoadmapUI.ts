@@ -1,6 +1,9 @@
 /**
- * Real UI-interaction proof for the upgraded /roadmap (البناء) practical
- * build guide. Drives a real built app in a real browser at 390×844.
+ * Real UI-interaction proof for the redesigned /roadmap (البناء) practical
+ * build guide — list -> detail architecture (BuildRoadmapView is the stage
+ * list, BuildRoadmapStageDetailView is the per-stage detail page reached at
+ * /roadmap/:stageId, mirroring the pattern already proven by Lessons and
+ * Betaflight). Drives a real built app in a real browser at 390×844.
  * Complements testBuildRoadmap.ts (pure data/structure, no browser).
  */
 import assert from 'node:assert/strict';
@@ -22,6 +25,24 @@ const STAGE_IDS = [
   'build-fc', 'build-receiver', 'build-gps', 'build-vtx', 'build-pre-battery',
 ];
 
+// Independently verified against roadmapData.ts (not merely copied from the
+// component that renders them) — used to wait for the *correct* post-navigation
+// content rather than a generic "some h1 is visible" signal, and to assert the
+// exact adjacent-stage title Previous/Next display.
+const STAGE_TITLES: Record<string, string> = {
+  'build-soldering-basics': 'أساسيات اللحام والتوصيل',
+  'build-parts-tools': 'تجهيز القطع والأدوات',
+  'build-frame': 'تركيب الفريم',
+  'build-motors': 'تركيب المحركات',
+  'build-esc': 'تركيب ESC',
+  'build-fc': 'تركيب Flight Controller',
+  'build-receiver': 'تركيب Receiver',
+  'build-gps': 'تركيب GPS',
+  'build-vtx': 'تركيب نظام الفيديو VTX',
+  'build-pre-battery': 'فحص قبل البطارية / Smoke Stopper',
+};
+const LIST_TITLE = 'خريطة البناء';
+
 let passed = 0;
 function ok(label: string, cond: boolean) {
   assert.ok(cond, `FAILED: ${label}`);
@@ -41,9 +62,26 @@ async function waitForServer(url: string, timeoutMs = 20000) {
   throw new Error(`Server at ${url} did not become ready within ${timeoutMs}ms`);
 }
 
-async function stageHeaderButton(page: Page, id: string) {
-  // Header buttons carry aria-controls pointing at the panel id.
-  return page.locator(`button[aria-controls="roadmap-stage-panel-${id}"]`);
+function stageCard(page: Page, id: string) {
+  return page.locator(`[data-testid="roadmap-stage-card-${id}"]`);
+}
+
+function checklistButtons(page: Page) {
+  return page.locator('div').filter({ hasText: 'قائمة التحقق' }).last().locator('button');
+}
+
+// Waits for the *specific* expected h1 text rather than "some h1 is visible" —
+// after a client-side React Router transition, the previous page's h1 can
+// still be visible for a brief moment before React's re-render commits, so a
+// generic visibility wait can resolve against stale content. Only used after
+// in-app clicks (SPA transitions); full page.goto() navigations already wait
+// on 'networkidle' for a real page load and don't need this.
+async function waitForStageTitle(page: Page, expectedTitle: string, timeout = 5000) {
+  await page.waitForFunction(
+    (t) => document.querySelector('h1')?.textContent === t,
+    expectedTitle,
+    { timeout },
+  );
 }
 
 async function main() {
@@ -57,8 +95,8 @@ async function main() {
     });
     await waitForServer(BASE);
 
-    // ── [1-6] Load, stage count, accordion exclusivity, images, zoom ────
-    console.log('\n[1] Page loads, exactly 10 stages, images, zoom, accordion exclusivity');
+    // ── [1] List loads, exactly 10 stage cards, each opens its own detail page, images, zoom ──
+    console.log('\n[1] Stage list loads, exactly 10 stage cards, each opens its own detail page with an image, zoom works');
     {
       const consoleErrors: string[] = [];
       const failedRequests: string[] = [];
@@ -73,41 +111,47 @@ async function main() {
       await page.waitForTimeout(300);
       ok('/roadmap loads', page.url().endsWith('/roadmap'));
 
-      // panels only exist once opened, so count stage headers by aria-controls instead
-      const allHeaders = await page.locator('button[aria-controls^="roadmap-stage-panel-"]').count();
-      ok('exactly 10 stages displayed', allHeaders === 10);
+      const allCards = await page.locator('[data-testid^="roadmap-stage-card-"]').count();
+      ok('exactly 10 stage cards displayed', allCards === 10);
 
       for (const id of STAGE_IDS) {
-        const header = await stageHeaderButton(page, id);
-        ok(`stage header exists: ${id}`, await header.count() === 1);
+        ok(`stage card exists: ${id}`, await stageCard(page, id).count() === 1);
       }
 
-      // Open stage 1, then stage 2 — only one expanded at a time.
-      await (await stageHeaderButton(page, 'build-soldering-basics')).click();
-      await page.waitForTimeout(200);
-      ok('stage 1 opens (panel present)', await page.locator('#roadmap-stage-panel-build-soldering-basics').count() === 1);
-      ok('stage 1 image renders', await page.locator('#roadmap-stage-panel-build-soldering-basics img').count() === 1);
+      // Opening stage 1 navigates to its own dedicated page (list->detail, not accordion).
+      await stageCard(page, 'build-soldering-basics').click();
+      await waitForStageTitle(page, STAGE_TITLES['build-soldering-basics']);
+      ok('stage 1 opens its own page', page.url() === `${ROADMAP_URL}/build-soldering-basics`);
+      ok('stage 1 image renders', await page.locator('main img, img').count() >= 1);
 
-      await (await stageHeaderButton(page, 'build-parts-tools')).click();
-      await page.waitForTimeout(200);
-      ok('opening stage 2 closes stage 1 (only one expanded at a time)',
-        await page.locator('#roadmap-stage-panel-build-soldering-basics').count() === 0 &&
-        await page.locator('#roadmap-stage-panel-build-parts-tools').count() === 1);
+      // Going back to the list and opening stage 2 shows ONLY stage 2's content (never both at once).
+      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
+      await stageCard(page, 'build-parts-tools').click();
+      await waitForStageTitle(page, STAGE_TITLES['build-parts-tools']);
+      ok('opening stage 2 shows only stage 2 (list->detail replaces the page, never shows two stages at once)',
+        page.url() === `${ROADMAP_URL}/build-parts-tools` && await page.locator('h1').innerText() === STAGE_TITLES['build-parts-tools']);
 
       // Image zoom
-      await page.locator('#roadmap-stage-panel-build-parts-tools img').click();
+      await page.locator('img').first().click();
       await page.waitForTimeout(150);
       ok('image zoom opens', await page.getByLabel('إغلاق المعاينة').count() === 1);
       await page.getByLabel('إغلاق المعاينة').click();
       await page.waitForTimeout(150);
       ok('image zoom closes', await page.getByLabel('إغلاق المعاينة').count() === 0);
 
-      // Every stage displays its assigned image — open each in turn.
+      // Image zoom also dismisses on Escape (keyboard operation, not just mouse click)
+      await page.locator('img').first().click();
+      await page.waitForTimeout(150);
+      ok('image zoom re-opens for the Escape check', await page.getByLabel('إغلاق المعاينة').count() === 1);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(150);
+      ok('image zoom closes on Escape', await page.getByLabel('إغلاق المعاينة').count() === 0);
+
+      // Every stage displays its assigned image — visit each detail page in turn.
       for (const id of STAGE_IDS) {
-        await (await stageHeaderButton(page, id)).click();
-        await page.waitForTimeout(120);
-        const imgCount = await page.locator(`#roadmap-stage-panel-${id} img`).count();
-        ok(`stage displays its assigned image: ${id}`, imgCount === 1);
+        await page.goto(`${ROADMAP_URL}/${id}`, { waitUntil: 'networkidle' });
+        const imgCount = await page.locator('img').count();
+        ok(`stage displays its assigned image: ${id}`, imgCount >= 1);
       }
 
       ok('no failed/404 requests for roadmap assets', failedRequests.filter(f => f.includes('build-images') || f.includes('/roadmap')).length === 0);
@@ -116,19 +160,15 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [2] New content sections render ──────────────────────────────────
-    console.log('\n[2] New practical-content sections render for every stage');
+    // ── [2] New content sections render on every stage's detail page ──────
+    console.log('\n[2] Practical-content sections render for every stage detail page');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
       for (const id of STAGE_IDS) {
-        await (await stageHeaderButton(page, id)).click();
-        await page.waitForTimeout(120);
-        const panel = page.locator(`#roadmap-stage-panel-${id}`);
-        const text = await panel.innerText();
+        await page.goto(`${ROADMAP_URL}/${id}`, { waitUntil: 'networkidle' });
+        const text = await page.locator('body').innerText();
         ok(`${id}: "ماذا ستنجز؟" renders`, text.includes('ماذا ستنجز؟'));
         ok(`${id}: "قبل أن تبدأ" renders`, text.includes('قبل أن تبدأ'));
         ok(`${id}: "خطوات التنفيذ" renders`, text.includes('خطوات التنفيذ'));
@@ -136,10 +176,11 @@ async function main() {
         ok(`${id}: "توقف ولا تكمل إذا..." renders`, text.includes('توقف ولا تكمل إذا'));
       }
 
-      // Warnings/common-mistakes render where applicable (non-empty in data for all 10, but verify presence
-      // generically). The loop above already left "build-pre-battery" open as its last iteration.
-      const preBatteryText = await page.locator('#roadmap-stage-panel-build-pre-battery').innerText();
-      ok('critical warnings render where applicable (stage 10)', preBatteryText.includes('انتبه'));
+      // Warnings + the existing safety callout are consolidated under one "تحذيرات" chapter (still the same underlying text, per stage 10).
+      await page.goto(`${ROADMAP_URL}/build-pre-battery`, { waitUntil: 'networkidle' });
+      const preBatteryText = await page.locator('body').innerText();
+      ok('critical warnings render under the consolidated "تحذيرات" chapter (stage 10)', preBatteryText.includes('تحذيرات'));
+      ok('the danger-level safety callout text still renders verbatim (stage 10)', preBatteryText.includes('لا توصل LiPo قبل فحص القطبية'));
       ok('common mistakes render (stage 10)', preBatteryText.includes('أخطاء شائعة'));
 
       await ctx.close();
@@ -150,20 +191,18 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
-      await (await stageHeaderButton(page, 'build-frame')).click();
-      await page.waitForTimeout(150);
-      await page.locator('#roadmap-stage-panel-build-frame').getByText('تركيب الفريم', { exact: true }).click();
+      await page.goto(`${ROADMAP_URL}/build-frame`, { waitUntil: 'networkidle' });
+      // The stage title and the related-lesson chip label happen to share the
+      // same Arabic text ("تركيب الفريم") — scope to the chip button
+      // specifically (not a generic text match) to avoid strict-mode ambiguity
+      // against the page's own <h1>.
+      await page.getByRole('button', { name: 'تركيب الفريم', exact: true }).click();
       await page.waitForTimeout(300);
       ok('lesson link navigates to a valid /lessons destination', page.url().includes('/lessons/lesson-frame-assembly'));
 
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
-      await (await stageHeaderButton(page, 'build-gps')).click();
-      await page.waitForTimeout(150);
-      const gpsPanelText = await page.locator('#roadmap-stage-panel-build-gps').innerText();
+      await page.goto(`${ROADMAP_URL}/build-gps`, { waitUntil: 'networkidle' });
+      const gpsPanelText = await page.locator('body').innerText();
       ok('Stage 8 (GPS) does not show a "راجع بسرعة" lesson-link section (no real GPS lesson exists)', !gpsPanelText.includes('راجع بسرعة'));
       ok('Stage 8 is content-complete on its own (has practical steps and acceptance checks)',
         gpsPanelText.includes('خطوات التنفيذ') && gpsPanelText.includes('كيف تتأكد أن كل شيء صحيح؟'));
@@ -176,25 +215,19 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
+      await page.goto(`${ROADMAP_URL}/build-frame`, { waitUntil: 'networkidle' });
 
-      await (await stageHeaderButton(page, 'build-frame')).click();
-      await page.waitForTimeout(150);
-      const firstItem = page.locator('#roadmap-stage-panel-build-frame').locator('div').filter({ hasText: 'قائمة التحقق' }).last().locator('button').first();
+      const firstItem = checklistButtons(page).first();
       await firstItem.click();
       await page.waitForTimeout(150);
       ok('checked item shows strikethrough state immediately', (await firstItem.innerText()).length > 0);
 
       await page.reload({ waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
-      await (await stageHeaderButton(page, 'build-frame')).click();
-      await page.waitForTimeout(150);
       const storedChecklists = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), STORAGE_KEYS.CHECKLISTS);
       ok('a checked item remains checked after reload', (storedChecklists['roadmap-build-frame'] || []).includes('item-0'));
 
       // Partial completion
-      const secondItem = page.locator('#roadmap-stage-panel-build-frame').locator('div').filter({ hasText: 'قائمة التحقق' }).last().locator('button').nth(1);
+      const secondItem = checklistButtons(page).nth(1);
       await secondItem.click();
       await page.waitForTimeout(150);
       const partialStored = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '{}'), STORAGE_KEYS.CHECKLISTS);
@@ -209,7 +242,6 @@ async function main() {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(150);
 
       // Seed representative existing progress using the current storage format,
       // then reload so the app boots with this state already present.
@@ -233,104 +265,106 @@ async function main() {
       const summaryText = await page.locator('text=/من 10 مراحل مكتملة/').innerText();
       ok('completed-stage count reflects seeded data (2 of 10)', summaryText.startsWith('2'));
 
-      await (await stageHeaderButton(page, 'build-motors')).click();
-      await page.waitForTimeout(150);
-      const panelText = await page.locator('#roadmap-stage-panel-build-motors').innerText();
-      ok('seeded partial checklist state (2/7) still shows correctly for stage 4', panelText.includes('2/7') || (await page.locator('button[aria-controls="roadmap-stage-panel-build-motors"]').innerText()).includes('2/7'));
+      const motorsCardText = await stageCard(page, 'build-motors').innerText();
+      ok('seeded partial checklist state (2/7) shows correctly on the list card for stage 4', motorsCardText.includes('2/7'));
+
+      await page.goto(`${ROADMAP_URL}/build-motors`, { waitUntil: 'networkidle' });
+      const doneCount = await checklistButtons(page).evaluateAll(btns => btns.filter(b => b.querySelector('.line-through')).length);
+      ok('seeded partial checklist state (2/7) also shows correctly on the detail page for stage 4', doneCount === 2);
 
       await ctx.close();
     }
 
     // ── [6] Previous / Next navigation ────────────────────────────────────
-    console.log('\n[6] Previous / Next navigation');
+    console.log('\n[6] Previous / Next navigation (real route push, list->detail)');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
-      await (await stageHeaderButton(page, 'build-soldering-basics')).click();
-      await page.waitForTimeout(150);
-      const prev1 = page.locator('[data-testid="roadmap-stage-prev-build-soldering-basics"]');
-      ok('Stage 1 Previous is disabled', await prev1.isDisabled());
+      await page.goto(`${ROADMAP_URL}/build-soldering-basics`, { waitUntil: 'networkidle' });
+      ok('Stage 1 has no Previous button (first stage, mirrors the Lessons pattern of omitting rather than disabling)',
+        await page.locator('[data-testid="roadmap-stage-prev-build-soldering-basics"]').count() === 0);
 
       const next1 = page.locator('[data-testid="roadmap-stage-next-build-soldering-basics"]');
+      ok('Stage 1 Next displays the exact title of Stage 2 (not just a correct destination route)',
+        (await next1.innerText()).includes(STAGE_TITLES['build-parts-tools']));
       await next1.click();
-      await page.waitForTimeout(200);
-      ok('Stage 1 Next opens Stage 2', await page.locator('#roadmap-stage-panel-build-parts-tools').count() === 1);
+      await waitForStageTitle(page, STAGE_TITLES['build-parts-tools']);
+      ok('Stage 1 Next opens Stage 2', page.url() === `${ROADMAP_URL}/build-parts-tools`);
 
       const prev2 = page.locator('[data-testid="roadmap-stage-prev-build-parts-tools"]');
+      ok('Stage 2 Previous displays the exact title of Stage 1',
+        (await prev2.innerText()).includes(STAGE_TITLES['build-soldering-basics']));
       await prev2.click();
-      await page.waitForTimeout(200);
-      ok('Stage 2 Previous returns to Stage 1', await page.locator('#roadmap-stage-panel-build-soldering-basics').count() === 1);
+      await waitForStageTitle(page, STAGE_TITLES['build-soldering-basics']);
+      ok('Stage 2 Previous returns to Stage 1', page.url() === `${ROADMAP_URL}/build-soldering-basics`);
 
-      // Middle stage next/prev
-      await (await stageHeaderButton(page, 'build-fc')).click();
-      await page.waitForTimeout(150);
-      await page.locator('[data-testid="roadmap-stage-next-build-fc"]').click();
-      await page.waitForTimeout(200);
-      ok('middle-stage Next works (fc -> receiver)', await page.locator('#roadmap-stage-panel-build-receiver').count() === 1);
-      await page.locator('[data-testid="roadmap-stage-prev-build-receiver"]').click();
-      await page.waitForTimeout(200);
-      ok('middle-stage Previous works (receiver -> fc)', await page.locator('#roadmap-stage-panel-build-fc').count() === 1);
+      // Middle stage next/prev — verify both the destination route AND the displayed adjacent title
+      await page.goto(`${ROADMAP_URL}/build-fc`, { waitUntil: 'networkidle' });
+      const nextFc = page.locator('[data-testid="roadmap-stage-next-build-fc"]');
+      ok('middle-stage Next displays the exact title of the following stage (fc -> receiver)',
+        (await nextFc.innerText()).includes(STAGE_TITLES['build-receiver']));
+      await nextFc.click();
+      await waitForStageTitle(page, STAGE_TITLES['build-receiver']);
+      ok('middle-stage Next works (fc -> receiver)', page.url() === `${ROADMAP_URL}/build-receiver`);
+      const prevReceiver = page.locator('[data-testid="roadmap-stage-prev-build-receiver"]');
+      ok('middle-stage Previous displays the exact title of the prior stage (receiver -> fc)',
+        (await prevReceiver.innerText()).includes(STAGE_TITLES['build-fc']));
+      await prevReceiver.click();
+      await waitForStageTitle(page, STAGE_TITLES['build-fc']);
+      ok('middle-stage Previous works (receiver -> fc)', page.url() === `${ROADMAP_URL}/build-fc`);
 
-      // Stage 10 Next absent/disabled
-      await (await stageHeaderButton(page, 'build-pre-battery')).click();
-      await page.waitForTimeout(150);
-      const next10 = page.locator('[data-testid="roadmap-stage-next-build-pre-battery"]');
-      ok('Stage 10 Next is disabled (no Stage 11)', await next10.isDisabled());
+      // Stage 10: Previous displays the exact title of Stage 9, no Next control
+      await page.goto(`${ROADMAP_URL}/build-pre-battery`, { waitUntil: 'networkidle' });
+      const prevPreBattery = page.locator('[data-testid="roadmap-stage-prev-build-pre-battery"]');
+      ok('Stage 10 Previous displays the exact title of Stage 9',
+        (await prevPreBattery.innerText()).includes(STAGE_TITLES['build-vtx']));
+      ok('Stage 10 has no Next button (last stage, no Stage 11)', await page.locator('[data-testid="roadmap-stage-next-build-pre-battery"]').count() === 0);
 
-      // Direct accordion selection still works after using Prev/Next
-      await (await stageHeaderButton(page, 'build-esc')).click();
-      await page.waitForTimeout(150);
-      ok('direct accordion selection still works', await page.locator('#roadmap-stage-panel-build-esc').count() === 1);
+      // Direct list-card selection still works after using Prev/Next
+      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
+      await stageCard(page, 'build-esc').click();
+      await waitForStageTitle(page, STAGE_TITLES['build-esc']);
+      ok('direct list-card selection still works', page.url() === `${ROADMAP_URL}/build-esc`);
 
       // Navigation remains open/non-gated — jump directly to stage 9 without completing 1-8
-      await (await stageHeaderButton(page, 'build-vtx')).click();
-      await page.waitForTimeout(150);
-      ok('navigation remains open/non-gated (stage 9 opens without completing earlier stages)', await page.locator('#roadmap-stage-panel-build-vtx').count() === 1);
+      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
+      await stageCard(page, 'build-vtx').click();
+      await waitForStageTitle(page, STAGE_TITLES['build-vtx']);
+      ok('navigation remains open/non-gated (stage 9 opens without completing earlier stages)', page.url() === `${ROADMAP_URL}/build-vtx`);
 
       await ctx.close();
     }
 
-    // ── [7] Scroll-to-beginning behavior and independence from checklist toggles ──
+    // ── [7] New stage reveals its own beginning; checklist toggles don't reset scroll ──
     console.log('\n[7] Opening a new stage reveals its beginning; checklist toggles do not reset scroll');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 700 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
-      await (await stageHeaderButton(page, 'build-fc')).click();
-      await page.waitForTimeout(200);
+      await page.goto(`${ROADMAP_URL}/build-fc`, { waitUntil: 'networkidle' });
       await page.mouse.wheel(0, 900); // scroll deep into stage 6's long content
       await page.waitForTimeout(150);
       const scrollYBeforeNext = await page.evaluate(() => window.scrollY);
       ok('scrolled down into stage content before navigating', scrollYBeforeNext > 200);
 
       await page.locator('[data-testid="roadmap-stage-next-build-fc"]').click();
-      await page.waitForTimeout(250);
-      const headerRect = await page.evaluate(() => {
-        const btn = document.querySelector('button[aria-controls="roadmap-stage-panel-build-receiver"]');
-        const r = btn?.getBoundingClientRect();
-        return r ? { top: r.top, inView: r.top >= 0 && r.top < 700 } : null;
-      });
-      ok('after Next, the new stage\'s own header/beginning is visible in the viewport', !!headerRect && headerRect.inView);
+      await waitForStageTitle(page, STAGE_TITLES['build-receiver']);
+      await page.waitForTimeout(150);
+      const scrollYAfterNext = await page.evaluate(() => window.scrollY);
+      ok('after Next, the new stage starts at the top of the page (scroll explicitly reset)', scrollYAfterNext < 10);
 
-      // Toggle a checklist item in the newly-opened stage — must not reset scroll to page top.
-      // The first click may itself need Playwright to auto-scroll the (currently off-screen,
-      // further down the stage) checklist item into view, so that scroll is not evidence of
-      // anything — the real test is the SECOND toggle, once the item is already on-screen: if
-      // the app reset scroll on every checklist change, this second click would need to
-      // re-scroll too and scrollY would move again.
-      const firstChecklistBtn = page.locator('#roadmap-stage-panel-build-receiver').locator('div').filter({ hasText: 'قائمة التحقق' }).last().locator('button').first();
+      // Toggle a checklist item in the newly-opened stage — must not reset scroll.
+      await page.mouse.wheel(0, 900);
+      await page.waitForTimeout(150);
+      const firstChecklistBtn = checklistButtons(page).first();
       await firstChecklistBtn.click();
       await page.waitForTimeout(150);
       const scrollYAfterFirstToggle = await page.evaluate(() => window.scrollY);
       await firstChecklistBtn.click();
       await page.waitForTimeout(150);
       const scrollYAfterSecondToggle = await page.evaluate(() => window.scrollY);
-      ok('changing a checklist item within the same stage does not reset scroll (item already in view, no further scroll needed)', Math.abs(scrollYAfterSecondToggle - scrollYAfterFirstToggle) < 5);
+      ok('changing a checklist item within the same stage does not reset scroll', Math.abs(scrollYAfterSecondToggle - scrollYAfterFirstToggle) < 5);
 
       await ctx.close();
     }
@@ -340,29 +374,24 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
       // Navigating (Prev/Next/direct) does not auto-complete or auto-check anything.
-      await (await stageHeaderButton(page, 'build-esc')).click();
-      await page.waitForTimeout(150);
+      await page.goto(`${ROADMAP_URL}/build-esc`, { waitUntil: 'networkidle' });
       await page.locator('[data-testid="roadmap-stage-next-build-esc"]').click();
-      await page.waitForTimeout(150);
+      await waitForStageTitle(page, STAGE_TITLES['build-fc']);
       const escProgress = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '[]'), STORAGE_KEYS.PROGRESS_ROADMAP);
       ok('navigation does not auto-complete stages', !escProgress.includes('build-esc'));
 
       // Complete all 10 stages via their checklists to reach the final state.
       for (const id of STAGE_IDS) {
-        await (await stageHeaderButton(page, id)).click();
-        await page.waitForTimeout(100);
-        const panel = page.locator(`#roadmap-stage-panel-${id}`);
-        const checklistBtns = panel.locator('div').filter({ hasText: 'قائمة التحقق' }).last().locator('button');
-        const count = await checklistBtns.count();
+        await page.goto(`${ROADMAP_URL}/${id}`, { waitUntil: 'networkidle' });
+        const btns = checklistButtons(page);
+        const count = await btns.count();
         for (let i = 0; i < count; i++) {
-          await checklistBtns.nth(i).click();
+          await btns.nth(i).click();
         }
         await page.waitForTimeout(80);
-        const completeBtn = panel.getByText('إتمام المرحلة');
+        const completeBtn = page.getByText('إتمام المرحلة');
         if (await completeBtn.count() > 0) await completeBtn.click();
         await page.waitForTimeout(100);
       }
@@ -370,9 +399,9 @@ async function main() {
       const finalProgress = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '[]'), STORAGE_KEYS.PROGRESS_ROADMAP);
       ok('completing one stage does not modify another (all 10 explicitly completed, none extra)', finalProgress.length === 10 && STAGE_IDS.every(id => finalProgress.includes(id)));
 
-      await page.waitForTimeout(200);
+      await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
       const finalCard = page.locator('[data-testid="roadmap-final-completion"]');
-      ok('completing all 10 stages reveals the final completion state', await finalCard.count() === 1);
+      ok('completing all 10 stages reveals the final completion state on the list page', await finalCard.count() === 1);
       const finalText = await finalCard.innerText();
       ok('final completion state does not claim the drone is ready to fly', !/جاهز(ة)?\s+للطيران(?!.*ليس)/.test(finalText) && finalText.includes('ليس جاهزًا للطيران'));
       ok('final completion state says propellers remain removed', finalText.includes('المراوح غير مركبة'));
@@ -380,12 +409,11 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [9] Programming Hub link + no unavailable section presented as open ──
+    // ── [9] Final-state destination links ─────────────────────────────────
     console.log('\n[9] Final-state destination links');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.evaluate(() => {}); // noop to keep pattern consistent
       await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
       await page.evaluate((keys) => {
         localStorage.setItem(keys.PROGRESS_ROADMAP, JSON.stringify([
@@ -414,11 +442,12 @@ async function main() {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
-      await (await stageHeaderButton(page, 'build-soldering-basics')).click();
-      await page.waitForTimeout(200);
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-      ok('no horizontal overflow with a stage open', !overflow);
+      let overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow on the stage list', !overflow);
+
+      await page.goto(`${ROADMAP_URL}/build-soldering-basics`, { waitUntil: 'networkidle' });
+      overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow on a stage detail page', !overflow);
       await ctx.close();
     }
 
@@ -428,21 +457,52 @@ async function main() {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
       await page.goto(ROADMAP_URL, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(200);
 
-      const header = await stageHeaderButton(page, 'build-soldering-basics');
-      await header.focus();
+      const card = stageCard(page, 'build-soldering-basics');
+      await card.focus();
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
-      ok('keyboard Enter opens a stage', await page.locator('#roadmap-stage-panel-build-soldering-basics').count() === 1);
+      await waitForStageTitle(page, STAGE_TITLES['build-soldering-basics']);
+      ok('keyboard Enter opens a stage', page.url() === `${ROADMAP_URL}/build-soldering-basics`);
 
-      ok('accordion header has aria-expanded', await header.getAttribute('aria-expanded') === 'true');
+      const backButton = page.locator('button[aria-label="العودة"]');
+      ok('back button has an aria-label', await backButton.count() === 1);
 
       const nextBtn = page.locator('[data-testid="roadmap-stage-next-build-soldering-basics"]');
       await nextBtn.focus();
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
-      ok('keyboard Enter activates the Next control', await page.locator('#roadmap-stage-panel-build-parts-tools').count() === 1);
+      await waitForStageTitle(page, STAGE_TITLES['build-parts-tools']);
+      ok('keyboard Enter activates the Next control', page.url() === `${ROADMAP_URL}/build-parts-tools`);
+
+      await ctx.close();
+    }
+
+    // ── [12] Invalid stage route — honest app-integrated empty state ──────
+    console.log('\n[12] Invalid stage route is an honest, app-integrated empty state (not a bare dead end)');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+
+      await page.goto(`${ROADMAP_URL}/this-stage-does-not-exist`, { waitUntil: 'networkidle' });
+      ok('exactly one h1 on the invalid-stage page', await page.locator('h1').count() === 1);
+      ok('invalid-stage h1 shows the honest Arabic message', await page.locator('h1').innerText() === 'المرحلة غير موجودة');
+      ok('invalid-stage page renders inside AppShell (bottom nav present)', await page.locator('nav').count() === 1);
+      ok('invalid-stage page keeps "البناء" as the active bottom-nav item', page.url().startsWith(ROADMAP_URL));
+
+      const backIcon = page.locator('button[aria-label="العودة"]');
+      ok('invalid-stage page has an accessible back icon button', await backIcon.count() === 1);
+
+      const returnButton = page.getByRole('button', { name: 'العودة إلى خريطة البناء' });
+      ok('invalid-stage page has a clear native button returning to /roadmap', await returnButton.count() === 1);
+      await returnButton.click();
+      await waitForStageTitle(page, LIST_TITLE);
+      ok('the return button navigates to /roadmap (fixed destination)', page.url() === ROADMAP_URL);
+
+      // Browser Back must still work after visiting an invalid stage route.
+      await page.goto(`${ROADMAP_URL}/build-frame`, { waitUntil: 'networkidle' });
+      await page.goto(`${ROADMAP_URL}/another-invalid-id`, { waitUntil: 'networkidle' });
+      await page.goBack();
+      await page.waitForLoadState('networkidle');
+      ok('browser Back still works after an invalid stage route', page.url() === `${ROADMAP_URL}/build-frame`);
 
       await ctx.close();
     }
