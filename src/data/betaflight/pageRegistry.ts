@@ -3,6 +3,10 @@ import { setupPage } from './pages/setup';
 import { portsPage } from './pages/ports';
 import { motorsPage } from './pages/motors';
 import { failsafePage } from './pages/failsafe';
+import { powerPage } from './pages/power';
+import { modesPage } from './pages/modes';
+import { configurationPage } from './pages/configuration';
+import { receiverPage } from './pages/receiver';
 
 /**
  * Official page/tab registry — verified directly against the cloned
@@ -51,18 +55,18 @@ export const bfPageRegistry: BfRegistryEntry[] = [
   // ── Connected-state tabs (always available once connected) ──
   { id: 'setup', officialId: 'setup', officialTitle: 'Setup', titleAr: 'الإعداد الأولي', officialOrder: 6, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'reviewed', page: setupPage },
   { id: 'failsafe', officialId: 'failsafe', officialTitle: 'Failsafe', titleAr: 'الحماية عند فقدان الإشارة', officialOrder: 7, connectionState: 'connected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'reviewed', page: failsafePage },
-  { id: 'power', officialId: 'power', officialTitle: 'Power & Battery', titleAr: 'الطاقة والبطارية', officialOrder: 8, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'not-started' },
+  { id: 'power', officialId: 'power', officialTitle: 'Power & Battery', titleAr: 'الطاقة والبطارية', officialOrder: 8, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: powerPage },
   { id: 'adjustments', officialId: 'adjustments', officialTitle: 'Adjustments', titleAr: 'التعديلات أثناء التحكم', officialOrder: 9, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
-  { id: 'modes', officialId: 'auxiliary', officialTitle: 'Modes', titleAr: 'أوضاع التشغيل', officialOrder: 10, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'not-started' },
+  { id: 'modes', officialId: 'auxiliary', officialTitle: 'Modes', titleAr: 'أوضاع التشغيل', officialOrder: 10, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: modesPage },
   { id: 'presets', officialId: 'presets', officialTitle: 'Presets', titleAr: 'الإعدادات الجاهزة', officialOrder: 11, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
   { id: 'cli', officialId: 'cli', officialTitle: 'CLI', titleAr: 'سطر الأوامر', officialOrder: 12, connectionState: 'connected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'not-started' },
-  { id: 'configuration', officialId: 'configuration', officialTitle: 'Configuration', titleAr: 'الإعدادات العامة', officialOrder: 13, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'not-started' },
+  { id: 'configuration', officialId: 'configuration', officialTitle: 'Configuration', titleAr: 'الإعدادات العامة', officialOrder: 13, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: configurationPage },
   { id: 'tethered-logging', officialId: 'logging', officialTitle: 'Tethered Logging', titleAr: 'التسجيل المباشر عبر USB', officialOrder: 14, connectionState: 'connected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },
   { id: 'blackbox', officialId: 'onboard_logging', officialTitle: 'Blackbox', titleAr: 'صندوق التسجيل الأسود', officialOrder: 15, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
   { id: 'motors', officialId: 'motors', officialTitle: 'Motors', titleAr: 'المحركات', officialOrder: 16, connectionState: 'connected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'reviewed', page: motorsPage },
   { id: 'pid-tuning', officialId: 'pid_tuning', officialTitle: 'PID Tuning', titleAr: 'ضبط PID', officialOrder: 17, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'not-started' },
   { id: 'ports', officialId: 'ports', officialTitle: 'Ports', titleAr: 'المنافذ', officialOrder: 18, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: portsPage },
-  { id: 'receiver', officialId: 'receiver', officialTitle: 'Receiver', titleAr: 'المستقبل', officialOrder: 19, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'not-started' },
+  { id: 'receiver', officialId: 'receiver', officialTitle: 'Receiver', titleAr: 'المستقبل', officialOrder: 19, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: receiverPage },
   { id: 'sensors', officialId: 'sensors', officialTitle: 'Sensors', titleAr: 'الحساسات', officialOrder: 20, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
 
   // ── Feature/hardware-conditional tabs (cloud-build gated) ──

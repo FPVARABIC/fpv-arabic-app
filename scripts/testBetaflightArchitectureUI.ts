@@ -156,17 +156,15 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [5] The 7 legacy IDs that are still "not-started" in the registry render EXACTLY as before ──
-    // ("motors" and "failsafe" are legacy IDs too, but Phase 2 gave them real registry .page
-    // entries, so — same as "ports" in Phase 1 — the new complete page now wins at those URLs.
-    // They are covered separately in sections [13]/[14], not here.
-    console.log('\n[5] The other 7 legacy IDs (still not-started in the registry) are pixel-for-pixel unaffected');
+    // ── [5] The 5 legacy IDs that are still "not-started" in the registry render EXACTLY as before ──
+    // ("motors", "failsafe" got real registry .page entries in Phase 2; "receiver" and "modes" got
+    // real registry .page entries in Phase 3 — same as "ports" in Phase 1, the new complete page now
+    // wins at those URLs. They are covered separately in sections [13]/[14] and [16]-[19], not here.
+    console.log('\n[5] The other 5 legacy IDs (still not-started in the registry) are pixel-for-pixel unaffected');
     {
       const LEGACY_UNCHANGED = [
         { id: 'interface', titleAr: 'واجهة Betaflight' },
         { id: 'firmware', titleAr: 'Firmware / تحديث' },
-        { id: 'receiver', titleAr: 'Receiver' },
-        { id: 'modes', titleAr: 'Modes' },
         { id: 'osd', titleAr: 'OSD' },
         { id: 'blackbox', titleAr: 'Blackbox' },
         { id: 'cli', titleAr: 'CLI' },
@@ -196,8 +194,8 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [7] /betaflight/power: a real, verified official page with no authored content yet ──
-    console.log('\n[7] /betaflight/power shows the honest not-started state, not a fake 404');
+    // ── [7] /betaflight/power: now a real, complete "reviewed" page (Phase 3) ──
+    console.log('\n[7] /betaflight/power renders the complete "reviewed" Power & Battery page (Phase 3)');
     {
       const consoleErrors: string[] = [];
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -209,12 +207,15 @@ async function main() {
       ok('exactly one h1', await page.locator('h1').count() === 1);
       ok('h1 shows the official English title "Power & Battery"', (await page.locator('h1').textContent())?.trim() === 'Power & Battery');
       ok('Arabic title "الطاقة والبطارية" renders', await page.locator('text=الطاقة والبطارية').count() >= 1);
-      ok('content-status badge shows "لم يُبدأ بعد" (not-started, honest)', await page.locator('text=لم يُبدأ بعد').count() >= 1);
-      ok('explicit "not built yet" explanation text renders', await page.locator('text=لم يتم بعد بناء المحتوى العربي').count() === 1);
-      ok('does NOT show the generic "not found" message', await page.locator('text=القسم غير موجود').count() === 0);
-      ok('does NOT show any fake settings/fields (no englishLabel-style field rows)', await page.locator('.card-subtle p.text-sm.font-bold').count() === 0);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 3 complete)', await page.locator('text=مراجَع').count() >= 1);
+      ok('does NOT show the not-started explanation text anymore', await page.locator('text=لم يتم بعد بناء المحتوى العربي').count() === 0);
+      ok('the Battery group renders', await page.locator('text=Battery').count() >= 1);
+      ok('the Voltage Meter group renders', await page.locator('text=Voltage Meter').count() >= 1);
+      ok('the Calibration Manager button renders', await page.locator('text=Calibration').count() >= 1);
+      ok('the verbatim propeller-removal calibration warning renders (English quoted text)', await page.locator('text=Remember to remove propellers').count() >= 1);
       ok('version/release-line context renders', await page.locator('text=2025.12').count() >= 1);
       ok('the safety badge renders (Power & Battery is registered as "warning")', await page.locator('text=تحذير').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/power-tab"]').count()) === 1);
       ok('Programming nav tab is active on /betaflight/power', await navButtonIsActive(page, 'البرمجة'));
       ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
@@ -222,7 +223,7 @@ async function main() {
 
       await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
       await page.waitForLoadState('networkidle');
-      ok('return-to-hub works from the not-started page', page.url() === `${BASE}/betaflight`);
+      ok('return-to-hub works from the reviewed Power page', page.url() === `${BASE}/betaflight`);
       await ctx.close();
     }
 
@@ -260,8 +261,8 @@ async function main() {
       ok('Programming is ACTIVE (real color match) on /betaflight/setup', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/betaflight/ports`, { waitUntil: 'networkidle' });
       ok('Programming is ACTIVE (real color match) on /betaflight/ports', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
-      await page.goto(`${BASE}/betaflight/power`, { waitUntil: 'networkidle' });
-      ok('Programming is ACTIVE (real color match) on /betaflight/power (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
+      await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
+      ok('Programming is ACTIVE (real color match) on /betaflight/adjustments (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' });
       ok('Programming is INACTIVE (real color match) on /home', (await navButtonColor(page, 'البرمجة')) === INACTIVE_NAV_COLOR);
       await ctx.close();
@@ -272,7 +273,7 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/betaflight/power`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
       const backArrow = page.locator('button[aria-label="العودة"]');
       ok('icon back-button has an aria-label on the not-started page', await backArrow.count() === 1);
       await backArrow.focus();
@@ -294,7 +295,7 @@ async function main() {
       for (const vp of viewports) {
         const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
         const page = await ctx.newPage();
-        await page.goto(`${BASE}/betaflight/power`, { waitUntil: 'networkidle' });
+        await page.goto(`${BASE}/betaflight/adjustments`, { waitUntil: 'networkidle' });
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
         ok(`[${vp.name}] no horizontal overflow on the not-started page`, !overflow);
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -384,15 +385,114 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [15] Responsive: Motors and Failsafe at 3 viewports (highest-safety pages get explicit coverage) ──
-    console.log('\n[15] Motors and Failsafe are responsive at mobile/tablet/desktop viewports');
+    // ── [16] /betaflight/configuration: complete "reviewed" page (Phase 3), two distinct beeper tables ──
+    console.log('\n[16] /betaflight/configuration renders the complete "reviewed" Configuration page (Phase 3)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/configuration`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Configuration"', (await page.locator('h1').textContent())?.trim() === 'Configuration');
+      ok('Arabic title "الإعدادات العامة" renders', await page.locator('text=الإعدادات العامة').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 3 complete)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the "Other Features" group renders', await page.locator('text=Other Features').count() >= 1);
+      ok('the "Beeper Configuration" group renders (full condition list)', await page.locator('text=Beeper Configuration').count() >= 1);
+      ok('the "Dshot Beacon Configuration" group renders (the SEPARATE restricted condition list)', await page.locator('text=Dshot Beacon Configuration').count() >= 1);
+      ok('the "Maximum ARM Angle" field renders', await page.locator('text=Maximum ARM Angle').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/configuration-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/configuration', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [17] /betaflight/receiver: complete "reviewed" page (Phase 3, supersedes the legacy URL), two distinct Save buttons ──
+    console.log('\n[17] /betaflight/receiver renders the complete "reviewed" Receiver page (Phase 3, legacy URL now superseded)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/receiver`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Receiver"', (await page.locator('h1').textContent())?.trim() === 'Receiver');
+      ok('Arabic title "المستقبل" renders', await page.locator('text=المستقبل').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 3 complete, supersedes legacy)', await page.locator('text=مراجَع').count() >= 1);
+      ok('critical safety badge renders (Receiver is Failsafe-adjacent)', await page.locator('text=حرِج').count() >= 1);
+      ok('the verbatim Failsafe-testing reminder renders (English quoted text)', await page.locator('text=Always check that your Failsafe is working properly').count() >= 1);
+      ok('the "Serial Receiver Provider" field renders', await page.locator('text=Serial Receiver Provider').count() >= 1);
+      ok('the "SPI Bus Receiver Provider" field renders', await page.locator('text=SPI Bus Receiver Provider').count() >= 1);
+      ok('the plain "Save" action renders (no-reboot save)', await page.locator('text=Save').count() >= 1);
+      ok('the "Save and Reboot" action renders as its own SEPARATE control', await page.locator('text=Save and Reboot').count() >= 1);
+      ok('the "Bind Receiver" action renders', await page.locator('text=Bind Receiver').count() >= 1);
+      ok('the "Radio Emulator" action renders', await page.locator('text=Radio Emulator').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/receiver-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/receiver', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [18] /betaflight/modes: complete "reviewed" page (Phase 3, supersedes the legacy URL), honest no-reboot save ──
+    console.log('\n[18] /betaflight/modes renders the complete "reviewed" Modes page (Phase 3, legacy URL now superseded)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/modes`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Modes"', (await page.locator('h1').textContent())?.trim() === 'Modes');
+      ok('Arabic title "أوضاع التشغيل" renders', await page.locator('text=أوضاع التشغيل').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 3 complete, supersedes legacy)', await page.locator('text=مراجَع').count() >= 1);
+      ok('critical safety badge renders (Modes governs ARM among other modes)', await page.locator('text=حرِج').count() >= 1);
+      ok('the verbatim ARM-cannot-be-linked exception renders (English quoted text)', await page.locator('text=ARM cannot be linked').count() >= 1);
+      ok('the "Hide unused modes" toggle renders', await page.locator('text=Hide unused modes').count() >= 1);
+      ok('the modes assignment table renders', await page.locator('text=Modes').count() >= 1);
+      ok('the "Add Range" action renders', await page.locator('text=Add Range').count() >= 1);
+      ok('the "Add Link" action renders', await page.locator('text=Add Link').count() >= 1);
+      ok('official source link renders and points at betaflight.com (officialId "auxiliary")', (await page.locator('a[href*="betaflight.com/docs/wiki/app/auxiliary-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/modes', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [15] Responsive: Motors, Failsafe, Configuration, Power, Receiver, Modes at 3 viewports ──
+    console.log('\n[15] All Phase 2 + Phase 3 reviewed pages are responsive at mobile/tablet/desktop viewports');
     {
       const viewports = [
         { name: 'mobile 390x844', width: 390, height: 844 },
         { name: 'tablet 768x1024', width: 768, height: 1024 },
         { name: 'desktop 1440x900', width: 1440, height: 900 },
       ];
-      for (const routeId of ['motors', 'failsafe']) {
+      for (const routeId of ['motors', 'failsafe', 'configuration', 'power', 'receiver', 'modes']) {
         for (const vp of viewports) {
           const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
           const page = await ctx.newPage();
