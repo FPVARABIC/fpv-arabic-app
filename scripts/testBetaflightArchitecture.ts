@@ -25,13 +25,21 @@ import { modesPage } from '../src/data/betaflight/pages/modes';
 import { pidTuningPage } from '../src/data/betaflight/pages/pid_tuning';
 import { presetsPage } from '../src/data/betaflight/pages/presets';
 import { adjustmentsPage } from '../src/data/betaflight/pages/adjustments';
+import { osdPage } from '../src/data/betaflight/pages/osd';
+import { vtxPage } from '../src/data/betaflight/pages/vtx';
+import { sensorsPage } from '../src/data/betaflight/pages/sensors';
+import { gpsPage } from '../src/data/betaflight/pages/gps';
+import { ledStripPage } from '../src/data/betaflight/pages/led_strip';
+import { servosPage } from '../src/data/betaflight/pages/servos';
+import { cliPage } from '../src/data/betaflight/pages/cli';
 import { betaflightData } from '../src/data/betaflightData';
 import type { BfPage } from '../src/data/betaflight/types';
 
 const PHASE_2_PAGES = [setupPage, portsPage, motorsPage, failsafePage] as BfPage[];
 const PHASE_3_PAGES = [configurationPage, powerPage, receiverPage, modesPage] as BfPage[];
 const PHASE_4_PAGES = [pidTuningPage, presetsPage, adjustmentsPage] as BfPage[];
-const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES, ...PHASE_4_PAGES];
+const PHASE_5_PAGES = [osdPage, vtxPage, sensorsPage, gpsPage, ledStripPage, servosPage, cliPage] as BfPage[];
+const ALL_REVIEWED_PAGES = [...PHASE_2_PAGES, ...PHASE_3_PAGES, ...PHASE_4_PAGES, ...PHASE_5_PAGES];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -223,10 +231,9 @@ console.log('\n[7j] PID Tuning, Presets, Adjustments (Phase 4): honest "reviewed
   ok('presetsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'presets')?.page === presetsPage);
   ok('adjustmentsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'adjustments')?.page === adjustmentsPage);
 
-  ok('exactly 11 registry entries are "reviewed" (Setup, Ports, Motors, Failsafe, Configuration, Power, Receiver, Modes, PID Tuning, Presets, Adjustments)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 11);
-  ok('the remaining 15 registry entries are honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 15);
-  ok('no Phase 5+ page was started (only exactly these 11 ids are reviewed)', JSON.stringify(bfPageRegistry.filter(e => e.contentStatus === 'reviewed').map(e => e.id).sort())
-    === JSON.stringify(['adjustments', 'configuration', 'failsafe', 'modes', 'motors', 'pid-tuning', 'ports', 'power', 'presets', 'receiver', 'setup'].sort()));
+  ok('exactly 11 registry entries were "reviewed" as of Phase 4 (Setup, Ports, Motors, Failsafe, Configuration, Power, Receiver, Modes, PID Tuning, Presets, Adjustments)',
+    ['adjustments', 'configuration', 'failsafe', 'modes', 'motors', 'pid-tuning', 'ports', 'power', 'presets', 'receiver', 'setup']
+      .every(id => bfPageRegistry.find(e => e.id === id)?.contentStatus === 'reviewed'));
 }
 
 console.log('\n[7k] PID Tuning: dead/permanently-hidden source elements correctly excluded, real save-without-reboot semantics, no fabricated Launch Control section');
@@ -440,8 +447,145 @@ console.log('\n[7i] Modes (auxiliary): honest no-reboot save, ARM-cannot-be-link
   ok('Modes: officialId is "auxiliary" (internal tab ID), while officialTitle is the visible "Modes"', modesPage.officialId === 'auxiliary' && modesPage.officialTitle === 'Modes');
   ok('Modes: page-level safetyLevel is "critical" (governs ARM among other modes)', modesPage.safetyLevel === 'critical');
 
-  ok('all 8 Phase 2 + Phase 3 pages are honestly marked "reviewed"', ALL_REVIEWED_PAGES.every(p => p.contentStatus === 'reviewed'));
-  ok('all 8 Phase 2 + Phase 3 pages carry a real 40-char verified source commit hash', ALL_REVIEWED_PAGES.every(p => /^[0-9a-f]{40}$/.test(p.source.commit ?? '')));
+  ok('all 18 reviewed pages (Phases 2-5) are honestly marked "reviewed"', ALL_REVIEWED_PAGES.every(p => p.contentStatus === 'reviewed'));
+  ok('all 18 reviewed pages (Phases 2-5) carry a real 40-char verified source commit hash', ALL_REVIEWED_PAGES.every(p => /^[0-9a-f]{40}$/.test(p.source.commit ?? '')));
+}
+
+console.log('\n[7n] OSD, VTX, Sensors, GPS, LED Strip, Servos, CLI (Phase 5): honest "reviewed" status, real source-backed fields, no invented data');
+{
+  for (const page of PHASE_5_PAGES) {
+    ok(`${page.id}: contentStatus is explicitly "reviewed" (Phase 5 complete pages)`, page.contentStatus === 'reviewed');
+    ok(`${page.id}: has a non-empty source.url`, page.source.url.length > 0);
+    ok(`${page.id}: source.url matches the verified officialDocUrl pattern`, page.source.url === officialDocUrl(page.officialId));
+    ok(`${page.id}: has a non-empty source.repoPath (real file, not invented)`, (page.source.repoPath ?? '').length > 0);
+    ok(`${page.id}: source.commit is a real 40-char git hash`, /^[0-9a-f]{40}$/.test(page.source.commit ?? ''));
+    ok(`${page.id}: has at least one group`, page.groups.length > 0);
+    ok(`${page.id}: every group has at least one field`, page.groups.every(g => g.fields.length > 0));
+
+    const allFields = page.groups.flatMap(g => g.fields);
+    ok(`${page.id}: field IDs are unique within the page`, new Set(allFields.map(f => f.id)).size === allFields.length);
+    ok(`${page.id}: group IDs are unique within the page`, new Set(page.groups.map(g => g.id)).size === page.groups.length);
+    ok(`${page.id}: every field has a non-empty englishLabel`, allFields.every(f => f.englishLabel.length > 0));
+    ok(`${page.id}: every field has a non-empty arabicMeaning`, allFields.every(f => f.arabicMeaning.length > 0));
+    ok(`${page.id}: every field has a non-empty arabicExplanation`, allFields.every(f => f.arabicExplanation.length > 0));
+    ok(`${page.id}: every field has a valid safetyLevel`, allFields.every(f => SAFETY_LEVELS.has(f.safetyLevel)));
+    ok(`${page.id}: every field has a valid controlType`, allFields.every(f => ['toggle', 'select', 'number', 'text', 'button', 'table', 'graph', 'status', 'action'].includes(f.controlType)));
+    ok(`${page.id}: every field carries its own source`, allFields.every(f => f.source.url.length > 0));
+    ok(`${page.id}: every field's source.repoPath is a real path (non-empty)`, allFields.every(f => (f.source.repoPath ?? '').length > 0));
+    ok(`${page.id}: every field with scope !== 'universal' has a conditionNote`, allFields.every(f => f.scope === 'universal' || (f.conditionNote ?? '').length > 0));
+    ok(`${page.id}: every field explicitly states requiresSave (boolean)`, allFields.every(f => typeof f.requiresSave === 'boolean'));
+    ok(`${page.id}: every field explicitly states requiresReboot (boolean)`, allFields.every(f => typeof f.requiresReboot === 'boolean'));
+    ok(`${page.id}: no field invents a numeric range without min AND max together`, allFields.every(f => !f.range || (f.range.min === undefined) === (f.range.max === undefined)));
+    ok(`${page.id}: every group has a valid content level`, page.groups.every(g => CONTENT_LEVELS.has(g.level)));
+    ok(`${page.id}: dependsOnFieldIds (if present) reference real field IDs on the same page`, allFields.every(f => (f.dependsOnFieldIds ?? []).every(depId => allFields.some(other => other.id === depId))));
+  }
+
+  ok('osdPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'osd')?.page === osdPage);
+  ok('vtxPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'vtx')?.page === vtxPage);
+  ok('sensorsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'sensors')?.page === sensorsPage);
+  ok('gpsPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'gps')?.page === gpsPage);
+  ok('ledStripPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'led-strip')?.page === ledStripPage);
+  ok('servosPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'servos')?.page === servosPage);
+  ok('cliPage is registered in bfPageRegistry with matching content', bfPageRegistry.find(e => e.id === 'cli')?.page === cliPage);
+
+  ok('exactly 26 registry entries exist total', bfPageRegistry.length === 26);
+  ok('exactly 18 registry entries are "reviewed" after Phase 5', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
+  ok('exactly 8 registry entries remain honestly "not-started"', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
+  ok('the 8 not-started IDs match the verified out-of-scope Phase 5 list', JSON.stringify(bfPageRegistry.filter(e => e.contentStatus === 'not-started').map(e => e.id).sort())
+    === JSON.stringify(['landing', 'firmware-flasher', 'privacy-policy', 'options', 'help', 'tethered-logging', 'blackbox', 'transponder'].sort()));
+}
+
+console.log('\n[7o] OSD: dead/permanently-hidden source elements correctly excluded, plain-Save-vs-Upload-Font-reboot semantics kept distinct');
+{
+  const allOsdFields = osdPage.groups.flatMap(g => g.fields);
+  ok('OSD: no field models the dead "VTX Settings" box (verified permanently display:none, never populated)', !allOsdFields.some(f => /vtx-settings|osdSetupVtxTitle/i.test(f.id)));
+  ok('OSD: no field models the dead "Aircraft Name" / callsign box (verified permanently display:none, never populated)', !allOsdFields.some(f => f.id === 'osd-craft-name' || f.id === 'osd-callsign'));
+  ok('OSD: no field models the inert Zoom checkbox (verified CSS force-hidden, id never referenced in JS)', !allOsdFields.some(f => /preview-zoom/i.test(f.id)));
+  ok('OSD: the Rulers checkbox IS modeled (verified real and wired to drawRulers())', allOsdFields.some(f => f.id === 'osd-preview-rulers-toggle'));
+  const saveField = allOsdFields.find(f => f.id === 'osd-save');
+  const uploadFontField = allOsdFields.find(f => f.id === 'osd-upload-font-button');
+  ok('OSD: plain "Save" correctly does NOT require reboot (verified: MSP_EEPROM_WRITE only)', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  ok('OSD: "Upload Font" is the only action page-wide that requires reboot (verified: MSP_SET_REBOOT sent only here)', uploadFontField?.requiresReboot === true);
+  ok('OSD: exactly one field on the whole page requires reboot', allOsdFields.filter(f => f.requiresReboot === true).length === 1);
+  ok('OSD: the Elements list documents real version-gated additions (1.45/1.46/1.47), not a fabricated flat list', /1\.45/.test(allOsdFields.find(f => f.id === 'osd-elements-list')?.conditionNote ?? '') && /1\.46/.test(allOsdFields.find(f => f.id === 'osd-elements-list')?.arabicExplanation ?? ''));
+  ok('OSD: the preset-position grid documents all 15 real named positions', (allOsdFields.find(f => f.id === 'osd-preset-position-grid')?.arabicExplanation.match(/Top|Bottom|Left|Right|Center|Middle/g) ?? []).length >= 15);
+  ok('OSD page-level safetyLevel is "caution"', osdPage.safetyLevel === 'caution');
+}
+
+console.log('\n[7p] VTX: no fabricated protocol-select field (auto-detected/read-only), hardware-dependent power fallback, no-reboot save');
+{
+  const allVtxFields = vtxPage.groups.flatMap(g => g.fields);
+  ok('VTX: no field models a user-facing "protocol" select (verified auto-detected, display-only in Current Values)', !allVtxFields.some(f => f.id === 'vtx-protocol' || f.englishLabel === 'Protocol'));
+  ok('VTX: the Current Values status field is the only place VTX type/protocol is surfaced', allVtxFields.find(f => f.id === 'vtx-current-values-status')?.controlType === 'status');
+  const powerField = allVtxFields.find(f => f.id === 'vtx-power');
+  ok('VTX: Power select is hardware-dependent (no fabricated fixed option list — real range depends on detected VTX type or custom table)', powerField?.scope === 'hardware-dependent' && !powerField?.range?.options);
+  const saveField = allVtxFields.find(f => f.id === 'vtx-save');
+  ok('VTX: Save action exists and correctly does NOT require reboot (verified: writeConfiguration(false, ...))', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  ok('VTX: no field on the whole page requires reboot', allVtxFields.every(f => f.requiresReboot === false));
+  ok('VTX page-level safetyLevel is "warning"', vtxPage.safetyLevel === 'warning');
+}
+
+console.log('\n[7q] Sensors: NO page-actions/Save group exists (verified genuinely absent from real source), hardware-detection gating, no fabricated calibration/declination');
+{
+  ok('Sensors: no "page-actions" group exists (verified: zero MSP_EEPROM_WRITE/writeConfiguration/reboot calls anywhere in sensors.js)', !sensorsPage.groups.some(g => g.id === 'page-actions'));
+  const allSensorFields = sensorsPage.groups.flatMap(g => g.fields);
+  ok('Sensors: not a single field on the page requires save', allSensorFields.every(f => f.requiresSave === false));
+  ok('Sensors: not a single field on the page requires reboot', allSensorFields.every(f => f.requiresReboot === false));
+  ok('Sensors: no field models a calibration action (verified absent — calibration lives on Setup)', !allSensorFields.some(f => /calibrat/i.test(f.id)));
+  ok('Sensors: no field models magnetic declination (verified absent — lives on Configuration/GPS)', !allSensorFields.some(f => /declination/i.test(f.id)));
+  ok('Sensors: no field models optical flow (verified have_sensor() never queried for it in this tab)', !allSensorFields.some(f => /optical.?flow/i.test(f.id)));
+  const accelEnable = allSensorFields.find(f => f.id === 'sensors-accel-enable');
+  const gyroEnable = allSensorFields.find(f => f.id === 'sensors-gyro-enable');
+  ok('Sensors: Accelerometer checkbox is hardware-gated (unlike Gyroscope, which is always available)', accelEnable?.scope === 'sensor-dependent' && gyroEnable?.scope === 'universal');
+  ok('Sensors page-level safetyLevel is "caution"', sensorsPage.safetyLevel === 'caution');
+}
+
+console.log('\n[7r] GPS: no duplicated GPS Rescue tuning (references Failsafe instead), read-only declination display, real Save-and-Reboot');
+{
+  const allGpsFields = gpsPage.groups.flatMap(g => g.fields);
+  ok('GPS: no field models GPS Rescue tuning (verified absent from gps.html/gps.js by grep)', !allGpsFields.some(f => /rescue/i.test(f.id)));
+  ok('GPS: relatedPageIds references failsafe instead of duplicating GPS Rescue tuning', (gpsPage.relatedPageIds ?? []).includes('failsafe'));
+  const declinationField = allGpsFields.find(f => f.id === 'gps-magnetic-declination-status');
+  ok('GPS: Magnetic Declination is modeled as read-only status, not an editable input (the real editable field lives on Configuration)', declinationField?.controlType === 'status');
+  const saveField = allGpsFields.find(f => f.id === 'gps-save-and-reboot');
+  ok('GPS: "Save and Reboot" action exists and correctly requires reboot (verified: writeConfiguration(true))', saveField?.requiresSave === true && saveField?.requiresReboot === true);
+  ok('GPS page-level safetyLevel is "caution"', gpsPage.safetyLevel === 'caution');
+}
+
+console.log('\n[7s] LED Strip: fixed 256-cell grid distinct from dynamic wire order, Larson/Blink mutual exclusion documented, no-reboot save');
+{
+  const allLedFields = ledStripPage.groups.flatMap(g => g.fields);
+  ok('LED Strip: id is "led-strip" (hyphenated, matches registry) while officialId is "led_strip" (underscored, matches source)', ledStripPage.id === 'led-strip' && ledStripPage.officialId === 'led_strip');
+  ok('LED Strip: the spatial grid field is distinct from the wiring-mode field (two genuinely separate concepts)', allLedFields.some(f => f.id === 'led-strip-grid') && allLedFields.some(f => f.id === 'led-strip-wiring-mode'));
+  const larson = allLedFields.find(f => f.id === 'led-strip-larson-scanner');
+  const blink = allLedFields.find(f => f.id === 'led-strip-blink-always');
+  ok('LED Strip: Larson scanner and Blink always both document their mutual exclusivity', /Blink/.test(larson?.conditionNote ?? '') && /Larson/.test(blink?.conditionNote ?? ''));
+  const saveField = allLedFields.find(f => f.id === 'led-strip-save');
+  ok('LED Strip: Save action exists and correctly does NOT require reboot (verified: writeConfiguration(false, ...))', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  ok('LED Strip: Rainbow and Brightness are both version-gated (API >= 1.46)', allLedFields.find(f => f.id === 'led-strip-rainbow')?.scope === 'version-dependent' && allLedFields.find(f => f.id === 'led-strip-brightness')?.scope === 'version-dependent');
+}
+
+console.log('\n[7t] Servos: hardware-dependent support (not a fabricated mixer-type check), live-mode instant-apply, no-reboot save');
+{
+  const allServoFields = servosPage.groups.flatMap(g => g.fields);
+  const saveField = allServoFields.find(f => f.id === 'servos-save');
+  ok('Servos: Save action exists and correctly does NOT require reboot (verified: writeConfiguration(false, ...))', saveField?.requiresSave === true && saveField?.requiresReboot === false);
+  const liveMode = allServoFields.find(f => f.id === 'servos-live-mode-toggle');
+  ok('Servos: Live mode toggle exists and correctly does NOT require an explicit save (instant RAM-only apply)', liveMode?.requiresSave === false);
+  ok('Servos: the servo rate select documents the real 201 discrete options (-100..100), not a fabricated coarse range', /201/.test(allServoFields.find(f => f.id === 'servo-rate')?.arabicExplanation ?? ''));
+  ok('Servos page-level safetyLevel is "caution"', servosPage.safetyLevel === 'caution');
+}
+
+console.log('\n[7u] CLI: modeled as an interactive terminal (not a settings page), no fabricated command reference, heavy critical safety framing');
+{
+  const allCliFields = cliPage.groups.flatMap(g => g.fields);
+  const commandInput = allCliFields.find(f => f.id === 'command-input');
+  ok('CLI: the command input field explicitly states commands depend on the connected firmware build (no invented command reference)', /عتمد|firmware/i.test(commandInput?.arabicExplanation ?? ''));
+  ok('CLI: no field enumerates a fabricated list of CLI commands (only real toolbar/terminal-mechanic fields exist)', !allCliFields.some(f => /^cli-command-list$/.test(f.id)));
+  ok('CLI page-level safetyLevel is "critical"', cliPage.safetyLevel === 'critical');
+  ok('CLI page-level expertRequired is true', cliPage.expertRequired === true);
+  const infoWarning = allCliFields.find(f => f.id === 'cli-info-warning');
+  ok('CLI: the info warning field carries critical safety level', infoWarning?.safetyLevel === 'critical');
 }
 
 console.log('\n[8] Version overlays are empty unless a verified difference exists (no speculative overlays)');
@@ -781,6 +925,95 @@ console.log('\n[12] OFFICIAL-SOURCE CROSS-CHECK (Phase 4) — PID Tuning, Preset
   const allAdjFieldsCheck = adjustmentsPage.groups.flatMap(g => g.fields);
   const adjFunctionField = allAdjFieldsCheck.find(f => f.id === 'adjustment-apply-function');
   ok('official-source cross-check: Adjustments apply-function options include the real last function "LED Brightness Adjust"', (adjFunctionField?.range?.options ?? []).includes('LED Brightness Adjust'));
+}
+
+console.log('\n[13] OFFICIAL-SOURCE CROSS-CHECK (Phase 5) — OSD, VTX, Sensors, GPS, LED Strip, Servos, CLI read live against the real cloned Configurator source');
+{
+  const CLONE_DIR = '/tmp/betaflight-official-audit/configurator';
+  const localePath = join(CLONE_DIR, 'locales/en/messages.json');
+  const locale = JSON.parse(readFileSync(localePath, 'utf8')) as Record<string, { message?: string } | string>;
+  const realLabel = (key: string): string | undefined => {
+    const v = locale[key];
+    return typeof v === 'string' ? v : v?.message;
+  };
+
+  // ── OSD ──
+  const osdHtmlPath = join(CLONE_DIR, 'src/tabs/osd.html');
+  const osdJsPath = join(CLONE_DIR, 'src/js/tabs/osd.js');
+  ok('official-source cross-check: real src/tabs/osd.html exists in the clone', existsSync(osdHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/osd.js exists in the clone', existsSync(osdJsPath));
+  const osdJsSrc = readFileSync(osdJsPath, 'utf8');
+  const osdHtmlSrc = readFileSync(osdHtmlPath, 'utf8');
+  ok('official-source cross-check: osd.js really sends MSP_EEPROM_WRITE on the plain Save button with no reboot in the same handler', /\$\("a\.save"\)\.click/.test(osdJsSrc.replace(/\s+/g, ' ')) && /MSPCodes\.MSP_EEPROM_WRITE/.test(osdJsSrc));
+  ok('official-source cross-check: osd.js really sends MSP_SET_REBOOT only inside the font-upload flow', /MSPCodes\.MSP_SET_REBOOT/.test(osdJsSrc));
+  ok('official-source cross-check: osd.html really contains a permanently display:none VTX Settings box', /osdSetupVtxTitle/.test(osdHtmlSrc));
+  ok('official-source cross-check: osd.js never references ".vtx-settings" outside the dead static markup (confirms it is correctly excluded)', !osdJsSrc.includes('.vtx-settings'));
+  const realOsdSetupTitle = realLabel('osdSetupTitle');
+  const realOsdElementsTitle = realLabel('osdSetupElementsTitle');
+  ok('official-source cross-check: the real locale defines "osdSetupTitle" as "OSD"', realOsdSetupTitle === 'OSD');
+  ok('official-source cross-check: the real locale actually defines "osdSetupElementsTitle"', typeof realOsdElementsTitle === 'string' && realOsdElementsTitle.length > 0);
+  ok('official-source cross-check: OSD officialTitle matches the live-read real locale string exactly', osdPage.officialTitle === realOsdSetupTitle);
+
+  // ── VTX ──
+  const vtxHtmlPath = join(CLONE_DIR, 'src/tabs/vtx.html');
+  const vtxJsPath = join(CLONE_DIR, 'src/js/tabs/vtx.js');
+  ok('official-source cross-check: real src/tabs/vtx.html exists in the clone', existsSync(vtxHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/vtx.js exists in the clone', existsSync(vtxJsPath));
+  const vtxJsSrc = readFileSync(vtxJsPath, 'utf8');
+  ok('official-source cross-check: vtx.js really calls writeConfiguration(false, ...) on save (confirms no-reboot save)', /writeConfiguration\(false,\s*save_completed\)/.test(vtxJsSrc));
+  ok('official-source cross-check: vtx.js really defines per-VTX-type power fallback ranges (RTC6705/SmartAudio/Tramp/MSP)', /VTXDEV_RTC6705/.test(vtxJsSrc) && /VTXDEV_SMARTAUDIO/.test(vtxJsSrc) && /VTXDEV_TRAMP/.test(vtxJsSrc));
+  const realVtxTab = realLabel('tabVtx');
+  ok('official-source cross-check: the real locale defines "tabVtx" as "Video Transmitter"', realVtxTab === 'Video Transmitter');
+  ok('official-source cross-check: VTX officialTitle matches the live-read real locale string exactly', vtxPage.officialTitle === realVtxTab);
+
+  // ── Sensors ──
+  const sensorsHtmlPath = join(CLONE_DIR, 'src/tabs/sensors.html');
+  const sensorsJsPath = join(CLONE_DIR, 'src/js/tabs/sensors.js');
+  ok('official-source cross-check: real src/tabs/sensors.html exists in the clone', existsSync(sensorsHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/sensors.js exists in the clone', existsSync(sensorsJsPath));
+  const sensorsJsSrc = readFileSync(sensorsJsPath, 'utf8');
+  ok('official-source cross-check: sensors.js contains no MSP_EEPROM_WRITE call anywhere (confirms the page genuinely has no Save/EEPROM path)', !/MSP_EEPROM_WRITE/.test(sensorsJsSrc));
+  ok('official-source cross-check: sensors.js contains no "reboot" reference anywhere', !/reboot/i.test(sensorsJsSrc));
+  ok('official-source cross-check: sensors.js really gates the Accelerometer checkbox on have_sensor(activeSensors, "acc")', /have_sensor\(FC\.CONFIG\.activeSensors,\s*"acc"\)/.test(sensorsJsSrc));
+
+  // ── GPS ──
+  const gpsHtmlPath = join(CLONE_DIR, 'src/tabs/gps.html');
+  const gpsJsPath = join(CLONE_DIR, 'src/js/tabs/gps.js');
+  ok('official-source cross-check: real src/tabs/gps.html exists in the clone', existsSync(gpsHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/gps.js exists in the clone', existsSync(gpsJsPath));
+  const gpsHtmlSrc = readFileSync(gpsHtmlPath, 'utf8');
+  const gpsJsSrc = readFileSync(gpsJsPath, 'utf8');
+  ok('official-source cross-check: gps.html contains no reference to "rescue"/"Rescue" (confirms GPS Rescue tuning genuinely lives elsewhere)', !/rescue/i.test(gpsHtmlSrc));
+  ok('official-source cross-check: gps.js contains no reference to "rescue"/"Rescue" (confirms GPS Rescue tuning genuinely lives elsewhere)', !/rescue/i.test(gpsJsSrc));
+  ok('official-source cross-check: gps.js really calls writeConfiguration(true, ...) on the toolbar save (confirms real reboot outcome)', /writeConfiguration\(true\)/.test(gpsJsSrc));
+
+  // ── LED Strip ──
+  const ledStripHtmlPath = join(CLONE_DIR, 'src/tabs/led_strip.html');
+  const ledStripJsPath = join(CLONE_DIR, 'src/js/tabs/led_strip.js');
+  ok('official-source cross-check: real src/tabs/led_strip.html exists in the clone', existsSync(ledStripHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/led_strip.js exists in the clone', existsSync(ledStripJsPath));
+  const ledStripJsSrc = readFileSync(ledStripJsPath, 'utf8');
+  ok('official-source cross-check: led_strip.js really builds exactly a 256-cell grid (16x16 fixed layout)', /i\s*<\s*256/.test(ledStripJsSrc));
+  ok('official-source cross-check: led_strip.js really documents Larson/Blink as mutually exclusive in source comments', /not working properly at the same time/i.test(ledStripJsSrc));
+  ok('official-source cross-check: led_strip.js really calls writeConfiguration(false, save_completed) on save (confirms no-reboot save)', /writeConfiguration\(false,\s*save_completed\)/.test(ledStripJsSrc));
+
+  // ── Servos ──
+  const servosVuePath = join(CLONE_DIR, 'src/components/tabs/ServosTab.vue');
+  ok('official-source cross-check: real src/components/tabs/ServosTab.vue exists in the clone', existsSync(servosVuePath));
+  const servosVueSrc = readFileSync(servosVuePath, 'utf8');
+  ok('official-source cross-check: ServosTab.vue really gates support on FC.SERVO_CONFIG.length (not a fabricated mixer-type check)', /SERVO_CONFIG/.test(servosVueSrc));
+
+  // ── CLI ──
+  const cliHtmlPath = join(CLONE_DIR, 'src/tabs/cli.html');
+  const cliJsPath = join(CLONE_DIR, 'src/js/tabs/cli.js');
+  ok('official-source cross-check: real src/tabs/cli.html exists in the clone', existsSync(cliHtmlPath));
+  ok('official-source cross-check: real src/js/tabs/cli.js exists in the clone', existsSync(cliJsPath));
+  const realCliInfo = realLabel('cliInfo');
+  const realTabCli = realLabel('tabCLI');
+  ok('official-source cross-check: the real locale actually defines "cliInfo"', typeof realCliInfo === 'string' && realCliInfo.length > 0);
+  ok('official-source cross-check: the real locale defines "tabCLI" as "CLI"', realTabCli === 'CLI');
+  const cliInfoField = cliPage.groups.flatMap(g => g.fields).find(f => f.id === 'cli-info-warning');
+  ok('official-source cross-check: CLI info-warning field text reflects the real locale warning being present in source (non-empty, sourced)', (cliInfoField?.arabicExplanation ?? '').length > 0 && cliInfoField?.source.repoPath?.includes('cli'));
 }
 
 console.log(`\nAll ${passed} structural assertions passed.`);

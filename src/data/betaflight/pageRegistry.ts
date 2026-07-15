@@ -10,6 +10,13 @@ import { receiverPage } from './pages/receiver';
 import { pidTuningPage } from './pages/pid_tuning';
 import { presetsPage } from './pages/presets';
 import { adjustmentsPage } from './pages/adjustments';
+import { cliPage } from './pages/cli';
+import { sensorsPage } from './pages/sensors';
+import { gpsPage } from './pages/gps';
+import { ledStripPage } from './pages/led_strip';
+import { osdPage } from './pages/osd';
+import { servosPage } from './pages/servos';
+import { vtxPage } from './pages/vtx';
 
 /**
  * Official page/tab registry — verified directly against the cloned
@@ -62,7 +69,7 @@ export const bfPageRegistry: BfRegistryEntry[] = [
   { id: 'adjustments', officialId: 'adjustments', officialTitle: 'Adjustments', titleAr: 'التعديلات أثناء التحكم', officialOrder: 9, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'reviewed', page: adjustmentsPage },
   { id: 'modes', officialId: 'auxiliary', officialTitle: 'Modes', titleAr: 'أوضاع التشغيل', officialOrder: 10, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: modesPage },
   { id: 'presets', officialId: 'presets', officialTitle: 'Presets', titleAr: 'الإعدادات الجاهزة', officialOrder: 11, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'reviewed', page: presetsPage },
-  { id: 'cli', officialId: 'cli', officialTitle: 'CLI', titleAr: 'سطر الأوامر', officialOrder: 12, connectionState: 'connected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'not-started' },
+  { id: 'cli', officialId: 'cli', officialTitle: 'CLI', titleAr: 'سطر الأوامر', officialOrder: 12, connectionState: 'connected', scope: 'universal', safetyLevel: 'critical', contentStatus: 'reviewed', page: cliPage },
   { id: 'configuration', officialId: 'configuration', officialTitle: 'Configuration', titleAr: 'الإعدادات العامة', officialOrder: 13, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: configurationPage },
   { id: 'tethered-logging', officialId: 'logging', officialTitle: 'Tethered Logging', titleAr: 'التسجيل المباشر عبر USB', officialOrder: 14, connectionState: 'connected', scope: 'universal', safetyLevel: 'informational', contentStatus: 'not-started' },
   { id: 'blackbox', officialId: 'onboard_logging', officialTitle: 'Blackbox', titleAr: 'صندوق التسجيل الأسود', officialOrder: 15, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
@@ -70,13 +77,13 @@ export const bfPageRegistry: BfRegistryEntry[] = [
   { id: 'pid-tuning', officialId: 'pid_tuning', officialTitle: 'PID Tuning', titleAr: 'ضبط PID', officialOrder: 17, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: pidTuningPage },
   { id: 'ports', officialId: 'ports', officialTitle: 'Ports', titleAr: 'المنافذ', officialOrder: 18, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: portsPage },
   { id: 'receiver', officialId: 'receiver', officialTitle: 'Receiver', titleAr: 'المستقبل', officialOrder: 19, connectionState: 'connected', scope: 'universal', safetyLevel: 'warning', contentStatus: 'reviewed', page: receiverPage },
-  { id: 'sensors', officialId: 'sensors', officialTitle: 'Sensors', titleAr: 'الحساسات', officialOrder: 20, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'not-started' },
+  { id: 'sensors', officialId: 'sensors', officialTitle: 'Sensors', titleAr: 'الحساسات', officialOrder: 20, connectionState: 'connected', scope: 'universal', safetyLevel: 'caution', contentStatus: 'reviewed', page: sensorsPage },
 
   // ── Feature/hardware-conditional tabs (cloud-build gated) ──
-  { id: 'gps', officialId: 'gps', officialTitle: 'GPS', titleAr: 'نظام تحديد المواقع', officialOrder: 21, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة GPS.', safetyLevel: 'caution', contentStatus: 'not-started' },
-  { id: 'led-strip', officialId: 'led_strip', officialTitle: 'LED Strip', titleAr: 'شريط الإضاءة', officialOrder: 22, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة LED_STRIP.', safetyLevel: 'informational', contentStatus: 'not-started' },
-  { id: 'osd', officialId: 'osd', officialTitle: 'OSD', titleAr: 'عرض المعلومات على الشاشة', officialOrder: 23, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن دعم OSD.', safetyLevel: 'caution', contentStatus: 'not-started' },
-  { id: 'servos', officialId: 'servos', officialTitle: 'Servos', titleAr: 'المحركات الخادمة', officialOrder: 24, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط مع نوع خلط (Mixer) يستخدم Servos، مثل الطائرات ثابتة الجناح.', safetyLevel: 'caution', contentStatus: 'not-started' },
+  { id: 'gps', officialId: 'gps', officialTitle: 'GPS', titleAr: 'نظام تحديد المواقع', officialOrder: 21, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة GPS.', safetyLevel: 'caution', contentStatus: 'reviewed', page: gpsPage },
+  { id: 'led-strip', officialId: 'led_strip', officialTitle: 'LED Strip', titleAr: 'شريط الإضاءة', officialOrder: 22, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة LED_STRIP.', safetyLevel: 'informational', contentStatus: 'reviewed', page: ledStripPage },
+  { id: 'osd', officialId: 'osd', officialTitle: 'OSD', titleAr: 'عرض المعلومات على الشاشة', officialOrder: 23, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن دعم OSD.', safetyLevel: 'caution', contentStatus: 'reviewed', page: osdPage },
+  { id: 'servos', officialId: 'servos', officialTitle: 'Servos', titleAr: 'المحركات الخادمة', officialOrder: 24, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط مع نوع خلط (Mixer) يستخدم Servos، مثل الطائرات ثابتة الجناح.', safetyLevel: 'caution', contentStatus: 'reviewed', page: servosPage },
   { id: 'transponder', officialId: 'transponder', officialTitle: 'Race Transponder', titleAr: 'جهاز إرسال السباق', officialOrder: 25, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة Transponder.', safetyLevel: 'informational', contentStatus: 'not-started' },
-  { id: 'vtx', officialId: 'vtx', officialTitle: 'Video Transmitter', titleAr: 'جهاز إرسال الفيديو', officialOrder: 26, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن التحكم بجهاز الفيديو (SmartAudio/Tramp/MSP-VTX).', safetyLevel: 'warning', contentStatus: 'not-started' },
+  { id: 'vtx', officialId: 'vtx', officialTitle: 'Video Transmitter', titleAr: 'جهاز إرسال الفيديو', officialOrder: 26, connectionState: 'connected', scope: 'feature-dependent', conditionNote: 'يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن التحكم بجهاز الفيديو (SmartAudio/Tramp/MSP-VTX).', safetyLevel: 'warning', contentStatus: 'reviewed', page: vtxPage },
 ];

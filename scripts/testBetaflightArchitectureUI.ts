@@ -156,18 +156,19 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [5] The 5 legacy IDs that are still "not-started" in the registry render EXACTLY as before ──
+    // ── [5] The remaining legacy IDs that are still "not-started" in the registry render EXACTLY as before ──
     // ("motors", "failsafe" got real registry .page entries in Phase 2; "receiver" and "modes" got
-    // real registry .page entries in Phase 3 — same as "ports" in Phase 1, the new complete page now
-    // wins at those URLs. They are covered separately in sections [13]/[14] and [16]-[19], not here.
-    console.log('\n[5] The other 5 legacy IDs (still not-started in the registry) are pixel-for-pixel unaffected');
+    // real registry .page entries in Phase 3; "osd" and "cli" got real registry .page entries in
+    // Phase 5 — same as "ports" in Phase 1, the new complete page now wins at those URLs. They are
+    // covered separately in sections [13]/[14], [16]-[21], and [22]/[28], not here. Only "interface"/
+    // "firmware" (no matching registry id at all) and "blackbox" (registry id exists but still
+    // not-started) remain genuinely unaffected.
+    console.log('\n[5] The remaining legacy IDs (still not-started or unmapped in the registry) are pixel-for-pixel unaffected');
     {
       const LEGACY_UNCHANGED = [
         { id: 'interface', titleAr: 'واجهة Betaflight' },
         { id: 'firmware', titleAr: 'Firmware / تحديث' },
-        { id: 'osd', titleAr: 'OSD' },
         { id: 'blackbox', titleAr: 'Blackbox' },
-        { id: 'cli', titleAr: 'CLI' },
       ];
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -227,15 +228,15 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [8] /betaflight/gps: a conditional (feature-dependent) not-started page ──
-    console.log('\n[8] /betaflight/gps shows the not-started state with its condition badge');
+    // ── [8] /betaflight/transponder: a conditional (feature-dependent) not-started page ──
+    console.log('\n[8] /betaflight/transponder shows the not-started state with its condition badge');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/betaflight/gps`, { waitUntil: 'networkidle' });
-      ok('h1 shows the official English title "GPS"', (await page.locator('h1').textContent())?.trim() === 'GPS');
+      await page.goto(`${BASE}/betaflight/transponder`, { waitUntil: 'networkidle' });
+      ok('h1 shows the official English title "Race Transponder"', (await page.locator('h1').textContent())?.trim() === 'Race Transponder');
       ok('content-status badge shows "لم يُبدأ بعد"', await page.locator('text=لم يُبدأ بعد').count() >= 1);
-      ok('the condition badge (feature requirement) renders', await page.locator('text=يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة GPS').count() === 1);
+      ok('the condition badge (feature requirement) renders', await page.locator('text=يظهر فقط إذا كانت نسخة الفيرموير المبنية تتضمن ميزة Transponder').count() === 1);
       ok('does NOT show the generic "not found" message', await page.locator('text=القسم غير موجود').count() === 0);
       await ctx.close();
     }
@@ -261,8 +262,8 @@ async function main() {
       ok('Programming is ACTIVE (real color match) on /betaflight/setup', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/betaflight/ports`, { waitUntil: 'networkidle' });
       ok('Programming is ACTIVE (real color match) on /betaflight/ports', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
-      await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
-      ok('Programming is ACTIVE (real color match) on /betaflight/sensors (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
+      await page.goto(`${BASE}/betaflight/tethered-logging`, { waitUntil: 'networkidle' });
+      ok('Programming is ACTIVE (real color match) on /betaflight/tethered-logging (not-started page)', (await navButtonColor(page, 'البرمجة')) === ACTIVE_NAV_COLOR);
       await page.goto(`${BASE}/home`, { waitUntil: 'networkidle' });
       ok('Programming is INACTIVE (real color match) on /home', (await navButtonColor(page, 'البرمجة')) === INACTIVE_NAV_COLOR);
       await ctx.close();
@@ -273,7 +274,7 @@ async function main() {
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
-      await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/betaflight/tethered-logging`, { waitUntil: 'networkidle' });
       const backArrow = page.locator('button[aria-label="العودة"]');
       ok('icon back-button has an aria-label on the not-started page', await backArrow.count() === 1);
       await backArrow.focus();
@@ -295,7 +296,7 @@ async function main() {
       for (const vp of viewports) {
         const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
         const page = await ctx.newPage();
-        await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
+        await page.goto(`${BASE}/betaflight/tethered-logging`, { waitUntil: 'networkidle' });
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
         ok(`[${vp.name}] no horizontal overflow on the not-started page`, !overflow);
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -578,15 +579,229 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [15] Responsive: all Phase 2 + Phase 3 + Phase 4 reviewed pages at 3 viewports ──
-    console.log('\n[15] All Phase 2 + Phase 3 + Phase 4 reviewed pages are responsive at mobile/tablet/desktop viewports');
+    // ── [22] /betaflight/osd: complete "reviewed" page (Phase 5), plain Save vs Upload-Font reboot semantics ──
+    console.log('\n[22] /betaflight/osd renders the complete "reviewed" OSD page (Phase 5, legacy URL now superseded)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/osd`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "OSD"', (await page.locator('h1').textContent())?.trim() === 'OSD');
+      ok('Arabic title "عرض المعلومات على الشاشة" renders', await page.locator('text=عرض المعلومات على الشاشة').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, supersedes legacy)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the "Elements" group renders (Arabic heading)', await page.locator('h2', { hasText: 'العناصر' }).count() >= 1);
+      ok('the "Font Manager" group renders (Arabic heading)', await page.locator('h2', { hasText: 'مدير الخطوط' }).count() >= 1);
+      ok('the "Upload Font" action renders (the only reboot-requiring action on this page)', await page.locator('text=Upload Font').count() >= 1);
+      ok('the "Post Flight Statistics" group renders (Arabic heading)', await page.locator('h2', { hasText: 'إحصائيات ما بعد الطيران' }).count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/osd-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow (verified on the largest page in the app)', !overflow);
+      ok('Programming nav tab remains active on /betaflight/osd', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [23] /betaflight/vtx: complete "reviewed" page (Phase 5), no fabricated protocol select ──
+    console.log('\n[23] /betaflight/vtx renders the complete "reviewed" Video Transmitter page (Phase 5)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/vtx`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Video Transmitter"', (await page.locator('h1').textContent())?.trim() === 'Video Transmitter');
+      ok('Arabic title "جهاز إرسال الفيديو" renders', await page.locator('text=جهاز إرسال الفيديو').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('warning safety badge renders', await page.locator('text=تحذير').count() >= 1);
+      ok('the "Selected Mode" group renders (Arabic heading)', await page.locator('h2', { hasText: 'الوضع المحدد' }).count() >= 1);
+      ok('the "Current Values" group renders (Arabic heading, read-only VTX type display)', await page.locator('h2', { hasText: 'القيم الحالية' }).count() >= 1);
+      ok('the "VTX Table" custom editor group renders (Arabic heading)', await page.locator('h2', { hasText: 'جدول VTX المخصص' }).count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/vtx-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/vtx', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [24] /betaflight/sensors: complete "reviewed" page (Phase 5), NO Save/page-actions group at all ──
+    console.log('\n[24] /betaflight/sensors renders the complete "reviewed" Sensors page (Phase 5, no Save group)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/sensors`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Sensors"', (await page.locator('h1').textContent())?.trim() === 'Sensors');
+      ok('Arabic title "الحساسات" renders', await page.locator('text=الحساسات').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the Gyroscope group renders', await page.locator('text=Gyroscope').count() >= 1);
+      ok('the Accelerometer group renders', await page.locator('text=Accelerometer').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/sensors-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/sensors', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [25] /betaflight/gps: complete "reviewed" page (Phase 5), references Failsafe instead of duplicating GPS Rescue ──
+    console.log('\n[25] /betaflight/gps renders the complete "reviewed" GPS page (Phase 5, was not-started)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/gps`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "GPS"', (await page.locator('h1').textContent())?.trim() === 'GPS');
+      ok('Arabic title "نظام تحديد المواقع" renders', await page.locator('text=نظام تحديد المواقع').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the "GPS Configuration" group renders (Arabic heading)', await page.locator('h2', { hasText: 'إعدادات GPS' }).count() >= 1);
+      ok('the "Ground Assistance Type" field renders', await page.locator('text=Ground Assistance Type').count() >= 1);
+      ok('the "Save and Reboot" action renders', await page.locator('text=Save and Reboot').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/gps-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/gps', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [26] /betaflight/led-strip: complete "reviewed" page (Phase 5), dynamic editor stays dynamic ──
+    console.log('\n[26] /betaflight/led-strip renders the complete "reviewed" LED Strip page (Phase 5, was not-started)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/led-strip`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "LED Strip"', (await page.locator('h1').textContent())?.trim() === 'LED Strip');
+      ok('Arabic title "شريط الإضاءة" renders', await page.locator('text=شريط الإضاءة').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the "Function" group renders', await page.locator('text=Function').count() >= 1);
+      ok('the "Mode colors" group renders', await page.locator('text=Mode colors').count() >= 1);
+      ok('the "LED Strip Wiring" group renders (Arabic heading, dynamic wire-order editor distinct from the spatial grid)', await page.locator('h2', { hasText: 'الترتيب السلكي' }).count() >= 1);
+      ok('the "Wire Ordering Mode" field renders', await page.locator('text=Wire Ordering Mode').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/led-strip-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/led-strip', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [27] /betaflight/servos: complete "reviewed" page (Phase 5), respects hardware-dependent scope ──
+    console.log('\n[27] /betaflight/servos renders the complete "reviewed" Servos page (Phase 5, was not-started)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/servos`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "Servos"', (await page.locator('h1').textContent())?.trim() === 'Servos');
+      ok('Arabic title "المحركات الخادمة" renders', await page.locator('text=المحركات الخادمة').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, was not-started)', await page.locator('text=مراجَع').count() >= 1);
+      ok('the "Enable Live mode" toggle renders', await page.locator('text=Enable Live mode').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/servos-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/servos', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [28] /betaflight/cli: complete "reviewed" page (Phase 5, legacy URL now superseded), terminal not a settings page ──
+    console.log('\n[28] /betaflight/cli renders the complete "reviewed" CLI page (Phase 5, legacy URL now superseded)');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await page.goto(`${BASE}/betaflight/cli`, { waitUntil: 'networkidle' });
+      ok('exactly one h1', await page.locator('h1').count() === 1);
+      ok('h1 shows the official English title "CLI"', (await page.locator('h1').textContent())?.trim() === 'CLI');
+      ok('Arabic title "سطر الأوامر" renders', await page.locator('text=سطر الأوامر').count() >= 1);
+      ok('content-status badge shows "مراجَع" (reviewed, Phase 5 complete, supersedes legacy)', await page.locator('text=مراجَع').count() >= 1);
+      ok('critical safety badge renders (CLI is the highest safety level)', await page.locator('text=حرِج').count() >= 1);
+      ok('the terminal "Command input" field renders (not a settings-style field list)', await page.locator('text=Command input').count() >= 1);
+      ok('the "Submit Support Data" toolbar action renders', await page.locator('text=Submit Support Data').count() >= 1);
+      ok('official source link renders and points at betaflight.com', (await page.locator('a[href*="betaflight.com/docs/wiki/app/cli-tab"]').count()) === 1);
+      ok('no unexpected console error', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow', !overflow);
+      ok('Programming nav tab remains active on /betaflight/cli', await navButtonIsActive(page, 'البرمجة'));
+
+      const backArrow = page.locator('button[aria-label="العودة"]');
+      await backArrow.focus();
+      ok('back-arrow button is keyboard-focusable on the CLI page', await backArrow.evaluate(el => el === document.activeElement));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
+      await ctx.close();
+    }
+
+    // ── [15] Responsive: all Phase 2 + Phase 3 + Phase 4 + Phase 5 reviewed pages at 3 viewports ──
+    console.log('\n[15] All Phase 2 + Phase 3 + Phase 4 + Phase 5 reviewed pages are responsive at mobile/tablet/desktop viewports');
     {
       const viewports = [
         { name: 'mobile 390x844', width: 390, height: 844 },
         { name: 'tablet 768x1024', width: 768, height: 1024 },
         { name: 'desktop 1440x900', width: 1440, height: 900 },
       ];
-      for (const routeId of ['motors', 'failsafe', 'configuration', 'power', 'receiver', 'modes', 'pid-tuning', 'presets', 'adjustments']) {
+      for (const routeId of ['motors', 'failsafe', 'configuration', 'power', 'receiver', 'modes', 'pid-tuning', 'presets', 'adjustments', 'osd', 'vtx', 'sensors', 'gps', 'led-strip', 'servos', 'cli']) {
         for (const vp of viewports) {
           const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
           const page = await ctx.newPage();
