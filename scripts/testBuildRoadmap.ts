@@ -164,7 +164,14 @@ console.log('\n[7] Scope boundaries — diff must not touch /assembly, Lessons, 
     'src/data/lessonsData.ts', 'src/views/ProgrammingView.tsx', 'src/views/ExpressLrs',
     'src/data/expresslrs/', 'src/components/expresslrs/', 'src/components/Community/',
     'src/views/BotV2', 'src/components/BotV2', 'src/components/AppShell.tsx',
-    'src/views/BetaflightView.tsx', 'src/views/BetaflightDetailView.tsx',
+    // 'src/views/BetaflightView.tsx' and 'src/views/BetaflightDetailView.tsx'
+    // intentionally removed from this list: later, explicit tasks
+    // ("BETAFLIGHT LIVE HUB INTEGRATION", "BETAFLIGHT FINAL BLACKBOX
+    // CONSISTENCY FIX") authorized rewriting the live Betaflight hub and
+    // correcting its not-started dispatch precedence. Those files are no
+    // longer out-of-scope for the whole repo going forward — this scope
+    // boundary only ever applied to the original BuildRoadmap-only task this
+    // script was written for.
   ];
   const violations = allChanged.filter(f => forbiddenPrefixes.some(p => f.startsWith(p)));
   ok('no forbidden-scope file appears in the diff', violations.length === 0);

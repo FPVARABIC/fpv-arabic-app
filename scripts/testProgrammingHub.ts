@@ -103,14 +103,16 @@ console.log('\n[5] Disabled cards use genuinely disabled native buttons, not fak
   ok('a native `disabled` attribute is used on the non-available card button', /disabled\s*\n\s*data-testid=\{`programming-card-\$\{card\.id\}`\}/.test(programmingViewTsx));
 }
 
-console.log('\n[6] Betaflight preservation — content files are structurally untouched');
+console.log('\n[6] Betaflight preservation — legacy compatibility files are structurally untouched; the live hub is now registry-driven');
 {
   ok('BetaflightView.tsx still renders the exact existing heading', betaflightViewTsx.includes('Betaflight بالعربي'));
-  ok('BetaflightView.tsx still navigates to /betaflight/${section.id} for each of the 10 sections', betaflightViewTsx.includes('navigate(`/betaflight/${section.id}`)'));
+  ok('BetaflightView.tsx is now a thin wrapper that imports BetaflightHubRenderer (the old hardcoded 10-card hub was replaced)', /import\s*\{\s*BetaflightHubRenderer\s*\}\s*from\s*'\.\.\/components\/betaflight\/BetaflightHubRenderer';/.test(betaflightViewTsx));
+  ok('BetaflightView.tsx drives the live hub from the real 26-page bfPageRegistry, not the legacy 10-item betaflightData array', /import\s*\{\s*bfPageRegistry\s*\}\s*from\s*'\.\.\/data\/betaflight\/pageRegistry';/.test(betaflightViewTsx) && !/from\s*'\.\.\/data\/betaflightData'/.test(betaflightViewTsx));
   ok('BetaflightDetailView.tsx still navigates back to /betaflight (back button + return button)', (betaflightDetailViewTsx.match(/navigate\('\/betaflight'\)/g) || []).length === 2);
   const sectionIds = [...betaflightDataTs.matchAll(/id:\s*'([a-z]+)', title:/g)].map(m => m[1]);
-  ok('betaflightData.ts still defines exactly 10 sections', sectionIds.length === 10);
+  ok('betaflightData.ts still defines exactly 10 sections (still used by BetaflightDetailView.tsx for legacy deep-link compatibility)', sectionIds.length === 10);
   ok('betaflightData.ts section order is unchanged', JSON.stringify(sectionIds) === JSON.stringify(['interface', 'firmware', 'ports', 'receiver', 'modes', 'motors', 'failsafe', 'osd', 'blackbox', 'cli']));
+  ok('BetaflightDetailView.tsx still imports betaflightData for its legacy fallback branch (untouched)', /import\s*\{\s*betaflightData\s*\}\s*from\s*'\.\.\/data\/betaflightData';/.test(betaflightDetailViewTsx));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

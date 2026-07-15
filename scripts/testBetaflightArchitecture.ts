@@ -594,13 +594,12 @@ console.log('\n[8] Version overlays are empty unless a verified difference exist
   ok('portsPage has no version overlays (none verified yet)', (portsPage.versionOverlays ?? []).length === 0);
 }
 
-console.log('\n[9] Legacy Betaflight files are untouched (do not replace all ten current articles this phase)');
+console.log('\n[9] Legacy compatibility files stay honestly untouched (the live hub is the intentional exception, see [14])');
 {
   const betaflightDataSrc = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 'utf8');
   const betaflightViewSrc = readFileSync(join(ROOT, 'src/views/BetaflightView.tsx'), 'utf8');
   ok('betaflightData.ts still defines exactly 10 sections', (betaflightDataSrc.match(/id: '[a-z]+', title:/g) ?? []).length === 10);
-  ok('BetaflightView.tsx (hub) is untouched — still renders the exact existing heading', betaflightViewSrc.includes('Betaflight بالعربي'));
-  ok('BetaflightView.tsx (hub) is untouched — still navigates the legacy way for its 10 cards', betaflightViewSrc.includes('navigate(`/betaflight/${section.id}`)'));
+  ok('BetaflightView.tsx still renders the exact existing heading', betaflightViewSrc.includes('Betaflight بالعربي'));
   const betaflightDetailSrc = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
   ok('BetaflightDetailView.tsx legacy return-navigation is preserved exactly twice', (betaflightDetailSrc.match(/navigate\('\/betaflight'\)/g) ?? []).length === 2);
   ok('BetaflightDetailView.tsx legacy branch (icon back button) is preserved', betaflightDetailSrc.includes("navigate('/betaflight')} className=\"w-9 h-9 rounded-xl bg-white/5"));
@@ -1014,6 +1013,86 @@ console.log('\n[13] OFFICIAL-SOURCE CROSS-CHECK (Phase 5) — OSD, VTX, Sensors,
   ok('official-source cross-check: the real locale defines "tabCLI" as "CLI"', realTabCli === 'CLI');
   const cliInfoField = cliPage.groups.flatMap(g => g.fields).find(f => f.id === 'cli-info-warning');
   ok('official-source cross-check: CLI info-warning field text reflects the real locale warning being present in source (non-empty, sourced)', (cliInfoField?.arabicExplanation ?? '').length > 0 && cliInfoField?.source.repoPath?.includes('cli'));
+}
+
+console.log('\n[14] LIVE HUB INTEGRATION — /betaflight is registry-driven, not the legacy 10-article hub');
+{
+  const betaflightViewSrc = readFileSync(join(ROOT, 'src/views/BetaflightView.tsx'), 'utf8');
+  const hubRendererSrc = readFileSync(join(ROOT, 'src/components/betaflight/BetaflightHubRenderer.tsx'), 'utf8');
+
+  ok('BetaflightView.tsx imports BetaflightHubRenderer', /import\s*\{\s*BetaflightHubRenderer\s*\}\s*from\s*'\.\.\/components\/betaflight\/BetaflightHubRenderer';/.test(betaflightViewSrc));
+  ok('BetaflightView.tsx imports bfPageRegistry (the real 26-page registry)', /import\s*\{\s*bfPageRegistry\s*\}\s*from\s*'\.\.\/data\/betaflight\/pageRegistry';/.test(betaflightViewSrc));
+  ok('BetaflightView.tsx no longer imports the legacy betaflightData array', !/from\s*'\.\.\/data\/betaflightData'/.test(betaflightViewSrc));
+  ok('BetaflightView.tsx no longer imports BetaflightVisual (legacy card illustrations)', !/BetaflightVisual/.test(betaflightViewSrc));
+  ok('BetaflightView.tsx renders <BetaflightHubRenderer with entries={bfPageRegistry}', /<BetaflightHubRenderer[\s\S]*?entries=\{bfPageRegistry\}/.test(betaflightViewSrc));
+  ok('BetaflightView.tsx is genuinely a thin wrapper (under 40 lines)', betaflightViewSrc.split('\n').length < 40);
+
+  ok('exactly 26 registry entries exist total (unchanged by this task)', bfPageRegistry.length === 26);
+  ok('exactly 18 registry entries are "reviewed" (unchanged by this task)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
+  ok('exactly 8 registry entries are "not-started" (unchanged by this task)', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
+
+  // ── every registry ID appears in exactly one of the 5 hub groups, no duplicates, no invented IDs ──
+  const groupBlockMatches = [...hubRendererSrc.matchAll(/id:\s*'([a-z-]+)',\s*titleAr:\s*'[^']*',\s*icon:\s*\w+,\s*pageIds:\s*\[([^\]]*)\]/g)];
+  ok('exactly 5 hub groups are defined in BetaflightHubRenderer.tsx', groupBlockMatches.length === 5);
+  const allGroupedIds = groupBlockMatches.flatMap(m => [...m[2].matchAll(/'([a-z-]+)'/g)].map(x => x[1]));
+  ok('the 5 hub groups together list exactly 26 page IDs (one per registry entry)', allGroupedIds.length === 26);
+  ok('no duplicate page ID appears across the hub groups', new Set(allGroupedIds).size === allGroupedIds.length);
+  const registryIds = new Set(bfPageRegistry.map(e => e.id));
+  ok('every grouped ID maps to a real registry entry (no invented/fabricated page)', allGroupedIds.every(id => registryIds.has(id)));
+  ok('every registry entry is represented in exactly one hub group (no page silently dropped)', bfPageRegistry.every(e => allGroupedIds.includes(e.id)));
+
+  // ── search/filter/summary UI affordances exist in source ──
+  ok('the hub renders a live search input', /betaflight-hub-search-input/.test(hubRendererSrc));
+  ok('the hub renders status filter controls (all/reviewed/not-started)', /betaflight-hub-filter-\$\{value\}/.test(hubRendererSrc) && /\['all',\s*'الكل'\]/.test(hubRendererSrc) && /\['reviewed',\s*'مراجَع'\]/.test(hubRendererSrc) && /\['not-started',\s*'لم يُبدأ بعد'\]/.test(hubRendererSrc));
+  ok('the hub renders a visible summary of reviewed/not-started counts', /صفحة مراجعة/.test(hubRendererSrc) && /صفحات قيد الإعداد/.test(hubRendererSrc));
+  ok('the hub search matches on official English title, Arabic title, ID, and page summary (not a fabricated subset)', /officialTitle\.toLowerCase\(\)\.includes/.test(hubRendererSrc) && /titleAr\.includes/.test(hubRendererSrc) && /entry\.id\.toLowerCase\(\)\.includes/.test(hubRendererSrc) && /page\?\.summaryAr/.test(hubRendererSrc));
+  ok('the hub uses the new dark bf-shell theme (not the old white-frame card-feature-only layout)', /bf-shell/.test(hubRendererSrc));
+  ok('the hub uses lucide-react exclusively for icons (single icon family)', /from 'lucide-react'/.test(hubRendererSrc) && !/react-icons|@heroicons|phosphor/.test(hubRendererSrc));
+  ok('every card icon is additive (Arabic/English text labels are still rendered, not replaced by icons)', /entry\.officialTitle/.test(hubRendererSrc) && /entry\.titleAr/.test(hubRendererSrc));
+
+  // ── no dangling unused-hub-renderer state remains: it now has a real consumer ──
+  const appTsxSrc = readFileSync(join(ROOT, 'src/App.tsx'), 'utf8');
+  ok('App.tsx still routes /betaflight to BetaflightView unchanged (only the view internals changed)', /<Route path="\/betaflight" element=\{<BetaflightView\/>\}\/>/.test(appTsxSrc));
+
+  // ── content preservation: compatibility file this task must not touch; the
+  // reviewed-page priority branch in BetaflightDetailView.tsx is untouched
+  // (only its not-started dispatch precedence was corrected, see below) ──
+  const detailViewSrc = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
+  ok('compatibilityMap.ts still defines exactly 10 legacy mappings (untouched)', bfCompatibilityMap.length === 10);
+  ok('BetaflightDetailView.tsx registry-priority (reviewed) branch is untouched', /registryEntry\?\.page/.test(detailViewSrc));
+  ok('compatibilityMap.ts still resolves every legacy ID via resolveCompatibilityId (untouched)', resolveCompatibilityId('ports') === 'ports');
+}
+
+console.log('\n[15] BLACKBOX DISPATCH PRECEDENCE — a not-started registry ID that collides with a legacy article ID must render the honest not-started state, not the legacy article');
+{
+  const detailViewSrc = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
+  const blackboxEntry = bfPageRegistry.find(e => e.id === 'blackbox');
+  ok('blackbox exists in the registry', !!blackboxEntry);
+  ok('blackbox registry status remains "not-started" (this fix does not author Blackbox content)', blackboxEntry?.contentStatus === 'not-started');
+  ok('blackbox has no `.page` (still genuinely not-started, not secretly reviewed)', blackboxEntry?.page === undefined);
+  ok('blackbox also exists in legacy betaflightData (the actual collision this fix resolves)', betaflightData.some(s => s.id === 'blackbox'));
+  ok(
+    'the not-started dispatch branch no longer excludes legacy-ID collisions (the old `!isLegacyId` gate is gone)',
+    !/registryEntry\s*&&\s*!isLegacyId/.test(detailViewSrc) && /if \(registryEntry\) \{/.test(detailViewSrc),
+  );
+  // Every OTHER not-started registry ID has no legacy counterpart, so this
+  // precedence fix is a no-op for them; only 'blackbox' actually collides.
+  const otherNotStarted = bfPageRegistry.filter(e => e.contentStatus === 'not-started' && e.id !== 'blackbox');
+  ok(
+    'no other not-started registry ID collides with a legacy article ID (the fix is narrowly scoped to blackbox)',
+    otherNotStarted.every(e => !betaflightData.some(s => s.id === e.id)),
+  );
+  // Reviewed IDs that also collide with a legacy article (receiver/modes/
+  // motors/failsafe/osd/cli/ports) must still be dispatched via the
+  // untouched `registryEntry?.page` branch above, never via the not-started
+  // or legacy branch.
+  const reviewedLegacyCollisions = bfPageRegistry.filter(e => e.contentStatus === 'reviewed' && betaflightData.some(s => s.id === e.id));
+  ok('at least the known reviewed/legacy-collision IDs still exist and are reviewed (regression guard)', reviewedLegacyCollisions.length >= 7);
+  ok('every reviewed/legacy-collision entry still carries a `.page` (dispatched via the reviewed branch, unaffected by this fix)', reviewedLegacyCollisions.every(e => !!e.page));
+  // Legacy-only IDs with no registry counterpart at all must still fall
+  // through to the legacy branch untouched.
+  const legacyOnlyIds = betaflightData.map(s => s.id).filter(id => !bfPageRegistry.some(e => e.id === id));
+  ok('legacy-only IDs with no registry counterpart still exist (interface/firmware)', legacyOnlyIds.includes('interface') && legacyOnlyIds.includes('firmware'));
 }
 
 console.log(`\nAll ${passed} structural assertions passed.`);

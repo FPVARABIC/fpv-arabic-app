@@ -122,7 +122,8 @@ async function main() {
       await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
       await page.waitForLoadState('networkidle');
       ok('return button navigates back to /betaflight', page.url() === `${BASE}/betaflight`);
-      ok('the legacy hub heading still renders there', await page.locator('text=Betaflight بالعربي').count() === 1);
+      await page.getByText('Betaflight بالعربي').first().waitFor({ state: 'visible' });
+      ok('the hub heading renders there', await page.locator('text=Betaflight بالعربي').count() === 1);
       await ctx.close();
     }
 
@@ -156,19 +157,19 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [5] The remaining legacy IDs that are still "not-started" in the registry render EXACTLY as before ──
+    // ── [5] The remaining legacy IDs with NO registry counterpart at all render EXACTLY as before ──
     // ("motors", "failsafe" got real registry .page entries in Phase 2; "receiver" and "modes" got
     // real registry .page entries in Phase 3; "osd" and "cli" got real registry .page entries in
     // Phase 5 — same as "ports" in Phase 1, the new complete page now wins at those URLs. They are
     // covered separately in sections [13]/[14], [16]-[21], and [22]/[28], not here. Only "interface"/
-    // "firmware" (no matching registry id at all) and "blackbox" (registry id exists but still
-    // not-started) remain genuinely unaffected.
-    console.log('\n[5] The remaining legacy IDs (still not-started or unmapped in the registry) are pixel-for-pixel unaffected');
+    // "firmware" (no matching registry id at all) remain genuinely unaffected. "blackbox" DOES have a
+    // registry entry (not-started) and is now dispatched honestly instead of falling through to the
+    // legacy article — see section [5b].
+    console.log('\n[5] The remaining legacy-only IDs (no registry counterpart) are pixel-for-pixel unaffected');
     {
       const LEGACY_UNCHANGED = [
         { id: 'interface', titleAr: 'واجهة Betaflight' },
         { id: 'firmware', titleAr: 'Firmware / تحديث' },
-        { id: 'blackbox', titleAr: 'Blackbox' },
       ];
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -181,17 +182,131 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [6] Hub (/betaflight) is completely unaffected ──
-    console.log('\n[6] The Betaflight hub itself is unaffected — still the original 10 legacy cards');
+    // ── [5b] Blackbox dispatch precedence: registry not-started status wins over the legacy-article collision ──
+    console.log('\n[5b] /betaflight/blackbox now honestly renders the not-started state (registry status wins over the legacy-article collision)');
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
+      await page.goto(`${BASE}/betaflight/blackbox`, { waitUntil: 'networkidle' });
+      await page.locator('h1').first().waitFor({ state: 'visible' });
+      ok('h1 shows the official English registry title "Blackbox"', (await page.locator('h1').textContent())?.trim() === 'Blackbox');
+      ok('Arabic registry title "صندوق التسجيل الأسود" renders', await page.locator('text=صندوق التسجيل الأسود').count() >= 1);
+      ok('content-status badge shows "لم يُبدأ بعد" (honest not-started, not secretly reviewed)', await page.locator('text=لم يُبدأ بعد').count() >= 1);
+      ok('the honest "not built yet" explanation text renders', await page.locator('text=لم يتم بعد بناء المحتوى العربي').count() >= 1);
+      ok('does NOT render the old legacy "الشرح" explanation heading (old template)', await page.locator('text=الشرح').count() === 0);
+      ok('does NOT render the old legacy body text ("Blackbox يسجّل بيانات الطيران كاملة")', await page.locator('text=يسجّل بيانات الطيران كاملة').count() === 0);
+      ok('does NOT show the generic "not found" message', await page.locator('text=القسم غير موجود').count() === 0);
+      ok('Programming nav tab remains active on /betaflight/blackbox', await navButtonIsActive(page, 'البرمجة'));
+
+      await page.locator('button', { hasText: 'العودة إلى Betaflight' }).click();
+      await page.waitForLoadState('networkidle');
+      ok('return-to-hub works from the not-started Blackbox page', page.url() === `${BASE}/betaflight`);
+
+      // ── the hub card itself must also be honest ──
+      await page.locator('h1').first().waitFor({ state: 'visible' });
+      ok('the hub card for Blackbox shows "لم يُبدأ بعد"', (await page.locator('[data-testid="betaflight-hub-card-blackbox"]').textContent() ?? '').includes('لم يُبدأ بعد'));
+      await ctx.close();
+    }
+
+    // ── [6] Hub (/betaflight) is now the live registry-driven BetaflightHubRenderer ──
+    console.log('\n[6] The live Betaflight hub is now registry-driven (bfPageRegistry), dark-themed, searchable, and filterable');
+    {
+      const consoleErrors: string[] = [];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
       await page.goto(`${BASE}/betaflight`, { waitUntil: 'networkidle' });
       ok('hub heading "Betaflight بالعربي" renders', await page.locator('text=Betaflight بالعربي').count() === 1);
-      ok('hub still shows exactly the original 10 legacy h3 cards', await page.locator('h3', {
-        hasText: /^(واجهة Betaflight|Firmware \/ تحديث|Ports|Receiver|Modes|Motors|Failsafe|OSD|Blackbox|CLI)$/,
-      }).count() === 10);
-      ok('the new hub renderer test-id is NOT present on the live hub (not wired in yet)', await page.locator('[data-testid="betaflight-hub-renderer"]').count() === 0);
+      ok('the live registry-driven hub renderer is wired in', await page.locator('[data-testid="betaflight-hub-renderer"]').count() === 1);
+      ok('the hub uses the dark bf-shell theme (not the old white-frame layout)', await page.evaluate(() => document.querySelector('[data-testid="betaflight-hub-renderer"]')?.classList.contains('bf-shell')) === true);
+
+      const summaryText = (await page.locator('[data-testid="betaflight-hub-summary"]').textContent()) ?? '';
+      ok('summary shows exactly "18 صفحة مراجعة"', summaryText.includes('18 صفحة مراجعة'));
+      ok('summary shows exactly "8 صفحات قيد الإعداد"', summaryText.includes('8 صفحات قيد الإعداد'));
+
+      // ── all 26 pages are discoverable: 5 groups covering every registry id, no wall-of-26 ──
+      const groupIds = ['disconnected', 'basic-setup', 'tuning-control', 'video-sensors', 'advanced-tools'];
+      for (const g of groupIds) {
+        ok(`group "${g}" renders`, await page.locator(`[data-testid="betaflight-hub-group-${g}"]`).count() === 1);
+      }
+      const totalCardsInGroups = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
+      ok('all 26 registry pages are represented by exactly one card each across the 5 groups', totalCardsInGroups === 26);
+
+      // ── reviewed vs not-started cards are honestly marked ──
+      ok('a reviewed card (Ports) shows the "مراجَع" status', (await page.locator('[data-testid="betaflight-hub-card-ports"]').textContent() ?? '').includes('مراجَع'));
+      ok('a not-started card (Tethered Logging) shows the "لم يُبدأ بعد" status', (await page.locator('[data-testid="betaflight-hub-card-tethered-logging"]').textContent() ?? '').includes('لم يُبدأ بعد'));
+
+      // ── search: Arabic and English ──
+      const searchInput = page.locator('[data-testid="betaflight-hub-search-input"]');
+      await searchInput.fill('Servos');
+      await page.waitForTimeout(150);
+      ok('English search "Servos" narrows to the Servos card via search results', await page.locator('[data-testid="betaflight-hub-search-results"] [data-testid="betaflight-hub-card-servos"]').count() === 1);
+      ok('groups are hidden while a search is active', await page.locator('[data-testid="betaflight-hub-group-basic-setup"]').count() === 0);
+
+      await searchInput.fill('');
+      await searchInput.fill('المحركات الخادمة');
+      await page.waitForTimeout(150);
+      ok('Arabic search "المحركات الخادمة" (Servos) narrows to the Servos card', await page.locator('[data-testid="betaflight-hub-card-servos"]').count() === 1);
+
+      await searchInput.fill('zzz-no-such-page-zzz');
+      await page.waitForTimeout(150);
+      ok('an empty search result shows the honest "no matches" state', await page.locator('[data-testid="betaflight-hub-empty-state"]').count() === 1);
+      const clearButton = page.locator('[data-testid="betaflight-hub-search-clear"]');
+      await clearButton.click();
+      await page.waitForTimeout(150);
+      ok('clearing the search restores the grouped view', await page.locator('[data-testid="betaflight-hub-group-basic-setup"]').count() === 1);
+
+      // ── status filters ──
+      await page.locator('[data-testid="betaflight-hub-filter-reviewed"]').click();
+      await page.waitForTimeout(150);
+      let filteredCount = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
+      ok('the "مراجَع" filter shows exactly 18 cards', filteredCount === 18);
+      ok('a not-started card is absent under the reviewed filter', await page.locator('[data-testid="betaflight-hub-card-tethered-logging"]').count() === 0);
+
+      await page.locator('[data-testid="betaflight-hub-filter-not-started"]').click();
+      await page.waitForTimeout(150);
+      filteredCount = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
+      ok('the "لم يُبدأ بعد" filter shows exactly 8 cards', filteredCount === 8);
+
+      await page.locator('[data-testid="betaflight-hub-filter-all"]').click();
+      await page.waitForTimeout(150);
+      ok('the "الكل" filter restores the full grouped view (26 cards)', await page.locator('[data-testid^="betaflight-hub-card-"]').count() === 26);
+
+      // ── reviewed card opens the real detail page ──
+      await page.locator('[data-testid="betaflight-hub-card-ports"]').click();
+      await page.waitForLoadState('networkidle');
+      await page.locator('h1').first().waitFor({ state: 'visible' });
+      ok('clicking a reviewed card (Ports) navigates to /betaflight/ports', page.url() === `${BASE}/betaflight/ports`);
+      ok('the reviewed Ports detail page renders', await page.locator('h1', { hasText: 'Ports' }).count() === 1);
+
+      // ── not-started card opens the honest not-started state (tethered-logging is not a legacy-shared ID) ──
+      await page.goto(`${BASE}/betaflight`, { waitUntil: 'networkidle' });
+      await page.locator('[data-testid="betaflight-hub-card-tethered-logging"]').click();
+      await page.waitForLoadState('networkidle');
+      await page.locator('h1').first().waitFor({ state: 'visible' });
+      ok('clicking a not-started card (Tethered Logging) navigates to its route', page.url() === `${BASE}/betaflight/tethered-logging`);
+      ok('the honest not-started state renders (not a 404)', await page.locator('text=لم يُبدأ بعد').count() >= 1);
+      ok('does NOT show the generic "not found" message', await page.locator('text=القسم غير موجود').count() === 0);
+
+      // ── legacy route compatibility preserved ──
+      await page.goto(`${BASE}/betaflight/interface`, { waitUntil: 'networkidle' });
+      ok('legacy route /betaflight/interface still renders its old content unchanged', await page.locator('h1', { hasText: 'واجهة Betaflight' }).count() === 1);
+
+      // ── Programming nav stays active on the live hub ──
+      await page.goto(`${BASE}/betaflight`, { waitUntil: 'networkidle' });
+      ok('Programming nav tab remains active on /betaflight', await navButtonIsActive(page, 'البرمجة'));
+
+      // ── keyboard focus visible on a hub card ──
+      const portsCard = page.locator('[data-testid="betaflight-hub-card-ports"]');
+      await portsCard.focus();
+      ok('a hub card is keyboard-focusable', await portsCard.evaluate(el => el === document.activeElement));
+
+      ok('no unexpected console error on the live hub', consoleErrors.filter(e => !/net::ERR_|favicon/i.test(e)).length === 0);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+      ok('no horizontal overflow on the live hub', !overflow);
+
       await ctx.close();
     }
 

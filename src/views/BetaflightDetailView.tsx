@@ -24,14 +24,16 @@ export const BetaflightDetailView: React.FC = () => {
     );
   }
 
-  // Several registry IDs (receiver/modes/motors/failsafe/osd/blackbox/cli)
-  // intentionally share their ID with one of the original ten legacy
-  // articles. Those nine must keep rendering exactly as before — only a
-  // registry entry with NO legacy counterpart (e.g. 'power', 'gps') is a
-  // genuinely new page, and only for those do we show the honest
-  // not-started state instead of falling through to "section not found."
-  const isLegacyId = betaflightData.some(s => s.id === sectionId);
-  if (registryEntry && !isLegacyId) {
+  // Several registry IDs (receiver/modes/motors/failsafe/osd/cli) intentionally
+  // share their ID with one of the original ten legacy articles; those are
+  // already handled above via registryEntry.page (reviewed). Any remaining
+  // registry entry here has no `.page`, i.e. it is honestly not-started —
+  // that must win over a legacy-article collision (e.g. 'blackbox' exists in
+  // both places, but the registry's not-started status is the source of
+  // truth for the live 26-page hub). A legacy-only ID with no registry
+  // counterpart at all (e.g. 'interface', 'firmware') still falls through to
+  // the legacy branch below.
+  if (registryEntry) {
     return (
       <AppShell tint="purple">
         <BetaflightNotStartedPage entry={registryEntry} versionContext={BF_VERSION_CONTEXT} backTo="/betaflight" />

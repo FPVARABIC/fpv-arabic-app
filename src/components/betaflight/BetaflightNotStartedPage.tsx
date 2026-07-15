@@ -18,16 +18,16 @@ export const BetaflightNotStartedPage: React.FC<{
   const navigate = useNavigate();
 
   return (
-    <div className="fade-in">
-      <div className="px-4 pt-4 pb-3 flex items-center gap-3 border-b border-cyan-400/10">
-        <button onClick={() => navigate(backTo)} className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center press" aria-label="العودة">
-          <ArrowRight size={18} className="text-slate-400" />
+    <div className="fade-in bf-shell">
+      <div className="bf-header px-4 pt-4 pb-3.5 flex items-center gap-3">
+        <button onClick={() => navigate(backTo)} className="w-9 h-9 rounded-xl bg-white/8 flex items-center justify-center press" aria-label="العودة">
+          <ArrowRight size={18} className="text-slate-200" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-extrabold text-white" dir="ltr">
+          <h1 className="text-xl font-extrabold text-white tracking-tight" dir="ltr">
             {entry.officialTitle}
           </h1>
-          <p className="text-xs text-cyan-300">{entry.titleAr}</p>
+          <p className="text-[13px] text-cyan-300 font-medium mt-0.5">{entry.titleAr}</p>
         </div>
         <SafetyBadge level={entry.safetyLevel} />
       </div>
@@ -38,7 +38,7 @@ export const BetaflightNotStartedPage: React.FC<{
           {entry.conditionNote && <ConditionBadge note={entry.conditionNote} />}
         </div>
 
-        <div className="card-subtle p-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400">
+        <div className="bf-panel-quiet p-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-slate-300">
           <span>الإصدار الموثّق: Betaflight {versionContext.releaseLine}</span>
           <span>تمت المراجعة: {versionContext.reviewedAt}</span>
         </div>
