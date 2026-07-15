@@ -67,6 +67,14 @@ const HUB_GROUPS: { id: string; titleAr: string; icon: IconCmp; pageIds: string[
   { id: 'advanced-tools', titleAr: 'الأدوات المتقدمة', icon: Boxes, pageIds: ['cli', 'tethered-logging', 'blackbox', 'servos', 'transponder'] },
 ];
 
+// These four "قبل الاتصال" registry entries are app/Configurator chrome
+// (welcome screen, privacy policy, in-app options, docs links) rather than
+// FC-configuration pages — they add no teaching value to the live hub. They
+// stay fully defined in the registry (still 26 entries) and their direct
+// routes still resolve honestly; only the live hub's visible card list
+// excludes them, so Firmware Flasher is the sole "قبل الاتصال" card.
+const HUB_HIDDEN_IDS = new Set(['landing', 'privacy-policy', 'options', 'help']);
+
 type StatusFilter = 'all' | 'reviewed' | 'not-started';
 
 function matchesQuery(entry: BfRegistryEntry, rawQuery: string): boolean {
@@ -121,18 +129,20 @@ export const BetaflightHubRenderer: React.FC<{
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const reviewedCount = entries.filter(e => e.contentStatus === 'reviewed').length;
-  const notStartedCount = entries.filter(e => e.contentStatus === 'not-started').length;
-  const byId = useMemo(() => new Map(entries.map(e => [e.id, e])), [entries]);
+  const visibleEntries = useMemo(() => entries.filter(e => !HUB_HIDDEN_IDS.has(e.id)), [entries]);
+
+  const reviewedCount = visibleEntries.filter(e => e.contentStatus === 'reviewed').length;
+  const notStartedCount = visibleEntries.filter(e => e.contentStatus === 'not-started').length;
+  const byId = useMemo(() => new Map(visibleEntries.map(e => [e.id, e])), [visibleEntries]);
 
   const filtered = useMemo(
     () =>
-      entries.filter(e => {
+      visibleEntries.filter(e => {
         if (statusFilter === 'reviewed' && e.contentStatus !== 'reviewed') return false;
         if (statusFilter === 'not-started' && e.contentStatus !== 'not-started') return false;
         return matchesQuery(e, query);
       }),
-    [entries, query, statusFilter],
+    [visibleEntries, query, statusFilter],
   );
 
   const isFiltering = query.trim().length > 0 || statusFilter !== 'all';

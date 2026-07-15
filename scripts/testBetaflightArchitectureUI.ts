@@ -223,16 +223,28 @@ async function main() {
       ok('the hub uses the dark bf-shell theme (not the old white-frame layout)', await page.evaluate(() => document.querySelector('[data-testid="betaflight-hub-renderer"]')?.classList.contains('bf-shell')) === true);
 
       const summaryText = (await page.locator('[data-testid="betaflight-hub-summary"]').textContent()) ?? '';
-      ok('summary shows exactly "18 صفحة مراجعة"', summaryText.includes('18 صفحة مراجعة'));
-      ok('summary shows exactly "8 صفحات قيد الإعداد"', summaryText.includes('8 صفحات قيد الإعداد'));
+      ok('summary shows exactly "18 صفحة مراجعة" (all 18 reviewed pages are visible; none are hidden)', summaryText.includes('18 صفحة مراجعة'));
+      ok('summary shows exactly "4 صفحات قيد الإعداد" (visible-only count, not the registry\'s full 8)', summaryText.includes('4 صفحات قيد الإعداد'));
 
-      // ── all 26 pages are discoverable: 5 groups covering every registry id, no wall-of-26 ──
+      // ── the "قبل الاتصال" group renders with exactly one visible card (Firmware Flasher); 4 other groups remain unaffected ──
       const groupIds = ['disconnected', 'basic-setup', 'tuning-control', 'video-sensors', 'advanced-tools'];
       for (const g of groupIds) {
         ok(`group "${g}" renders`, await page.locator(`[data-testid="betaflight-hub-group-${g}"]`).count() === 1);
       }
       const totalCardsInGroups = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
-      ok('all 26 registry pages are represented by exactly one card each across the 5 groups', totalCardsInGroups === 26);
+      ok('exactly 22 visible cards render (26 registry entries minus the 4 hidden "app chrome" pages)', totalCardsInGroups === 22);
+      const disconnectedGroupCards = await page.locator('[data-testid="betaflight-hub-group-disconnected"] [data-testid^="betaflight-hub-card-"]').count();
+      ok('the "قبل الاتصال" group shows exactly one card', disconnectedGroupCards === 1);
+      ok('that one card is Firmware Flasher', await page.locator('[data-testid="betaflight-hub-group-disconnected"] [data-testid="betaflight-hub-card-firmware-flasher"]').count() === 1);
+
+      // ── the 4 hidden pages never render as hub cards ──
+      for (const hiddenId of ['landing', 'privacy-policy', 'options', 'help']) {
+        ok(`hidden page "${hiddenId}" does not render as a hub card`, await page.locator(`[data-testid="betaflight-hub-card-${hiddenId}"]`).count() === 0);
+      }
+      ok('"Welcome" text does not appear as a hub card title', await page.locator('[data-testid^="betaflight-hub-card-"]', { hasText: 'Welcome' }).count() === 0);
+      ok('"Privacy Policy" text does not appear as a hub card title', await page.locator('[data-testid^="betaflight-hub-card-"]', { hasText: 'Privacy Policy' }).count() === 0);
+      ok('"Options" text does not appear as a hub card title', await page.locator('[data-testid^="betaflight-hub-card-"]', { hasText: 'Options' }).count() === 0);
+      ok('"Documentation & Support" text does not appear as a hub card title', await page.locator('[data-testid^="betaflight-hub-card-"]', { hasText: 'Documentation & Support' }).count() === 0);
 
       // ── reviewed vs not-started cards are honestly marked ──
       ok('a reviewed card (Ports) shows the "مراجَع" status', (await page.locator('[data-testid="betaflight-hub-card-ports"]').textContent() ?? '').includes('مراجَع'));
@@ -250,6 +262,20 @@ async function main() {
       await page.waitForTimeout(150);
       ok('Arabic search "المحركات الخادمة" (Servos) narrows to the Servos card', await page.locator('[data-testid="betaflight-hub-card-servos"]').count() === 1);
 
+      // ── search cannot reveal a hidden page, even by its exact official/Arabic title ──
+      await searchInput.fill('');
+      await searchInput.fill('Firmware');
+      await page.waitForTimeout(150);
+      ok('search "Firmware" finds Firmware Flasher', await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').count() === 1);
+
+      for (const hiddenQuery of ['Welcome', 'Privacy', 'Options', 'Support']) {
+        await searchInput.fill('');
+        await searchInput.fill(hiddenQuery);
+        await page.waitForTimeout(150);
+        ok(`search "${hiddenQuery}" returns no result (the matching page is hidden from the hub)`, await page.locator('[data-testid="betaflight-hub-empty-state"]').count() === 1);
+      }
+
+      await searchInput.fill('');
       await searchInput.fill('zzz-no-such-page-zzz');
       await page.waitForTimeout(150);
       ok('an empty search result shows the honest "no matches" state', await page.locator('[data-testid="betaflight-hub-empty-state"]').count() === 1);
@@ -268,11 +294,13 @@ async function main() {
       await page.locator('[data-testid="betaflight-hub-filter-not-started"]').click();
       await page.waitForTimeout(150);
       filteredCount = await page.locator('[data-testid^="betaflight-hub-card-"]').count();
-      ok('the "لم يُبدأ بعد" filter shows exactly 8 cards', filteredCount === 8);
+      ok('the "لم يُبدأ بعد" filter shows exactly 4 visible cards (not the registry\'s full 8)', filteredCount === 4);
+      ok('Firmware Flasher is visible under the not-started filter', await page.locator('[data-testid="betaflight-hub-card-firmware-flasher"]').count() === 1);
+      ok('a hidden not-started page (landing) is absent under the not-started filter', await page.locator('[data-testid="betaflight-hub-card-landing"]').count() === 0);
 
       await page.locator('[data-testid="betaflight-hub-filter-all"]').click();
       await page.waitForTimeout(150);
-      ok('the "الكل" filter restores the full grouped view (26 cards)', await page.locator('[data-testid^="betaflight-hub-card-"]').count() === 26);
+      ok('the "الكل" filter restores the full visible view (22 cards, not 26)', await page.locator('[data-testid^="betaflight-hub-card-"]').count() === 22);
 
       // ── reviewed card opens the real detail page ──
       await page.locator('[data-testid="betaflight-hub-card-ports"]').click();
@@ -307,6 +335,28 @@ async function main() {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
       ok('no horizontal overflow on the live hub', !overflow);
 
+      await ctx.close();
+    }
+
+    // ── [6b] Direct routes to the 4 hub-hidden pages remain honest and functional (hiding is hub-visibility only, never a route/data deletion) ──
+    console.log('\n[6b] Direct deep links to the 4 hub-hidden pages still work (their honest not-started state, never removed)');
+    {
+      const HIDDEN_ROUTES: { id: string; officialTitle: string }[] = [
+        { id: 'landing', officialTitle: 'Welcome' },
+        { id: 'privacy-policy', officialTitle: 'Privacy Policy' },
+        { id: 'options', officialTitle: 'Options' },
+        { id: 'help', officialTitle: 'Documentation & Support' },
+      ];
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      for (const { id, officialTitle } of HIDDEN_ROUTES) {
+        await page.goto(`${BASE}/betaflight/${id}`, { waitUntil: 'networkidle' });
+        await page.locator('h1').first().waitFor({ state: 'visible' });
+        ok(`/betaflight/${id}: h1 shows the official title "${officialTitle}" (route still resolves)`, (await page.locator('h1').textContent())?.trim() === officialTitle);
+        ok(`/betaflight/${id}: honest not-started badge renders`, await page.locator('text=لم يُبدأ بعد').count() >= 1);
+        ok(`/betaflight/${id}: does NOT show the generic "not found" message`, await page.locator('text=القسم غير موجود').count() === 0);
+        ok(`/betaflight/${id}: Programming nav tab remains active`, await navButtonIsActive(page, 'البرمجة'));
+      }
       await ctx.close();
     }
 

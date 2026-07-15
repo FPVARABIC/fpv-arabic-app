@@ -1095,4 +1095,69 @@ console.log('\n[15] BLACKBOX DISPATCH PRECEDENCE — a not-started registry ID t
   ok('legacy-only IDs with no registry counterpart still exist (interface/firmware)', legacyOnlyIds.includes('interface') && legacyOnlyIds.includes('firmware'));
 }
 
+console.log('\n[16] HUB VISIBILITY — the live hub intentionally hides four disconnected-state "app chrome" pages; the registry itself is untouched');
+{
+  const hubRendererSrc = readFileSync(join(ROOT, 'src/components/betaflight/BetaflightHubRenderer.tsx'), 'utf8');
+  const EXPECTED_HIDDEN = ['landing', 'privacy-policy', 'options', 'help'];
+
+  ok('registry still has exactly 26 total entries (this task adds/removes none)', bfPageRegistry.length === 26);
+  ok('registry still has exactly 18 "reviewed" entries (unchanged)', bfPageRegistry.filter(e => e.contentStatus === 'reviewed').length === 18);
+  ok('registry still has exactly 8 "not-started" entries (unchanged)', bfPageRegistry.filter(e => e.contentStatus === 'not-started').length === 8);
+  for (const id of EXPECTED_HIDDEN) {
+    ok(`hidden page "${id}" still exists in the registry (only hub visibility changed, not the data)`, bfPageRegistry.some(e => e.id === id));
+  }
+
+  // ── the source literally declares the same 4 hidden IDs the task requires ──
+  const hiddenSetMatch = hubRendererSrc.match(/HUB_HIDDEN_IDS\s*=\s*new Set\(\[([^\]]*)\]\)/);
+  ok('BetaflightHubRenderer.tsx declares a HUB_HIDDEN_IDS set', !!hiddenSetMatch);
+  const declaredHidden = [...(hiddenSetMatch?.[1] ?? '').matchAll(/'([a-z-]+)'/g)].map(m => m[1]);
+  ok('exactly 4 IDs are declared hidden from the hub', declaredHidden.length === 4);
+  ok('the declared hidden IDs are exactly landing/privacy-policy/options/help (no more, no less)', JSON.stringify([...declaredHidden].sort()) === JSON.stringify([...EXPECTED_HIDDEN].sort()));
+  ok('"firmware-flasher" is NOT in the hidden set (it remains the sole visible "قبل الاتصال" card)', !declaredHidden.includes('firmware-flasher'));
+  ok('no reviewed page is ever hidden from the hub', EXPECTED_HIDDEN.every(id => bfPageRegistry.find(e => e.id === id)?.contentStatus !== 'reviewed'));
+
+  // ── independently recompute the live hub's visible set the same way the component does, from the real registry ──
+  const hiddenSet = new Set(declaredHidden);
+  const visibleEntries = bfPageRegistry.filter(e => !hiddenSet.has(e.id));
+  ok('the live hub shows exactly 22 visible cards (26 registry entries minus the 4 hidden)', visibleEntries.length === 22);
+  ok('the live hub shows exactly 18 visible "reviewed" cards (none of the hidden 4 are reviewed)', visibleEntries.filter(e => e.contentStatus === 'reviewed').length === 18);
+  ok('the live hub shows exactly 4 visible "not-started" cards', visibleEntries.filter(e => e.contentStatus === 'not-started').length === 4);
+  ok(
+    'the 4 visible not-started cards are exactly firmware-flasher/tethered-logging/blackbox/transponder',
+    JSON.stringify(visibleEntries.filter(e => e.contentStatus === 'not-started').map(e => e.id).sort())
+      === JSON.stringify(['blackbox', 'firmware-flasher', 'tethered-logging', 'transponder'].sort()),
+  );
+
+  // ── the "قبل الاتصال" (disconnected) group's *visible* membership is exactly one card ──
+  const groupBlockMatches2 = [...hubRendererSrc.matchAll(/id:\s*'([a-z-]+)',\s*titleAr:\s*'[^']*',\s*icon:\s*\w+,\s*pageIds:\s*\[([^\]]*)\]/g)];
+  const disconnectedGroup = groupBlockMatches2.find(m => m[1] === 'disconnected');
+  ok('the "disconnected" (قبل الاتصال) group definition still exists', !!disconnectedGroup);
+  const disconnectedGroupIds = [...(disconnectedGroup?.[2] ?? '').matchAll(/'([a-z-]+)'/g)].map(m => m[1]);
+  const disconnectedVisible = disconnectedGroupIds.filter(id => !hiddenSet.has(id));
+  ok('the "قبل الاتصال" group has exactly one VISIBLE member after hiding', disconnectedVisible.length === 1);
+  ok('that one visible member is "firmware-flasher"', disconnectedVisible[0] === 'firmware-flasher');
+  // The group's declared pageIds array itself is untouched (still all 5) —
+  // only the runtime hidden-set filter narrows what actually renders. This
+  // preserves "every registry entry in exactly one group" from section [14].
+  ok('the group\'s declared pageIds array still lists all 5 original IDs (data untouched, only visibility narrowed)', disconnectedGroupIds.length === 5);
+
+  // ── no other group's declared membership or order was touched ──
+  const OTHER_GROUPS_EXPECTED: Record<string, string[]> = {
+    'basic-setup': ['setup', 'ports', 'configuration', 'receiver', 'power'],
+    'tuning-control': ['pid-tuning', 'modes', 'adjustments', 'presets', 'failsafe', 'motors'],
+    'video-sensors': ['osd', 'vtx', 'sensors', 'gps', 'led-strip'],
+    'advanced-tools': ['cli', 'tethered-logging', 'blackbox', 'servos', 'transponder'],
+  };
+  for (const [groupId, expectedIds] of Object.entries(OTHER_GROUPS_EXPECTED)) {
+    const g = groupBlockMatches2.find(m => m[1] === groupId);
+    const ids = [...(g?.[2] ?? '').matchAll(/'([a-z-]+)'/g)].map(m => m[1]);
+    ok(`group "${groupId}" membership and order are unchanged`, JSON.stringify(ids) === JSON.stringify(expectedIds));
+  }
+
+  // ── the hidden IDs' direct routes remain honest (still dispatched via the untouched not-started branch, not deleted) ──
+  const detailViewSrc2 = readFileSync(join(ROOT, 'src/views/BetaflightDetailView.tsx'), 'utf8');
+  ok('BetaflightDetailView.tsx still has a not-started dispatch branch that any registry entry (hidden or not) reaches via direct URL', /if \(registryEntry\) \{/.test(detailViewSrc2));
+  ok('BetaflightHubRenderer.tsx does not delete or mutate registry data (filters a local computed array only)', /entries\.filter\(e => !HUB_HIDDEN_IDS\.has\(e\.id\)\)/.test(hubRendererSrc));
+}
+
 console.log(`\nAll ${passed} structural assertions passed.`);
