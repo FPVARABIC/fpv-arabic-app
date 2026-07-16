@@ -50,3 +50,22 @@ export async function e2eToggleLikeDirect(
     return { ok: false, code: (err as { code?: string } | null)?.code };
   }
 }
+
+// Calls the REAL togglePostLike callable directly, bypassing the UI — used
+// once a post has been deleted/hidden (its like button is no longer
+// rendered anywhere reachable), to prove the backend itself still rejects
+// liking it, and to prove a client-supplied "uid" field in the payload
+// never overrides the real request.auth.uid.
+export async function e2eTogglePostLikeDirect(
+  postId: string,
+  desiredState: 'like' | 'unlike',
+  extraPayload: Record<string, unknown> = {},
+): Promise<{ ok: boolean; liked?: boolean; code?: string }> {
+  const call = httpsCallable<{ postId: string; desiredState: string }, ToggleLikeResult>(firebaseFunctions, 'togglePostLike');
+  try {
+    const res = await call({ postId, desiredState, ...extraPayload });
+    return { ok: true, liked: res.data.liked };
+  } catch (err) {
+    return { ok: false, code: (err as { code?: string } | null)?.code };
+  }
+}

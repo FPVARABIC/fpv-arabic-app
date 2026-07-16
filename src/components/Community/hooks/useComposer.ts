@@ -97,6 +97,7 @@ export const useComposer = (): UseComposerResult => {
           mediaDuration: null,
           mediaPath: media?.mediaPath ?? null,
           commentsCount: 0,
+          likesCount: 0,
           createdAt: serverTimestamp(),
           status: 'active',
           searchTokens: generateSearchTokens(text),

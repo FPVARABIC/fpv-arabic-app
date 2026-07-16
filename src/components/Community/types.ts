@@ -65,6 +65,15 @@ export interface Post {
   createdAt: Timestamp;
   status: ContentStatus;
   searchTokens: string[];
+  // Server-aggregated via increment() inside the same Admin-SDK transaction
+  // that creates/deletes the paired likes/{uid} document (see
+  // functions/src/index.ts's togglePostLike) — same trust model as
+  // Comment.likesCount above. Written as 0 at creation time (client write,
+  // validated by firestore.rules) since post creation itself remains a
+  // direct client write, unlike comment creation. Absent on any post
+  // created before this field existed; every read site must coalesce with
+  // `?? 0` rather than assume every document has it.
+  likesCount?: number;
 }
 
 export interface Comment {
@@ -91,6 +100,13 @@ export interface Comment {
 // the toggleCommentLike Cloud Function (functions/src/index.ts) — the
 // client SDK is denied create/update/delete on this path in firestore.rules.
 export interface CommentLike {
+  createdAt: Timestamp;
+}
+
+// A single user's like on a single post — same deterministic-document-ID
+// model as CommentLike above (posts/{postId}/likes/{uid}), written
+// exclusively by the togglePostLike Cloud Function (functions/src/index.ts).
+export interface PostLike {
   createdAt: Timestamp;
 }
 

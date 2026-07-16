@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowRight, Trash2 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
@@ -8,6 +9,7 @@ import { postPath } from '../utils/firestorePaths';
 import { CommentsList } from './CommentsList';
 import { CommentInput } from './CommentInput';
 import { ReportButton } from '../Moderation/ReportButton';
+import { PostLikeButton } from '../PostLikeButton';
 import { CATEGORY_LABELS, CATEGORY_TINTS } from '../utils/categories';
 import { timeAgo } from '../utils/timeAgo';
 import { Avatar } from '../Avatar';
@@ -29,6 +31,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
   } = usePost(postId);
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const tint = post && post.category && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
@@ -44,6 +47,11 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
   const deletePost = async () => {
     await updateDoc(doc(firestoreDb, postPath(postId)), { status: 'deleted' });
     onBack();
+  };
+
+  const handleGuestLikeTap = () => {
+    setToast('يجب تسجيل الدخول للإعجاب');
+    setTimeout(() => setToast(null), 2500);
   };
 
   return (
@@ -111,6 +119,21 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
             }}>
               {CATEGORY_LABELS[post.category]}
             </span>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <PostLikeButton postId={post.id} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} size={18} />
+          </div>
+
+          {toast && createPortal(
+            <div style={{
+              position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+              background: '#1a2b3c', color: '#ffffff', fontSize: 13, padding: '10px 18px',
+              borderRadius: 999, zIndex: 60, whiteSpace: 'nowrap',
+            }}>
+              {toast}
+            </div>,
+            document.body,
           )}
 
           <div style={{ height: 1, background: '#e5eaf0', margin: '18px 0' }} />

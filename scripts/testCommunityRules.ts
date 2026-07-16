@@ -121,6 +121,7 @@ const validPostDoc = (authorId: string, overrides: Record<string, unknown> = {})
   mediaDuration: null,
   mediaPath: null,
   commentsCount: 0,
+  likesCount: 0,
   createdAt: serverTimestamp(),
   status: 'active',
   searchTokens: ['منشور', 'تجريبي'],
@@ -786,6 +787,88 @@ async function main() {
 
   await record('E6 email field injection into a public-profile-adjacent field via update is rejected (users/{uid} update only ever allows the two narrow paired-write shapes)', 'deny', () =>
     updateDoc(doc(asA.firestore(), 'users/uidA'), { email: 'leaked@example.com' }));
+
+  await record('E7 a fake "provider" field injection into a new user bootstrap document is rejected (hasOnly() allow-list, same mechanism as E1)', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidProviderInject').firestore(), 'users/uidProviderInject'), {
+      ...validUserDoc({ displayName: 'Provider Injector' }),
+      provider: 'google.com',
+    }));
+
+  await record('E8 a fake private-settings field injection into a new user bootstrap document is rejected', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidSettingsInject').firestore(), 'users/uidSettingsInject'), {
+      ...validUserDoc({ displayName: 'Settings Injector' }),
+      privateSettings: { notificationsEnabled: true },
+    }));
+
+  console.log('\n=== 20. Post likes (Phase 7) — Cloud-Function-only, direct client bypass proofs ===');
+  console.log('    (real concurrent like/unlike behavior now lives server-side in');
+  console.log('    togglePostLike and is exercised in scripts/testCommunityFunctions.ts.)');
+
+  const asPostLikeA = testEnv.authenticatedContext('uidPostLikeA');
+  const asPostLikeB = testEnv.authenticatedContext('uidPostLikeB');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidPostLikeA'), validUserDoc({ displayName: 'Post Like Pilot A' }));
+    await setDoc(doc(db, 'users/uidPostLikeB'), validUserDoc({ displayName: 'Post Like Pilot B' }));
+    await setDoc(doc(db, 'posts/post-like-target-post'), validPostDoc('uidA', { text: 'a likeable post' }));
+  });
+
+  await record('PL1 direct client post-like create (own uid) is denied — like creation is Cloud-Function-only', 'deny', () =>
+    setDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA'), { createdAt: serverTimestamp() }));
+
+  await record('PL2 direct client post-like create at another user\'s uid path (spoofing) is denied', 'deny', () =>
+    setDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeB'), { createdAt: serverTimestamp() }));
+
+  await record('PL3 a guest cannot create a post like', 'deny', () =>
+    setDoc(doc(asGuest.firestore(), 'posts/post-like-target-post/likes/uidGuestPostLike'), { createdAt: serverTimestamp() }));
+
+  await record('PL4 a direct +1 post likesCount update is denied', 'deny', () =>
+    updateDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post'), { likesCount: increment(1) }));
+
+  await record('PL5 a direct arbitrary post likesCount write is denied', 'deny', () =>
+    updateDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post'), { likesCount: 9999 }));
+
+  // Seed a real like document (rules disabled, simulating one already
+  // created by togglePostLike) so PL6/PL7 can prove delete is ALSO closed
+  // to the client, not merely create.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA'), { createdAt: serverTimestamp() });
+  });
+
+  await record('PL6 the like\'s own owner cannot directly delete it — unlike is Cloud-Function-only too', 'deny', () =>
+    deleteDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
+
+  await record('PL7 a different user cannot delete uidPostLikeA\'s like either', 'deny', () =>
+    deleteDoc(doc(asPostLikeB.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
+
+  await record('PL8 anyone (including a guest) CAN still read a post like — likes remain public, only writes moved server-side', 'allow', () =>
+    getDoc(doc(asGuest.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
+
+  console.log('\n=== 21. Post creation likesCount field lock (Phase 7) ===');
+
+  // Fresh, never-posted uids — uidB has already successfully created a post
+  // earlier in this suite (section 12), so reusing it here would risk the
+  // 60s rate-limit denial masking the specific check this section exists to
+  // prove; a fresh uid guarantees the denial below is actually caused by
+  // the likesCount validation, not an incidental rate-limit collision.
+  const asPostCreateLikesCountA = testEnv.authenticatedContext('uidPostCreateLikesCountA');
+  const asPostCreateLikesCountB = testEnv.authenticatedContext('uidPostCreateLikesCountB');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidPostCreateLikesCountA'), validUserDoc({ displayName: 'Post Create LikesCount Pilot A' }));
+    await setDoc(doc(db, 'users/uidPostCreateLikesCountB'), validUserDoc({ displayName: 'Post Create LikesCount Pilot B' }));
+  });
+
+  await record('PC1 post create with likesCount != 0 is rejected', 'deny', () =>
+    setDoc(doc(asPostCreateLikesCountA.firestore(), 'posts/post-likescount-forged'), validPostDoc('uidPostCreateLikesCountA', {
+      authorName: 'Post Create LikesCount Pilot A', likesCount: 5,
+    })));
+
+  await record('PC2 post create with likesCount missing entirely is rejected', 'deny', () => {
+    const { likesCount: _omit, ...withoutLikesCount } = validPostDoc('uidPostCreateLikesCountB', { authorName: 'Post Create LikesCount Pilot B' });
+    void _omit;
+    return setDoc(doc(asPostCreateLikesCountB.firestore(), 'posts/post-likescount-missing'), withoutLikesCount);
+  });
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

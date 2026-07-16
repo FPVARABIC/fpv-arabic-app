@@ -175,7 +175,7 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly([
                          'authorId', 'authorName', 'authorPhoto', 'text', 'category',
                          'mediaType', 'mediaURL', 'thumbnailURL', 'mediaSize', 'mediaDuration', 'mediaPath',
-                         'commentsCount', 'createdAt', 'status', 'searchTokens'
+                         'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount'
                        ])
                     && request.resource.data.authorId == request.auth.uid
                     && request.resource.data.authorName == callerProfile().displayName
@@ -193,6 +193,17 @@ service cloud.firestore {
                          ]
                        )
                     && request.resource.data.commentsCount == 0
+                    // likesCount (Phase 7) — written 0 by the client at creation,
+                    // same as commentsCount above, since post creation itself
+                    // remains a direct client write (unlike comment creation,
+                    // which moved to the Admin-SDK createComment Function). Never
+                    // client-writable again after creation — see the update rule
+                    // below, whose diff().affectedKeys() allowlist has no branch
+                    // that includes 'likesCount', and togglePostLike
+                    // (functions/src/index.ts) is the only path that ever changes
+                    // it post-creation, via the Admin SDK, which bypasses these
+                    // Rules by design.
+                    && request.resource.data.likesCount == 0
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.searchTokens is list
                     && request.resource.data.searchTokens.size() <= 30
@@ -251,6 +262,19 @@ service cloud.firestore {
                        );
 
       allow delete: if false; // soft delete only, ever (D10)
+
+      // One like document per (post, liker) — deterministic key, same model
+      // and same reasoning as comments/{commentId}/likes/{likerUid} below:
+      // BOTH create and delete are Cloud-Function-only (togglePostLike),
+      // since the Function atomically pairs this write with the post's
+      // likesCount adjustment inside one transaction, which a direct client
+      // write could never guarantee. Read stays public, matching the rest
+      // of this project's "a like is no more sensitive than the public
+      // content it's attached to" posture.
+      match /likes/{likerUid} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
 
       match /comments/{commentId} {
         allow read: if resource.data.status == 'active';

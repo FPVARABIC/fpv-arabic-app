@@ -45,6 +45,12 @@ const firebaseLibTs = readFileSync(join(ROOT, 'src/lib/firebase.ts'), 'utf8');
 const functionsIndexTs = readFileSync(join(ROOT, 'functions/src/index.ts'), 'utf8');
 const functionsPackageJson = readFileSync(join(ROOT, 'functions/package.json'), 'utf8');
 const firebaseJson = readFileSync(join(ROOT, 'firebase.json'), 'utf8');
+const vercelJson = readFileSync(join(ROOT, 'vercel.json'), 'utf8');
+const postCardTsx = readFileSync(join(ROOT, 'src/components/Community/Feed/PostCard.tsx'), 'utf8');
+const postLikeButtonTsx = readFileSync(join(ROOT, 'src/components/Community/PostLikeButton.tsx'), 'utf8');
+const usePostLikeTs = readFileSync(join(ROOT, 'src/components/Community/hooks/usePostLike.ts'), 'utf8');
+const useComposerTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useComposer.ts'), 'utf8');
+const migrationProdTs = readFileSync(join(ROOT, 'functions/scripts/migrateDisplayNameNormalizedProd.ts'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -286,6 +292,59 @@ console.log('\n[15] Privacy leak scan — no email field anywhere in changed Com
   ok('types.ts never declares an actual "email" interface member anywhere', !/^\s*email[?:]/m.test(typesTs));
 }
 
+console.log('\n[17] Post likes (Phase 7) — schema, path helpers, Rules, and Function are all consistent');
+{
+  ok('Post.likesCount is declared', /likesCount\?:\s*number/.test(typesTs) && (typesTs.match(/likesCount\?:\s*number/g) ?? []).length >= 2);
+  ok('PostLike interface exists, mirroring CommentLike', /export interface PostLike/.test(typesTs));
+  ok('postLikesPath/postLikePath helpers exist in firestorePaths.ts', /export const postLikesPath/.test(firestorePathsTs) && /export const postLikePath/.test(firestorePathsTs));
+  ok('firestore.rules requires likesCount == 0 at post creation', /request\.resource\.data\.likesCount == 0/.test(rulesTxt));
+  ok('firestore.rules\' post create key allow-list includes likesCount', /'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount'/.test(rulesTxt));
+  ok('firestore.rules denies create/update/delete on posts/{postId}/likes/{likerUid} to the client', /One like document per \(post, liker\)[\s\S]{0,600}?match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
+  ok('togglePostLike is exported as an onCall function', /export const togglePostLike = onCall/.test(functionsIndexTs));
+  ok('togglePostLike takes an explicit desiredState (\'like\'|\'unlike\') rather than blindly inverting current state', /export const togglePostLike[\s\S]{0,600}?desiredState/.test(functionsIndexTs));
+  ok('togglePostLike writes the like doc and adjusts likesCount inside the SAME transaction (atomic, no split-write drift)', /tx\.set\(likeRef, \{ createdAt: FieldValue\.serverTimestamp\(\) \}\);\s*\n\s*tx\.update\(postRef, \{ likesCount: FieldValue\.increment/.test(functionsIndexTs));
+  ok('cleanupPostLikes is exported as an onDocumentUpdated trigger scoped to posts/{postId}', /export const cleanupPostLikes = onDocumentUpdated\(\s*\n\s*\{ document: 'posts\/\{postId\}'/.test(functionsIndexTs));
+  ok('cleanupPostLikes and cleanupCommentLikes share the same bounded-batch delete helper (no duplicated batching loop)', (functionsIndexTs.match(/deleteAllDocsInBatches\(/g) ?? []).length >= 3); // 1 definition + 2 call sites
+  ok('useComposer.ts writes likesCount: 0 at post creation, alongside commentsCount: 0', /commentsCount: 0,\s*\n\s*likesCount: 0,/.test(useComposerTs));
+  ok('usePostLike.ts calls the togglePostLike Cloud Function with an explicit desiredState', /httpsCallable[^(]*\(\s*\n?\s*firebaseFunctions,\s*\n?\s*'togglePostLike'/.test(usePostLikeTs));
+}
+
+console.log('\n[18] Post-like UI — one shared component, used consistently, accessible');
+{
+  ok('PostCard.tsx renders the shared PostLikeButton (feed, search results, public-profile posts, and saved posts all reuse PostCard, so this one wiring covers all of them)', /<PostLikeButton\b/.test(postCardTsx));
+  ok('PostDetail.tsx renders the shared PostLikeButton', /<PostLikeButton\b/.test(postDetailTsx));
+  ok('PostLikeButton is a single shared component, not duplicated per-screen', /export const PostLikeButton/.test(postLikeButtonTsx));
+  ok('the like button is a real native <button>', /<button\b/.test(postLikeButtonTsx));
+  ok('the accessible name is Arabic and flips between like/unlike (never color-only status)', /'إلغاء الإعجاب بهذا المنشور'/.test(postLikeButtonTsx) && /'أعجبني هذا المنشور'/.test(postLikeButtonTsx));
+  ok('aria-pressed reflects the liked state', /aria-pressed=\{!isGuest && liked\}/.test(postLikeButtonTsx));
+  ok('the Heart icon itself changes shape (fill), not just color, between states', /fill=\{liked \? '#dc2626' : 'none'\}/.test(postLikeButtonTsx));
+  ok('the count span is always rendered (even as an empty string), so toggling never shifts layout', /likesCount > 0 \? likesCount : ''/.test(postLikeButtonTsx));
+  ok('the button is disabled while a toggle is genuinely pending, preventing double-activation', /disabled=\{!isGuest && \(likedLoading \|\| toggling\)\}/.test(postLikeButtonTsx));
+}
+
+console.log('\n[19] CSP (vercel.json) — Cloud Functions and Storage domains are reachable (the deployed comment-publish/upload bug fix)');
+{
+  const cspHeader = vercelJson.match(/"Content-Security-Policy"[\s\S]*?"value": "([^"]+)"/)?.[1] ?? '';
+  const connectSrc = cspHeader.match(/connect-src ([^;]+);/)?.[1] ?? '';
+  ok('connect-src allows Cloud Functions callable invocation (the Functions SDK constructs URLs as https://{region}-{projectId}.cloudfunctions.net/{name} — confirmed from the installed SDK source)', connectSrc.includes('https://*.cloudfunctions.net'));
+  ok('connect-src allows Firebase Storage (the Storage SDK\'s default host is firebasestorage.googleapis.com — confirmed from the installed SDK source)', connectSrc.includes('https://firebasestorage.googleapis.com'));
+  const imgSrc = cspHeader.match(/img-src ([^;]+);/)?.[1] ?? '';
+  ok('img-src also allows Firebase Storage, so uploaded post images actually render', imgSrc.includes('https://firebasestorage.googleapis.com'));
+  ok('the pre-existing security headers (X-Frame-Options, HSTS, frame-ancestors) are untouched — this was a targeted connect-src/img-src addition, not a rewrite', /"X-Frame-Options", "value": "DENY"/.test(vercelJson) && /frame-ancestors 'none'/.test(vercelJson));
+}
+
+console.log('\n[20] Production displayNameNormalized migration — real, executable, fail-safe');
+{
+  ok('the production script is NOT part of the deployed Functions bundle (functions/tsconfig.json only includes "src")', !JSON.parse(readFileSync(join(ROOT, 'functions/tsconfig.json'), 'utf8')).include.includes('scripts'));
+  ok('dry-run by default, requires explicit --apply to write', /const APPLY = process\.argv\.includes\('--apply'\)/.test(migrationProdTs));
+  ok('requires an explicit --project flag — never guesses a target project', /Missing required --project/.test(migrationProdTs));
+  ok('uses Application Default Credentials only — no service-account key file is read or embedded', /applicationDefault\(\)/.test(migrationProdTs) && !/require\(.*\.json/.test(migrationProdTs));
+  ok('is idempotent — skips any document that already has displayNameNormalized', /already migrated — idempotent skip/.test(migrationProdTs));
+  ok('skips malformed documents safely rather than crashing the whole run', /SKIP \(malformed\)/.test(migrationProdTs));
+  ok('uses bounded pagination, never one unbounded collection read', /orderBy\('__name__'\)\.limit\(PAGE_SIZE\)/.test(migrationProdTs));
+  ok('uses BulkWriter for batched/rate-limited/retried writes, not a manual tight loop', /db\.bulkWriter\(\)/.test(migrationProdTs));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -299,6 +358,7 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'firestore.rules' &&
     f !== 'firestore.indexes.json' &&
     f !== 'firebase.json' &&
+    f !== 'vercel.json' && // Phase 7: CSP connect-src fix for the deployed comment-publish bug
     f !== 'package.json' &&
     !f.startsWith('functions/') &&
     !f.startsWith('scripts/testCommunity') &&

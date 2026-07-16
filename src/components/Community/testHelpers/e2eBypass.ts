@@ -62,3 +62,25 @@ export async function e2eAttemptDirectLikeDelete(postId: string, commentId: stri
     return { ok: false, code: (err as { code?: string } | null)?.code };
   }
 }
+
+export async function e2eAttemptDirectPostLikeCreate(postId: string, likerUid: string): Promise<BypassResult> {
+  try {
+    await setDoc(doc(firestoreDb, 'posts', postId, 'likes', likerUid), {
+      createdAt: serverTimestamp(),
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: (err as { code?: string } | null)?.code };
+  }
+}
+
+export async function e2eAttemptDirectPostLikesCountBump(postId: string): Promise<BypassResult> {
+  try {
+    await updateDoc(doc(firestoreDb, 'posts', postId), {
+      likesCount: increment(1),
+    });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: (err as { code?: string } | null)?.code };
+  }
+}

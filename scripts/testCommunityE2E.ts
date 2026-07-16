@@ -39,6 +39,7 @@ import {
   doc, setDoc, getDoc, getDocs, collection, query, where, serverTimestamp,
   type DocumentSnapshot, type DocumentData, type QuerySnapshot,
 } from 'firebase/firestore';
+import { normalizeDisplayName } from '../src/components/Community/utils/userSearch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -191,7 +192,7 @@ async function main() {
         authorId: 'e2e-seed-author', authorName: 'Seed Author', authorPhoto: null,
         text: SEED_POST_TEXT, category: 'questions', mediaType: 'none', mediaURL: null,
         thumbnailURL: null, mediaSize: null, mediaDuration: null, mediaPath: null,
-        commentsCount: 0, createdAt: serverTimestamp(), status: 'active', searchTokens: ['منشور', 'اختبار'],
+        commentsCount: 0, likesCount: 0, createdAt: serverTimestamp(), status: 'active', searchTokens: ['منشور', 'اختبار'],
       });
     });
 
@@ -537,6 +538,229 @@ async function main() {
     assertValue('I11 User B\'s email never appears anywhere in User A\'s post page UI during/after the deletion+cleanup flow', postPageTextA.includes(userB.email), false);
     const postPageTextB = await userB.page.evaluate(() => document.body.innerText);
     assertValue('I12 User A\'s email never appears anywhere in User B\'s post page UI during/after the deletion+cleanup flow', postPageTextB.includes(userA.email), false);
+
+    console.log('\n=== 10. Post likes — real UI wiring, text and image posts ===');
+
+    async function readPostAdmin(postId: string): Promise<DocumentSnapshot<DocumentData>> {
+      let result: DocumentSnapshot<DocumentData>;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        result = await getDoc(doc(ctx.firestore(), 'posts', postId));
+      });
+      return result!;
+    }
+    async function readPostLikesCollectionAdmin(postId: string): Promise<QuerySnapshot<DocumentData>> {
+      let result: QuerySnapshot<DocumentData>;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        result = await getDocs(collection(ctx.firestore(), 'posts', postId, 'likes'));
+      });
+      return result!;
+    }
+
+    // 10a. Text post: like via the real UI, reload persists it, unlike via the real UI.
+    await backToFeed(userA.page).catch(() => {});
+    await openPostByText(userA.page, SEED_POST_TEXT);
+    const postLikeButtonDetail = userA.page.locator('button[aria-label="أعجبني هذا المنشور"], button[aria-label="إلغاء الإعجاب بهذا المنشور"]');
+    await postLikeButtonDetail.click();
+    await userA.page.waitForFunction(
+      () => !!document.querySelector('button[aria-label="إلغاء الإعجاب بهذا المنشور"]'),
+      undefined, { timeout: 8000 },
+    );
+    record('J1 the post-detail like button switches to the liked (filled) state after clicking', true);
+    await userA.page.waitForFunction(
+      () => (document.querySelector('button[aria-label="إلغاء الإعجاب بهذا المنشور"]') as HTMLButtonElement | null)?.disabled === false,
+      undefined, { timeout: 8000 },
+    );
+
+    const postLikedAfterServer = await waitUntilE2E(async () => (await readPostAdmin(SEED_POST_ID)).data()?.likesCount >= 1);
+    assertValue('J2 the real togglePostLike call landed server-side — likesCount is at least 1', postLikedAfterServer, true);
+
+    await userA.page.reload({ waitUntil: 'domcontentloaded' });
+    await userA.page.waitForFunction(() => document.querySelector('h1')?.textContent === 'المجتمع', undefined, { timeout: 10000 });
+    await openPostByText(userA.page, SEED_POST_TEXT);
+    const stillLikedAfterReload = await userA.page.waitForFunction(
+      () => !!document.querySelector('button[aria-label="إلغاء الإعجاب بهذا المنشور"]'),
+      undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('J3 the like state PERSISTS across a full page reload (real server state, not just optimistic UI)', stillLikedAfterReload, true);
+
+    await postLikeButtonDetail.click();
+    await userA.page.waitForFunction(
+      () => !!document.querySelector('button[aria-label="أعجبني هذا المنشور"]'),
+      undefined, { timeout: 8000 },
+    );
+    record('J4 unliking via the real UI switches the button back to the not-liked state', true);
+
+    // 10b. Image post — the composer's own image-upload control is
+    // currently disabled in the UI (PostComposer.tsx: `<button disabled
+    // aria-describedby="image-upload-disabled-message">`, "رفع الصور غير
+    // متاح حالياً — سيتم تفعيله قريباً"), a pre-existing, disclosed, D4
+    // product decision entirely unrelated to this task's 3 confirmed bugs
+    // — so a real end-to-end image UPLOAD cannot be driven through this
+    // build's UI. What CAN and must be proven is that the LIKE mechanism
+    // itself is identical for an image post once one exists: seeded here
+    // directly (same admin-fixture convention as SEED_POST_ID above),
+    // exactly matching the schema useComposer.ts would have produced had
+    // upload been enabled, then liked through the real feed AND detail UI.
+    const IMAGE_POST_ID = 'e2e-image-post-1';
+    const IMAGE_POST_TEXT = 'منشور بصورة لاختبار الإعجاب — لا تحذف';
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      await setDoc(doc(ctx.firestore(), 'posts', IMAGE_POST_ID), {
+        authorId: 'e2e-seed-author', authorName: 'Seed Author', authorPhoto: null,
+        text: IMAGE_POST_TEXT, category: 'questions', mediaType: 'image',
+        mediaURL: 'https://example-test.invalid/full.jpg', thumbnailURL: 'https://example-test.invalid/thumb.jpg',
+        mediaSize: 100000, mediaDuration: null, mediaPath: `community/posts/${IMAGE_POST_ID}`,
+        commentsCount: 0, likesCount: 0, createdAt: serverTimestamp(), status: 'active', searchTokens: ['منشور', 'صورة'],
+      });
+    });
+
+    await backToFeed(userB.page).catch(() => {});
+    await userB.page.waitForFunction(
+      (t: string) => document.body.textContent?.includes(t) ?? false, IMAGE_POST_TEXT, { timeout: 10000 },
+    ).catch(async () => { await userB.page.reload({ waitUntil: 'domcontentloaded' }); });
+    const feedImageLikeButton = userB.page.locator('p', { hasText: IMAGE_POST_TEXT })
+      .locator('xpath=ancestor::div[1]')
+      .locator('button[aria-label="أعجبني هذا المنشور"], button[aria-label="إلغاء الإعجاب بهذا المنشور"]');
+    await feedImageLikeButton.click();
+    await userB.page.waitForFunction(
+      (t: string) => {
+        const p = Array.from(document.querySelectorAll('p')).find(el => el.textContent === t);
+        const card = p?.closest('div[role="button"]');
+        return card?.querySelector('button[aria-label="إلغاء الإعجاب بهذا المنشور"]') != null;
+      },
+      IMAGE_POST_TEXT, { timeout: 8000 },
+    );
+    record('K1 an IMAGE post can be liked directly from its FEED card — the like belongs to the post, not a separate per-image system', true);
+
+    await openPostByText(userB.page, IMAGE_POST_TEXT);
+    const detailImageLikeCountVisible = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('1') && !!document.querySelector('button[aria-label="إلغاء الإعجاب بهذا المنشور"]'),
+      undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('K2 the SAME like state and count are visible from the post-detail view immediately after liking from the feed', detailImageLikeCountVisible, true);
+
+    // 10c. Concurrent likes from two different real users on the same post.
+    // Reset B's like from 10b first so this section starts from a clean count.
+    await userB.page.evaluate(async ({ postId }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eDirectCalls.ts');
+      return mod.e2eTogglePostLikeDirect(postId, 'unlike');
+    }, { postId: IMAGE_POST_ID });
+    // useFeed.ts is a one-time fetch, not a realtime listener — userA's feed
+    // was last loaded before the image post existed, so a plain
+    // backToFeed()+openPostByText() would race a page that genuinely
+    // doesn't have this post yet. A reload forces a fresh fetch.
+    await userA.page.reload({ waitUntil: 'domcontentloaded' });
+    await userA.page.waitForFunction(() => document.querySelector('h1')?.textContent === 'المجتمع', undefined, { timeout: 10000 });
+    await openPostByText(userA.page, IMAGE_POST_TEXT);
+    await backToFeed(userB.page).catch(() => {});
+    await openPostByText(userB.page, IMAGE_POST_TEXT);
+    const postLikeBtnA = userA.page.locator('button[aria-label="أعجبني هذا المنشور"]');
+    const postLikeBtnB = userB.page.locator('button[aria-label="أعجبني هذا المنشور"]');
+    await Promise.all([postLikeBtnA.click(), postLikeBtnB.click()]);
+    const concurrentPostLikeCountOk = await waitUntilE2E(async () => (await readPostAdmin(IMAGE_POST_ID)).data()?.likesCount === 2);
+    assertValue('L1 two concurrent real-user likes on the same post resolve to an exact count of 2 (no lost update)', concurrentPostLikeCountOk, true);
+
+    // 10d. Direct client-SDK bypass fails from a real authenticated session.
+    const bypassPostLikeCreate = await userA.page.evaluate(async ({ postId }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eBypass.ts');
+      return mod.e2eAttemptDirectPostLikeCreate(postId, 'forced-uid-does-not-matter-rules-deny-regardless');
+    }, { postId: IMAGE_POST_ID });
+    assertValue('M1 a direct Firestore post-like create from a real signed-in session is denied', bypassPostLikeCreate.ok, false);
+    assertValue('M1b the denial is permission-denied', bypassPostLikeCreate.code, 'permission-denied');
+
+    const bypassPostLikesCountBump = await userA.page.evaluate(async ({ postId }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eBypass.ts');
+      return mod.e2eAttemptDirectPostLikesCountBump(postId);
+    }, { postId: IMAGE_POST_ID });
+    assertValue('M2 a direct Firestore likesCount bump from a real signed-in session is denied', bypassPostLikesCountBump.ok, false);
+    assertValue('M2b the denial is permission-denied', bypassPostLikesCountBump.code, 'permission-denied');
+
+    // 10e. A hidden/deleted post cannot be liked, and a client-supplied uid
+    // override in the callable payload is ignored (always request.auth.uid).
+    const HIDDEN_POST_ID = 'e2e-hidden-post-1';
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      await setDoc(doc(ctx.firestore(), 'posts', HIDDEN_POST_ID), {
+        authorId: 'e2e-seed-author', authorName: 'Seed Author', authorPhoto: null,
+        text: 'منشور مخفي', category: 'questions', mediaType: 'none', mediaURL: null,
+        thumbnailURL: null, mediaSize: null, mediaDuration: null, mediaPath: null,
+        commentsCount: 0, likesCount: 0, createdAt: serverTimestamp(), status: 'hidden', searchTokens: [],
+      });
+    });
+    const hiddenPostLikeAttempt = await userA.page.evaluate(async ({ postId }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eDirectCalls.ts');
+      return mod.e2eTogglePostLikeDirect(postId, 'like');
+    }, { postId: HIDDEN_POST_ID });
+    assertValue('N1 a hidden post cannot be liked — rejected as not-found', hiddenPostLikeAttempt.ok, false);
+    assertValue('N1b the rejection code is not-found', hiddenPostLikeAttempt.code, 'functions/not-found');
+
+    const forgedUidAttempt = await userA.page.evaluate(async ({ postId }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eDirectCalls.ts');
+      return mod.e2eTogglePostLikeDirect(postId, 'like', { uid: 'someone-else-entirely' });
+    }, { postId: IMAGE_POST_ID });
+    const forgedUidLikeDoc = await readPostLikesCollectionAdmin(IMAGE_POST_ID);
+    assertValue('N2 a client-supplied "uid" field in the callable payload never creates a like under that forged uid', forgedUidLikeDoc.docs.some(d => d.id === 'someone-else-entirely'), false);
+    void forgedUidAttempt;
+
+    console.log('\n=== 11. User search — English case-insensitive prefix, whitespace normalization, and the exact production fix for a pre-existing account ===');
+    console.log('    (Arabic prefix search is already covered by section 6 above — User B searching for');
+    console.log('    "مستخدم اختبار أ" and finding User A — this section covers the remaining required cases.)');
+
+    // A user document seeded WITHOUT displayNameNormalized — deliberately
+    // simulating exactly the deployed production bug: an account bootstrapped
+    // before that field existed. No real Auth account is needed behind this
+    // uid; PublicProfile.tsx and useUserSearch.ts only ever read the
+    // Firestore document by id.
+    const LEGACY_UID = 'e2e-legacy-account-no-normalized';
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      await setDoc(doc(ctx.firestore(), 'users', LEGACY_UID), {
+        displayName: 'Legacy English Pilot', photoURL: null, joinedAt: serverTimestamp(),
+        postsCount: 0, role: 'user', status: 'active', lastPostAt: null, lastCommentAt: null,
+        // displayNameNormalized intentionally omitted — this IS the bug.
+      });
+    });
+
+    await backToFeed(userB.page).catch(() => {});
+    await userB.page.locator('button[aria-label="بحث"]').click();
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('Legacy');
+    await userB.page.waitForTimeout(600); // clears the 300ms debounce window
+    const legacyNotFoundYet = await userB.page.evaluate(() => document.body.innerText).then(t => t.includes('لا توجد حسابات مطابقة'));
+    assertValue('O1 an old account missing displayNameNormalized fails SAFELY — no crash, no error, just correctly reports no match (reproduces the exact deployed bug)', legacyNotFoundYet, true);
+
+    // Run the exact backfill the production runbook specifies (same
+    // normalizeDisplayName function the real migration scripts use) —
+    // proving the documented fix procedure actually closes the gap.
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      await setDoc(doc(ctx.firestore(), 'users', LEGACY_UID), {
+        displayNameNormalized: normalizeDisplayName('Legacy English Pilot'),
+      }, { merge: true });
+    });
+
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('');
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('legacy'); // lowercase — case-insensitive prefix
+    const legacyFoundAfterMigration = await userB.page.waitForFunction(
+      (name: string) => document.body.textContent?.includes(name) ?? false, 'Legacy English Pilot', { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('O2 after the exact migration procedure runs, the SAME account is found with a lowercase, case-insensitive query — proving the documented fix closes the gap end-to-end', legacyFoundAfterMigration, true);
+
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('');
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('  Legacy  '); // leading/trailing whitespace
+    const legacyFoundWithWhitespace = await userB.page.waitForFunction(
+      (name: string) => document.body.textContent?.includes(name) ?? false, 'Legacy English Pilot', { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('O3 leading/trailing whitespace in the query is normalized away — the account is still found', legacyFoundWithWhitespace, true);
+
+    await userB.page.getByText('Legacy English Pilot', { exact: true }).click();
+    const legacyProfileOpened = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الملف الشخصي') ?? false,
+      undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('O4 selecting the search result opens the correct public profile', legacyProfileOpened, true);
+    // PublicProfile.tsx's own user-document fetch is async (shows "جارٍ
+    // التحميل..." until it resolves) — wait for the actual name, not just
+    // the static header, before checking it.
+    const legacyProfileNameShown = await userB.page.waitForFunction(
+      (name: string) => document.body.textContent?.includes(name) ?? false, 'Legacy English Pilot', { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('O4b the opened profile shows the correct account name', legacyProfileNameShown, true);
 
     console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

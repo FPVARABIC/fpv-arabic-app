@@ -204,8 +204,90 @@ export const toggleCommentLike = onCall<ToggleCommentLikeRequest, Promise<Toggle
   });
 });
 
+interface TogglePostLikeRequest {
+  postId: string;
+  desiredState: 'like' | 'unlike';
+}
+
+interface TogglePostLikeResponse {
+  liked: boolean;
+}
+
+// Post likes (Phase 7) — same trusted-server model as toggleCommentLike
+// above: posts/{postId}/likes/{uid} deterministic per-liker document, paired
+// atomically with the post's likesCount inside one transaction. desiredState
+// (not a blind toggle) is what makes the call genuinely retry-safe — a
+// lost-response retry of the SAME desired state is a true no-op, never a
+// double-flip. firestore.rules denies the client SDK create/update/delete on
+// both paths entirely, so a like can never be forged by an isolated ±1
+// write without a real paired like document.
+export const togglePostLike = onCall<TogglePostLikeRequest, Promise<TogglePostLikeResponse>>(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'يجب تسجيل الدخول للإعجاب.');
+  const uid = request.auth.uid;
+
+  const postId = request.data?.postId;
+  const desiredState = request.data?.desiredState;
+  if (typeof postId !== 'string' || !postId) throw new HttpsError('invalid-argument', 'معرّف المنشور غير صالح.');
+  if (desiredState !== 'like' && desiredState !== 'unlike') {
+    throw new HttpsError('invalid-argument', 'حالة الإعجاب غير صالحة.');
+  }
+
+  const userRef = db.doc(`users/${uid}`);
+  const postRef = db.doc(`posts/${postId}`);
+  const likeRef = postRef.collection('likes').doc(uid);
+
+  return db.runTransaction(async tx => {
+    const [userSnap, postSnap, likeSnap] = await Promise.all([
+      tx.get(userRef), tx.get(postRef), tx.get(likeRef),
+    ]);
+
+    if (!userSnap.exists || userSnap.data()!.status !== 'active') {
+      throw new HttpsError('permission-denied', 'حسابك موقوف حالياً.');
+    }
+    if (!postSnap.exists || postSnap.data()!.status !== 'active') {
+      throw new HttpsError('not-found', 'هذا المنشور لم يعد متاحاً.');
+    }
+
+    const alreadyLiked = likeSnap.exists;
+
+    if (desiredState === 'like') {
+      if (alreadyLiked) return { liked: true }; // idempotent no-op — already in the desired state
+      tx.set(likeRef, { createdAt: FieldValue.serverTimestamp() });
+      tx.update(postRef, { likesCount: FieldValue.increment(1) });
+      return { liked: true };
+    } else {
+      if (!alreadyLiked) return { liked: false }; // idempotent no-op — already in the desired state
+      tx.delete(likeRef);
+      tx.update(postRef, { likesCount: FieldValue.increment(-1) });
+      return { liked: false };
+    }
+  });
+});
+
 // Firestore's own hard limit on write operations per batch.
 const LIKES_CLEANUP_BATCH_SIZE = 500;
+
+// Bounded, looped batched deletes — handles arbitrarily many documents in
+// `collectionRef` without ever exceeding Firestore's per-batch write limit.
+// An empty collection exits on the very first (empty) page — a true no-op,
+// not a special case. Shared by cleanupCommentLikes and cleanupPostLikes
+// below, which are otherwise identical in every respect except which
+// collection they clean and which field they normalize.
+async function deleteAllDocsInBatches(
+  collectionRef: FirebaseFirestore.CollectionReference,
+): Promise<number> {
+  let deletedCount = 0;
+  for (;;) {
+    const page = await collectionRef.limit(LIKES_CLEANUP_BATCH_SIZE).get();
+    if (page.empty) break;
+    const batch = db.batch();
+    for (const doc of page.docs) batch.delete(doc.ref);
+    await batch.commit();
+    deletedCount += page.size;
+    if (page.size < LIKES_CLEANUP_BATCH_SIZE) break; // that page was the last one
+  }
+  return deletedCount;
+}
 
 // Orphaned-likes cleanup (Phase 6, correction). A comment leaving the
 // 'active' state — via either client path Firestore Rules allow for
@@ -240,21 +322,7 @@ export const cleanupCommentLikes = onDocumentUpdated(
     // reaching the delete loop again.
     if (before.status !== 'active' || after.status === 'active') return;
 
-    const likesRef = change.after.ref.collection('likes');
-    let deletedCount = 0;
-    // Bounded, looped batched deletes — handles arbitrarily many likes
-    // without ever exceeding Firestore's per-batch write limit. A comment
-    // with zero likes exits on the very first (empty) page — a true no-op,
-    // not a special case.
-    for (;;) {
-      const page = await likesRef.limit(LIKES_CLEANUP_BATCH_SIZE).get();
-      if (page.empty) break;
-      const batch = db.batch();
-      for (const likeDoc of page.docs) batch.delete(likeDoc.ref);
-      await batch.commit();
-      deletedCount += page.size;
-      if (page.size < LIKES_CLEANUP_BATCH_SIZE) break; // that page was the last one
-    }
+    const deletedCount = await deleteAllDocsInBatches(change.after.ref.collection('likes'));
 
     // Retry-safe by construction: this SETS the honest final value (never
     // increments/decrements), so replaying this event — whether after a
@@ -268,5 +336,41 @@ export const cleanupCommentLikes = onDocumentUpdated(
     // Safe identifiers only — path segments and a count, never comment
     // text, author name/photo, email, or any other user-identifying data.
     console.log(`[cleanupCommentLikes] postId=${event.params.postId} commentId=${event.params.commentId} deletedLikes=${deletedCount}`);
+  },
+);
+
+// Orphaned post-likes cleanup (Phase 7) — identical reasoning and mechanics
+// to cleanupCommentLikes above, one level up: a post leaving 'active' (owner
+// soft-delete, or moderator hide) makes it unreadable and un-likeable
+// (togglePostLike above requires status=='active') to every client, but
+// never removes its nested posts/{postId}/likes/{uid} documents on its own.
+// Scoped to `posts/{postId}` specifically (not `posts/{postId}/{path=**}`),
+// so it fires once per post-status-transition and is never re-triggered by
+// writes to that post's comments or their likes, which live at deeper paths
+// this trigger is not registered against.
+export const cleanupPostLikes = onDocumentUpdated(
+  { document: 'posts/{postId}', timeoutSeconds: 120 },
+  async (event) => {
+    const change = event.data;
+    if (!change) return;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Same self-terminating guard as cleanupCommentLikes: the only write
+    // this function performs (the likesCount normalization below) never
+    // changes `status`, so its own echo event always has before.status
+    // already non-active and returns here immediately — no recursion.
+    if (before.status !== 'active' || after.status === 'active') return;
+
+    const deletedCount = await deleteAllDocsInBatches(change.after.ref.collection('likes'));
+
+    if (after.likesCount !== 0) {
+      await change.after.ref.set({ likesCount: 0 }, { merge: true });
+    }
+
+    // Safe identifiers only — path segment and a count, never post text,
+    // author name/photo, media URLs, email, or any other user-identifying
+    // data.
+    console.log(`[cleanupPostLikes] postId=${event.params.postId} deletedLikes=${deletedCount}`);
   },
 );

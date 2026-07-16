@@ -6,6 +6,7 @@ import { CATEGORY_LABELS, CATEGORY_TINTS } from '../utils/categories';
 import { timeAgo } from '../utils/timeAgo';
 import { Avatar } from '../Avatar';
 import { ReportButton } from '../Moderation/ReportButton';
+import { PostLikeButton } from '../PostLikeButton';
 import { useSavedPostIds } from '../hooks/useSavedPostIds';
 import { useAuthContext } from '../../../contexts/AuthContext';
 
@@ -38,6 +39,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
       return;
     }
     toggleSaved(post.id);
+  };
+
+  const handleGuestLikeTap = () => {
+    setToast('يجب تسجيل الدخول للإعجاب');
+    setTimeout(() => setToast(null), 2000);
   };
 
   return (
@@ -113,7 +119,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
             {CATEGORY_LABELS[post.category]}
           </span>
         )}
-        <span style={{ fontSize: 12, color: '#5a6b7c' }} dir="ltr">{post.commentsCount} تعليق</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <PostLikeButton postId={post.id} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} />
+          <span style={{ fontSize: 12, color: '#5a6b7c' }} dir="ltr">{post.commentsCount} تعليق</span>
+        </div>
       </div>
     </div>
   );

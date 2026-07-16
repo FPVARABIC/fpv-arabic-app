@@ -166,6 +166,7 @@ async function seedPost(postId: string, authorUid: string, overrides: Record<str
       mediaDuration: null,
       mediaPath: null,
       commentsCount: 0,
+      likesCount: 0,
       createdAt: serverTimestamp(),
       status: 'active',
       searchTokens: ['منشور'],
@@ -212,6 +213,20 @@ async function readLikesCollection(postId: string, commentId: string): Promise<Q
   });
   return result!;
 }
+async function readPostLike(postId: string, likerUid: string): Promise<DocumentSnapshot<DocumentData>> {
+  let result: DocumentSnapshot<DocumentData>;
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    result = await getDoc(doc(ctx.firestore(), 'posts', postId, 'likes', likerUid));
+  });
+  return result!;
+}
+async function readPostLikesCollection(postId: string): Promise<QuerySnapshot<DocumentData>> {
+  let result: QuerySnapshot<DocumentData>;
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    result = await getDocs(collection(ctx.firestore(), 'posts', postId, 'likes'));
+  });
+  return result!;
+}
 
 // Simulates the REAL client write path exactly (CommentsList.tsx's
 // deleteComment / a moderator hiding a comment) — a direct Firestore update
@@ -223,6 +238,16 @@ async function readLikesCollection(postId: string, commentId: string): Promise<Q
 async function setCommentStatus(postId: string, commentId: string, status: 'deleted' | 'hidden'): Promise<void> {
   await testEnv.withSecurityRulesDisabled(async ctx => {
     await updateDoc(doc(ctx.firestore(), 'posts', postId, 'comments', commentId), { status });
+  });
+}
+
+// Same reasoning as setCommentStatus above, one level up: simulates the
+// REAL client write path (PostDetail.tsx's deletePost / a moderator hiding
+// a post) — a direct Firestore update touching only `status`, exactly what
+// firestore.rules' post update rule allows the owner/moderator to do.
+async function setPostStatus(postId: string, status: 'deleted' | 'hidden'): Promise<void> {
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await updateDoc(doc(ctx.firestore(), 'posts', postId), { status });
   });
 }
 
@@ -245,6 +270,9 @@ function callCreateComment(functions: Functions, data: unknown) {
 }
 function callToggleLike(functions: Functions, data: unknown) {
   return httpsCallable<unknown, ToggleLikeResult>(functions, 'toggleCommentLike')(data);
+}
+function callTogglePostLike(functions: Functions, data: unknown) {
+  return httpsCallable<unknown, ToggleLikeResult>(functions, 'togglePostLike')(data);
 }
 
 async function main() {
@@ -664,6 +692,240 @@ async function main() {
   const unrelatedLikeDoc = await readLike('post-fn-cleanup', cleanupCommentId10, cleanupUser2.uid);
   assertValue('CL15 an unrelated comment\'s likesCount is untouched by a sibling comment\'s cleanup trigger', unrelatedAfter.data()?.likesCount, 1);
   assertValue('CL16 an unrelated comment\'s like document is untouched by a sibling comment\'s cleanup trigger', unrelatedLikeDoc.exists(), true);
+
+  console.log('\n=== 12. togglePostLike — basic correctness and idempotency ===');
+
+  const postLikeUserL1 = await createTestUser('Post Like Pilot L1');
+  const postLikeUserL2 = await createTestUser('Post Like Pilot L2');
+  await seedPost('post-fn-postlike', postLikeUserL1.uid, { text: 'likeable post' });
+
+  const postLike1 = await expectSuccess('PL1 L1 likes the post', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-postlike', desiredState: 'like' }).then(r => r.data));
+  assertValue('PL1b liked = true', postLike1?.liked, true);
+
+  const afterPostLike1 = await readPost('post-fn-postlike');
+  assertValue('PL2 likesCount is exactly 1 after a single like', afterPostLike1.data()?.likesCount, 1);
+  const postLike1Doc = await readPostLike('post-fn-postlike', postLikeUserL1.uid);
+  assertValue('PL3 a real like document exists at the liker\'s own uid path', postLike1Doc.exists(), true);
+
+  const postLike1Again = await expectSuccess('PL4 L1 calls "like" again (already liked) — idempotent no-op, not an error', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-postlike', desiredState: 'like' }).then(r => r.data));
+  assertValue('PL4b still liked = true', postLike1Again?.liked, true);
+  const afterPostLike1Again = await readPost('post-fn-postlike');
+  assertValue('PL5 likesCount is STILL exactly 1 (no double-count from the redundant call)', afterPostLike1Again.data()?.likesCount, 1);
+
+  const postUnlike1 = await expectSuccess('PL6 L1 unlikes the post', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-postlike', desiredState: 'unlike' }).then(r => r.data));
+  assertValue('PL6b liked = false', postUnlike1?.liked, false);
+  const afterPostUnlike1 = await readPost('post-fn-postlike');
+  assertValue('PL7 likesCount is exactly 0 after unlike', afterPostUnlike1.data()?.likesCount, 0);
+  const postLike1DocAfterUnlike = await readPostLike('post-fn-postlike', postLikeUserL1.uid);
+  assertValue('PL8 the like document was deleted', postLike1DocAfterUnlike.exists(), false);
+
+  const postUnlike1Again = await expectSuccess('PL9 L1 calls "unlike" again (already unliked) — idempotent no-op', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-postlike', desiredState: 'unlike' }).then(r => r.data));
+  assertValue('PL9b still liked = false', postUnlike1Again?.liked, false);
+  const afterPostUnlike1Again = await readPost('post-fn-postlike');
+  assertValue('PL10 likesCount is STILL exactly 0 (never goes negative from the redundant call)', afterPostUnlike1Again.data()?.likesCount, 0);
+
+  console.log('\n=== 13. togglePostLike — identity cannot be spoofed, validation, and errors ===');
+
+  const postSpoofAttempt = await expectSuccess('PSP1 L2 calls togglePostLike with an extra client-supplied "uid" field pointing at L1', () =>
+    callTogglePostLike(postLikeUserL2.functions, {
+      postId: 'post-fn-postlike', desiredState: 'like', uid: postLikeUserL1.uid,
+    }).then(r => r.data));
+  assertValue('PSP1b the call still succeeds (the extra field is simply ignored)', postSpoofAttempt?.liked, true);
+  const l2PostLikeDoc = await readPostLike('post-fn-postlike', postLikeUserL2.uid);
+  assertValue('PSP2 the resulting like document is under L2\'s REAL uid — never L1\'s, proving uid always comes from request.auth, never from the payload', l2PostLikeDoc.exists(), true);
+  const l1PostLikeDocStillGone = await readPostLike('post-fn-postlike', postLikeUserL1.uid);
+  assertValue('PSP3 L1\'s like path is untouched by L2\'s spoofing attempt (still not liked, from section 12\'s unlike)', l1PostLikeDocStillGone.exists(), false);
+
+  // Clean up L2's like from the spoof test so section 14's concurrency counts start clean.
+  await callTogglePostLike(postLikeUserL2.functions, { postId: 'post-fn-postlike', desiredState: 'unlike' });
+
+  await expectError('PE1 an unauthenticated (guest) caller is rejected', 'unauthenticated', () =>
+    callTogglePostLike(guestFunctions, { postId: 'post-fn-postlike', desiredState: 'like' }));
+
+  await expectError('PE2 an invalid desiredState value is rejected', 'invalid-argument', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-postlike', desiredState: 'toggle' }));
+
+  await expectError('PE3 a missing postId is rejected', 'invalid-argument', () =>
+    callTogglePostLike(postLikeUserL1.functions, { desiredState: 'like' }));
+
+  await expectError('PE4 a nonexistent post is rejected', 'not-found', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-does-not-exist', desiredState: 'like' }));
+
+  await seedPost('post-fn-hidden', postLikeUserL1.uid, { text: 'مخفي', status: 'hidden' });
+  await expectError('PE5 a hidden (not-active) post is rejected', 'not-found', () =>
+    callTogglePostLike(postLikeUserL1.functions, { postId: 'post-fn-hidden', desiredState: 'like' }));
+
+  const bannedPostLikeAttempt = await createTestUser('Banned Post Like Pilot', { status: 'banned' });
+  await expectError('PE6 a banned user is rejected', 'permission-denied', () =>
+    callTogglePostLike(bannedPostLikeAttempt.functions, { postId: 'post-fn-postlike', desiredState: 'like' }));
+
+  console.log('\n=== 14. togglePostLike — real concurrency (5 different users, one Admin-SDK transaction each) ===');
+
+  const postConcurrentPost = 'post-fn-postlike-concurrent';
+  await seedPost(postConcurrentPost, postLikeUserL1.uid, { text: 'concurrency target post' });
+
+  const postConcurrentUsers = await Promise.all(
+    Array.from({ length: 5 }, (_, i) => createTestUser(`Post Concurrent Pilot ${i}`)),
+  );
+  const postConcurrentLikeResults = await Promise.allSettled(
+    postConcurrentUsers.map(u => callTogglePostLike(u.functions, { postId: postConcurrentPost, desiredState: 'like' })),
+  );
+  assertValue('PCC1 all 5 concurrent likes from 5 DIFFERENT users resolved without error', postConcurrentLikeResults.filter(r => r.status === 'rejected').length, 0);
+  const afterPostConcurrentLikes = await readPost(postConcurrentPost);
+  assertValue('PCC2 likesCount is exactly 5 (no lost updates under real Firestore transaction contention)', afterPostConcurrentLikes.data()?.likesCount, 5);
+
+  console.log('\n=== 15. togglePostLike — retry-safety (same user, same desiredState, 4-way concurrent) ===');
+
+  const postRetryUser = postConcurrentUsers[0];
+  const postRetryLikeResults = await Promise.allSettled(
+    Array.from({ length: 4 }, () => callTogglePostLike(postRetryUser.functions, { postId: postConcurrentPost, desiredState: 'like' })),
+  );
+  assertValue('PR1 4 concurrent "like" calls from an ALREADY-liking user (simulating a lost-response retry storm) all resolve without error', postRetryLikeResults.filter(r => r.status === 'rejected').length, 0);
+  const afterPostRetryLikes = await readPost(postConcurrentPost);
+  assertValue('PR2 likesCount is STILL exactly 5 — desiredState made every redundant call a true no-op, never a double-flip', afterPostRetryLikes.data()?.likesCount, 5);
+
+  const postRetryUnlikeResults = await Promise.allSettled(
+    Array.from({ length: 4 }, () => callTogglePostLike(postRetryUser.functions, { postId: postConcurrentPost, desiredState: 'unlike' })),
+  );
+  assertValue('PR3 4 concurrent "unlike" calls all resolve without error', postRetryUnlikeResults.filter(r => r.status === 'rejected').length, 0);
+  const afterPostRetryUnlikes = await readPost(postConcurrentPost);
+  assertValue('PR4 likesCount is exactly 4 — one real net unlike, not corrupted by the 4 redundant calls', afterPostRetryUnlikes.data()?.likesCount, 4);
+
+  console.log('\n=== 16. togglePostLike — an IMAGE post can be liked, same as a text post ===');
+
+  await seedPost('post-fn-image-like', postLikeUserL1.uid, {
+    text: 'منشور بصورة', mediaType: 'image', mediaURL: 'https://example-test.invalid/full.jpg',
+    thumbnailURL: 'https://example-test.invalid/thumb.jpg', mediaSize: 100000, mediaPath: 'community/posts/post-fn-image-like',
+  });
+  const imagePostLike = await expectSuccess('IMG1 liking an image post succeeds exactly like a text post — the like belongs to the POST, not a separate per-image system', () =>
+    callTogglePostLike(postLikeUserL2.functions, { postId: 'post-fn-image-like', desiredState: 'like' }).then(r => r.data));
+  assertValue('IMG1b liked = true', imagePostLike?.liked, true);
+  const afterImagePostLike = await readPost('post-fn-image-like');
+  assertValue('IMG2 the image post\'s likesCount is exactly 1 — the SAME field/mechanism used for text posts', afterImagePostLike.data()?.likesCount, 1);
+
+  console.log('\n=== 17. cleanupPostLikes — orphaned-like cleanup on post deletion ===');
+
+  const cleanupPostUser1 = await createTestUser('Post Cleanup Pilot 1');
+  const cleanupPostUser2 = await createTestUser('Post Cleanup Pilot 2');
+  const cleanupPostUser3 = await createTestUser('Post Cleanup Pilot 3');
+
+  // --- Case 1: zero likes ---
+  await seedPost('post-fn-pcleanup1', cleanupPostUser1.uid, { text: 'post بدون إعجابات للحذف' });
+  await setPostStatus('post-fn-pcleanup1', 'deleted');
+  const pcu1Done = await waitUntil(async () => (await readPost('post-fn-pcleanup1')).data()?.likesCount === 0);
+  assertValue('PCL1 zero-like post: delete transition succeeds, likesCount stays/ends at 0', pcu1Done, true);
+  const pcu1Likes = await readPostLikesCollection('post-fn-pcleanup1');
+  assertValue('PCL1b zero-like post: likes subcollection is empty (no-op cleanup, no error)', pcu1Likes.size, 0);
+
+  // --- Case 2: one like ---
+  await seedPost('post-fn-pcleanup2', cleanupPostUser1.uid, { text: 'post بإعجاب واحد للحذف' });
+  await callTogglePostLike(cleanupPostUser2.functions, { postId: 'post-fn-pcleanup2', desiredState: 'like' });
+  const beforePostDelete2 = await readPost('post-fn-pcleanup2');
+  assertValue('PCL2 one-like post: likesCount is 1 before deletion', beforePostDelete2.data()?.likesCount, 1);
+  await setPostStatus('post-fn-pcleanup2', 'deleted');
+  const pcu2Done = await waitUntil(async () => {
+    const likes = await readPostLikesCollection('post-fn-pcleanup2');
+    const p = await readPost('post-fn-pcleanup2');
+    return likes.size === 0 && p.data()?.likesCount === 0;
+  });
+  assertValue('PCL3 one-like post: the like document is physically removed and likesCount reaches 0 after the delete transition', pcu2Done, true);
+
+  // --- Case 3: multiple users' likes ---
+  await seedPost('post-fn-pcleanup3', cleanupPostUser1.uid, { text: 'post بعدة إعجابات للحذف' });
+  await Promise.all([cleanupPostUser1, cleanupPostUser2, cleanupPostUser3].map(u =>
+    callTogglePostLike(u.functions, { postId: 'post-fn-pcleanup3', desiredState: 'like' })));
+  const beforePostDelete3 = await readPost('post-fn-pcleanup3');
+  assertValue('PCL4 multi-like post: likesCount is 3 before deletion', beforePostDelete3.data()?.likesCount, 3);
+  await setPostStatus('post-fn-pcleanup3', 'deleted');
+  const pcu3Done = await waitUntil(async () => {
+    const likes = await readPostLikesCollection('post-fn-pcleanup3');
+    const p = await readPost('post-fn-pcleanup3');
+    return likes.size === 0 && p.data()?.likesCount === 0;
+  });
+  assertValue('PCL5 multi-like post: ALL 3 users\' like documents are removed and likesCount reaches 0', pcu3Done, true);
+
+  // --- Case 4: 600+ seeded likes — multi-batch cleanup ---
+  await seedPost('post-fn-pcleanup4', cleanupPostUser1.uid, { text: 'post بعدد كبير من الإعجابات للحذف' });
+  const SEEDED_POST_LIKE_COUNT = 610;
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const firestore = ctx.firestore();
+    let batch = writeBatch(firestore);
+    let opsInBatch = 0;
+    for (let i = 0; i < SEEDED_POST_LIKE_COUNT; i++) {
+      batch.set(doc(firestore, 'posts', 'post-fn-pcleanup4', 'likes', `seeded-uid-${i}`), { createdAt: serverTimestamp() });
+      opsInBatch++;
+      if (opsInBatch === 400) {
+        await batch.commit();
+        batch = writeBatch(firestore);
+        opsInBatch = 0;
+      }
+    }
+    if (opsInBatch > 0) await batch.commit();
+    await updateDoc(doc(firestore, 'posts', 'post-fn-pcleanup4'), { likesCount: SEEDED_POST_LIKE_COUNT });
+  });
+  const seededPostLikes = await readPostLikesCollection('post-fn-pcleanup4');
+  assertValue(`PCL6 ${SEEDED_POST_LIKE_COUNT} likes seeded directly (exceeds Firestore's 500-writes-per-batch limit, forcing the cleanup trigger's own internal pagination loop to run more than once)`, seededPostLikes.size, SEEDED_POST_LIKE_COUNT);
+  await setPostStatus('post-fn-pcleanup4', 'deleted');
+  const pcu4Done = await waitUntil(async () => {
+    const likes = await readPostLikesCollection('post-fn-pcleanup4');
+    const p = await readPost('post-fn-pcleanup4');
+    return likes.size === 0 && p.data()?.likesCount === 0;
+  }, 45000, 500);
+  assertValue('PCL7 600+ seeded likes: cleanup completes across multiple bounded batches, every like document is removed, likesCount is normalized to 0', pcu4Done, true);
+
+  // --- Case 5: replaying the active->deleted transition causes no drift ---
+  await setPostStatus('post-fn-pcleanup4', 'deleted');
+  const pcu4RetryDone = await waitUntil(async () => {
+    const likes = await readPostLikesCollection('post-fn-pcleanup4');
+    const p = await readPost('post-fn-pcleanup4');
+    return likes.size === 0 && p.data()?.likesCount === 0;
+  });
+  assertValue('PCL8 replaying the same already-deleted transition causes no failure, no negative count, and no drift (still 0 likes, likesCount still 0)', pcu4RetryDone, true);
+
+  // --- Case 6: updating an ACTIVE post (a real like) must NOT run cleanup ---
+  await seedPost('post-fn-pcleanup6', cleanupPostUser1.uid, { text: 'post نشط يتلقى إعجاباً' });
+  await callTogglePostLike(cleanupPostUser2.functions, { postId: 'post-fn-pcleanup6', desiredState: 'like' });
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  const afterActivePostLike = await readPost('post-fn-pcleanup6');
+  const activePostLikeDoc = await readPostLike('post-fn-pcleanup6', cleanupPostUser2.uid);
+  assertValue('PCL9 updating an ACTIVE post (a real like — status stays "active") does not run the cleanup trigger: likesCount stays 1', afterActivePostLike.data()?.likesCount, 1);
+  assertValue('PCL10 the like document from case 6 is untouched by cleanup — still present', activePostLikeDoc.exists(), true);
+
+  // --- Case 7: updating an already-deleted post does not corrupt its state ---
+  const cleanupPost4Final = await readPost('post-fn-pcleanup4');
+  assertValue('PCL11 updating an already-deleted post again leaves its status correctly as "deleted" (soft-delete retained, not corrupted or hard-deleted)', cleanupPost4Final.data()?.status, 'deleted');
+
+  // --- Case 8: a deleted (and cleaned-up) post remains impossible to like ---
+  await expectError('PCL12 liking a deleted-and-cleaned post is rejected as not-found', 'not-found', () =>
+    callTogglePostLike(cleanupPostUser3.functions, { postId: 'post-fn-pcleanup2', desiredState: 'like' }));
+
+  // --- Case 9: direct client deletion of a post like document remains denied ---
+  // (Rules-enforced proof lives in scripts/testCommunityRules.ts's PL6/PL7 —
+  // this section's job is the Function/trigger behavior, not the Rules
+  // boundary, so it is not duplicated here.)
+
+  // --- Case 10: an unrelated (sibling) post's likes are never touched ---
+  await seedPost('post-fn-pcleanup10', cleanupPostUser1.uid, { text: 'post منفصل يجب ألا يتأثر' });
+  await callTogglePostLike(cleanupPostUser2.functions, { postId: 'post-fn-pcleanup10', desiredState: 'like' });
+
+  await seedPost('post-fn-pcleanup10b', cleanupPostUser1.uid, { text: 'post آخر سيُحذف بجانبه' });
+  await callTogglePostLike(cleanupPostUser3.functions, { postId: 'post-fn-pcleanup10b', desiredState: 'like' });
+  await setPostStatus('post-fn-pcleanup10b', 'deleted');
+  const pcu10bDone = await waitUntil(async () => {
+    const likes = await readPostLikesCollection('post-fn-pcleanup10b');
+    const p = await readPost('post-fn-pcleanup10b');
+    return likes.size === 0 && p.data()?.likesCount === 0;
+  });
+  assertValue('PCL13 the sibling post\'s own cleanup completes normally', pcu10bDone, true);
+
+  const unrelatedPostAfter = await readPost('post-fn-pcleanup10');
+  const unrelatedPostLikeDoc = await readPostLike('post-fn-pcleanup10', cleanupPostUser2.uid);
+  assertValue('PCL14 an unrelated post\'s likesCount is untouched by a sibling post\'s cleanup trigger', unrelatedPostAfter.data()?.likesCount, 1);
+  assertValue('PCL15 an unrelated post\'s like document is untouched by a sibling post\'s cleanup trigger', unrelatedPostLikeDoc.exists(), true);
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

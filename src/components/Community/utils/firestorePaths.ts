@@ -25,6 +25,17 @@ export const commentLikesPath = (postId: string, commentId: string): string =>
 export const commentLikePath = (postId: string, commentId: string, uid: string): string =>
   `${commentLikesPath(postId, commentId)}/${uid}`;
 
+// Post likes — mirrors comment likes exactly: a deterministic
+// per-(postId, uid) document nested under the post itself, so "one like per
+// user per post" is a document-existence fact, not application-level dedup.
+export const POST_LIKES_SUBCOLLECTION = 'likes';
+
+export const postLikesPath = (postId: string): string =>
+  `${postPath(postId)}/${POST_LIKES_SUBCOLLECTION}`;
+
+export const postLikePath = (postId: string, uid: string): string =>
+  `${postLikesPath(postId)}/${uid}`;
+
 export const userPath = (uid: string): string => `${USERS_COLLECTION}/${uid}`;
 
 export const savedPostsPath = (uid: string): string => `${userPath(uid)}/${SAVED_POSTS_SUBCOLLECTION}`;
