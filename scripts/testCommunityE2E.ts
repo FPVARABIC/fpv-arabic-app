@@ -762,6 +762,165 @@ async function main() {
     ).then(() => true, () => false);
     assertValue('O4b the opened profile shows the correct account name', legacyProfileNameShown, true);
 
+    console.log('\n=== 12. Signed-in self-heal backfill — a REAL signed-in user\'s own account, no production migration run ===');
+    console.log('    (Distinct from section 11 above: O1-O4 exercise a legacy uid with no real session behind it,');
+    console.log('    requiring scripts/migrateDisplayNameNormalizedProd.ts. This section exercises User A\'s own,');
+    console.log('    currently-signed-in account, which must self-heal merely by signing back in.)');
+
+    async function readUserAdmin(uid: string): Promise<DocumentSnapshot<DocumentData>> {
+      let result: DocumentSnapshot<DocumentData>;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        result = await getDoc(doc(ctx.firestore(), 'users', uid));
+      });
+      return result!;
+    }
+
+    // Corrupt User A's OWN document directly (admin bypass — simulating an
+    // account bootstrapped before displayNameNormalized existed, or one
+    // whose value has gone stale), on the exact uid User A is actually
+    // signed in as right now.
+    const STALE_VALUE = 'stale-wrong-value-from-a-renamed-account';
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      await setDoc(doc(ctx.firestore(), 'users', userA.uid), {
+        displayNameNormalized: STALE_VALUE,
+      }, { merge: true });
+    });
+    const staleDoc = await readUserAdmin(userA.uid);
+    assertValue('P1 the precondition is real: User A\'s own document now carries a stale displayNameNormalized value', staleDoc.data()?.displayNameNormalized, STALE_VALUE);
+
+    await backToFeed(userB.page).catch(() => {});
+    await userB.page.locator('button[aria-label="بحث"]').click();
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('مستخدم اختبار أ');
+    await userB.page.waitForTimeout(600); // clears the 300ms debounce window
+    const userANotFoundWhileStale = await userB.page.evaluate(() => document.body.innerText).then(t => t.includes('لا توجد حسابات مطابقة'));
+    assertValue('P2 while stale, User A genuinely does not appear in User B\'s search results (the corruption really breaks search, not a no-op)', userANotFoundWhileStale, true);
+
+    // A reload forces AuthContext to resolve a fresh currentUser object,
+    // which re-runs useEnsureCommunityUser's bootstrap effect — the SAME
+    // per-login mechanism every real sign-in goes through, not a
+    // test-only shortcut.
+    await userA.page.reload({ waitUntil: 'domcontentloaded' });
+    await userA.page.waitForFunction(
+      () => document.querySelector('h1')?.textContent === 'المجتمع',
+      undefined, { timeout: 10000 },
+    );
+
+    const healed = await waitUntilE2E(async () => (await readUserAdmin(userA.uid)).data()?.displayNameNormalized === normalizeDisplayName('مستخدم اختبار أ'));
+    assertValue('P3 after User A\'s next sign-in — no production migration script run — displayNameNormalized self-heals back to match their real displayName', healed, true);
+
+    const healedDoc = await readUserAdmin(userA.uid);
+    assertValue('P4 the self-heal never touched displayName itself', healedDoc.data()?.displayName, 'مستخدم اختبار أ');
+
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('');
+    await userB.page.locator('input[placeholder^="ابحث"]').fill('مستخدم اختبار أ');
+    const userAFoundAfterHeal = await userB.page.waitForFunction(
+      (name: string) => document.body.textContent?.includes(name) ?? false, 'مستخدم اختبار أ', { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('P5 User B\'s search finds User A again after the self-heal, end-to-end through the real UI — no production migration was run for this account', userAFoundAfterHeal, true);
+
+    console.log('\n=== 13. Bottom-nav Home button — always returns to the main Home feed ===');
+
+    async function isOnFeed(page: Page): Promise<boolean> {
+      return page.evaluate(() => document.querySelector('h1')?.textContent === 'المجتمع');
+    }
+    // Presses Home and waits for the feed marker to appear, returning
+    // whether it actually did within the timeout — the reset is a React
+    // state update (async re-render), so checking isOnFeed synchronously
+    // right after the click races the render and produces false failures
+    // unrelated to the feature itself.
+    async function pressHomeAndWaitForFeed(page: Page, timeoutMs = 8000): Promise<boolean> {
+      await page.locator('nav button', { hasText: 'الرئيسية' }).click();
+      return page.waitForFunction(
+        () => document.querySelector('h1')?.textContent === 'المجتمع', undefined, { timeout: timeoutMs },
+      ).then(() => true, () => false);
+    }
+    async function homeTabIsActive(page: Page): Promise<boolean> {
+      // isActive() styling in BottomNavigation.tsx applies font-bold to the
+      // label span only on the active tab.
+      return page.evaluate(() => {
+        const btn = Array.from(document.querySelectorAll('nav button')).find(b => b.textContent?.includes('الرئيسية'));
+        return !!btn?.querySelector('span')?.className.includes('font-bold');
+      });
+    }
+
+    // 13a. From the SEARCH screen — User B is genuinely still there, left
+    // over from section 12's P5 search (input[placeholder^="ابحث"] is only
+    // rendered by SearchScreen.tsx, never the feed).
+    const onSearchScreen = await userB.page.evaluate(() => !!document.querySelector('input[placeholder^="ابحث"]'));
+    assertValue('Q1 precondition: User B is genuinely on the SEARCH screen, not the feed', onSearchScreen, true);
+    assertValue('Q1b pressing Home from the SEARCH screen returns to the main feed', await pressHomeAndWaitForFeed(userB.page), true);
+    assertValue('Q1c the Home tab is visibly active after the press', await homeTabIsActive(userB.page), true);
+
+    // 13b. From POST-DETAIL.
+    await openPostByText(userB.page, SEED_POST_TEXT);
+    assertValue('Q2 precondition: User B is genuinely on the post-detail screen, not the feed', await isOnFeed(userB.page), false);
+    assertValue('Q2b pressing Home from POST-DETAIL returns to the main feed', await pressHomeAndWaitForFeed(userB.page), true);
+
+    // 13c. From a PUBLIC PROFILE.
+    await openPostByText(userB.page, SEED_POST_TEXT);
+    const authorAvatarBtnQ = userB.page.locator('p', { hasText: commentText1 })
+      .locator('xpath=ancestor::div[2]')
+      .locator('button')
+      .first();
+    await authorAvatarBtnQ.click();
+    await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الملف الشخصي') ?? false, undefined, { timeout: 8000 },
+    );
+    assertValue('Q3 pressing Home from a PUBLIC PROFILE returns to the main feed', await pressHomeAndWaitForFeed(userB.page), true);
+
+    // 13d. From the PRIVATE PROFILE sheet (own profile — "القائمة" menu).
+    // ProfileSheet is an overlay rendered ALONGSIDE the current `screen`
+    // (which is already 'feed' here), so the feed's own h1 is present
+    // underneath even before the sheet closes — checking for the feed
+    // marker would prove nothing. The sheet's own content div is always
+    // present in the DOM (it's animated closed via a CSS transform, not
+    // conditionally unmounted — ProfileSheet.tsx:239-253), so checking for
+    // its text is equally useless. The one element ProfileSheet.tsx
+    // genuinely conditionally renders only `{open && (...)}` is its
+    // backdrop (a fixed div, uniquely identified by zIndex:39 — confirmed
+    // no other element in the app uses that exact value) — that presence/
+    // absence is the real, non-animated open/closed signal.
+    async function isProfileSheetOpen(page: Page): Promise<boolean> {
+      return page.evaluate(() => Array.from(document.querySelectorAll('div')).some(d => (d as HTMLElement).style.zIndex === '39'));
+    }
+    await openMenu(userB.page);
+    assertValue('Q4 precondition: User B\'s own (private) profile sheet is genuinely open', await isProfileSheetOpen(userB.page), true);
+    await userB.page.locator('nav button', { hasText: 'الرئيسية' }).click();
+    const privateProfileClosedAfterHome = await userB.page.waitForFunction(
+      () => !Array.from(document.querySelectorAll('div')).some(d => (d as HTMLElement).style.zIndex === '39'),
+      undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('Q4b pressing Home closes the open private-profile sheet', privateProfileClosedAfterHome, true);
+    assertValue('Q4c pressing Home from the private-profile sheet also lands on the main feed', await isOnFeed(userB.page), true);
+
+    // 13e. From SAVED.
+    await userB.page.locator('button[aria-label="المحفوظات"]').click();
+    await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('المنشورات المحفوظة') ?? false, undefined, { timeout: 8000 },
+    );
+    assertValue('Q5 pressing Home from SAVED returns to the main feed', await pressHomeAndWaitForFeed(userB.page), true);
+
+    // 13f. From COMPOSE — CommunityHome's own compose entry point ("بماذا
+    // تحتاج المساعدة اليوم؟", wired to handleComposeEntry -> onOpenCompose).
+    await userB.page.getByText('بماذا تحتاج المساعدة اليوم؟', { exact: true }).click();
+    await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('منشور جديد') ?? false, undefined, { timeout: 8000 },
+    );
+    assertValue('Q6 pressing Home from COMPOSE returns to the main feed', await pressHomeAndWaitForFeed(userB.page), true);
+
+    // 13g. From an entirely different TOP-LEVEL app route (outside Community/Home altogether).
+    await userB.page.goto(`${BASE}/roadmap`, { waitUntil: 'domcontentloaded' });
+    await userB.page.waitForFunction(() => !!document.querySelector('nav'), undefined, { timeout: 10000 });
+    const onRoadmapNotFeed = await userB.page.evaluate(() => document.querySelector('h1')?.textContent !== 'المجتمع');
+    assertValue('Q7 precondition: User B is genuinely off Community entirely (on /roadmap)', onRoadmapNotFeed, true);
+    assertValue('Q7b pressing Home from a completely different top-level route (/roadmap) lands on the main feed', await pressHomeAndWaitForFeed(userB.page, 10000), true);
+    assertValue('Q7c the URL is genuinely /home after the press', new URL(userB.page.url()).pathname, '/home');
+
+    // 13h. Idempotent when already on the feed — no error, no redirect loop.
+    assertValue('Q8 pressing Home again while already on the feed is a safe no-op (still on the feed)', await pressHomeAndWaitForFeed(userB.page), true);
+    const noPageErrorAfterIdempotentPress = await userB.page.evaluate(() => document.title.length > 0);
+    assertValue('Q8b the page is still alive/functional after the idempotent press (no crash/redirect loop)', noPageErrorAfterIdempotentPress, true);
+
     console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
     await testEnv.cleanup();

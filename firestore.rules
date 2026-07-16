@@ -59,28 +59,45 @@ service cloud.firestore {
                     && request.resource.data.displayNameNormalized is string
                     && request.resource.data.displayNameNormalized.size() <= 200;
 
-      // Only one client update shape remains (Phase 6 correction): post
-      // creation's lastPostAt/postsCount bump. Comment creation moved
-      // entirely to the createComment Cloud Function (functions/src/
+      // Two client update shapes (Phase 8 adds the second): post creation's
+      // lastPostAt/postsCount bump, and a narrow displayNameNormalized-only
+      // backfill (see ensureCommunityUser.ts) for the signed-in user's own
+      // document when it already exists but predates that field or has
+      // gone stale relative to its own stored displayName. Comment creation
+      // moved entirely to the createComment Cloud Function (functions/src/
       // index.ts), which uses the Admin SDK — the Admin SDK bypasses these
       // Rules by design, so lastCommentAt is now written ONLY by that
       // function (via a merge write) and has NO client-reachable update
-      // path here at all. role/status/displayName/photoURL/
-      // displayNameNormalized can NEVER change via any client write path —
-      // role/status are console-only (D10); displayName/photoURL have no V1
-      // edit feature (the ProfileSheet "edit name" feature writes to
-      // localStorage only, never to this document); displayNameNormalized
-      // is locked in step with displayName for the same reason.
+      // path here at all. role/status/displayName/photoURL can NEVER
+      // change via any client write path — role/status are console-only
+      // (D10); displayName/photoURL have no V1 edit feature (the
+      // ProfileSheet "edit name" feature writes to localStorage only, never
+      // to this document).
       allow update: if isOwner(uid)
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
-                    && request.resource.data.lastPostAt == request.time
-                    && request.resource.data.postsCount == resource.data.postsCount + 1
-                    && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's'))
-                    && request.resource.data.role == resource.data.role
-                    && request.resource.data.status == resource.data.status
-                    && request.resource.data.displayName == resource.data.displayName
-                    && request.resource.data.photoURL == resource.data.photoURL
-                    && request.resource.data.displayNameNormalized == resource.data.displayNameNormalized;
+                    && (
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
+                           && request.resource.data.lastPostAt == request.time
+                           && request.resource.data.postsCount == resource.data.postsCount + 1
+                           && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's'))
+                           && request.resource.data.role == resource.data.role
+                           && request.resource.data.status == resource.data.status
+                           && request.resource.data.displayName == resource.data.displayName
+                           && request.resource.data.photoURL == resource.data.photoURL
+                           && request.resource.data.displayNameNormalized == resource.data.displayNameNormalized)
+                         ||
+                         // displayNameNormalized backfill (Phase 8) — client-computed,
+                         // same trust model already accepted for its own value at
+                         // creation above and for Post.searchTokens (Rules validate
+                         // shape/type only, never re-derive the normalization itself).
+                         // hasOnly(['displayNameNormalized']) makes this branch
+                         // structurally incapable of touching displayName/photoURL/
+                         // role/status/postsCount/lastPostAt/lastCommentAt — those
+                         // remain governed exclusively by the branch above (or, for
+                         // role/status, by console-only access).
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayNameNormalized'])
+                           && request.resource.data.displayNameNormalized is string
+                           && request.resource.data.displayNameNormalized.size() <= 200)
+                       );
 
       allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
 

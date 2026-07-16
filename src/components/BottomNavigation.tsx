@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { House, Wrench, BookOpen, CircuitBoard, Package } from 'lucide-react';
 
@@ -19,6 +19,35 @@ export const BottomNavigation: React.FC = () => {
       return item.activeMatchPrefixes.some(prefix => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
     }
     return location.pathname === item.path || (item.path !== '/home' && location.pathname.startsWith(item.path));
+  };
+
+  // Home is the one tab whose destination route (/home) hosts its own
+  // internal screen state (CommunityHomeScreens' feed/post/search/saved/
+  // compose/profile) that persists for as long as the /home route stays
+  // mounted. A plain navigate('/home') is a no-op when the pathname is
+  // already '/home' — React Router never remounts the route, so that
+  // internal state would otherwise never reset, leaving the user stuck on
+  // whatever Community sub-screen they were viewing. Passing a fresh
+  // `homeReset` value in navigation state works regardless of whether the
+  // pathname itself changes: useLocation() re-renders on every navigate()
+  // call (a new location/key is produced even for an identical path), so
+  // CommunityHomeScreens can watch location.state.homeReset and reset itself
+  // every time Home is pressed — this is the single centralized signal every
+  // "return to Home" action funnels through, rather than a one-off reset
+  // wired into each individual Community sub-screen.
+  // A monotonically incrementing ref, not Date.now()/Math.random() — those
+  // are impure calls React's own lint rules reject inside a component's
+  // render scope (even inside a callback defined there); mutating a ref is
+  // the standard, rule-compliant way to mint a fresh, always-distinct value
+  // on each click.
+  const homeResetCounterRef = useRef(0);
+  const handleNavClick = (item: (typeof mainNav)[number]) => {
+    if (item.path === '/home') {
+      homeResetCounterRef.current += 1;
+      navigate('/home', { state: { homeReset: homeResetCounterRef.current } });
+    } else {
+      navigate(item.path);
+    }
   };
 
   return (
@@ -43,7 +72,7 @@ export const BottomNavigation: React.FC = () => {
               return (
                 <button
                   key={item.path}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => handleNavClick(item)}
                   className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
                   style={active ? { background: 'rgba(103,232,249,0.3)', boxShadow: '0 0 14px -4px rgba(103,232,249,0.7)' } : undefined}
                 >

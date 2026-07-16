@@ -51,6 +51,8 @@ const postLikeButtonTsx = readFileSync(join(ROOT, 'src/components/Community/Post
 const usePostLikeTs = readFileSync(join(ROOT, 'src/components/Community/hooks/usePostLike.ts'), 'utf8');
 const useComposerTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useComposer.ts'), 'utf8');
 const migrationProdTs = readFileSync(join(ROOT, 'functions/scripts/migrateDisplayNameNormalizedProd.ts'), 'utf8');
+const homeViewTsx = readFileSync(join(ROOT, 'src/views/HomeView.tsx'), 'utf8');
+const bottomNavTsx = readFileSync(join(ROOT, 'src/components/BottomNavigation.tsx'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -345,6 +347,24 @@ console.log('\n[20] Production displayNameNormalized migration — real, executa
   ok('uses BulkWriter for batched/rate-limited/retried writes, not a manual tight loop', /db\.bulkWriter\(\)/.test(migrationProdTs));
 }
 
+console.log('\n[21] displayNameNormalized self-heal backfill (Phase 8) — narrow, owner-only, single-field');
+{
+  ok('ensureCommunityUser.ts backfills displayNameNormalized for an EXISTING document when missing/stale', /if \(data\.displayNameNormalized !== expectedNormalized\)/.test(ensureCommunityUserTs));
+  ok('the backfill derives the normalized value from the document\'s OWN stored displayName, never from the freshly-passed identity param', /normalizeDisplayName\(storedDisplayName\)/.test(ensureCommunityUserTs));
+  ok('the backfill is a single-field tx.update, never touching any other field', /tx\.update\(userRef, \{ displayNameNormalized: expectedNormalized \}\)/.test(ensureCommunityUserTs));
+  ok('firestore.rules allows a displayNameNormalized-only update for the owner', /affectedKeys\(\)\.hasOnly\(\['displayNameNormalized'\]\)/.test(rulesTxt));
+  ok('the backfill Rules branch is owner-gated (isOwner(uid) governs both update branches)', /allow update: if isOwner\(uid\)/.test(rulesTxt));
+}
+
+console.log('\n[22] Bottom-nav Home button — centralized reset signal for Community-internal state (Phase 8)');
+{
+  ok('BottomNavigation.tsx sends a fresh homeReset value in navigation state on every Home press, not just on route change', /navigate\('\/home', \{ state: \{ homeReset:/.test(bottomNavTsx));
+  ok('the reset counter is a mutated ref (React-purity-rule-compliant), not an impure call inside the click handler itself', /homeResetCounterRef\.current \+= 1;\s*\n\s*navigate\('\/home', \{ state: \{ homeReset: homeResetCounterRef\.current \} \}\);/.test(bottomNavTsx));
+  ok('HomeView.tsx watches location.state.homeReset and resets Community screen state on every fresh value', /const homeReset = \(location\.state as \{ homeReset\?: number \} \| null\)\?\.homeReset;/.test(homeViewTsx));
+  ok('the reset collapses the internal screen stack back to the feed', /setScreen\(\{ name: 'feed' \}\);\s*\n\s*setMenuOpen\(false\);/.test(homeViewTsx));
+  ok('the reset is guarded against re-firing on an unrelated re-render (compared against the last-seen value, not merely "is it defined")', /homeReset !== undefined && homeReset !== lastHomeResetRef\.current/.test(homeViewTsx));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -359,6 +379,8 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'firestore.indexes.json' &&
     f !== 'firebase.json' &&
     f !== 'vercel.json' && // Phase 7: CSP connect-src fix for the deployed comment-publish bug
+    f !== 'src/views/HomeView.tsx' && // Phase 8: Home-screen-state reset on the bottom-nav Home press
+    f !== 'src/components/BottomNavigation.tsx' && // Phase 8: centralized Home-reset navigation signal
     f !== 'package.json' &&
     !f.startsWith('functions/') &&
     !f.startsWith('scripts/testCommunity') &&

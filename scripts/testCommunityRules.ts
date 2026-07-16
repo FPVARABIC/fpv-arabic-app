@@ -760,8 +760,23 @@ async function main() {
     return setDoc(doc(testEnv.authenticatedContext('uidNoNormalized').firestore(), 'users/uidNoNormalized'), withoutNormalized);
   });
 
-  await record('E3 displayNameNormalized cannot be changed via update after creation (locked in step with displayName)', 'deny', () =>
-    updateDoc(doc(asA.firestore(), 'users/uidA'), { displayNameNormalized: 'someone-else' }));
+  // Phase 8: a narrow, owner-only, displayNameNormalized-ONLY update is now
+  // allowed (the backfill shape ensureCommunityUser.ts uses for a
+  // pre-existing account missing/stale on this field) — Rules validate
+  // shape/type only, the same client-trust model already accepted for its
+  // value at creation. displayName ITSELF and every other field remain
+  // completely locked from any client update path.
+  await record('E3 a narrow displayNameNormalized-only update (the backfill shape) is allowed for the owner', 'allow', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { displayNameNormalized: normalizeDisplayName('Pilot') }));
+
+  await record('E3b displayName itself still cannot be changed via any update path', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { displayName: 'Forged New Name' }));
+
+  await record('E3c combining a displayNameNormalized change with any other field in the SAME update is still denied (the backfill shape must be single-field only)', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { displayNameNormalized: 'x', photoURL: 'https://forged.example.invalid/x.jpg' }));
+
+  await record('E3d a non-owner cannot backfill another user\'s displayNameNormalized', 'deny', () =>
+    updateDoc(doc(asB.firestore(), 'users/uidA'), { displayNameNormalized: normalizeDisplayName('Pilot') }));
 
   await record('E4 email field injection into a post create is rejected (pre-existing hasOnly() allow-list, regression-locked here)', 'deny', () =>
     setDoc(doc(asB.firestore(), 'posts/post-email-inject'), {

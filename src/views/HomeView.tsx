@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { ProfileSheet } from '../components/ProfileSheet';
 import { CommunityHome } from '../components/Community/CommunityHome';
@@ -42,6 +43,8 @@ const CommunityHomeScreens: React.FC = () => {
   const [category, setCategory] = useState<ChipValue>('all');
   const { currentUser, isGuest } = useAuthContext();
   const feed = useFeed(category);
+  const location = useLocation();
+  const lastHomeResetRef = useRef<number | undefined>(undefined);
   // Single dedicated lifecycle owner for the Community user-document
   // bootstrap (Phase 5) — CommunityHomeScreens is the stable, never-
   // unmounting Community-experience owner, matching the same architectural
@@ -67,6 +70,29 @@ const CommunityHomeScreens: React.FC = () => {
       feed.refresh();
     }
   }, [isGuest, currentUser?.uid, feed]);
+
+  // BottomNavigation's Home button (see that file's own comment) sends a
+  // fresh `homeReset` value in navigation state every time it is pressed —
+  // the only reliable signal available when the route is already '/home'
+  // and therefore never remounts this component on its own. Resets every
+  // piece of Community-internal navigation state in one place: the screen
+  // stack collapses to the feed, the profile-menu sheet closes, and the
+  // feed scroll position returns to the top — regardless of which
+  // Community sub-screen was open when Home was pressed. Guarded by
+  // comparing against the last-seen value (not merely "is it defined") so
+  // this never fires on a render that didn't originate from a fresh Home
+  // press, and safely no-ops if Home is pressed while already on the feed
+  // (setScreen to an equal value is a cheap, safe no-op).
+  useEffect(() => {
+    const homeReset = (location.state as { homeReset?: number } | null)?.homeReset;
+    if (homeReset !== undefined && homeReset !== lastHomeResetRef.current) {
+      lastHomeResetRef.current = homeReset;
+      setScreen({ name: 'feed' });
+      setMenuOpen(false);
+      scrollTopRef.current = 0;
+      setScrollY(0);
+    }
+  }, [location.state]);
 
   // Category change: the newly selected category always starts at the top —
   // the previous category's scroll position must never carry over. Skipped
