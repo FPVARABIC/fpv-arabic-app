@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { ArrowRight, Search as SearchIcon } from 'lucide-react';
 import { useSearch } from '../hooks/useSearch';
+import { useUserSearch } from '../hooks/useUserSearch';
+import { MIN_USER_SEARCH_QUERY_LENGTH } from '../utils/userSearch';
 import { PostCard } from '../Feed/PostCard';
+import { Avatar } from '../Avatar';
 
 const SUGGESTIONS: readonly string[] = ['Motor', 'DJI O4', 'Failsafe', 'بطارية', 'ESC', 'Betaflight'];
 
@@ -14,14 +17,17 @@ interface SearchScreenProps {
 export const SearchScreen: React.FC<SearchScreenProps> = ({ onBack, onOpenPost, onOpenAuthor }) => {
   const [input, setInput] = useState('');
   const { results, loading, hasSearched, error, search, clear } = useSearch();
+  const userSearch = useUserSearch();
 
   const runSearch = (q: string) => {
     setInput(q);
     if (q.trim().length === 0) {
       clear();
+      userSearch.clear();
       return;
     }
     search(q);
+    userSearch.search(q);
   };
 
   return (
@@ -70,16 +76,58 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ onBack, onOpenPost, 
           </>
         )}
 
+        {/* Accounts section — clearly labeled and visually distinct from post
+            results below (its own heading, its own card style: a horizontal
+            avatar+name row, never mistakable for a PostCard). Card content is
+            an explicit safe-fields-only projection (see
+            PublicUserSearchResult in useUserSearch.ts) — no email, no
+            role/status/activity metadata, ever. */}
+        {hasSearched && input.trim().length >= MIN_USER_SEARCH_QUERY_LENGTH && (
+          <div style={{ marginBottom: 18 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#5a6b7c', margin: '0 0 8px' }}>الحسابات</p>
+            {userSearch.loading && (
+              <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 13, padding: '12px 0' }}>جارٍ البحث عن حسابات...</p>
+            )}
+            {!userSearch.loading && userSearch.error && (
+              <p style={{ textAlign: 'center', color: '#dc2626', fontSize: 13, padding: '12px 0' }}>{userSearch.error}</p>
+            )}
+            {!userSearch.loading && !userSearch.error && userSearch.results.length === 0 && (
+              <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 13, padding: '12px 0' }}>لا توجد حسابات مطابقة.</p>
+            )}
+            {!userSearch.loading && userSearch.results.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {userSearch.results.map(user => (
+                  <button
+                    key={user.uid}
+                    onClick={() => onOpenAuthor(user.uid)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, background: '#ffffff',
+                      border: '0.5px solid #e5eaf0', borderRadius: 12, padding: 10, cursor: 'pointer', textAlign: 'right',
+                    }}
+                  >
+                    <Avatar photoURL={user.photoURL} name={user.displayName} size={36} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1a2b3c' }}>{user.displayName}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Posts section */}
+        {hasSearched && (
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#5a6b7c', margin: '0 0 8px' }}>المنشورات</p>
+        )}
         {hasSearched && loading && (
           <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 13, padding: 24 }}>جارٍ البحث...</p>
         )}
-        {hasSearched && error && (
+        {hasSearched && !loading && error && (
           <p style={{ textAlign: 'center', color: '#dc2626', fontSize: 13, padding: 24 }}>{error}</p>
         )}
         {hasSearched && !loading && !error && results.length === 0 && (
           <p style={{ textAlign: 'center', color: '#94a3b3', fontSize: 13, padding: 24 }}>لا توجد نتائج مطابقة.</p>
         )}
-        {hasSearched && !loading && results.length > 0 && (
+        {hasSearched && !loading && !error && results.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {results.map(post => (
               <PostCard key={post.id} post={post} onOpen={onOpenPost} onOpenAuthor={onOpenAuthor} />

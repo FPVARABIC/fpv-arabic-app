@@ -24,9 +24,10 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, collectionGroup,
-  query, where, runTransaction, getCountFromServer, serverTimestamp, Timestamp,
+  query, where, runTransaction, getCountFromServer, serverTimestamp, Timestamp, increment,
 } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
+import { normalizeDisplayName } from '../src/components/Community/utils/userSearch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,17 +69,26 @@ const assertValue = <T>(label: string, actual: T, expected: T) => {
   }
 };
 
-const validUserDoc = (overrides: Record<string, unknown> = {}) => ({
-  displayName: 'Pilot',
-  photoURL: null,
-  joinedAt: serverTimestamp(),
-  postsCount: 0,
-  role: 'user',
-  status: 'active',
-  lastPostAt: null,
-  lastCommentAt: null,
-  ...overrides,
-});
+const validUserDoc = (overrides: Record<string, unknown> = {}) => {
+  // Guards against a deliberately-bad-typed displayName override in a
+  // negative test (e.g. B10's displayName: 12345) — normalizeDisplayName()
+  // itself assumes a real string, so a non-string override must never reach
+  // it here; that value's own rejection is what the negative test is
+  // actually proving, not this field.
+  const nameForNormalization = typeof overrides.displayName === 'string' ? overrides.displayName : 'Pilot';
+  return {
+    displayName: 'Pilot',
+    photoURL: null,
+    joinedAt: serverTimestamp(),
+    postsCount: 0,
+    role: 'user',
+    status: 'active',
+    lastPostAt: null,
+    lastCommentAt: null,
+    displayNameNormalized: normalizeDisplayName(nameForNormalization),
+    ...overrides,
+  };
+};
 
 const AUTHOR_NAMES: Record<string, string> = {
   uidA: 'Pilot A',
@@ -91,7 +101,10 @@ const AUTHOR_NAMES: Record<string, string> = {
 // uncategorized post (never `category: undefined`, which Firestore rejects
 // client-side; never `category: null`/`''`, which the rules must reject).
 const withoutCategory = (postDoc: Record<string, unknown>) => {
-  const { category, ...rest } = postDoc;
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(postDoc)) {
+    if (key !== 'category') rest[key] = value;
+  }
   return rest;
 };
 
@@ -165,10 +178,14 @@ async function main() {
       mediaPath: 'community/posts/post-p2',
     })));
 
-  await record('P3 valid comment create', 'allow', () =>
+  // Comment creation moved entirely to the createComment Cloud Function
+  // (Phase 6 correction) — even a well-formed, otherwise-legitimate direct
+  // client comment create must now be denied. See section 16 below for the
+  // full set of direct-bypass proofs across every caller identity.
+  await record('P3 direct client comment create (even with an otherwise-valid shape) is denied — comment creation is Cloud-Function-only now', 'deny', () =>
     setDoc(doc(asA.firestore(), 'posts/post-existing/comments/comment-p3'), {
       authorId: 'uidA', authorName: 'Pilot A', authorPhoto: null,
-      text: 'تعليق صالح', createdAt: serverTimestamp(), status: 'active',
+      text: 'تعليق صالح', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
     }));
 
   await record('P4 owner reads own savedPosts entry', 'allow', () =>
@@ -355,8 +372,9 @@ async function main() {
     return runTransaction(db, async tx => {
       const snap = await tx.get(userRef);
       if (snap.exists()) return;
+      const displayName = identity.displayName ?? 'مستخدم';
       tx.set(userRef, {
-        displayName: identity.displayName ?? 'مستخدم',
+        displayName,
         photoURL: identity.photoURL ?? null,
         joinedAt: serverTimestamp(),
         postsCount: 0,
@@ -364,6 +382,7 @@ async function main() {
         status: 'active',
         lastPostAt: null,
         lastCommentAt: null,
+        displayNameNormalized: normalizeDisplayName(displayName),
       });
     });
   }
@@ -595,6 +614,178 @@ async function main() {
 
   await record('Q10 guest CAN read active-post-count aggregation (public)', 'allow', () =>
     getCountFromServer(query(collection(asGuest.firestore(), 'posts'), where('authorId', '==', 'uidAggAuthorMain'), where('status', '==', 'active'))));
+
+  console.log('\n=== 16. Comment creation (Phase 6, corrected) — Cloud-Function-only, direct client bypass proofs ===');
+  console.log('    (the real anti-spam rolling-window + duplicate-collapse behavior now lives');
+  console.log('    server-side in functions/src/index.ts and is exercised in');
+  console.log('    scripts/testCommunityFunctions.ts against the Functions Emulator, not here —');
+  console.log('    Firestore Rules no longer implement or know about rate limiting at all.)');
+
+  const asDirectA = testEnv.authenticatedContext('uidDirectCommentA');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidDirectCommentA'), validUserDoc({ displayName: 'Direct Comment Pilot' }));
+    await setDoc(doc(db, 'posts/post-direct-comment'), validPostDoc('uidA', { text: 'target for direct-create bypass proofs' }));
+  });
+
+  await record('R1 direct client comment create (valid shape, active user) is denied — creation is Cloud-Function-only now', 'deny', () =>
+    setDoc(doc(asDirectA.firestore(), 'posts/post-direct-comment/comments/comment-direct-1'), {
+      authorId: 'uidDirectCommentA', authorName: 'Direct Comment Pilot', authorPhoto: null,
+      text: 'محاولة إنشاء مباشر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    }));
+
+  await record('R2 direct client comment create by a guest is denied', 'deny', () =>
+    setDoc(doc(asGuest.firestore(), 'posts/post-direct-comment/comments/comment-direct-2'), {
+      authorId: 'uidGuestDirect', authorName: 'Guest', authorPhoto: null,
+      text: 'محاولة زائر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    }));
+
+  await record('R3 direct client comment create by a banned user is denied', 'deny', () =>
+    setDoc(doc(asBanned.firestore(), 'posts/post-direct-comment/comments/comment-direct-3'), {
+      authorId: 'uidBanned', authorName: 'Banned Pilot', authorPhoto: null,
+      text: 'محاولة محظور', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    }));
+
+  // Proves the boundary is total, not merely a re-imposed cooldown — a
+  // SECOND, DISTINCT direct attempt on the same post is denied for exactly
+  // the same reason as the first (there is no client-visible path at all
+  // anymore, so there is nothing left that could time-gate a legitimate
+  // second comment the way the earlier, corrected design did).
+  await record('R4 a second, DISTINCT direct comment create attempt on the same post is ALSO denied', 'deny', () =>
+    setDoc(doc(asDirectA.firestore(), 'posts/post-direct-comment/comments/comment-direct-4'), {
+      authorId: 'uidDirectCommentA', authorName: 'Direct Comment Pilot', authorPhoto: null,
+      text: 'تعليق مختلف تماماً بمحتوى آخر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    }));
+
+  await record('R5 the rateLimits bookkeeping subcollection is fully closed to every client read/write, even the owner (Admin-SDK-only, defense-in-depth)', 'deny', () =>
+    getDoc(doc(asDirectA.firestore(), 'users/uidDirectCommentA/rateLimits/comments')));
+
+  console.log('\n=== 17. Comment likes (Phase 6, corrected) — Cloud-Function-only, direct client bypass proofs ===');
+  console.log('    (real concurrent like/unlike behavior now lives server-side in');
+  console.log('    toggleCommentLike and is exercised in scripts/testCommunityFunctions.ts.)');
+
+  const asLikeA = testEnv.authenticatedContext('uidLikeA');
+  const asLikeB = testEnv.authenticatedContext('uidLikeB');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidLikeA'), validUserDoc({ displayName: 'Like Pilot A' }));
+    await setDoc(doc(db, 'users/uidLikeB'), validUserDoc({ displayName: 'Like Pilot B' }));
+    await setDoc(doc(db, 'posts/post-like-target'), validPostDoc('uidA', { text: 'post with a likeable comment' }));
+    await setDoc(doc(db, 'posts/post-like-target/comments/comment-like-target'), {
+      authorId: 'uidA', authorName: 'Pilot A', authorPhoto: null,
+      text: 'علّق عليّ', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    });
+  });
+
+  await record('K1 direct client like create (own uid) is denied — like creation is Cloud-Function-only now', 'deny', () =>
+    setDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA'), { createdAt: serverTimestamp() }));
+
+  await record('K2 direct client like create at another user\'s uid path (spoofing another user\'s like) is denied', 'deny', () =>
+    setDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeB'), { createdAt: serverTimestamp() }));
+
+  await record('K3 a guest cannot create a like', 'deny', () =>
+    setDoc(doc(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidGuestLike'), { createdAt: serverTimestamp() }));
+
+  await record('K4 a direct +1 likesCount update is denied — no client write to this field remains in ANY shape now (closes the gap the previous pass explicitly accepted as a risk)', 'deny', () =>
+    updateDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target'), { likesCount: increment(1) }));
+
+  await record('K5 a direct arbitrary likesCount write is denied', 'deny', () =>
+    updateDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target'), { likesCount: 9999 }));
+
+  // Seed a real like document (rules disabled, simulating one already
+  // created by toggleCommentLike) so K6/K7 can prove delete is ALSO closed
+  // to the client, not merely create.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA'), { createdAt: serverTimestamp() });
+  });
+
+  await record('K6 the like\'s own owner cannot directly delete it — unlike is Cloud-Function-only too', 'deny', () =>
+    deleteDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
+
+  await record('K7 a different user cannot delete uidLikeA\'s like either', 'deny', () =>
+    deleteDoc(doc(asLikeB.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
+
+  await record('K8 anyone (including a guest) CAN still read a like — likes remain public, only writes moved server-side', 'allow', () =>
+    getDoc(doc(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
+
+  console.log('\n=== 18. Concurrent DIRECT bypass attempts (Phase 6, corrected) ===');
+  console.log('    Real concurrency correctness (5 different users liking at once, one user');
+  console.log('    rapidly toggling) is now a Cloud Function / Admin-SDK-transaction property,');
+  console.log('    proven against the Functions Emulator in scripts/testCommunityFunctions.ts.');
+  console.log('    This suite\'s job is narrower: prove that even MANY simultaneous direct');
+  console.log('    client bypass attempts are ALL denied, none slipping through under race.');
+
+  const concurrentBypassLikers = ['uidBypassA', 'uidBypassB', 'uidBypassC', 'uidBypassD', 'uidBypassE'];
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    for (const uid of concurrentBypassLikers) {
+      await setDoc(doc(ctx.firestore(), 'users', uid), validUserDoc({ displayName: uid }));
+    }
+  });
+
+  const concurrentBypassResults = await Promise.allSettled(
+    concurrentBypassLikers.map(uid =>
+      setDoc(
+        doc(testEnv.authenticatedContext(uid).firestore(), `posts/post-like-target/comments/comment-like-target/likes/${uid}`),
+        { createdAt: serverTimestamp() },
+      ),
+    ),
+  );
+  assertValue(
+    'C1 all 5 concurrent DIRECT like-create bypass attempts from 5 different users are rejected (none succeed)',
+    concurrentBypassResults.filter(r => r.status === 'fulfilled').length,
+    0,
+  );
+
+  const likeDocsAfterBypassAttempt = await getDocs(
+    collection(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes'),
+  );
+  assertValue(
+    'C2 zero like documents exist after the concurrent bypass attempt (only the one seeded directly via withSecurityRulesDisabled for K6/K7 remains)',
+    likeDocsAfterBypassAttempt.docs.length,
+    1,
+  );
+
+  console.log('\n=== 19. Field-injection / privacy regression locks (Phase 6) ===');
+
+  await record('E1 email field injection into a NEW user bootstrap document is rejected', 'deny', () =>
+    setDoc(doc(testEnv.authenticatedContext('uidEmailInject1').firestore(), 'users/uidEmailInject1'), {
+      ...validUserDoc({ displayName: 'Email Injector' }),
+      email: 'leaked@example.com',
+    }));
+
+  await record('E2 user bootstrap create is rejected when displayNameNormalized is missing entirely', 'deny', () => {
+    const { displayNameNormalized: _omit, ...withoutNormalized } = validUserDoc({ displayName: 'No Normalized Field' });
+    void _omit;
+    return setDoc(doc(testEnv.authenticatedContext('uidNoNormalized').firestore(), 'users/uidNoNormalized'), withoutNormalized);
+  });
+
+  await record('E3 displayNameNormalized cannot be changed via update after creation (locked in step with displayName)', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { displayNameNormalized: 'someone-else' }));
+
+  await record('E4 email field injection into a post create is rejected (pre-existing hasOnly() allow-list, regression-locked here)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-email-inject'), {
+      ...validPostDoc('uidB'),
+      email: 'leaked@example.com',
+    }));
+
+  // Comment creation is denied outright now regardless of shape (section
+  // 16), so this is no longer testing an email-specific rejection — it is
+  // testing that the total denial still holds even when an attacker adds an
+  // email field to see if it slips through some overlooked allow-listed
+  // shape. It structurally cannot, on two independent levels: this Rules
+  // denial, AND createComment (functions/src/index.ts) itself never reading
+  // or writing anything from request.data beyond postId/text in the first
+  // place — a client-supplied email in the callable's request payload is
+  // simply never looked at.
+  await record('E5 direct client comment create with an injected email field is denied (same total denial as any other direct comment create)', 'deny', () =>
+    setDoc(doc(asA.firestore(), 'posts/post-existing/comments/comment-email-inject'), {
+      authorId: 'uidA', authorName: 'Pilot A', authorPhoto: null,
+      text: 'محاولة تسريب', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+      email: 'leaked@example.com',
+    }));
+
+  await record('E6 email field injection into a public-profile-adjacent field via update is rejected (users/{uid} update only ever allows the two narrow paired-write shapes)', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { email: 'leaked@example.com' }));
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

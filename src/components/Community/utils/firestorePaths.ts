@@ -13,6 +13,18 @@ export const commentsPath = (postId: string): string => `${postPath(postId)}/${C
 
 export const commentPath = (postId: string, commentId: string): string => `${commentsPath(postId)}/${commentId}`;
 
+// Comment likes (Phase 6) — deterministic per-(commentId, uid) document, so
+// "one like per user per comment" is a document-existence fact, not
+// application-level dedup. Nested under the comment itself, mirroring
+// savedPosts' "relation nested under the owner-relevant parent" convention.
+export const COMMENT_LIKES_SUBCOLLECTION = 'likes';
+
+export const commentLikesPath = (postId: string, commentId: string): string =>
+  `${commentPath(postId, commentId)}/${COMMENT_LIKES_SUBCOLLECTION}`;
+
+export const commentLikePath = (postId: string, commentId: string, uid: string): string =>
+  `${commentLikesPath(postId, commentId)}/${uid}`;
+
 export const userPath = (uid: string): string => `${USERS_COLLECTION}/${uid}`;
 
 export const savedPostsPath = (uid: string): string => `${userPath(uid)}/${SAVED_POSTS_SUBCOLLECTION}`;

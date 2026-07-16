@@ -4,7 +4,10 @@ import { useCommentComposer } from '../hooks/useCommentComposer';
 
 interface CommentInputProps {
   postId: string;
-  onCommentAdded: () => void;
+  // Called with the created (or duplicate-collapsed) comment's id — the
+  // caller fetches/upserts just that one document (usePost's
+  // appendCreatedComment) instead of re-running the whole paginated query.
+  onCommentAdded: (commentId: string) => void;
 }
 
 // Only rendered for logged-in users — PostDetail handles the logged-out
@@ -16,10 +19,10 @@ export const CommentInput: React.FC<CommentInputProps> = ({ postId, onCommentAdd
   const submit = async () => {
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
-    const ok = await createComment(postId, trimmed);
-    if (ok) {
+    const result = await createComment(postId, trimmed);
+    if (result) {
       setText('');
-      onCommentAdded();
+      onCommentAdded(result.commentId);
     }
   };
 

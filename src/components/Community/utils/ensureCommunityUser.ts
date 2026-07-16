@@ -1,6 +1,7 @@
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { userPath } from './firestorePaths';
+import { normalizeDisplayName } from './userSearch';
 
 export interface CommunityIdentity {
   displayName: string | null;
@@ -25,8 +26,9 @@ export async function ensureCommunityUser(uid: string, identity: CommunityIdenti
   await runTransaction(firestoreDb, async (tx) => {
     const snap = await tx.get(userRef);
     if (snap.exists()) return;
+    const displayName = identity.displayName ?? FALLBACK_DISPLAY_NAME;
     tx.set(userRef, {
-      displayName: identity.displayName ?? FALLBACK_DISPLAY_NAME,
+      displayName,
       photoURL: identity.photoURL ?? null,
       joinedAt: serverTimestamp(),
       postsCount: 0,
@@ -34,6 +36,13 @@ export async function ensureCommunityUser(uid: string, identity: CommunityIdenti
       status: 'active',
       lastPostAt: null,
       lastCommentAt: null,
+      // Powers user (account) search — see utils/userSearch.ts. Written once
+      // at bootstrap and never updated after (displayName itself has no V1
+      // edit path either, so the two can never drift apart for a given
+      // user). Pre-existing users bootstrapped before this field existed
+      // need scripts/migrateDisplayNameNormalized.ts, run once, to become
+      // searchable — see that script for the disclosed backfill plan.
+      displayNameNormalized: normalizeDisplayName(displayName),
     });
   });
 }

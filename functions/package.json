@@ -1,0 +1,23 @@
+{
+  "name": "fpv-arabic-app-functions",
+  "private": true,
+  "description": "Trusted server-side boundary for Community comment creation and comment likes — the only place these two writes are allowed to happen. Deliberately isolated from the client bundle (its own package.json/node_modules), matching Firebase's standard functions/ layout.",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^7.2.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

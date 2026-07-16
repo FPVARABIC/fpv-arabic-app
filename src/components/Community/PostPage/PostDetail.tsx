@@ -22,7 +22,11 @@ const NEUTRAL_TINT = { bg: '#eef2f6', text: '#5a6b7c' };
 
 // Full-size image loads here only — feed/search show thumbnails (D5).
 export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAuthor }) => {
-  const { post, comments, loading, error, commentsLoading, commentsError, refresh } = usePost(postId);
+  const {
+    post, comments, loading, error,
+    commentsLoading, commentsLoadingMore, commentsHasMore, commentsError,
+    loadMoreComments, retryComments, appendCreatedComment, removeCommentLocally,
+  } = usePost(postId);
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const tint = post && post.category && post.category in CATEGORY_TINTS
@@ -121,7 +125,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <p style={{ color: '#dc2626', fontSize: 12, margin: '0 0 6px' }}>{commentsError}</p>
               <button
-                onClick={refresh}
+                onClick={retryComments}
                 disabled={commentsLoading}
                 style={{
                   background: 'none', border: '0.5px solid #e5eaf0', borderRadius: 999,
@@ -134,7 +138,24 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
             </div>
           )}
           {showCommentsList && (
-            <CommentsList postId={postId} comments={comments} onOpenAuthor={onOpenAuthor} onCommentDeleted={refresh} />
+            <CommentsList postId={postId} comments={comments} onOpenAuthor={onOpenAuthor} onCommentDeleted={removeCommentLocally} />
+          )}
+
+          {commentsHasMore && (
+            <div style={{ textAlign: 'center', padding: '10px 0 0' }}>
+              <button
+                onClick={loadMoreComments}
+                disabled={commentsLoadingMore}
+                style={{
+                  background: 'none', border: '0.5px solid #e5eaf0', borderRadius: 999,
+                  padding: '6px 18px', fontSize: 12, fontWeight: 700,
+                  color: commentsLoadingMore ? '#94a3b3' : '#0e7c86',
+                  cursor: commentsLoadingMore ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {commentsLoadingMore ? 'جارٍ التحميل...' : 'عرض المزيد من التعليقات'}
+              </button>
+            </div>
           )}
 
           {isGuest ? (
@@ -142,7 +163,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
               التعليق يتطلب تسجيل الدخول — القراءة متاحة للجميع
             </p>
           ) : (
-            <CommentInput postId={postId} onCommentAdded={refresh} />
+            <CommentInput postId={postId} onCommentAdded={appendCreatedComment} />
           )}
         </div>
       )}

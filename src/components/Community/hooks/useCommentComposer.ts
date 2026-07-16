@@ -1,17 +1,38 @@
 import { useCallback, useState } from 'react';
-import { doc, getDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
-import { firestoreDb } from '../../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { firebaseFunctions } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
-import { userPath, postPath, commentsPath } from '../utils/firestorePaths';
-import { ensureCommunityUser } from '../utils/ensureCommunityUser';
-import { secondsRemaining, COMMENT_RATE_LIMIT_SECONDS, commentRateLimitMessage } from '../utils/rateLimit';
-import type { CommunityUser } from '../types';
+import { functionsErrorMessage } from '../utils/functionsError';
+
+export interface CreateCommentResult {
+  commentId: string;
+  collapsed: boolean;
+}
 
 interface UseCommentComposerResult {
-  createComment: (postId: string, text: string) => Promise<boolean>;
+  // Resolves to the created (or duplicate-collapsed) comment's id on
+  // success, so the caller (CommentInput) can hand it to
+  // usePost's appendCreatedComment instead of re-fetching the whole
+  // paginated comments list. null on failure.
+  createComment: (postId: string, text: string) => Promise<CreateCommentResult | null>;
   submitting: boolean;
   error: string | null;
 }
+
+// Comment creation (Phase 6, corrected) — the ONLY write path, via the
+// createComment callable (functions/src/index.ts). There is no client-side
+// cooldown pre-check anymore: the previous two-layer client guard (3s
+// global + 15s per-post) is exactly what made a second, distinct comment on
+// the same post wait for no real reason. All anti-spam/anti-flood
+// enforcement now lives server-side (Admin SDK, trusted uid, rolling
+// window + duplicate-fingerprint collapse) — see that file's comments for
+// the authoritative rules. The only thing this hook still does locally is
+// disable the submit action while a call is in flight, so a user can't
+// double-tap the same submission before the first round-trip resolves.
+const createCommentCallable = httpsCallable<{ postId: string; text: string }, CreateCommentResult>(
+  firebaseFunctions,
+  'createComment',
+);
 
 export const useCommentComposer = (): UseCommentComposerResult => {
   const { currentUser } = useAuthContext();
@@ -19,69 +40,21 @@ export const useCommentComposer = (): UseCommentComposerResult => {
   const [error, setError] = useState<string | null>(null);
 
   const createComment = useCallback(
-    async (postId: string, text: string): Promise<boolean> => {
+    async (postId: string, text: string): Promise<CreateCommentResult | null> => {
       if (!currentUser) {
         setError('يجب تسجيل الدخول للتعليق.');
-        return false;
+        return null;
       }
       setSubmitting(true);
       setError(null);
 
       try {
-        const userRef = doc(firestoreDb, userPath(currentUser.uid));
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.exists() ? (userSnap.data() as CommunityUser) : null;
-
-        if (userData?.status === 'banned') {
-          setError('حسابك موقوف عن التعليق حالياً.');
-          return false;
-        }
-
-        if (userData?.lastCommentAt) {
-          const remaining = secondsRemaining(userData.lastCommentAt, COMMENT_RATE_LIMIT_SECONDS);
-          if (remaining > 0) {
-            setError(commentRateLimitMessage(remaining));
-            return false;
-          }
-        }
-
-        // Same bootstrap constraint as useComposer: create-rule requires
-        // postsCount==0/lastPostAt==null/lastCommentAt==null at creation,
-        // which cannot share a batch with the update below. Normally already
-        // done by useEnsureCommunityUser at Community-entry; this call is a
-        // safe, idempotent fallback for the rare case a comment is submitted
-        // before that bootstrap has finished.
-        if (!userData) {
-          await ensureCommunityUser(currentUser.uid, {
-            displayName: currentUser.displayName,
-            photoURL: currentUser.photoURL,
-          });
-        }
-
-        const authorName = userData?.displayName ?? currentUser.displayName ?? 'مستخدم';
-        const authorPhoto = userData?.photoURL ?? currentUser.photoURL ?? null;
-
-        const commentRef = doc(collection(firestoreDb, commentsPath(postId)));
-        const postRef = doc(firestoreDb, postPath(postId));
-
-        const batch = writeBatch(firestoreDb);
-        batch.set(commentRef, {
-          authorId: currentUser.uid,
-          authorName,
-          authorPhoto,
-          text,
-          createdAt: serverTimestamp(),
-          status: 'active',
-        });
-        batch.update(postRef, { commentsCount: increment(1) });
-        batch.update(userRef, { lastCommentAt: serverTimestamp() });
-
-        await batch.commit();
-        return true;
+        const res = await createCommentCallable({ postId, text });
+        return res.data;
       } catch (err) {
         console.error('[useCommentComposer]', err);
-        setError('تعذر إضافة التعليق. حاول مرة أخرى.');
-        return false;
+        setError(functionsErrorMessage(err, 'تعذر إضافة التعليق. حاول مرة أخرى.'));
+        return null;
       } finally {
         setSubmitting(false);
       }

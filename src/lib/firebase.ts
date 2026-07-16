@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 
 const cfg = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            as string,
@@ -19,10 +20,13 @@ if (import.meta.env.DEV) {
   }
 }
 
-export const firebaseApp     = initializeApp(cfg);
-export const firebaseAuth    = getAuth(firebaseApp);
-export const firestoreDb     = getFirestore(firebaseApp);
-export const firebaseStorage = getStorage(firebaseApp);
+export const firebaseApp      = initializeApp(cfg);
+export const firebaseAuth     = getAuth(firebaseApp);
+export const firestoreDb      = getFirestore(firebaseApp);
+export const firebaseStorage  = getStorage(firebaseApp);
+// Default region (us-central1) — matches functions/src/index.ts, which
+// deploys createComment/toggleCommentLike without an explicit region.
+export const firebaseFunctions = getFunctions(firebaseApp);
 
 // Local-development-only emulator gate. Off by default (undefined !== 'true'),
 // so it never silently applies to a real dev build, staging, or Vercel
@@ -34,6 +38,7 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
     connectFirestoreEmulator(firestoreDb, '127.0.0.1', 8080);
     connectStorageEmulator(firebaseStorage, '127.0.0.1', 9199);
     connectAuthEmulator(firebaseAuth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    connectFunctionsEmulator(firebaseFunctions, '127.0.0.1', 5001);
     emulatorGuard.__communityEmulatorConnected = true;
   }
 }

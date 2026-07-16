@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { POSTS_COLLECTION } from '../utils/firestorePaths';
@@ -11,6 +11,10 @@ import type { Post, PostWithId } from '../types';
 // storage-time cap of 30 tokens per post.
 const MAX_QUERY_TOKENS = 10;
 const RESULTS_LIMIT = 20;
+// Debounced INSIDE the hook (Phase 6), not left to each caller to remember —
+// every call to search() resets this timer, so a fast typer issues at most
+// one Firestore read per pause in typing, not one per keystroke.
+const SEARCH_DEBOUNCE_MS = 300;
 
 const buildQueryTokens = (rawQuery: string): string[] => {
   const baseTokens = tokenizeRaw(rawQuery);
@@ -23,22 +27,35 @@ interface UseSearchResult {
   loading: boolean;
   hasSearched: boolean;
   error: string | null;
-  search: (rawQuery: string) => Promise<void>;
+  search: (rawQuery: string) => void;
   clear: () => void;
 }
 
+// Debounced + stale-response-guarded (Phase 6 fix): search() is safe to call
+// on every keystroke — it only ever issues a Firestore read after
+// SEARCH_DEBOUNCE_MS of no further calls, and a request-generation counter
+// (mirroring useFeed.ts/usePost.ts's proven pattern) ensures a slow older
+// response can never overwrite a faster newer one's already-applied results.
 export const useSearch = (): UseSearchResult => {
   const [results, setResults] = useState<PostWithId[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = useCallback(async (rawQuery: string) => {
+  const requestIdRef = useRef(0);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+  }, []);
+
+  const runSearch = useCallback(async (rawQuery: string, localId: number) => {
     const queryTokens = buildQueryTokens(rawQuery);
-    setHasSearched(true);
+    if (localId !== requestIdRef.current) return;
 
     if (queryTokens.length === 0) {
       setResults([]);
+      setLoading(false);
       return;
     }
 
@@ -54,19 +71,38 @@ export const useSearch = (): UseSearchResult => {
           limit(RESULTS_LIMIT),
         ),
       );
+      if (localId !== requestIdRef.current) return; // a newer search superseded this one
       setResults(snap.docs.map(d => ({ id: d.id, ...(d.data() as Post) })));
     } catch (err) {
+      if (localId !== requestIdRef.current) return;
       setError('تعذّر البحث. حاول مرة أخرى.');
       console.error('[useSearch]', err);
     } finally {
-      setLoading(false);
+      if (localId === requestIdRef.current) setLoading(false);
     }
   }, []);
 
+  const search = useCallback((rawQuery: string) => {
+    setHasSearched(true);
+    // Reflected immediately (not only once the debounce timer fires) so the
+    // UI shows an honest "searching" state for the whole debounce window
+    // instead of silently sitting on the previous query's stale results.
+    setLoading(true);
+    setError(null);
+    const localId = ++requestIdRef.current;
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      runSearch(rawQuery, localId);
+    }, SEARCH_DEBOUNCE_MS);
+  }, [runSearch]);
+
   const clear = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    requestIdRef.current += 1; // invalidate any in-flight/pending search
     setResults([]);
     setHasSearched(false);
     setError(null);
+    setLoading(false);
   }, []);
 
   return { results, loading, hasSearched, error, search, clear };

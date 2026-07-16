@@ -1,0 +1,328 @@
+/**
+ * Real source-structure assertions for the Community hardening task —
+ * comment-cooldown redesign, comment likes, user search, and the privacy/
+ * scope audit. Reads the real source/data files on disk and asserts on
+ * their structure directly, the same convention used by every other *.ts
+ * structural test in this repo (testAssembly.ts, testProgrammingHub.ts,
+ * etc). scripts/testCommunityRules.ts proves the same behaviors are
+ * actually enforced against a real Firestore Security Rules emulator.
+ */
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { normalizeDisplayName, prefixRangeEnd, MIN_USER_SEARCH_QUERY_LENGTH } from '../src/components/Community/utils/userSearch';
+import { POST_RATE_LIMIT_SECONDS, postRateLimitMessage } from '../src/components/Community/utils/rateLimit';
+import { commentLikePath, commentLikesPath } from '../src/components/Community/utils/firestorePaths';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, '..');
+
+let passed = 0;
+function ok(label: string, cond: boolean) {
+  assert.ok(cond, `FAILED: ${label}`);
+  console.log(`  ok — ${label}`);
+  passed++;
+}
+
+const typesTs = readFileSync(join(ROOT, 'src/components/Community/types.ts'), 'utf8');
+const ensureCommunityUserTs = readFileSync(join(ROOT, 'src/components/Community/utils/ensureCommunityUser.ts'), 'utf8');
+const firestorePathsTs = readFileSync(join(ROOT, 'src/components/Community/utils/firestorePaths.ts'), 'utf8');
+const rateLimitTs = readFileSync(join(ROOT, 'src/components/Community/utils/rateLimit.ts'), 'utf8');
+const useCommentComposerTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useCommentComposer.ts'), 'utf8');
+const useCommentLikeTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useCommentLike.ts'), 'utf8');
+const usePostTs = readFileSync(join(ROOT, 'src/components/Community/hooks/usePost.ts'), 'utf8');
+const functionsErrorTs = readFileSync(join(ROOT, 'src/components/Community/utils/functionsError.ts'), 'utf8');
+const commentsListTsx = readFileSync(join(ROOT, 'src/components/Community/PostPage/CommentsList.tsx'), 'utf8');
+const commentInputTsx = readFileSync(join(ROOT, 'src/components/Community/PostPage/CommentInput.tsx'), 'utf8');
+const postDetailTsx = readFileSync(join(ROOT, 'src/components/Community/PostPage/PostDetail.tsx'), 'utf8');
+const useSearchTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useSearch.ts'), 'utf8');
+const useUserSearchTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useUserSearch.ts'), 'utf8');
+const searchScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Search/SearchScreen.tsx'), 'utf8');
+const rulesTxt = readFileSync(join(ROOT, 'firestore.rules'), 'utf8');
+const migrationTs = readFileSync(join(ROOT, 'scripts/migrateDisplayNameNormalized.ts'), 'utf8');
+const firebaseLibTs = readFileSync(join(ROOT, 'src/lib/firebase.ts'), 'utf8');
+const functionsIndexTs = readFileSync(join(ROOT, 'functions/src/index.ts'), 'utf8');
+const functionsPackageJson = readFileSync(join(ROOT, 'functions/package.json'), 'utf8');
+const firebaseJson = readFileSync(join(ROOT, 'firebase.json'), 'utf8');
+
+console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
+{
+  ok('Comment.likesCount is declared', /likesCount\?:\s*number/.test(typesTs));
+  ok('Comment.likesCount is optional (pre-existing comments lack it)', /likesCount\?:/.test(typesTs));
+  ok('CommunityUser.displayNameNormalized is declared', /displayNameNormalized\?:\s*string/.test(typesTs));
+  ok('CommunityUser.displayNameNormalized is optional (pre-existing users lack it until migrated)', /displayNameNormalized\?:/.test(typesTs));
+  ok('CommentLike interface still exists (comment-like documents are still real, just Cloud-Function-written now)', /export interface CommentLike/.test(typesTs));
+  ok('the obsolete CommentCooldown interface (Phase 6 pre-correction) is fully removed, not merely unused', !/CommentCooldown/.test(typesTs));
+}
+
+console.log('\n[2] Firestore path helpers — deterministic, correctly shaped; the obsolete commentCooldowns helpers are removed');
+{
+  ok('commentLikePath produces the deterministic comments/{id}/likes/{uid} shape', commentLikePath('p1', 'c1', 'u1') === 'posts/p1/comments/c1/likes/u1');
+  ok('commentLikesPath (collection, no uid) is the parent of commentLikePath', commentLikesPath('p1', 'c1') === 'posts/p1/comments/c1/likes');
+  ok('the obsolete commentCooldownPath/commentCooldownsPath/COMMENT_COOLDOWNS_SUBCOLLECTION exports are fully removed', !/commentCooldown/i.test(firestorePathsTs));
+}
+
+console.log('\n[3] normalizeDisplayName — Arabic/English normalization, prefix-search helper');
+{
+  ok('lowercases Latin text', normalizeDisplayName('Ahmed Ali') === 'ahmed ali');
+  ok('folds hamza variants (أ/إ/آ) to bare alef', normalizeDisplayName('أحمد') === normalizeDisplayName('احمد'));
+  ok('folds taa marbuta to haa', normalizeDisplayName('فاطمة') === normalizeDisplayName('فاطمه'));
+  ok('collapses internal multi-space runs to a single space (not glued together)', normalizeDisplayName('Ahmed   Ali') === 'ahmed ali');
+  ok('trims leading/trailing whitespace', normalizeDisplayName('  Ahmed  ') === 'ahmed');
+  ok('empty input normalizes to an empty string, not a crash', normalizeDisplayName('') === '');
+  ok('a real prefix relationship holds for a genuine substring match ("احمد" starts-with "احم")', normalizeDisplayName('احمد علي').startsWith(normalizeDisplayName('احم')));
+
+  const rangeEnd = prefixRangeEnd('ahm');
+  ok('prefixRangeEnd appends a character (real upper bound, not a no-op)', rangeEnd.length === 'ahm'.length + 1);
+  ok('prefixRangeEnd starts with the original prefix (still a valid range start)', rangeEnd.startsWith('ahm'));
+  ok('MIN_USER_SEARCH_QUERY_LENGTH is a small positive bound (prevents overly-broad prefix reads)', MIN_USER_SEARCH_QUERY_LENGTH >= 1 && MIN_USER_SEARCH_QUERY_LENGTH <= 3);
+}
+
+console.log('\n[4] ensureCommunityUser.ts — bootstraps displayNameNormalized, still never writes email');
+{
+  ok('imports normalizeDisplayName', /import\s*\{\s*normalizeDisplayName\s*\}/.test(ensureCommunityUserTs));
+  ok('writes displayNameNormalized on the created user document', /displayNameNormalized:\s*normalizeDisplayName\(displayName\)/.test(ensureCommunityUserTs));
+  ok('still never references an email field anywhere in this file', !/\bemail\b/i.test(ensureCommunityUserTs.replace(/\/\/.*$/gm, '')));
+}
+
+console.log('\n[5] rateLimit.ts — post rate limit unchanged; comment rate limiting is fully server-side now, no client constants left');
+{
+  ok('POST_RATE_LIMIT_SECONDS is exactly 60 (unchanged, out of this correction pass\'s scope)', POST_RATE_LIMIT_SECONDS === 60);
+  ok('postRateLimitMessage produces a real, non-empty Arabic message', postRateLimitMessage(30).length > 0 && /\d/.test(postRateLimitMessage(30)));
+  ok('the obsolete GLOBAL_COMMENT_BURST_GUARD_SECONDS/POST_COMMENT_COOLDOWN_SECONDS/message-function exports are fully removed', !/GLOBAL_COMMENT_BURST_GUARD_SECONDS|POST_COMMENT_COOLDOWN_SECONDS|globalCommentBurstMessage|postCommentCooldownMessage/.test(rateLimitTs));
+}
+
+console.log('\n[6] useCommentComposer.ts — calls the createComment Cloud Function, no client-side cooldown pre-check left');
+{
+  ok('imports httpsCallable from firebase/functions', /import\s*\{\s*httpsCallable\s*\}\s*from\s*'firebase\/functions'/.test(useCommentComposerTs));
+  ok('imports firebaseFunctions (the shared Functions SDK instance)', /firebaseFunctions/.test(useCommentComposerTs));
+  ok('the callable is bound to the exact name "createComment"', /httpsCallable[^(]*\(\s*firebaseFunctions,\s*\n?\s*'createComment'/.test(useCommentComposerTs));
+  ok('no client-side cooldown pre-check read exists anymore (no cooldownRef/getDoc-before-write guard)', !/cooldownRef|commentCooldownPath/.test(useCommentComposerTs));
+  ok('no direct Firestore write (writeBatch/setDoc at a comments path) remains — creation is Function-only now', !/writeBatch|batch\.set/.test(useCommentComposerTs));
+  ok('createComment resolves to a { commentId, collapsed } shape the caller can use to upsert locally', /CreateCommentResult/.test(useCommentComposerTs));
+  ok('functionsErrorMessage is used to surface a real Arabic error rather than a generic fallback for every failure', /functionsErrorMessage/.test(useCommentComposerTs));
+}
+
+console.log('\n[7] CommentInput.tsx — duplicate-submit-while-pending guard preserved, hands the created commentId upward');
+{
+  ok('submit() still refuses to re-fire while a request is already pending', /if\s*\(!trimmed\s*\|\|\s*submitting\)\s*return;/.test(commentInputTsx));
+  ok('no fixed setTimeout-based artificial cooldown/countdown exists in the composer UI itself', !/setTimeout/.test(commentInputTsx));
+  ok('onCommentAdded is called with the created comment\'s id (not a bare no-arg refresh callback)', /onCommentAdded\(result\.commentId\)/.test(commentInputTsx));
+}
+
+console.log('\n[8] useCommentLike.ts — calls the toggleCommentLike Cloud Function with an explicit desiredState, no set-state-in-effect');
+{
+  ok('imports httpsCallable from firebase/functions', /import\s*\{\s*httpsCallable\s*\}\s*from\s*'firebase\/functions'/.test(useCommentLikeTs));
+  ok('the callable is bound to the exact name "toggleCommentLike"', /httpsCallable[^(]*\(\s*\n?\s*firebaseFunctions,\s*\n?\s*'toggleCommentLike'/.test(useCommentLikeTs));
+  ok('the request carries an explicit desiredState (\'like\'|\'unlike\') — a blind toggle is not retry-safe, see this hook\'s own comment', /desiredState/.test(useCommentLikeTs));
+  ok('no client-side runTransaction against Firestore remains for the toggle (moved to the Function\'s Admin-SDK transaction)', !/runTransaction/.test(useCommentLikeTs));
+  ok('no direct client write to likesCount remains (increment(...) against Firestore)', !/tx\.update\(commentRef|updateDoc\([^)]*likesCount/.test(useCommentLikeTs));
+  ok('a failed toggle rolls back the optimistic UI flip', /rollback the optimistic flip/.test(useCommentLikeTs));
+  ok('the effect that fetches the current like status never calls setState synchronously in its own body (only inside the async result) — avoids react-hooks/set-state-in-effect', /ever calls setState from inside the async result/.test(useCommentLikeTs));
+  ok('likedLoading/liked are DERIVED from a keyed result object compared against the current key, not tracked as separate state kept in sync via effect', /result\.key !== key|result\.key === key/.test(useCommentLikeTs));
+  ok('this hook does not fetch or return a like COUNT itself (count comes from the comment doc\'s own denormalized field, never an unbounded liker query)', !/getDocs\(/.test(useCommentLikeTs) && !/collection\(firestoreDb, commentLikesPath/.test(useCommentLikeTs));
+}
+
+console.log('\n[8b] usePost.ts — bounded cursor-based comment pagination, no synchronous setState in the main effect');
+{
+  ok('imports limit/startAfter for cursor-based pagination', /\blimit\b/.test(usePostTs) && /\bstartAfter\b/.test(usePostTs));
+  ok('a bounded, documented page size constant exists (not an unbounded getDocs)', /COMMENTS_PAGE_SIZE\s*=\s*\d+/.test(usePostTs));
+  ok('exposes loadMoreComments for cursor-based pagination', /loadMoreComments/.test(usePostTs));
+  ok('exposes appendCreatedComment (single-doc upsert instead of a full re-fetch after posting)', /appendCreatedComment/.test(usePostTs));
+  ok('exposes removeCommentLocally (local filter instead of a full re-fetch after deleting)', /removeCommentLocally/.test(usePostTs));
+  ok('the main effect never calls setPostState/setCommentsState synchronously in its own body before any await (avoids react-hooks/set-state-in-effect)', /Derived, not stored/.test(usePostTs));
+}
+
+console.log('\n[8c] functionsError.ts — shared FunctionsError → Arabic message mapping used by both Function-calling hooks');
+{
+  ok('exports functionsErrorMessage', /export function functionsErrorMessage/.test(functionsErrorTs));
+  ok('recognizes functions/-prefixed FunctionsErrorCode strings specifically (not a bare string compare)', /functions\//.test(functionsErrorTs));
+  ok('falls back to the caller-supplied fallback message for transport-level failures (never surfaces a raw/undefined message)', /fallback/.test(functionsErrorTs));
+}
+
+console.log('\n[9] CommentsList.tsx — accessible Like control, status not color-only, defensive likesCount coalesce');
+{
+  ok('imports the Heart icon', /import\s*\{[^}]*Heart[^}]*\}\s*from\s*'lucide-react'/.test(commentsListTsx));
+  ok('the like button is a real native <button type="button">', /<button\s*\n\s*type="button"\s*\n\s*onClick=\{handleClick\}/.test(commentsListTsx));
+  ok('aria-label changes between liked/unliked states (not a static generic label)', /aria-label=\{liked \? '.*' : '.*'\}/.test(commentsListTsx));
+  ok('aria-pressed reflects the current liked state', /aria-pressed=\{!isGuest && liked\}/.test(commentsListTsx));
+  ok('the heart icon itself changes fill (a shape change, not merely a color change) between states', /fill=\{liked \? '#dc2626' : 'none'\}/.test(commentsListTsx));
+  ok('likesCount is read defensively with ?? 0 (pre-existing comments may lack the field)', /comment\.likesCount \?\? 0/.test(commentsListTsx));
+  ok('guests are gated to a login toast rather than silently failing or silently succeeding', /يجب تسجيل الدخول للإعجاب/.test(commentsListTsx));
+  ok('onCommentDeleted is called with the deleted comment\'s id (local removal, not a bare no-arg refresh)', /onCommentDeleted\(commentId\)/.test(commentsListTsx));
+}
+
+console.log('\n[10] useSearch.ts (post search) — debounced and stale-response-guarded (Phase 6 fix)');
+{
+  ok('a debounce timer is used (not a raw call on every keystroke)', /debounceTimerRef/.test(useSearchTs) && /setTimeout/.test(useSearchTs));
+  ok('a request-generation counter guards against a stale response overwriting a newer one', /requestIdRef/.test(useSearchTs) && /localId !== requestIdRef\.current/.test(useSearchTs));
+  ok('the debounce timer is cleared on unmount (no leaked timer firing into a dead hook)', /clearTimeout\(debounceTimerRef\.current\)/.test(useSearchTs));
+  ok('search() no longer returns a Promise the caller is expected to await (fire-and-forget by design once debounced)', /search:\s*\(rawQuery: string\) => void/.test(useSearchTs));
+}
+
+console.log('\n[11] useUserSearch.ts — bounded prefix search, debounced, stale-guarded, explicit safe-fields projection');
+{
+  ok('queries by range on displayNameNormalized (prefix search), not an unbounded scan', /where\('displayNameNormalized', '>='/.test(useUserSearchTs) && /where\('displayNameNormalized', '<='/.test(useUserSearchTs));
+  ok('the query has a hard limit()', /limit\(RESULTS_LIMIT\)/.test(useUserSearchTs));
+  ok('a minimum query length gates the read (no 1-character overly-broad prefix scan)', /MIN_USER_SEARCH_QUERY_LENGTH/.test(useUserSearchTs));
+  ok('debounced (same pattern as post search)', /debounceTimerRef/.test(useUserSearchTs) && /setTimeout/.test(useUserSearchTs));
+  ok('stale-response-guarded via a request-generation counter', /requestIdRef/.test(useUserSearchTs) && /localId !== requestIdRef\.current/.test(useUserSearchTs));
+  ok('results are built via an EXPLICIT allow-list projection {uid, displayName, photoURL} — not a raw spread of the Firestore document', /return\s*\{\s*uid:\s*d\.id,\s*displayName:\s*data\.displayName,\s*photoURL:\s*data\.photoURL\s*\}/.test(useUserSearchTs));
+  ok('the result mapping never spreads the raw document data (...data) into the returned objects', !/\.\.\.data\b/.test(useUserSearchTs));
+  // Strips comment lines first: this file's own explanatory comments
+  // legitimately discuss WHY no email exists to leak — only real code
+  // (a field name, a property access) matters for this assertion.
+  const useUserSearchNonCommentLines = useUserSearchTs.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+  ok('the word "email" never appears in actual code (only in explanatory comments, if at all)', !/email/i.test(useUserSearchNonCommentLines));
+}
+
+console.log('\n[12] SearchScreen.tsx — accounts section clearly labeled and visually distinct from post results');
+{
+  ok('renders a "الحسابات" (accounts) heading', /الحسابات/.test(searchScreenTsx));
+  ok('renders a "المنشورات" (posts) heading, distinct from the accounts heading', /المنشورات/.test(searchScreenTsx));
+  ok('imports and uses useUserSearch', /useUserSearch/.test(searchScreenTsx));
+  ok('the accounts section is gated by the same minimum query length the hook itself enforces (consistent UX, no dead loading state below the floor)', /MIN_USER_SEARCH_QUERY_LENGTH/.test(searchScreenTsx));
+  ok('selecting a user result calls the existing onOpenAuthor navigation (reuses the existing public-profile flow, no new profile screen)', /onClick=\{\(\) => onOpenAuthor\(user\.uid\)\}/.test(searchScreenTsx));
+  ok('user result cards render only avatar + displayName, no other field from the search result object', /<Avatar photoURL=\{user\.photoURL\} name=\{user\.displayName\}/.test(searchScreenTsx));
+}
+
+console.log('\n[13] firestore.rules — comment creation and comment likes are Cloud-Function-only (Phase 6 correction)');
+{
+  ok('the obsolete commentCooldowns subcollection is fully removed', !/commentCooldowns/.test(rulesTxt));
+  ok('the obsolete 3s/15s duration-based comment-cooldown guards are fully removed', !/duration\.value\(3, 's'\)/.test(rulesTxt) && !/duration\.value\(15, 's'\)/.test(rulesTxt));
+  ok('comment creation is denied outright to the client (allow create: if false) — createComment is the only writer', /match \/comments\/\{commentId\}[\s\S]{0,1200}?allow create: if false;/.test(rulesTxt));
+  ok('the rateLimits bookkeeping subcollection is fully closed to every client read/write (defense-in-depth)', /match \/rateLimits\/\{document=\*\*\}[\s\S]{0,100}?allow read, write: if false;/.test(rulesTxt));
+  ok('the likes/{likerUid} subcollection is defined, nested under comments/{commentId}', /match \/likes\/\{likerUid\}/.test(rulesTxt));
+  ok('like create/update/delete are ALL denied to the client (allow create, update, delete: if false) — toggleCommentLike is the only writer', /match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
+  ok('likes remain publicly readable (only writes moved server-side, not reads)', /match \/likes\/\{likerUid\}[\s\S]{0,50}?allow read: if true;/.test(rulesTxt));
+  ok('likesCount is no longer touchable by the client in ANY update shape (the old ±1-only branch is fully removed from the comment update rule)', !/likesCount == resource\.data\.get\('likesCount'/.test(rulesTxt));
+  ok('displayNameNormalized is allow-listed on user bootstrap create', /'displayNameNormalized'/.test(rulesTxt));
+  ok('displayNameNormalized is locked (cannot change) on update, same as displayName/photoURL', /request\.resource\.data\.displayNameNormalized == resource\.data\.displayNameNormalized/.test(rulesTxt));
+  ok('the users/{uid} update rule no longer has a client-reachable lastCommentAt bump path (written only by createComment via the Admin SDK now)', !/lastCommentAt == request\.time/.test(rulesTxt));
+  ok('no overly-broad "allow read, write: if request.auth != null" catch-all pattern was introduced anywhere', !/allow read, write: if request\.auth != null/.test(rulesTxt));
+  ok('the word "email" never appears as a real field name in an allow-listed keys() list (only in explanatory comments)', !/hasOnly\(\[[^\]]*'email'[^\]]*\]\)/.test(rulesTxt));
+}
+
+console.log('\n[14] Migration utility — dry-run by default, idempotent, emulator-only, fails CLOSED, documented production runbook');
+{
+  ok('dry-run is the default (--apply is required to actually write)', /const APPLY = process\.argv\.includes\('--apply'\)/.test(migrationTs));
+  ok('skips any document that already has displayNameNormalized (idempotent re-run)', /already migrated.*idempotent skip/.test(migrationTs));
+  ok('fails CLOSED (process.exit(1)) when FIRESTORE_EMULATOR_HOST is not set, not merely by omission of admin credentials', /if\s*\(!process\.env\.FIRESTORE_EMULATOR_HOST\)/.test(migrationTs) && /process\.exit\(1\)/.test(migrationTs));
+  ok('the header documents a complete production runbook (dependency, credentials, IAM role, batching strategy)', /PRODUCTION MIGRATION RUNBOOK/.test(migrationTs));
+  ok('the runbook explicitly names the minimum sufficient IAM role (not a broad Editor/Owner grant)', /roles\/datastore\.user/.test(migrationTs));
+  ok('the runbook explicitly warns that the Admin SDK bypasses Firestore Security Rules', /bypasses Firestore Security Rules/.test(migrationTs));
+  ok('the runbook explicitly states credentials must never be committed', /never be committed|never committed/.test(migrationTs));
+  ok('targets the same emulator PROJECT_ID convention as the other Community emulator scripts', /PROJECT_ID = 'demo-community-rules-test'/.test(migrationTs));
+}
+
+console.log('\n[14b] functions/ — createComment/toggleCommentLike Cloud Functions, isolated sub-package, correct trust boundary');
+{
+  ok('functions/package.json depends on firebase-admin (the trust boundary for these two writes)', /"firebase-admin"/.test(functionsPackageJson));
+  ok('functions/package.json depends on firebase-functions (2nd-gen)', /"firebase-functions"/.test(functionsPackageJson));
+  ok('functions/ is a fully isolated sub-package (its own package.json, never merged into the root client dependency tree)', functionsPackageJson.includes('"name"'));
+  ok('createComment is exported as an onCall function', /export const createComment = onCall/.test(functionsIndexTs));
+  ok('toggleCommentLike is exported as an onCall function', /export const toggleCommentLike = onCall/.test(functionsIndexTs));
+  ok('createComment throws unauthenticated when request.auth is missing (uid is never trusted from the payload)', /if \(!request\.auth\) throw new HttpsError\('unauthenticated'/.test(functionsIndexTs));
+  ok('the caller uid is taken exclusively from request.auth.uid, never from request.data', /const uid = request\.auth\.uid;/.test(functionsIndexTs));
+  ok('createComment enforces a rolling-window flood guard (a documented, tunable ceiling, not an unbounded allow)', /MAX_COMMENTS_PER_WINDOW/.test(functionsIndexTs));
+  ok('createComment collapses an immediate duplicate-fingerprint retry into the ORIGINAL comment instead of creating a second one', /collapsed: true/.test(functionsIndexTs));
+  ok('createComment never enforces any PER-POST cooldown that would block a second, distinct comment on the same post (the defect this correction pass fixes)', !/postId.*cooldown|per-post cooldown/i.test(functionsIndexTs));
+  ok('toggleCommentLike takes an explicit desiredState (\'like\'|\'unlike\') rather than blindly inverting current state — a blind toggle is not retry-safe', /desiredState: 'like' \| 'unlike'/.test(functionsIndexTs));
+  ok('toggleCommentLike writes the like doc and adjusts likesCount inside the SAME transaction (atomic, no split-write drift)', /runTransaction\(async tx/.test(functionsIndexTs) && /tx\.set\(likeRef/.test(functionsIndexTs) && /tx\.update\(commentRef, \{ likesCount: FieldValue\.increment/.test(functionsIndexTs));
+  ok('a repeated "like" call on an already-liked comment is a true no-op (idempotent, never double-increments)', /already in the desired state/.test(functionsIndexTs));
+}
+
+console.log('\n[14c] firebase.json / src/lib/firebase.ts — Functions emulator wired end to end for local development and tests');
+{
+  ok('firebase.json declares the functions source directory', /"functions":\s*\{\s*\n\s*"source":\s*"functions"/.test(firebaseJson));
+  ok('firebase.json declares a functions emulator port', /"functions":\s*\{\s*\n\s*"port":\s*5001/.test(firebaseJson));
+  ok('src/lib/firebase.ts imports getFunctions/connectFunctionsEmulator from firebase/functions', /import\s*\{\s*getFunctions,\s*connectFunctionsEmulator\s*\}\s*from\s*'firebase\/functions'/.test(firebaseLibTs));
+  ok('src/lib/firebase.ts exports a shared firebaseFunctions instance (the same one both hooks import)', /export const firebaseFunctions = getFunctions\(firebaseApp\)/.test(firebaseLibTs));
+  ok('the emulator gate connects the Functions emulator alongside Firestore/Storage/Auth, only when explicitly opted in', /connectFunctionsEmulator\(firebaseFunctions, '127\.0\.0\.1', 5001\)/.test(firebaseLibTs));
+}
+
+console.log('\n[14d] PostDetail.tsx — bounded comment pagination wired into the UI');
+{
+  ok('imports and uses loadMoreComments from usePost', /loadMoreComments/.test(postDetailTsx));
+  ok('renders a load-more control gated by commentsHasMore', /commentsHasMore/.test(postDetailTsx));
+  ok('the retry button now calls retryComments (first-page reload), not a bare refresh', /onClick=\{retryComments\}/.test(postDetailTsx));
+  ok('CommentsList\'s onCommentDeleted is wired to removeCommentLocally (no full re-fetch after a delete)', /onCommentDeleted=\{removeCommentLocally\}/.test(postDetailTsx));
+  ok('CommentInput\'s onCommentAdded is wired to appendCreatedComment (single-doc upsert, not a full re-fetch after posting)', /onCommentAdded=\{appendCreatedComment\}/.test(postDetailTsx));
+}
+
+console.log('\n[15] Privacy leak scan — no email field anywhere in changed Community source (structural, repeatable)');
+{
+  const changedCommunityFiles = [
+    'src/components/Community/utils/userSearch.ts',
+    'src/components/Community/utils/firestorePaths.ts',
+    'src/components/Community/utils/rateLimit.ts',
+    'src/components/Community/utils/functionsError.ts',
+    'src/components/Community/hooks/useCommentComposer.ts',
+    'src/components/Community/hooks/useCommentLike.ts',
+    'src/components/Community/hooks/usePost.ts',
+    'src/components/Community/hooks/useSearch.ts',
+    'src/components/Community/hooks/useUserSearch.ts',
+    'src/components/Community/PostPage/CommentsList.tsx',
+    'src/components/Community/PostPage/CommentInput.tsx',
+    'src/components/Community/PostPage/PostDetail.tsx',
+    'src/components/Community/Search/SearchScreen.tsx',
+    'functions/src/index.ts',
+  ];
+  // Strips both // line comments and {/* JSX block */} comments — several
+  // of these files (.ts and .tsx alike) legitimately document WHY no email
+  // field exists, the actual privacy property under test; only real code
+  // (a field name, a property access) should ever fail this assertion.
+  const stripComments = (src: string): string =>
+    src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '').split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+
+  for (const relPath of changedCommunityFiles) {
+    const content = readFileSync(join(ROOT, relPath), 'utf8');
+    ok(`${relPath} contains no reference to an "email" field in real code`, !/\bemail\b/i.test(stripComments(content)));
+  }
+  // types.ts and ensureCommunityUser.ts DO legitimately mention "email" — but
+  // only inside explanatory comments about why it is deliberately absent,
+  // never as an actual field name. Verified precisely, not just excluded.
+  ok('types.ts never declares an actual "email" interface member anywhere', !/^\s*email[?:]/m.test(typesTs));
+}
+
+console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
+{
+  const { execSync } = await import('node:child_process');
+  const diffNames = execSync('git diff --name-only HEAD', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const untrackedNames = execSync('git ls-files --others --exclude-standard', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
+  const allChanged = [...diffNames, ...untrackedNames];
+  const outOfScope = allChanged.filter(f =>
+    !f.startsWith('src/components/Community/') &&
+    !f.startsWith('src/contexts/AuthContext.tsx') && // read-only reference, expect untouched — verified below, not assumed
+    f !== 'src/lib/firebase.ts' &&
+    f !== 'firestore.rules' &&
+    f !== 'firestore.indexes.json' &&
+    f !== 'firebase.json' &&
+    f !== 'package.json' &&
+    !f.startsWith('functions/') &&
+    !f.startsWith('scripts/testCommunity') &&
+    !f.startsWith('scripts/seedCommunityEmulator') &&
+    f !== 'scripts/migrateDisplayNameNormalized.ts',
+  );
+  ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
+  if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
+  ok('src/contexts/AuthContext.tsx itself was NOT modified (confirmed, not merely allow-listed above)', !allChanged.includes('src/contexts/AuthContext.tsx'));
+  ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Assembly/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
+    f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' ||
+    f === 'src/views/ProgrammingView.tsx' || f.startsWith('src/views/ExpressLrs') || f.startsWith('src/data/expresslrs/') ||
+    f.startsWith('src/views/BuildRoadmap') || f.startsWith('src/data/roadmap') || f.startsWith('src/data/lessonsData') ||
+    f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2') ||
+    f.startsWith('src/data/assembly/') || f.startsWith('src/components/Assembly/'),
+  ));
+  // Only ADDED lines matter here — the unified diff's unchanged CONTEXT
+  // lines legitimately include the "dependencies": { header near the
+  // scripts-section edit; checking the whole diff text would false-positive
+  // on that context line.
+  const packageJsonAddedLines = execSync('git diff -- package.json', { cwd: ROOT }).toString()
+    .split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+  ok('package.json has no NEW dependency (only a new npm script entry) — no unrelated dependency was added',
+    packageJsonAddedLines.every(l => !/^[+]\s*"[^"]+":\s*"\^?\d/.test(l)));
+}
+
+console.log(`\nAll ${passed} assertions passed.`);

@@ -34,10 +34,19 @@ service cloud.firestore {
       // Bootstrap: a user's own doc is created lazily on their first
       // post/comment/report action. Only the owner can create it, and only
       // with safe defaults — role/status can't be self-elevated at creation.
+      //
+      // displayNameNormalized (Phase 6, user search) is client-computed —
+      // Rules validate shape/type only, the exact same trust model already
+      // accepted for Post.searchTokens below. It is never re-derived from
+      // displayName here (Firestore Rules has no Arabic-normalization
+      // primitive to do so); a client sending a normalization that doesn't
+      // actually match its own displayName degrades only that one user's own
+      // search discoverability, never another user's data or privacy.
       allow create: if isOwner(uid)
                     && request.resource.data.keys().hasOnly([
                          'displayName', 'photoURL', 'joinedAt', 'postsCount',
-                         'role', 'status', 'lastPostAt', 'lastCommentAt'
+                         'role', 'status', 'lastPostAt', 'lastCommentAt',
+                         'displayNameNormalized'
                        ])
                     && request.resource.data.displayName is string
                     && (request.resource.data.photoURL == null || request.resource.data.photoURL is string)
@@ -46,31 +55,47 @@ service cloud.firestore {
                     && request.resource.data.role == 'user'
                     && request.resource.data.status == 'active'
                     && request.resource.data.lastPostAt == null
-                    && request.resource.data.lastCommentAt == null;
+                    && request.resource.data.lastCommentAt == null
+                    && request.resource.data.displayNameNormalized is string
+                    && request.resource.data.displayNameNormalized.size() <= 200;
 
-      // Only two narrow update shapes are ever allowed, each paired with a
-      // content write (post/comment creation). role/status/displayName/
-      // photoURL can NEVER change via any client write path — role/status are
-      // console-only (D10); displayName/photoURL have no V1 edit feature (the
-      // ProfileSheet "edit name" feature writes to localStorage only, never to
-      // this document).
+      // Only one client update shape remains (Phase 6 correction): post
+      // creation's lastPostAt/postsCount bump. Comment creation moved
+      // entirely to the createComment Cloud Function (functions/src/
+      // index.ts), which uses the Admin SDK — the Admin SDK bypasses these
+      // Rules by design, so lastCommentAt is now written ONLY by that
+      // function (via a merge write) and has NO client-reachable update
+      // path here at all. role/status/displayName/photoURL/
+      // displayNameNormalized can NEVER change via any client write path —
+      // role/status are console-only (D10); displayName/photoURL have no V1
+      // edit feature (the ProfileSheet "edit name" feature writes to
+      // localStorage only, never to this document); displayNameNormalized
+      // is locked in step with displayName for the same reason.
       allow update: if isOwner(uid)
-                    && (
-                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
-                           && request.resource.data.lastPostAt == request.time
-                           && request.resource.data.postsCount == resource.data.postsCount + 1
-                           && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's')))
-                         ||
-                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastCommentAt'])
-                           && request.resource.data.lastCommentAt == request.time
-                           && (resource.data.lastCommentAt == null || request.time > resource.data.lastCommentAt + duration.value(15, 's')))
-                       )
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
+                    && request.resource.data.lastPostAt == request.time
+                    && request.resource.data.postsCount == resource.data.postsCount + 1
+                    && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's'))
                     && request.resource.data.role == resource.data.role
                     && request.resource.data.status == resource.data.status
                     && request.resource.data.displayName == resource.data.displayName
-                    && request.resource.data.photoURL == resource.data.photoURL;
+                    && request.resource.data.photoURL == resource.data.photoURL
+                    && request.resource.data.displayNameNormalized == resource.data.displayNameNormalized;
 
       allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
+
+      // Per-user comment rate-limit/idempotency bookkeeping (Phase 6
+      // correction) — written and read EXCLUSIVELY by createComment's Admin
+      // SDK transaction (functions/src/index.ts). Explicitly closed to every
+      // client operation, on every path under this subcollection, as
+      // defense-in-depth documentation of the trust boundary (the Admin SDK
+      // bypasses this regardless of what it says, but an explicit `if false`
+      // makes the intended boundary unambiguous to a future reader, and
+      // fails safe if this collection is ever accidentally reached by a
+      // future client code path).
+      match /rateLimits/{document=**} {
+        allow read, write: if false;
+      }
 
       // Saved Posts — private bookmarking, amendment to D2. Nested under
       // users/{uid} so it is governed entirely by this match block, not by
@@ -230,22 +255,19 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if resource.data.status == 'active';
 
-        allow create: if isSignedIn()
-                      && isActiveCaller()
-                      && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt', 'status'])
-                      && request.resource.data.authorId == request.auth.uid
-                      && request.resource.data.authorName == callerProfile().displayName
-                      && request.resource.data.authorPhoto == callerProfile().photoURL
-                      && request.resource.data.status == 'active'
-                      && request.resource.data.text is string
-                      && request.resource.data.text.size() > 0
-                      && request.resource.data.text.size() <= 500
-                      && request.resource.data.createdAt == request.time
-                      // rate limit: 1 comment / 15s (D11)
-                      && (
-                           callerProfile().lastCommentAt == null ||
-                           request.time > callerProfile().lastCommentAt + duration.value(15, 's')
-                         );
+        // Phase 6 correction: comment creation is Cloud-Function-only.
+        // Direct client creation is denied outright — the earlier two-layer
+        // client-writable rate-limit design (a 3s global guard + a 15s
+        // per-post cooldown) is GONE, not merely tightened, because it still
+        // blocked a normal user's second, DISTINCT comment on the same post
+        // for 15 real seconds — an actual UX defect the earlier pass did not
+        // fully fix. createComment (functions/src/index.ts) now enforces
+        // anti-spam via a user-partitioned rolling-window + duplicate-
+        // fingerprint transaction instead, using the Admin SDK, which
+        // bypasses this rule entirely — so `if false` here does not block
+        // real comment creation, only DIRECT client attempts to bypass the
+        // trusted function.
+        allow create: if false;
 
         allow update: if isSignedIn()
                       && (
@@ -257,8 +279,28 @@ service cloud.firestore {
                              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                              && request.resource.data.status == 'hidden')
                          );
+        // likesCount is no longer client-writable in ANY shape (Phase 6
+        // correction) — toggleCommentLike (functions/src/index.ts) is the
+        // only writer, via the Admin SDK, inside the same transaction that
+        // creates/deletes the paired likes/{uid} document. This closes the
+        // exact gap the previous pass explicitly disclosed as an accepted
+        // risk: likesCount can no longer be forged by ±1 without a real,
+        // atomically-paired like relation.
 
         allow delete: if false;
+
+        // One like document per (comment, liker) — deterministic key.
+        // Phase 6 correction: BOTH create and delete are now Cloud-
+        // Function-only (toggleCommentLike), same reasoning as comments
+        // create above — the function atomically pairs this write with the
+        // comment's likesCount adjustment inside one transaction, which a
+        // direct client write could never guarantee. Read stays public,
+        // matching the rest of this project's "a like is no more sensitive
+        // than the public content it's attached to" posture.
+        match /likes/{likerUid} {
+          allow read: if true;
+          allow create, update, delete: if false;
+        }
       }
     }
 

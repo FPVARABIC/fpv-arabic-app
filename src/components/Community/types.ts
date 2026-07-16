@@ -34,6 +34,14 @@ export interface CommunityUser {
   status: UserStatus;
   lastPostAt: Timestamp | null;
   lastCommentAt: Timestamp | null;
+  // Client-computed (normalizeDisplayName), same trust model already
+  // accepted for Post.searchTokens — Rules validate shape/type only, never
+  // cryptographically re-derive it from displayName. Absent on any
+  // users/{uid} document bootstrapped before this field existed; every read
+  // site must treat it as optional (see utils/userSearch.ts) rather than
+  // assume every document has it. See scripts/migrateDisplayNameNormalized.ts
+  // for the (untouched-in-production) backfill utility.
+  displayNameNormalized?: string;
 }
 
 export interface Post {
@@ -66,6 +74,24 @@ export interface Comment {
   text: string;
   createdAt: Timestamp;
   status: ContentStatus;
+  // Server-aggregated via increment() inside the same Admin-SDK transaction
+  // that creates/deletes the paired likes/{uid} document (see
+  // functions/src/index.ts's toggleCommentLike) — a real atomic guarantee,
+  // not shape-validation trust, since the client SDK is denied any direct
+  // write to this field. Absent on any comment created before this field
+  // existed; every read site must coalesce with `?? 0` rather than assume
+  // every document has it.
+  likesCount?: number;
+}
+
+// A single user's like on a single comment — deterministic document ID
+// (the liker's own uid) under comments/{commentId}/likes/{uid}, so "one
+// like per user per comment" is structurally guaranteed by document
+// existence, not by application-level dedup logic. Written exclusively by
+// the toggleCommentLike Cloud Function (functions/src/index.ts) — the
+// client SDK is denied create/update/delete on this path in firestore.rules.
+export interface CommentLike {
+  createdAt: Timestamp;
 }
 
 // Document data plus its own Firestore doc ID — the shape every read hook
