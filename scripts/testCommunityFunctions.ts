@@ -34,6 +34,7 @@ import {
   doc, setDoc, getDoc, getDocs, collection, updateDoc, deleteDoc, writeBatch, serverTimestamp,
   type DocumentSnapshot, type DocumentData, type QuerySnapshot,
 } from 'firebase/firestore';
+import { ref, uploadBytes, listAll } from 'firebase/storage';
 import {
   initializeTestEnvironment, assertFails, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
@@ -251,6 +252,43 @@ async function setPostStatus(postId: string, status: 'deleted' | 'hidden'): Prom
   });
 }
 
+// @firebase/rules-unit-testing's ctx.storage() defaults to bucket
+// `gs://{projectId}` (no `.appspot.com` suffix) when called with no
+// argument — a DIFFERENT bucket name than the Admin SDK's own
+// getStorage().bucket() default (`{projectId}.appspot.com`, confirmed via
+// runtime debug logging against this exact emulator session), which is
+// what cleanupPostMedia (functions/src/index.ts) actually reads from, and
+// what the real app's client Storage SDK is explicitly configured to use
+// (lib/firebase.ts's VITE_FIREBASE_STORAGE_BUCKET). Both local emulators
+// route through the same single Storage emulator process regardless of
+// bucket name, so this mismatch never affected the ALLOW/DENY rules
+// assertions elsewhere in this suite/testCommunityRules.ts — but it matters
+// here, where the Admin SDK must see the SAME objects this harness seeds.
+const STORAGE_BUCKET_URL = `gs://${PROJECT_ID}.appspot.com`;
+
+// Seeds real full+thumb objects at the exact path shape MediaUploader.tsx
+// produces (community/posts/{uid}/{postId}/{uuid}.jpg and _thumb.jpg) —
+// rules disabled purely because this harness's test users aren't real
+// owners from Storage Rules' perspective for a path seeded ahead of time;
+// the object shape/naming is identical to a real upload.
+async function seedMediaFiles(uid: string, postId: string, uuid: string): Promise<void> {
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const storage = ctx.storage(STORAGE_BUCKET_URL);
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    await uploadBytes(ref(storage, `community/posts/${uid}/${postId}/${uuid}.jpg`), bytes, { contentType: 'image/jpeg' });
+    await uploadBytes(ref(storage, `community/posts/${uid}/${postId}/${uuid}_thumb.jpg`), bytes, { contentType: 'image/jpeg' });
+  });
+}
+
+async function countMediaFiles(uid: string, postId: string): Promise<number> {
+  let count = 0;
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const listing = await listAll(ref(ctx.storage(STORAGE_BUCKET_URL), `community/posts/${uid}/${postId}`));
+    count = listing.items.length;
+  });
+  return count;
+}
+
 // Polls an EXACT condition instead of sleeping a fixed duration — waits for
 // the cleanupCommentLikes trigger (which fires asynchronously, outside the
 // original status-update call's own response) to reach its observable
@@ -282,6 +320,11 @@ async function main() {
       rules: readFileSync(join(ROOT, 'firestore.rules'), 'utf8'),
       host: '127.0.0.1',
       port: 8080,
+    },
+    storage: {
+      rules: readFileSync(join(ROOT, 'storage.rules'), 'utf8'),
+      host: '127.0.0.1',
+      port: 9199,
     },
   });
 
@@ -926,6 +969,83 @@ async function main() {
   const unrelatedPostLikeDoc = await readPostLike('post-fn-pcleanup10', cleanupPostUser2.uid);
   assertValue('PCL14 an unrelated post\'s likesCount is untouched by a sibling post\'s cleanup trigger', unrelatedPostAfter.data()?.likesCount, 1);
   assertValue('PCL15 an unrelated post\'s like document is untouched by a sibling post\'s cleanup trigger', unrelatedPostLikeDoc.exists(), true);
+
+  console.log('\n=== 18. cleanupPostMedia — orphaned-media cleanup on post hide/delete (Phase 9) ===');
+
+  const mediaCleanupUser = await createTestUser('Media Cleanup Pilot');
+  const mediaCleanupUser2 = await createTestUser('Media Cleanup Pilot 2');
+
+  // --- Case 1: owner deletes an image post -> its media is removed ---
+  const uuid1 = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
+  const mediaPath1 = `community/posts/${mediaCleanupUser.uid}/post-media-cleanup-1`;
+  await seedPost('post-media-cleanup-1', mediaCleanupUser.uid, {
+    text: 'منشور بصورة سيُحذف', mediaType: 'image',
+    mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+    thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+    mediaSize: 200 * 1024, mediaPath: mediaPath1, mediaWidth: 1600, mediaHeight: 1000,
+  });
+  await seedMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-1', uuid1);
+  const filesBeforeDelete1 = await countMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-1');
+  assertValue('MC1 precondition: both the full image and thumbnail exist in Storage before deletion', filesBeforeDelete1, 2);
+
+  await setPostStatus('post-media-cleanup-1', 'deleted');
+  const mc1Done = await waitUntil(async () => (await countMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-1')) === 0);
+  assertValue('MC2 owner-deleting the post removes BOTH its Storage files (full + thumbnail)', mc1Done, true);
+
+  // --- Case 2: moderator hides an image post -> its media is ALSO removed ---
+  const uuid2 = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+  const mediaPath2 = `community/posts/${mediaCleanupUser.uid}/post-media-cleanup-2`;
+  await seedPost('post-media-cleanup-2', mediaCleanupUser.uid, {
+    text: 'منشور بصورة سيُخفى', mediaType: 'image',
+    mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+    thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+    mediaSize: 200 * 1024, mediaPath: mediaPath2, mediaWidth: 1600, mediaHeight: 1000,
+  });
+  await seedMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-2', uuid2);
+  await setPostStatus('post-media-cleanup-2', 'hidden');
+  const mc2Done = await waitUntil(async () => (await countMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-2')) === 0);
+  assertValue('MC3 a MODERATOR-hidden post\'s media is also removed — the trigger fires identically for both active->hidden and active->deleted transitions', mc2Done, true);
+  const postAfterHide = await readPost('post-media-cleanup-2');
+  assertValue('MC4 the post\'s own status is exactly "hidden" (soft-hide retained, not corrupted into "deleted")', postAfterHide.data()?.status, 'hidden');
+
+  // --- Case 3: retry-safety — replaying the same transition doesn't crash ---
+  await setPostStatus('post-media-cleanup-1', 'deleted');
+  const mc3Done = await waitUntil(async () => (await countMediaFiles(mediaCleanupUser.uid, 'post-media-cleanup-1')) === 0);
+  assertValue('MC5 replaying an already-cleaned transition is a safe no-op (files already gone -> no crash, no error)', mc3Done, true);
+
+  // --- Case 4: a text-only post (no media) transitioning is a safe no-op ---
+  await seedPost('post-media-cleanup-textonly', mediaCleanupUser.uid, { text: 'منشور نصي بدون صورة' });
+  await setPostStatus('post-media-cleanup-textonly', 'deleted');
+  const textOnlyDeleted = await waitUntil(async () => (await readPost('post-media-cleanup-textonly')).data()?.status === 'deleted');
+  assertValue('MC6 a text-only post\'s deletion completes normally (no mediaPath -> the trigger no-ops on the Storage step entirely)', textOnlyDeleted, true);
+
+  // --- Case 5: an unrelated (sibling) post's media is never touched ---
+  const uuidSibling = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+  const mediaPathSibling = `community/posts/${mediaCleanupUser2.uid}/post-media-cleanup-sibling`;
+  await seedPost('post-media-cleanup-sibling', mediaCleanupUser2.uid, {
+    text: 'منشور مستقل يجب ألا يتأثر', mediaType: 'image',
+    mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+    thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+    mediaSize: 200 * 1024, mediaPath: mediaPathSibling, mediaWidth: 1600, mediaHeight: 1000,
+  });
+  await seedMediaFiles(mediaCleanupUser2.uid, 'post-media-cleanup-sibling', uuidSibling);
+
+  const uuidNeighbor = '16fd2706-8baf-433b-82eb-8c7fada847da';
+  const mediaPathNeighbor = `community/posts/${mediaCleanupUser2.uid}/post-media-cleanup-neighbor`;
+  await seedPost('post-media-cleanup-neighbor', mediaCleanupUser2.uid, {
+    text: 'منشور آخر سيُحذف بجانبه', mediaType: 'image',
+    mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+    thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+    mediaSize: 200 * 1024, mediaPath: mediaPathNeighbor, mediaWidth: 1600, mediaHeight: 1000,
+  });
+  await seedMediaFiles(mediaCleanupUser2.uid, 'post-media-cleanup-neighbor', uuidNeighbor);
+
+  await setPostStatus('post-media-cleanup-neighbor', 'deleted');
+  const neighborDone = await waitUntil(async () => (await countMediaFiles(mediaCleanupUser2.uid, 'post-media-cleanup-neighbor')) === 0);
+  assertValue('MC7 the neighbor post\'s own cleanup completes normally', neighborDone, true);
+
+  const siblingFilesAfter = await countMediaFiles(mediaCleanupUser2.uid, 'post-media-cleanup-sibling');
+  assertValue('MC8 an unrelated sibling post\'s media is completely untouched by its neighbor\'s cleanup trigger', siblingFilesAfter, 2);
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

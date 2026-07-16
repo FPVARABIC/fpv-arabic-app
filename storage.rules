@@ -1,32 +1,61 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /community/posts/{postId}/{fileName} {
+    // Phase 9: path gained a {uid} segment (was community/posts/{postId}/...).
+    // The uid segment is what lets this rule enforce "write only inside your
+    // own path" as a cheap, no-lookup `request.auth.uid == uid` check —
+    // the previous scheme had no per-author scoping at all: any signed-in,
+    // non-banned user could write into ANY postId's folder, since postId is
+    // client-generated and the only prior gate was "are you active", not
+    // "is this your post". A firestore.get() ownership check keyed off
+    // postId was never viable either way: the image finishes uploading to
+    // Storage BEFORE the paired Firestore post document exists (see
+    // useComposer.ts), so there is nothing yet to look up at upload time.
+    match /community/posts/{uid}/{postId}/{fileName} {
       // Public read — matches Firestore's public read of active posts (D2).
       // Known accepted risk: this is unconditional, so an image/thumbnail
       // whose parent post is later hidden or soft-deleted remains fetchable
-      // by anyone who already has the direct URL. "Delete" delists the post
-      // from feed/search/post-page; it does not erase the underlying file.
-      // Fixing this requires either a Cloud Function to move/delete the
-      // object on hide/delete, or a firestore.get() status check on every
-      // read (costly, and would compete with the write rule below for the
-      // 2-Firestore-read-per-evaluation cap). Accepted for V1.
+      // by anyone who already has the direct URL, for the window between
+      // the status change and cleanupPostMedia's trigger completing (Phase
+      // 9 closes the bulk of this gap with a real Cloud Function that
+      // deletes the underlying files on hide/delete — see functions/src/
+      // index.ts — but the trigger is asynchronous, so a brief window with
+      // a stale direct URL is still possible in principle). Accepted for V1.
       allow read: if true;
 
-      // Only signed-in, non-banned users may write, only image files, only
-      // under the UUID naming pipeline MediaUploader produces:
-      // {uuid}.jpg (full image) and {uuid}_thumb.jpg (thumbnail).
+      // Only the path's own owner (Auth-derived, never trusted from any
+      // form/request data), only if their account is non-banned, only image
+      // files of an explicitly approved type, only under the UUID naming
+      // pipeline MediaUploader produces: {uuid}.jpg (full image) and
+      // {uuid}_thumb.jpg (thumbnail).
       allow write: if request.auth != null
+                   && request.auth.uid == uid
                    && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active'
                    && fileName.matches('[a-zA-Z0-9-]+(_thumb)?\\.jpg')
-                   && request.resource.contentType.matches('image/.*')
+                   // Exact allow-list, not a wildcard (Phase 9 hardening) —
+                   // matches MediaUploader.tsx's ALLOWED_IMAGE_MIME_TYPES.
+                   // The previous `image/.*` pattern also matched
+                   // image/svg+xml (an XML/script-capable payload, not a
+                   // raster image at all) and image/gif (never audited for
+                   // animation/size/cost implications) — both are now
+                   // structurally rejected, not merely discouraged.
+                   && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
                    // Hard physical ceiling; D5's compression targets (≤300KB
                    // full / ≤40KB thumb) sit far under this. This is a
                    // backstop against a compromised or bypassed client, not
                    // the primary size control.
                    && request.resource.size < 2 * 1024 * 1024;
 
-      allow delete: if false; // no client-side deletion in V1; moderation/cleanup via console (D10)
+      // Phase 9: the path's own owner may delete their own files — required
+      // for useComposer.ts's client-side orphan cleanup (Storage upload
+      // succeeded, the paired Firestore post-create write then failed) to
+      // actually work, since that cleanup runs in the browser under the
+      // client SDK, not the Admin SDK. cleanupPostMedia (functions/src/
+      // index.ts) — the hide/delete cleanup path — uses the Admin SDK,
+      // which bypasses Storage Rules entirely by design and so needs no
+      // permission granted here at all. No one may delete another user's
+      // files under any path.
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
   }
 }

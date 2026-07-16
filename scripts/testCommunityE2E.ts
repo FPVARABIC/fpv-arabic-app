@@ -27,7 +27,7 @@
  *   npm run test:community-e2e
  */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execSync, type ChildProcess } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,9 +36,10 @@ import {
   initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  doc, setDoc, getDoc, getDocs, collection, query, where, serverTimestamp,
+  doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, serverTimestamp,
   type DocumentSnapshot, type DocumentData, type QuerySnapshot,
 } from 'firebase/firestore';
+import { ref, listAll } from 'firebase/storage';
 import { normalizeDisplayName } from '../src/components/Community/utils/userSearch';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,6 +48,16 @@ const ROOT = join(__dirname, '..');
 const PROJECT_ID = 'demo-community-rules-test';
 const PORT = 4396;
 const BASE = `http://localhost:${PORT}`;
+
+// Minimal, genuinely-decodable, real 1x1-pixel fixture bytes for each
+// approved image type (Phase 9) — well-known minimal valid encodings, not
+// placeholder/fake bytes. Actually decoded by the browser's real
+// createImageBitmap/canvas pipeline during these tests, exactly like a real
+// photo would be.
+const PNG_1X1_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+const JPEG_1X1_B64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+const WEBP_1X1_B64 = 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
+const SVG_PAYLOAD = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
 
 let passCount = 0;
 let failCount = 0;
@@ -80,6 +91,56 @@ async function waitForServer(url: string, timeoutMs = 40000) {
     await new Promise(r => setTimeout(r, 250));
   }
   throw new Error(`Server at ${url} did not become ready within ${timeoutMs}ms`);
+}
+
+// Correction pass: this script's own dev-server child (spawned `detached:
+// true` below, so npx/vite's own process TREE shares one process group with
+// it) survived a plain single SIGTERM in a run observed during the
+// independent review — the parent exited but a grandchild `node .../vite`
+// process kept the port bound. Escalating to SIGKILL after a bounded grace
+// period, and targeting the whole process GROUP (-pid, not pid) rather than
+// just the immediate child, closes that gap. The wait loop below is bounded
+// (a fixed iteration count derived from graceMs/250ms), never an unbounded
+// monitor — after graceMs elapses it kills unconditionally and returns.
+function isProcessGroupAlive(pid: number): boolean {
+  try {
+    process.kill(-pid, 0); // signal 0: existence check only, sends nothing
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function killProcessGroupGracefully(pid: number, graceMs = 5000): Promise<void> {
+  if (!isProcessGroupAlive(pid)) return;
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch {
+    return; // already gone between the check above and this call
+  }
+  const start = Date.now();
+  while (isProcessGroupAlive(pid) && Date.now() - start < graceMs) {
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  if (isProcessGroupAlive(pid)) {
+    try { process.kill(-pid, 'SIGKILL'); } catch { /* exited between check and kill */ }
+  }
+}
+
+// Real port-occupancy check (not merely "did our own kill call not throw")
+// — lsof is authoritative regardless of whether the occupying process is
+// one this script itself spawned, so a leftover process from a PRIOR failed
+// run (or one this script failed to track) is caught too, not just the ones
+// this script remembers starting.
+function isPortFree(port: number): boolean {
+  try {
+    const out = execSync(`lsof -ti:${port}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    return out.length === 0;
+  } catch {
+    // lsof exits non-zero (and execSync throws) when nothing matches — the
+    // free case, not an error.
+    return true;
+  }
 }
 
 interface E2EUser {
@@ -146,6 +207,48 @@ async function backToFeed(page: Page) {
   );
 }
 
+// Correction pass: replaces the earlier R3/R4 pattern of asserting only
+// document.body.textContent?.includes(text) — that proved the post's TEXT
+// reached the screen, not that its IMAGE genuinely rendered, despite the
+// original assertion labels implying the latter. This helper locates the
+// ONE post card containing the given exact text (PostCard.tsx's outer
+// role="button" div is the only such element for a given post's text — a
+// robust anchor, not a fragile ancestor-depth guess), finds the <img>
+// strictly INSIDE that card, and polls until it has genuinely decoded
+// (complete && naturalWidth/naturalHeight > 0, not just present in the
+// DOM with a src attribute) — so the assertion cannot pass because some
+// OTHER image elsewhere on the screen happened to load. Also returns the
+// resolved src so the caller can independently confirm it is a real
+// remote Storage/emulator URL, never a local blob:/data:/file: reference.
+async function waitForCardImageDecoded(
+  page: Page,
+  cardText: string,
+  timeoutMs = 10000,
+): Promise<{ decoded: boolean; validRemoteUrl: boolean; src: string | null }> {
+  try {
+    await page.waitForFunction(
+      (text: string) => {
+        const cards = Array.from(document.querySelectorAll('[role="button"]'));
+        const card = cards.find(c => c.textContent?.includes(text));
+        const img = card?.querySelector('img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+      },
+      cardText,
+      { timeout: timeoutMs },
+    );
+  } catch {
+    return { decoded: false, validRemoteUrl: false, src: null };
+  }
+  const src = await page.evaluate((text: string) => {
+    const cards = Array.from(document.querySelectorAll('[role="button"]'));
+    const card = cards.find(c => c.textContent?.includes(text));
+    const img = card?.querySelector('img') as HTMLImageElement | null;
+    return img?.getAttribute('src') ?? null;
+  }, cardText);
+  const validRemoteUrl = !!src && /^https?:\/\//.test(src) && !/^blob:|^data:|^file:/i.test(src);
+  return { decoded: true, validRemoteUrl, src };
+}
+
 async function submitComment(page: Page, text: string) {
   const input = page.locator('input[placeholder="أضف تعليقاً..."]');
   await input.fill(text);
@@ -161,9 +264,64 @@ async function main() {
       host: '127.0.0.1',
       port: 8080,
     },
+    storage: {
+      rules: readFileSync(join(ROOT, 'storage.rules'), 'utf8'),
+      host: '127.0.0.1',
+      port: 9199,
+    },
   });
+  // Matches VITE_FIREBASE_STORAGE_BUCKET below exactly — @firebase/rules-
+  // unit-testing's ctx.storage() defaults to a DIFFERENT bucket
+  // (`gs://{projectId}`, no `.appspot.com`) than what the real app's client
+  // Storage SDK and the Admin SDK both actually use, so any admin-bypass
+  // read/list against uploaded files must explicitly target this same URL
+  // or it will see an empty, unrelated bucket (confirmed empirically while
+  // building the equivalent Functions-emulator tests).
+  const STORAGE_BUCKET_URL = `gs://${PROJECT_ID}.appspot.com`;
 
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+
+  // Idempotent cleanup, reachable from every exit path (correction pass —
+  // the independent review found a leftover vite process surviving the
+  // original single-SIGTERM `finally` block). Closes the browser/contexts
+  // FIRST, then escalates the vite server's own process group through
+  // SIGTERM -> bounded wait -> SIGKILL. Safe to call more than once (e.g.
+  // once explicitly at the end of a successful run, once again from the
+  // `finally` below, and potentially once more from a signal handler) —
+  // the guard flag makes every call after the first a no-op, so there is
+  // no recursive/duplicate teardown.
+  let cleanupRan = false;
+  const cleanupAll = async (): Promise<void> => {
+    if (cleanupRan) return;
+    cleanupRan = true;
+    try { await browser.close(); } catch { /* already closed */ }
+    if (server && server.pid) {
+      await killProcessGroupGracefully(server.pid);
+    }
+  };
+
+  // The Firestore/Auth/Storage/Functions emulators themselves are started
+  // and stopped by the OUTER `firebase emulators:exec` command that wraps
+  // this whole script (see package.json's test:community-e2e script) — this
+  // process has no handle on them and correctly does not try to kill them;
+  // emulators:exec's own shutdown (observed to complete cleanly on every
+  // normal exit path in this session) is what's responsible for that. What
+  // this script CAN and must own is its own directly-spawned vite server.
+  const onFatalSignal = (signal: NodeJS.Signals) => {
+    console.error(`\n[testCommunityE2E] received ${signal} — running cleanup before exit`);
+    void cleanupAll().finally(() => process.exit(1));
+  };
+  process.on('SIGINT', () => onFatalSignal('SIGINT'));
+  process.on('SIGTERM', () => onFatalSignal('SIGTERM'));
+  process.on('uncaughtException', err => {
+    console.error('[testCommunityE2E] uncaughtException', err);
+    void cleanupAll().finally(() => process.exit(1));
+  });
+  process.on('unhandledRejection', err => {
+    console.error('[testCommunityE2E] unhandledRejection', err);
+    void cleanupAll().finally(() => process.exit(1));
+  });
+
   try {
     server = spawn('npx', ['vite', '--port', String(PORT), '--strictPort'], {
       cwd: process.cwd(),
@@ -921,15 +1079,492 @@ async function main() {
     const noPageErrorAfterIdempotentPress = await userB.page.evaluate(() => document.title.length > 0);
     assertValue('Q8b the page is still alive/functional after the idempotent press (no crash/redirect loop)', noPageErrorAfterIdempotentPress, true);
 
-    console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
+    console.log('\n=== 14. Secure image uploads for Community posts (Phase 9) ===');
+
+    async function openComposer(page: Page) {
+      await page.getByText('بماذا تحتاج المساعدة اليوم؟', { exact: true }).click();
+      await page.waitForFunction(() => document.body.textContent?.includes('منشور جديد') ?? false, undefined, { timeout: 8000 });
+    }
+    async function pickImage(page: Page, base64: string, name: string, mimeType: string) {
+      await page.locator('input[type="file"]').setInputFiles({ name, mimeType, buffer: Buffer.from(base64, 'base64') });
+    }
+    async function previewIsShown(page: Page): Promise<boolean> {
+      return page.locator('button[aria-label="إزالة الصورة"]').isVisible().catch(() => false);
+    }
+    async function submitPost(page: Page) {
+      await page.locator('button').filter({ hasText: /^نشر$/ }).click();
+    }
+    async function findPostIdByText(text: string): Promise<string | null> {
+      let result: string | null = null;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        const snap = await getDocs(query(collection(ctx.firestore(), 'posts'), where('text', '==', text)));
+        result = snap.empty ? null : snap.docs[0].id;
+      });
+      return result;
+    }
+    async function countMediaFilesAdmin(uid: string, postId: string): Promise<number> {
+      let count = 0;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        const listing = await listAll(ref(ctx.storage(STORAGE_BUCKET_URL), `community/posts/${uid}/${postId}`));
+        count = listing.items.length;
+      });
+      return count;
+    }
+
+    // The pre-existing 60s post rate limit (D11, unrelated to this phase) is
+    // per-user and keyed off users/{uid}.lastPostAt — this section
+    // deliberately submits many posts from the SAME User B session in quick
+    // succession purely to exercise the upload pipeline, which would
+    // otherwise start colliding with that real, correct rate limit after the
+    // very first submission. Resetting it via admin bypass between
+    // submissions is a test-harness concession to that unrelated pre-
+    // existing feature, not a weakening of it — the rate limit itself is
+    // untouched and is exercised on its own in scripts/testCommunityRules.ts.
+    async function resetPostRateLimit(uid: string): Promise<void> {
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        await updateDoc(doc(ctx.firestore(), 'users', uid), { lastPostAt: null });
+      });
+    }
+
+    console.log('\n--- 14a. UPLOAD: valid types succeed, real files land in Storage, real dimensions stored ---');
+
+    async function uploadAndVerify(label: string, base64: string, fileName: string, mimeType: string): Promise<string | null> {
+      await resetPostRateLimit(userB.uid);
+      await backToFeed(userB.page).catch(() => {});
+      await openComposer(userB.page);
+      const postText = `منشور اختبار ${label} ${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await userB.page.locator('textarea').fill(postText);
+      await pickImage(userB.page, base64, fileName, mimeType);
+      const preview = await userB.page.waitForFunction(
+        () => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 },
+      ).then(() => true, () => false);
+      assertValue(`U-${label} preview appears after picking a valid ${label} file`, preview, true);
+
+      await submitPost(userB.page);
+      const postCreated = await userB.page.waitForFunction(
+        () => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 },
+      ).then(() => true, () => false);
+      assertValue(`U-${label} post-detail opens after a successful ${label} upload+publish`, postCreated, true);
+
+      const postId = await findPostIdByText(postText);
+      assertValue(`U-${label} the post document was actually created`, postId !== null, true);
+      if (!postId) return null;
+
+      const postDoc = await readPostAdmin(postId);
+      const data = postDoc.data();
+      assertValue(`U-${label} mediaType is "image"`, data?.mediaType, 'image');
+      assertValue(`U-${label} mediaPath is uid-scoped to User B's own uid`, data?.mediaPath, `community/posts/${userB.uid}/${postId}`);
+      assertValue(`U-${label} mediaWidth is a real positive number, never fabricated`, typeof data?.mediaWidth === 'number' && data.mediaWidth > 0, true);
+      assertValue(`U-${label} mediaHeight is a real positive number, never fabricated`, typeof data?.mediaHeight === 'number' && data.mediaHeight > 0, true);
+      // http:// (not https://) here is expected and correct: getDownloadURL()
+      // resolves against the LOCAL Storage emulator (127.0.0.1:9199, plain
+      // HTTP) in this test environment — production Firebase Storage always
+      // serves over https://. The check that actually matters, and holds in
+      // both environments, is that it's a real remote URL, never a local
+      // blob:/file:/data: reference.
+      assertValue(`U-${label} mediaURL is a real remote Storage URL, never a local blob:/file:/data: path`, /^https?:\/\//.test(data?.mediaURL ?? ''), true);
+
+      const fileCount = await countMediaFilesAdmin(userB.uid, postId);
+      assertValue(`U-${label} exactly 2 real files (full + thumbnail) exist in Storage at the uid-scoped path`, fileCount, 2);
+      return postId;
+    }
+
+    const jpegPostId = await uploadAndVerify('JPEG', JPEG_1X1_B64, 'photo.jpg', 'image/jpeg');
+    const pngPostId = await uploadAndVerify('PNG', PNG_1X1_B64, 'photo.png', 'image/png');
+    await uploadAndVerify('WEBP', WEBP_1X1_B64, 'photo.webp', 'image/webp');
+
+    console.log('\n--- 14b. UPLOAD: client-side rejection before ever reaching Storage ---');
+
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+    const draftTextBeforeRejections = `مسودة نص يجب أن تبقى ${Date.now()}`;
+    await userB.page.locator('textarea').fill(draftTextBeforeRejections);
+
+    await pickImage(userB.page, Buffer.from('plain text pretending to be an image').toString('base64'), 'fake.txt', 'text/plain');
+    const invalidMimeError = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الصيغ المسموحة') ?? false, undefined, { timeout: 5000 },
+    ).then(() => true, () => false);
+    assertValue('U-INVALID-MIME an invalid MIME type is rejected client-side with a clear Arabic error', invalidMimeError, true);
+    assertValue('U-INVALID-MIME no preview is shown for the rejected file', await previewIsShown(userB.page), false);
+
+    await pickImage(userB.page, Buffer.from(SVG_PAYLOAD).toString('base64'), 'evil.svg', 'image/svg+xml');
+    const svgError = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الصيغ المسموحة') ?? false, undefined, { timeout: 5000 },
+    ).then(() => true, () => false);
+    assertValue('U-SVG an SVG file (XML/script-capable, not a raster image) is rejected client-side', svgError, true);
+
+    const oversizedBuffer = Buffer.alloc(21 * 1024 * 1024, 0xff);
+    await userB.page.locator('input[type="file"]').setInputFiles({ name: 'huge.jpg', mimeType: 'image/jpeg', buffer: oversizedBuffer });
+    const oversizedError = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('حجم الصورة كبير جداً') ?? false, undefined, { timeout: 5000 },
+    ).then(() => true, () => false);
+    assertValue('U-OVERSIZED a file over the 20MB raw ceiling is rejected client-side, before any compression/upload attempt', oversizedError, true);
+
+    await pickImage(userB.page, Buffer.from('not actually decodable image bytes').toString('base64'), 'corrupt.jpg', 'image/jpeg');
+    const corruptError = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('تعذّر قراءة هذه الصورة') ?? false, undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    assertValue('U-CORRUPT a file with an allowed MIME type but undecodable bytes (a renamed non-image) is rejected after the real decode check', corruptError, true);
+
+    console.log('\n--- 14c. UPLOAD: draft text is preserved across a rejected image pick ---');
+    const draftTextPreserved = await userB.page.locator('textarea').inputValue();
+    assertValue('U-DRAFT the composer\'s text draft is byte-for-byte untouched by any of the 4 rejected picks above', draftTextPreserved, draftTextBeforeRejections);
+
+    console.log('\n--- 14d. UPLOAD: remove and replace work via the real UI ---');
+    await pickImage(userB.page, PNG_1X1_B64, 'first.png', 'image/png');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+    assertValue('U-REPLACE the add-image button now reads "استبدال الصورة" once an image is selected', await userB.page.getByLabel('استبدال الصورة').isVisible(), true);
+    await pickImage(userB.page, JPEG_1X1_B64, 'second.jpg', 'image/jpeg');
+    await userB.page.waitForTimeout(300);
+    assertValue('U-REPLACE picking a new image while one is already selected replaces it (still exactly one preview, not two)', await userB.page.locator('button[aria-label="إزالة الصورة"]').count(), 1);
+    await userB.page.locator('button[aria-label="إزالة الصورة"]').click();
+    assertValue('U-REMOVE removing the image clears the preview', await previewIsShown(userB.page), false);
+    assertValue('U-REMOVE the add-image button reverts to "إضافة صورة" after removal', await userB.page.getByLabel('إضافة صورة').isVisible(), true);
+
+    console.log('\n--- 14e. UPLOAD: duplicate-submit prevention (same established pattern as the comment composer) ---');
+    await resetPostRateLimit(userB.uid);
+    await userB.page.locator('textarea').fill(`منشور اختبار قفل الإرسال ${Date.now()}`);
+    await pickImage(userB.page, JPEG_1X1_B64, 'dup-guard.jpg', 'image/jpeg');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+    const submitClickPromise = submitPost(userB.page);
+    const submitDisabledWhilePending = await userB.page.waitForFunction(
+      () => Array.from(document.querySelectorAll('button')).some(b => b.textContent === 'جارٍ النشر...' && b.disabled),
+      undefined, { timeout: 3000 },
+    ).then(() => true, () => false);
+    assertValue('U-DUPLICATE the publish button shows real feedback ("جارٍ النشر...") and is disabled while the upload+publish is pending', submitDisabledWhilePending, true);
+    await submitClickPromise;
+    await userB.page.waitForFunction(() => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 });
+
+    console.log('\n--- 14f. UPLOAD: unauthenticated / cross-user Storage bypass attempts are denied ---');
+
+    const guestUploadContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const guestUploadPage = await guestUploadContext.newPage();
+    await guestUploadPage.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    const guestUploadResult = await guestUploadPage.evaluate(async ({ path }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eBypass.ts');
+      return mod.e2eAttemptDirectStorageUpload(path, 'image/jpeg');
+    }, { path: `community/posts/${userB.uid}/some-post-id/11111111-1111-1111-1111-111111111111.jpg` });
+    assertValue('U-GUEST an unauthenticated Storage upload attempt is denied', guestUploadResult.ok, false);
+    await guestUploadContext.close();
+
+    const crossUserUploadResult = await userA.page.evaluate(async ({ path }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eBypass.ts');
+      return mod.e2eAttemptDirectStorageUpload(path, 'image/jpeg');
+    }, { path: `community/posts/${userB.uid}/some-post-id/22222222-2222-2222-2222-222222222222.jpg` });
+    assertValue('U-CROSS-USER User A cannot upload into User B\'s uid-scoped Storage path', crossUserUploadResult.ok, false);
+
+    console.log('\n--- 14g. UPLOAD: a successful upload followed by a failed Firestore write cleans up the orphan ---');
+
+    const orphanResult = await userB.page.evaluate(async ({ base64, name, type }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eMediaOrphanCleanup.ts');
+      return mod.e2eProveOrphanCleanup({ name, type, dataUrl: `data:${type};base64,${base64}` });
+    }, { base64: JPEG_1X1_B64, name: 'orphan.jpg', type: 'image/jpeg' });
+    assertValue('U-ORPHAN the upload itself genuinely succeeded (real files reached Storage)', orphanResult.uploadSucceeded, true);
+    assertValue('U-ORPHAN the paired Firestore post-create write genuinely failed (an invalid shape, denied by firestore.rules)', orphanResult.firestoreWriteFailed, true);
+    assertValue('U-ORPHAN deleteMedia ran to completion without throwing', orphanResult.deleteRanWithoutThrowing, true);
+    assertValue('U-ORPHAN deleteMedia\'s own structured result reports fullySucceeded (both real objects genuinely removed, not merely "didn\'t throw")', orphanResult.deleteResult?.fullySucceeded, true);
+    if (orphanResult.mediaPath) {
+      const orphanFilesRemaining = await (async () => {
+        let count = 0;
+        await testEnv.withSecurityRulesDisabled(async ctx => {
+          const listing = await listAll(ref(ctx.storage(STORAGE_BUCKET_URL), orphanResult.mediaPath!));
+          count = listing.items.length;
+        });
+        return count;
+      })();
+      assertValue('U-ORPHAN the orphaned files are actually gone from Storage after deleteMedia — no leaked storage cost from the failed post', orphanFilesRemaining, 0);
+    }
+
+    console.log('\n--- 14h. UPLOAD: deleteMedia structured result — already-missing and cross-user-denied (correction pass) ---');
+
+    // Case 1: one of the two objects is already gone before deleteMedia
+    // runs (real infra can produce this deterministically — the OWNER can
+    // delete their own object directly per storage.rules, unlike the
+    // "one succeeds / one fails" and "transient-then-retry" cases, which
+    // are covered instead by scripts/testMediaDeleteRetry.ts's pure unit
+    // tests since both real objects share one owner path and one rule).
+    const uploadForMissingTest = await userB.page.evaluate(async ({ base64, name, type }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eMediaOrphanCleanup.ts');
+      return mod.e2eUploadMediaForTest({ name, type, dataUrl: `data:${type};base64,${base64}` });
+    }, { base64: JPEG_1X1_B64, name: 'missing-thumb.jpg', type: 'image/jpeg' });
+    assertValue('U-DELETE-MISSING precondition: the upload for this case genuinely succeeded', uploadForMissingTest.media !== null, true);
+
+    if (uploadForMissingTest.media) {
+      const media = uploadForMissingTest.media;
+      const thumbPath = `${media.mediaPath}/${media.uuid}_thumb.jpg`;
+      const preDeleteThumb = await userB.page.evaluate(async ({ path }) => {
+        const mod = await import('/src/components/Community/testHelpers/e2eBypass.ts');
+        return mod.e2eAttemptDirectStorageDelete(path);
+      }, { path: thumbPath });
+      assertValue('U-DELETE-MISSING precondition: the owner can delete their own thumbnail object directly (storage.rules owner-delete)', preDeleteThumb.ok, true);
+
+      const deleteResult = await userB.page.evaluate(async ({ media }) => {
+        const mod = await import('/src/components/Community/testHelpers/e2eMediaOrphanCleanup.ts');
+        return mod.e2eDeleteMediaAndReport(media);
+      }, { media });
+      assertValue('U-DELETE-MISSING deleteMedia reports the full image as "deleted" (it was genuinely still there)', deleteResult.full, 'deleted');
+      assertValue('U-DELETE-MISSING deleteMedia reports the pre-deleted thumbnail as "already-missing", not "failed"', deleteResult.thumbnail, 'already-missing');
+      assertValue('U-DELETE-MISSING an already-missing object still counts as fullySucceeded — idempotent cleanup is success, not failure', deleteResult.fullySucceeded, true);
+    }
+
+    // Case 2: a NON-OWNER (User A) attempts to delete User B's still-fully-
+    // present media pair. storage.rules denies both objects (uid mismatch),
+    // and storage/unauthorized is not a retryable code, so both are
+    // classified "failed" immediately -> the aggregate must be fullyFailed,
+    // and — critically — the real files must still be verifiably present
+    // in Storage afterward, proving deleteMedia never falsely claims
+    // success on a genuinely denied delete.
+    const uploadForDeniedTest = await userB.page.evaluate(async ({ base64, name, type }) => {
+      const mod = await import('/src/components/Community/testHelpers/e2eMediaOrphanCleanup.ts');
+      return mod.e2eUploadMediaForTest({ name, type, dataUrl: `data:${type};base64,${base64}` });
+    }, { base64: PNG_1X1_B64, name: 'cross-user-delete.png', type: 'image/png' });
+    assertValue('U-DELETE-DENIED precondition: the upload for this case genuinely succeeded', uploadForDeniedTest.media !== null, true);
+
+    if (uploadForDeniedTest.media) {
+      const media = uploadForDeniedTest.media;
+      const deniedResult = await userA.page.evaluate(async ({ media }) => {
+        const mod = await import('/src/components/Community/testHelpers/e2eMediaOrphanCleanup.ts');
+        return mod.e2eDeleteMediaAndReport(media);
+      }, { media });
+      assertValue('U-DELETE-DENIED a non-owner\'s deleteMedia call reports BOTH objects as "failed" (storage.rules denies the delete)', deniedResult.fullyFailed, true);
+      assertValue('U-DELETE-DENIED fullySucceeded is false — no false success claim on a genuinely denied delete', deniedResult.fullySucceeded, false);
+
+      const stillPresentCount = await (async () => {
+        let count = 0;
+        await testEnv.withSecurityRulesDisabled(async ctx => {
+          const listing = await listAll(ref(ctx.storage(STORAGE_BUCKET_URL), media.mediaPath));
+          count = listing.items.length;
+        });
+        return count;
+      })();
+      assertValue('U-DELETE-DENIED the real files are STILL present in Storage afterward — the denial was real, not merely reported', stillPresentCount, 2);
+    }
+
+    console.log('\n=== 15. Image rendering across every Community surface ===');
+
+    const RENDER_POST_TEXT = `منشور اختبار العرض ${Date.now()}`;
+    await resetPostRateLimit(userB.uid);
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+    await userB.page.locator('textarea').fill(RENDER_POST_TEXT);
+    await pickImage(userB.page, JPEG_1X1_B64, 'render-test.jpg', 'image/jpeg');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+    await submitPost(userB.page);
+    await userB.page.waitForFunction(() => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 });
+    const renderPostId = await findPostIdByText(RENDER_POST_TEXT);
+
+    const detailImageLoaded = await userB.page.waitForFunction(
+      () => {
+        const img = document.querySelector('main img, div img') as HTMLImageElement | null;
+        return !!img && img.complete && img.naturalWidth > 0;
+      },
+      undefined, { timeout: 10000 },
+    ).then(() => true, () => false);
+    assertValue('R1 the uploaded image genuinely loads and decodes in POST DETAIL (naturalWidth > 0, not just a DOM src attribute)', detailImageLoaded, true);
+
+    await backToFeed(userB.page);
+    const feedImgCheck = await waitForCardImageDecoded(userB.page, RENDER_POST_TEXT);
+    assertValue('R2 the uploaded image\'s thumbnail genuinely decodes in the FEED (naturalWidth/naturalHeight > 0, scoped to THIS post\'s own card — not merely present in the DOM)', feedImgCheck.decoded, true);
+    assertValue('R2b the feed thumbnail\'s src is a real remote Storage/emulator URL, never blob:/data:/file:/local', feedImgCheck.validRemoteUrl, true);
+
+    await openMenu(userB.page);
+    await userB.page.getByLabel('فتح ملفك الشخصي').first().click().catch(async () => {
+      await closeMenu(userB.page);
+    });
+    const onOwnProfile = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الملف الشخصي') ?? false, undefined, { timeout: 8000 },
+    ).then(() => true, () => false);
+    if (onOwnProfile) {
+      const profileImgCheck = await waitForCardImageDecoded(userB.page, RENDER_POST_TEXT);
+      assertValue('R3 the uploaded image genuinely decodes on the OWN PUBLIC PROFILE, scoped to THIS post\'s own card (not merely its text being present)', profileImgCheck.decoded, true);
+      assertValue('R3b the profile thumbnail\'s src is a real remote Storage/emulator URL, never blob:/data:/file:/local', profileImgCheck.validRemoteUrl, true);
+    } else {
+      record('R3 the uploaded image genuinely decodes on the OWN PUBLIC PROFILE, scoped to THIS post\'s own card', false, 'could not reach own profile screen via the real UI');
+      record('R3b the profile thumbnail\'s src is a real remote Storage/emulator URL', false, 'could not reach own profile screen via the real UI');
+    }
+
+    // Saves the post through the REAL bookmark button, not a direct
+    // Firestore write — SavedPostIdsProvider fetches its id set ONCE on
+    // mount (a plain getDocs, not a realtime onSnapshot listener), so a
+    // write made outside its own toggleSaved() action is invisible to the
+    // already-running session for the rest of this test, exactly as it
+    // would be invisible to a real second browser tab until reloaded. Using
+    // the real button both sidesteps that and is the more faithful test.
+    await backToFeed(userB.page).catch(() => {});
+    if (renderPostId) {
+      const bookmarkClicked = await userB.page.locator('[role="button"]', { hasText: RENDER_POST_TEXT })
+        .locator('button[aria-label="حفظ"]')
+        .click()
+        .then(() => true, () => false);
+      assertValue('R4 precondition: the real bookmark button on the uploaded post\'s card was clicked', bookmarkClicked, true);
+
+      await userB.page.locator('button[aria-label="المحفوظات"]').click();
+      const savedImgCheck = await waitForCardImageDecoded(userB.page, RENDER_POST_TEXT);
+      assertValue('R4 the uploaded image genuinely decodes in SAVED POSTS, scoped to THIS post\'s own card (not merely its text being present) after saving via the real bookmark button', savedImgCheck.decoded, true);
+      assertValue('R4b the saved-post thumbnail\'s src is a real remote Storage/emulator URL, never blob:/data:/file:/local', savedImgCheck.validRemoteUrl, true);
+      await backToFeed(userB.page).catch(() => {});
+    }
+
+    console.log('\n--- 15b. Full-screen preview ---');
+    if (renderPostId) {
+      await openPostByText(userB.page, RENDER_POST_TEXT);
+      await userB.page.locator('button[aria-label="فتح الصورة بحجمها الكامل"]').click();
+      const lightboxOpen = await userB.page.waitForFunction(
+        () => !!document.querySelector('button[aria-label="إغلاق المعاينة"]'),
+        undefined, { timeout: 5000 },
+      ).then(() => true, () => false);
+      assertValue('L1 clicking the post image opens a full-screen preview', lightboxOpen, true);
+      await userB.page.keyboard.press('Escape');
+      const lightboxClosedByEscape = await userB.page.waitForFunction(
+        () => !document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 },
+      ).then(() => true, () => false);
+      assertValue('L2 pressing Escape closes the full-screen preview', lightboxClosedByEscape, true);
+
+      await userB.page.locator('button[aria-label="فتح الصورة بحجمها الكامل"]').click();
+      await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 });
+      await userB.page.mouse.click(20, 20);
+      const lightboxClosedByBackdrop = await userB.page.waitForFunction(
+        () => !document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 },
+      ).then(() => true, () => false);
+      assertValue('L3 clicking the backdrop closes the full-screen preview', lightboxClosedByBackdrop, true);
+
+      await userB.page.locator('button[aria-label="فتح الصورة بحجمها الكامل"]').click();
+      await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 });
+      await userB.page.locator('button[aria-label="إغلاق المعاينة"]').click();
+      const lightboxClosedByButton = await userB.page.waitForFunction(
+        () => !document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 },
+      ).then(() => true, () => false);
+      assertValue('L4 clicking the close button closes the full-screen preview', lightboxClosedByButton, true);
+
+      console.log('\n--- 15b(ii). Lightbox dialog semantics + focus management (correction pass) ---');
+
+      const originalBodyOverflow = await userB.page.evaluate(() => document.body.style.overflow);
+
+      await userB.page.locator('button[aria-label="فتح الصورة بحجمها الكامل"]').click();
+      await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 });
+
+      const dialogSemantics = await userB.page.evaluate(() =>
+        !!document.querySelector('[role="dialog"][aria-modal="true"]'),
+      );
+      assertValue('L5 the lightbox container exposes role="dialog" and aria-modal="true"', dialogSemantics, true);
+
+      const focusEnteredDialog = await userB.page.evaluate(() =>
+        document.activeElement === document.querySelector('button[aria-label="إغلاق المعاينة"]'),
+      );
+      assertValue('L6 focus moves onto the close button as soon as the lightbox opens', focusEnteredDialog, true);
+
+      const bodyScrollLocked = await userB.page.evaluate(() => document.body.style.overflow === 'hidden');
+      assertValue('L7 body scrolling is locked (document.body.style.overflow === "hidden") while the lightbox is open', bodyScrollLocked, true);
+
+      // The close button is the ONLY focusable element inside the dialog —
+      // Tab/Shift+Tab must keep focus pinned there, never escape to the
+      // page rendered behind the (visually opaque but otherwise
+      // unprotected without a real trap) backdrop.
+      await userB.page.keyboard.press('Tab');
+      const tabStaysInside = await userB.page.evaluate(() =>
+        document.activeElement === document.querySelector('button[aria-label="إغلاق المعاينة"]'),
+      );
+      assertValue('L8 pressing Tab keeps focus trapped inside the dialog (stays on the close button)', tabStaysInside, true);
+
+      await userB.page.keyboard.press('Shift+Tab');
+      const shiftTabStaysInside = await userB.page.evaluate(() =>
+        document.activeElement === document.querySelector('button[aria-label="إغلاق المعاينة"]'),
+      );
+      assertValue('L9 pressing Shift+Tab also keeps focus trapped inside the dialog', shiftTabStaysInside, true);
+
+      await userB.page.keyboard.press('Escape');
+      await userB.page.waitForFunction(() => !document.querySelector('button[aria-label="إغلاق المعاينة"]'), undefined, { timeout: 5000 });
+
+      const focusReturnedToOpener = await userB.page.evaluate(() =>
+        document.activeElement?.getAttribute('aria-label') === 'فتح الصورة بحجمها الكامل',
+      );
+      assertValue('L10 closing the lightbox restores focus to the exact button that opened it', focusReturnedToOpener, true);
+
+      const bodyOverflowAfterClose = await userB.page.evaluate(() => document.body.style.overflow);
+      assertValue('L11 body scrolling style is restored to its exact pre-open value after the lightbox closes', bodyOverflowAfterClose, originalBodyOverflow);
+    }
+
+    console.log('\n--- 15c. Text-only posts remain unaffected ---');
+    await resetPostRateLimit(userB.uid);
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+    const textOnlyPostText = `منشور نصي فقط بدون صورة ${Date.now()}`;
+    await userB.page.locator('textarea').fill(textOnlyPostText);
+    await submitPost(userB.page);
+    const textOnlyCreated = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 10000 },
+    ).then(() => true, () => false);
+    assertValue('T1 a text-only post (no image ever picked) still publishes normally', textOnlyCreated, true);
+    const textOnlyPostId = await findPostIdByText(textOnlyPostText);
+    if (textOnlyPostId) {
+      const textOnlyDoc = await readPostAdmin(textOnlyPostId);
+      assertValue('T2 a text-only post has mediaType "none" and every media field null', textOnlyDoc.data()?.mediaType, 'none');
+    }
+
+    console.log('\n=== 16. Media cleanup on hide/delete — real end-to-end proof ===');
+
+    // T1's post-detail (the text-only post) is still the current screen —
+    // openPostByText below needs to find RENDER_POST_TEXT's card, which
+    // only renders on the feed.
+    await backToFeed(userB.page).catch(() => {});
+
+    if (renderPostId) {
+      const filesBeforeOwnerDelete = await countMediaFilesAdmin(userB.uid, renderPostId);
+      assertValue('C1 precondition: the render-test post\'s media files exist in Storage before deletion', filesBeforeOwnerDelete, 2);
+
+      await openPostByText(userB.page, RENDER_POST_TEXT);
+      await userB.page.locator('button[aria-label="حذف"]').click();
+      await userB.page.locator('button', { hasText: 'تأكيد الحذف' }).click();
+      await userB.page.waitForFunction(() => document.querySelector('h1')?.textContent === 'المجتمع', undefined, { timeout: 10000 });
+
+      const ownerDeleteCleanedUp = await waitUntilE2E(async () => (await countMediaFilesAdmin(userB.uid, renderPostId)) === 0);
+      assertValue('C2 owner-deleting an uploaded post (via the real UI) removes its Storage media end-to-end', ownerDeleteCleanedUp, true);
+    }
+
+    if (jpegPostId) {
+      const filesBeforeHide = await countMediaFilesAdmin(userB.uid, jpegPostId);
+      assertValue('C3 precondition: the JPEG upload test post\'s media files still exist before being hidden', filesBeforeHide, 2);
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        await updateDoc(doc(ctx.firestore(), 'posts', jpegPostId), { status: 'hidden' });
+      });
+      const hideCleanedUp = await waitUntilE2E(async () => (await countMediaFilesAdmin(userB.uid, jpegPostId)) === 0);
+      assertValue('C4 a MODERATOR-hidden post\'s media is also removed (simulated via the same direct status write a real moderator action performs — this app has no in-UI moderator control, role/status changes are console-only per D10)', hideCleanedUp, true);
+    }
+
+    console.log('\n=== 17. Privacy — media metadata carries no private data ===');
+
+    // Reuses the still-alive PNG upload-test post from section 14a (the
+    // render-test post was deleted and the JPEG post hidden above, in
+    // section 16 — this one was deliberately left untouched).
+    if (pngPostId) {
+      const doc_ = await readPostAdmin(pngPostId);
+      const fullDocText = JSON.stringify(doc_.data());
+      assertValue('P1 no email address appears anywhere in an image post\'s document fields', /@/.test(fullDocText), false);
+      assertValue('P2 no local file path (file://, C:\\, /Users/, /home/) appears anywhere in an image post\'s document fields', /file:\/\/|[A-Za-z]:\\|\/Users\/|\/home\//.test(fullDocText), false);
+      assertValue('P3 mediaURL is a genuine remote Storage URL, never a local blob:/file:/data: URL', /^https?:\/\//.test(doc_.data()?.mediaURL ?? ''), true);
+    }
 
     await testEnv.cleanup();
-    await browser.close();
+
+    console.log('\n=== 18. Suite-owned process/port cleanup verification ===');
+    // Runs BEFORE the final results line (so its own pass/fail is part of
+    // the reported total, per the correction pass's "fail the suite
+    // clearly if a port/process remains alive" requirement) and closes the
+    // browser/contexts before killing the server, per cleanupAll's own
+    // ordering. isPortFree() shells out to the real `lsof`, independent of
+    // whether this script's own bookkeeping thinks the process is gone —
+    // authoritative, not self-reported.
+    await cleanupAll();
+    const vitePortFree = isPortFree(PORT);
+    assertValue(`CLEANUP the suite's own vite dev server (port ${PORT}) is confirmed terminated and the port is free`, vitePortFree, true);
+
+    console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
     process.exit(failCount > 0 ? 1 : 0);
   } finally {
-    if (server && server.pid) {
-      try { process.kill(-server.pid, 'SIGTERM'); } catch { /* ignore */ }
-    }
+    // Idempotent — a no-op if the explicit call above (or a signal
+    // handler) already ran it. Covers any exception path that reached
+    // here without going through the success path's own explicit call.
+    await cleanupAll();
   }
 }
 

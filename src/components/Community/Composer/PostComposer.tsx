@@ -2,9 +2,10 @@ import React, { useRef, useState } from 'react';
 import { Image as ImageIcon, Video, X } from 'lucide-react';
 import { VISIBLE_CATEGORY_IDS, CATEGORY_LABELS } from '../utils/categories';
 import { useComposer } from '../hooks/useComposer';
+import {
+  ALLOWED_IMAGE_MIME_TYPES, MAX_RAW_INPUT_BYTES, isAllowedImageMimeType, verifyImageDecodable,
+} from './MediaUploader';
 import type { PostCategory } from '../types';
-
-const IMAGE_UPLOADS_DISABLED_MESSAGE = 'رفع الصور غير متاح حالياً — سيتم تفعيله قريباً';
 
 interface PostComposerProps {
   onPosted: (postId: string) => void;
@@ -20,21 +21,58 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
   const [category, setCategory] = useState<PostCategory | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [validatingImage, setValidatingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createPost, submitting, error } = useComposer();
 
   const canSubmit = text.trim().length > 0 && !submitting;
 
-  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Pre-upload validation pipeline (Phase 9) — every check runs BEFORE the
+  // file is accepted into state/preview, so an invalid pick never gets as
+  // far as a preview or a wasted compression pass. Order matters: cheap
+  // synchronous checks (type, size) first, the more expensive async decode
+  // check last — no reason to spend a createImageBitmap() call on a file
+  // that's already rejected on its declared MIME type or size.
+  const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Reset the input's own value so picking the SAME file again after a
+    // rejection still fires a change event (the browser otherwise treats
+    // "same file selected again" as a no-op change).
+    e.target.value = '';
     if (!file) return;
+
+    setImageError(null);
+
+    if (!isAllowedImageMimeType(file.type)) {
+      setImageError('صيغة الصورة غير مدعومة. الصيغ المسموحة: JPEG وPNG وWebP فقط.');
+      return;
+    }
+    if (file.size > MAX_RAW_INPUT_BYTES) {
+      setImageError('حجم الصورة كبير جداً. الحد الأقصى 20 ميجابايت.');
+      return;
+    }
+
+    setValidatingImage(true);
+    const decodable = await verifyImageDecodable(file);
+    setValidatingImage(false);
+    if (!decodable) {
+      setImageError('تعذّر قراءة هذه الصورة. جرب ملفاً آخر.');
+      return;
+    }
+
+    // Replacing an already-selected image — revoke the OLD preview URL
+    // before minting a new one, so a rapid pick→replace→replace sequence
+    // never leaks object URLs.
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     setImageFile(file);
     setImagePreviewUrl(URL.createObjectURL(file));
   };
 
   const removeImage = () => {
     setImageFile(null);
+    setImageError(null);
     if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
     setImagePreviewUrl(null);
   };
@@ -69,6 +107,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
         style={{ width: '100%', border: '0.5px solid #e5eaf0', borderRadius: 12, padding: 12, fontSize: 14, color: '#1a2b3c', resize: 'none' }}
       />
       <p style={{ fontSize: 11, color: '#94a3b3', textAlign: 'left', margin: '4px 0 14px' }} dir="ltr">{text.length}/2000</p>
+
+      {imageError && <p style={{ fontSize: 12, color: '#dc2626', marginBottom: 10 }}>{imageError}</p>}
+      {validatingImage && <p style={{ fontSize: 12, color: '#94a3b3', marginBottom: 10 }}>جارٍ التحقق من الصورة...</p>}
 
       {imagePreviewUrl && (
         <div style={{ position: 'relative', marginBottom: 14 }}>
@@ -115,17 +156,26 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImagePick} disabled style={{ display: 'none' }} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ALLOWED_IMAGE_MIME_TYPES.join(',')}
+          onChange={handleImagePick}
+          style={{ display: 'none' }}
+        />
         <button
-          disabled
-          aria-describedby="image-upload-disabled-message"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={validatingImage}
+          aria-label={imageFile ? 'استبدال الصورة' : 'إضافة صورة'}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
-            border: '0.5px solid #e5eaf0', background: '#f7f9fb', color: '#94a3b3', fontSize: 13,
-            cursor: 'not-allowed', opacity: 0.7,
+            border: imageFile ? '1px solid #0e7c86' : '0.5px solid #e5eaf0',
+            background: imageFile ? '#e6f4f3' : '#ffffff',
+            color: imageFile ? '#0e7c86' : '#5a6b7c', fontSize: 13,
+            cursor: validatingImage ? 'not-allowed' : 'pointer', opacity: validatingImage ? 0.7 : 1,
           }}
         >
-          <ImageIcon size={16} /> صورة
+          <ImageIcon size={16} /> {imageFile ? 'استبدال الصورة' : 'صورة'}
         </button>
 
         {/* D4: reserved layout slot, disabled, never removed */}
@@ -146,9 +196,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
           </span>
         </button>
       </div>
-      <p id="image-upload-disabled-message" style={{ fontSize: 12, color: '#5a6b7c', margin: '-8px 0 18px', textAlign: 'right' }}>
-        {IMAGE_UPLOADS_DISABLED_MESSAGE}
-      </p>
 
       <button
         onClick={submit}

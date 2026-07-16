@@ -13,6 +13,7 @@ import { PostLikeButton } from '../PostLikeButton';
 import { CATEGORY_LABELS, CATEGORY_TINTS } from '../utils/categories';
 import { timeAgo } from '../utils/timeAgo';
 import { Avatar } from '../Avatar';
+import { ImageLightbox } from '../ImageLightbox';
 
 interface PostDetailProps {
   postId: string;
@@ -32,6 +33,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const tint = post && post.category && post.category in CATEGORY_TINTS
     ? CATEGORY_TINTS[post.category as keyof typeof CATEGORY_TINTS]
     : NEUTRAL_TINT;
@@ -107,9 +109,32 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
           </p>
 
           {post.mediaType === 'image' && post.mediaURL && (
-            <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', marginBottom: 12, background: '#eef2f6' }}>
-              <img src={post.mediaURL} alt="" style={{ width: '100%', display: 'block' }} />
-            </div>
+            <>
+              {/* aspectRatio reserves the correct on-screen space using the
+                  image's REAL stored dimensions (mediaWidth/mediaHeight,
+                  Phase 9) before the browser has even fetched it, avoiding
+                  any layout shift. maxHeight bounds an extreme portrait
+                  photo from dominating the whole screen; the background
+                  color underneath doubles as a stable loading placeholder
+                  for the brief window before the image itself paints. */}
+              <button
+                onClick={() => setPreviewOpen(true)}
+                aria-label="فتح الصورة بحجمها الكامل"
+                style={{
+                  display: 'block', width: '100%', border: 'none', padding: 0, cursor: 'pointer',
+                  borderRadius: 12, overflow: 'hidden', marginBottom: 12, background: '#eef2f6',
+                  aspectRatio: post.mediaWidth && post.mediaHeight ? `${post.mediaWidth} / ${post.mediaHeight}` : '16 / 10',
+                  maxHeight: '70vh',
+                }}
+              >
+                <img
+                  src={post.mediaURL}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+              </button>
+              {previewOpen && <ImageLightbox src={post.mediaURL} onClose={() => setPreviewOpen(false)} />}
+            </>
           )}
 
           {post.category && (

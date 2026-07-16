@@ -26,7 +26,7 @@ import {
   doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, collectionGroup,
   query, where, runTransaction, getCountFromServer, serverTimestamp, Timestamp, increment,
 } from 'firebase/firestore';
-import { ref, uploadBytes } from 'firebase/storage';
+import { ref, uploadBytes, deleteObject } from 'firebase/storage';
 import { normalizeDisplayName } from '../src/components/Community/utils/userSearch';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -120,6 +120,8 @@ const validPostDoc = (authorId: string, overrides: Record<string, unknown> = {})
   mediaSize: null,
   mediaDuration: null,
   mediaPath: null,
+  mediaWidth: null,
+  mediaHeight: null,
   commentsCount: 0,
   likesCount: 0,
   createdAt: serverTimestamp(),
@@ -170,13 +172,15 @@ async function main() {
   await record('P1 valid text-only post create', 'allow', () =>
     setDoc(doc(asA.firestore(), 'posts/post-p1'), validPostDoc('uidA', { text: 'منشور صالح بدون صورة' })));
 
-  await record('P2 valid image post create (mediaSize under cap, correct mediaPath)', 'allow', () =>
+  await record('P2 valid image post create (mediaSize under cap, correct uid-scoped mediaPath, real dimensions)', 'allow', () =>
     setDoc(doc(asA.firestore(), 'posts/post-p2'), validPostDoc('uidA', {
       mediaType: 'image',
       mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
       thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
       mediaSize: 400 * 1024,
-      mediaPath: 'community/posts/post-p2',
+      mediaPath: 'community/posts/uidA/post-p2',
+      mediaWidth: 1600,
+      mediaHeight: 1000,
     })));
 
   // Comment creation moved entirely to the createComment Cloud Function
@@ -197,12 +201,68 @@ async function main() {
       postId: 'post-p1', savedAt: serverTimestamp(),
     }));
 
-  await record('P5 valid Storage image upload (UUID filename, under 2MB)', 'allow', () =>
+  await record('P5 valid Storage image upload (own uid-scoped path, UUID filename, under 2MB)', 'allow', () =>
     uploadBytes(
-      ref(asA.storage(), 'community/posts/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg'),
+      ref(asA.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg'),
       new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
       { contentType: 'image/jpeg' },
     ));
+
+  await record('P5b unauthenticated Storage upload is denied', 'deny', () =>
+    uploadBytes(
+      ref(testEnv.unauthenticatedContext().storage(), 'community/posts/uidA/post-p2/f47ac10b-58cc-4372-a567-0e02b2c3d479.jpg'),
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      { contentType: 'image/jpeg' },
+    ));
+
+  await record('P5c a DIFFERENT active user cannot write into uidA\'s own path (Phase 9 fix — the previous scheme had no per-author path scoping at all)', 'deny', () =>
+    uploadBytes(
+      ref(asB.storage(), 'community/posts/uidA/post-p2/9d3f1e60-2c1a-4b5e-9f0a-1234567890ab.jpg'),
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      { contentType: 'image/jpeg' },
+    ));
+
+  await record('P5d a banned user cannot write even into their OWN uid-matching path (the active-status gate is preserved, not merely replaced by path scoping)', 'deny', () =>
+    uploadBytes(
+      ref(asBanned.storage(), 'community/posts/uidBanned/post-banned-media/2b3c4d5e-6f70-4819-9a2b-3c4d5e6f7081.jpg'),
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      { contentType: 'image/jpeg' },
+    ));
+
+  await record('P5e oversized upload (over the 2MB physical cap) is denied', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/6ba7b810-9dad-11d1-80b4-00c04fd430c8.jpg'),
+      new Uint8Array(2 * 1024 * 1024 + 1),
+      { contentType: 'image/jpeg' },
+    ));
+
+  await record('P5f a disallowed MIME type (image/svg+xml — an XML/script-capable payload, not a raster image) is denied even with a .jpg-named path', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/7c9e6679-7425-40de-944b-e07fc1f90ae7.jpg'),
+      new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),
+      { contentType: 'image/svg+xml' },
+    ));
+
+  await record('P5g a disallowed MIME type (image/gif) is denied', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/16fd2706-8baf-433b-82eb-8c7fada847da.jpg'),
+      new Uint8Array([0x47, 0x49, 0x46, 0x38]),
+      { contentType: 'image/gif' },
+    ));
+
+  await record('P5h the owner CAN delete their own uploaded file (required for useComposer.ts\'s client-side orphan cleanup)', 'allow', () =>
+    deleteObject(ref(asA.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg')));
+
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await uploadBytes(
+      ref(ctx.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg'),
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      { contentType: 'image/jpeg' },
+    );
+  });
+
+  await record('P5i a DIFFERENT user cannot delete uidA\'s uploaded file', 'deny', () =>
+    deleteObject(ref(asB.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg')));
 
   console.log('\n=== 1. Forged role/status ===');
 
@@ -241,21 +301,78 @@ async function main() {
       mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
       thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
       mediaSize: 100 * 1024,
-      mediaPath: 'community/posts/SOME-OTHER-POST-ID',
+      mediaPath: 'community/posts/uidB/SOME-OTHER-POST-ID',
+      mediaWidth: 800, mediaHeight: 600,
+    })));
+
+  await record('reject image post whose mediaPath uses another user\'s uid segment (spoofing authorship of the media)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-wrong-uid-path'), validPostDoc('uidB', {
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 100 * 1024,
+      mediaPath: 'community/posts/uidA/post-wrong-uid-path',
+      mediaWidth: 800, mediaHeight: 600,
+    })));
+
+  await record('reject image post using the OLD pre-Phase-9 mediaPath shape (no uid segment at all)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-old-path-shape'), validPostDoc('uidB', {
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 100 * 1024,
+      mediaPath: 'community/posts/post-old-path-shape',
+      mediaWidth: 800, mediaHeight: 600,
+    })));
+
+  console.log('\n=== 5b. Invalid/missing media dimensions (Phase 9) ===');
+
+  await record('reject image post with mediaWidth missing (field omitted entirely)', 'deny', () => {
+    const doc_ = validPostDoc('uidB', {
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 100 * 1024,
+      mediaPath: 'community/posts/uidB/post-no-width',
+      mediaHeight: 600,
+    });
+    const { mediaWidth: _omit, ...withoutWidth } = doc_;
+    void _omit;
+    return setDoc(doc(asB.firestore(), 'posts/post-no-width'), withoutWidth);
+  });
+
+  await record('reject image post with mediaWidth <= 0', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-zero-width'), validPostDoc('uidB', {
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 100 * 1024,
+      mediaPath: 'community/posts/uidB/post-zero-width',
+      mediaWidth: 0, mediaHeight: 600,
+    })));
+
+  await record('reject image post with a nonsensical mediaHeight (over the 10000px ceiling)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-huge-height'), validPostDoc('uidB', {
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 100 * 1024,
+      mediaPath: 'community/posts/uidB/post-huge-height',
+      mediaWidth: 800, mediaHeight: 999999,
     })));
 
   console.log('\n=== 6. Bad UUID filename ===');
 
   await record('reject Storage upload with a non-matching filename', 'deny', () =>
     uploadBytes(
-      ref(asB.storage(), 'community/posts/post-p2/not a valid name!.jpg'),
+      ref(asA.storage(), 'community/posts/uidA/post-p2/not a valid name!.jpg'),
       new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
       { contentType: 'image/jpeg' },
     ));
 
   await record('reject Storage upload with the wrong extension', 'deny', () =>
     uploadBytes(
-      ref(asB.storage(), 'community/posts/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.png'),
+      ref(asA.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.png'),
       new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
       { contentType: 'image/png' },
     ));
@@ -293,7 +410,8 @@ async function main() {
       mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
       thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
       mediaSize: 600 * 1024,
-      mediaPath: 'community/posts/post-oversized-media',
+      mediaPath: 'community/posts/uidB/post-oversized-media',
+      mediaWidth: 800, mediaHeight: 600,
     })));
 
   console.log('\n=== 12. Optional category (Phase 2) ===');

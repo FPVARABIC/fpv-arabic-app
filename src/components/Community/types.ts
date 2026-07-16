@@ -59,8 +59,17 @@ export interface Post {
   // cap on the actual uploaded bytes is the real physical backstop.
   mediaSize: number | null;
   mediaDuration: number | null;
-  // Storage folder path only, e.g. "community/posts/{postId}" — not a file path.
+  // Storage folder path only, e.g. "community/posts/{uid}/{postId}" — not a
+  // file path (Phase 9: uid segment added so storage.rules can enforce
+  // per-user write scoping via a path-segment check, see firestorePaths.ts).
   mediaPath: string | null;
+  // Real pixel dimensions of the uploaded (post-compression) image (Phase
+  // 9) — derived from the actual decoded file, never fabricated. Lets
+  // rendering reserve correct aspect-ratio space before the image loads
+  // (no layout shift) and bound its maximum on-screen height. null for
+  // text-only posts, same convention as the other media fields.
+  mediaWidth: number | null;
+  mediaHeight: number | null;
   commentsCount: number;
   createdAt: Timestamp;
   status: ContentStatus;

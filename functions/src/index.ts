@@ -17,6 +17,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 
 initializeApp();
@@ -372,5 +373,68 @@ export const cleanupPostLikes = onDocumentUpdated(
     // author name/photo, media URLs, email, or any other user-identifying
     // data.
     console.log(`[cleanupPostLikes] postId=${event.params.postId} deletedLikes=${deletedCount}`);
+  },
+);
+
+// Orphaned-media cleanup (Phase 9). A post leaving the 'active' state — via
+// either client path firestore.rules allows for posts/{postId}'s `status`
+// field (the author's own soft-delete to 'deleted', or a moderator's hide
+// to 'hidden' — both direct client writes governed by the same rule, both
+// only ever touch `status`) — makes the post unreadable
+// (`allow read: if resource.data.status == 'active'`) to every client, but
+// never removes its Storage media: nothing else ever does, since
+// storage.rules only grants delete to the media's own owner (a client-side
+// permission for the orphan-cleanup-on-failed-post-create path in
+// useComposer.ts, an entirely different scenario from this one), and no
+// client write path was ever going to reach into Storage on a hide/delete
+// it didn't initiate itself. This trigger is the only thing that ever
+// removes the files for both transitions, using the Admin SDK (bypasses
+// Storage Rules by design, so it needs no permission grant there).
+//
+// Idempotent and retry-safe: bucket.getFiles({ prefix }) below treats "no
+// files match" as a normal empty result, not an error — replaying this
+// trigger (a genuine Cloud Functions retry, or this event simply firing
+// again for any reason) after the files are already gone is a safe no-op,
+// not a crash. (Deletion itself is a getFiles({ prefix }) listing followed
+// by an individual, error-swallowed file.delete() per match — not a single
+// bucket.deleteFiles({ prefix }) call — because per-file errors need to be
+// caught independently so one bad object never aborts the rest of the
+// batch; see the try block below for the actual calls.) Scoped strictly to
+// the ONE post's own mediaPath (read
+// directly off that post's own document, which firestore.rules already
+// validated at creation time to equal exactly
+// 'community/posts/{authorUid}/{postId}') — structurally incapable of
+// touching any other post's or user's media.
+export const cleanupPostMedia = onDocumentUpdated(
+  { document: 'posts/{postId}', timeoutSeconds: 120 },
+  async (event) => {
+    const change = event.data;
+    if (!change) return;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Same self-terminating guard as cleanupPostLikes — this function never
+    // writes anything back to the post document at all, so there is no
+    // echo-event risk, but the guard is kept identical for consistency and
+    // because it is the correct condition regardless: act only on a genuine
+    // active -> non-active transition, never on any other update.
+    if (before.status !== 'active' || after.status === 'active') return;
+
+    const mediaPath = after.mediaPath as string | null | undefined;
+    if (!mediaPath) return; // text-only post — nothing to clean up
+
+    try {
+      const [files] = await getStorage().bucket().getFiles({ prefix: `${mediaPath}/` });
+      await Promise.all(files.map(file => file.delete().catch(() => {})));
+      console.log(`[cleanupPostMedia] postId=${event.params.postId} deletedFiles=${files.length}`);
+    } catch (err) {
+      // A missing bucket/prefix or a transient Storage error must never
+      // crash this trigger — the post's Firestore status change has
+      // already succeeded and is the source of truth; a failed media
+      // cleanup is a leaked-storage cost concern, not a correctness one,
+      // and this trigger will naturally get another chance if Cloud
+      // Functions retries it.
+      console.error(`[cleanupPostMedia] postId=${event.params.postId} failed`, err);
+    }
   },
 );

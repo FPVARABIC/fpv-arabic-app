@@ -192,6 +192,7 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly([
                          'authorId', 'authorName', 'authorPhoto', 'text', 'category',
                          'mediaType', 'mediaURL', 'thumbnailURL', 'mediaSize', 'mediaDuration', 'mediaPath',
+                         'mediaWidth', 'mediaHeight',
                          'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount'
                        ])
                     && request.resource.data.authorId == request.auth.uid
@@ -234,7 +235,9 @@ service cloud.firestore {
                            && request.resource.data.thumbnailURL == null
                            && request.resource.data.mediaSize == null
                            && request.resource.data.mediaPath == null
-                           && request.resource.data.mediaDuration == null)
+                           && request.resource.data.mediaDuration == null
+                           && request.resource.data.mediaWidth == null
+                           && request.resource.data.mediaHeight == null)
                          ||
                          (request.resource.data.mediaType == 'image'
                            && request.resource.data.mediaURL is string
@@ -246,8 +249,21 @@ service cloud.firestore {
                            && request.resource.data.mediaSize is number
                            && request.resource.data.mediaSize > 0
                            && request.resource.data.mediaSize <= 500 * 1024
-                           && request.resource.data.mediaPath == 'community/posts/' + postId
-                           && request.resource.data.mediaDuration == null)
+                           // Phase 9: uid-scoped path — matches storage.rules'
+                           // per-user write scoping exactly (see storage.rules
+                           // and firestorePaths.ts's mediaFolderPath comment).
+                           && request.resource.data.mediaPath == 'community/posts/' + request.auth.uid + '/' + postId
+                           && request.resource.data.mediaDuration == null
+                           // Real decoded pixel dimensions (Phase 9) — bounded
+                           // generously (no legitimate photo exceeds this) purely
+                           // to reject a nonsensical/forged value, not to encode
+                           // any real product constraint.
+                           && request.resource.data.mediaWidth is number
+                           && request.resource.data.mediaWidth > 0
+                           && request.resource.data.mediaWidth <= 10000
+                           && request.resource.data.mediaHeight is number
+                           && request.resource.data.mediaHeight > 0
+                           && request.resource.data.mediaHeight <= 10000)
                        )
                     // rate limit: 1 post / 60s (D11). First-ever post has no
                     // lastPostAt yet, so it's allowed through.

@@ -53,6 +53,11 @@ const useComposerTs = readFileSync(join(ROOT, 'src/components/Community/hooks/us
 const migrationProdTs = readFileSync(join(ROOT, 'functions/scripts/migrateDisplayNameNormalizedProd.ts'), 'utf8');
 const homeViewTsx = readFileSync(join(ROOT, 'src/views/HomeView.tsx'), 'utf8');
 const bottomNavTsx = readFileSync(join(ROOT, 'src/components/BottomNavigation.tsx'), 'utf8');
+const mediaUploaderTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/MediaUploader.tsx'), 'utf8');
+const postComposerTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/PostComposer.tsx'), 'utf8');
+const imageLightboxTsx = readFileSync(join(ROOT, 'src/components/Community/ImageLightbox.tsx'), 'utf8');
+const storageRulesTxt = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
+const mediaDeleteRetryTs = readFileSync(join(ROOT, 'src/components/Community/Composer/mediaDeleteRetry.ts'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -365,6 +370,82 @@ console.log('\n[22] Bottom-nav Home button — centralized reset signal for Comm
   ok('the reset is guarded against re-firing on an unrelated re-render (compared against the last-seen value, not merely "is it defined")', /homeReset !== undefined && homeReset !== lastHomeResetRef\.current/.test(homeViewTsx));
 }
 
+console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
+{
+  ok('MediaUploader.tsx exports an exact MIME allow-list (jpeg/png/webp), not a wildcard', /ALLOWED_IMAGE_MIME_TYPES\s*=\s*\['image\/jpeg',\s*'image\/png',\s*'image\/webp'\]/.test(mediaUploaderTsx));
+  ok('the allow-list check function is exported for reuse by the composer\'s own pre-validation', /export const isAllowedImageMimeType/.test(mediaUploaderTsx));
+  ok('verifyImageDecodable is exported — a genuine decode check, not merely a MIME/extension check', /export const verifyImageDecodable/.test(mediaUploaderTsx) && /createImageBitmap/.test(mediaUploaderTsx));
+  ok('MAX_RAW_INPUT_BYTES (pre-compression ceiling) is exported for the composer to enforce before spending a compression pass', /export const MAX_RAW_INPUT_BYTES/.test(mediaUploaderTsx));
+  ok('uploadMedia takes an explicit uid parameter — the path is uid-scoped, never trusted from anywhere else', /uploadMedia\s*=\s*async\s*\(\s*file:\s*File,\s*uid:\s*string,\s*postId:\s*string/.test(mediaUploaderTsx));
+  ok('uploadMedia derives real width/height from the actual compressed output via verifyImageDecodable, never fabricated', /verifyImageDecodable\(fullBlob\)/.test(mediaUploaderTsx));
+  ok('deleteMedia is exported — the orphan-cleanup primitive useComposer.ts calls on a failed post-create', /export const deleteMedia/.test(mediaUploaderTsx));
+  ok('deleteMedia attempts both files independently via classifyAndRetryDelete (one failing never blocks the other)', /classifyAndRetryDelete\(\(\) => deleteObject\(fullRef\)/.test(mediaUploaderTsx) && /classifyAndRetryDelete\(\(\) => deleteObject\(thumbRef\)/.test(mediaUploaderTsx));
+  ok('deleteMedia returns a structured MediaDeleteResult (derived via deriveMediaDeleteResult), not void — the correction-pass fix for the independent review\'s partial-failure finding', /deriveMediaDeleteResult\(full, thumbnail\)/.test(mediaUploaderTsx));
+
+  ok('useComposer.ts passes currentUser.uid into uploadMedia (the uid segment is Auth-derived, never trusted from form data)', /uploadMedia\(imageFile,\s*currentUser\.uid,\s*postId/.test(useComposerTs));
+  ok('useComposer.ts calls deleteMedia on a failed post-create AFTER a successful upload — the orphan-cleanup wiring', /const cleanup = await deleteMedia\(media\)/.test(useComposerTs));
+  ok('useComposer.ts inspects the structured cleanup result rather than assuming success (correction pass)', /if \(!cleanup\.fullySucceeded\)/.test(useComposerTs));
+  ok('useComposer.ts logs a partial/full cleanup failure without leaking a token-bearing download URL (only the outcome enum values)', /console\.error\('\[useComposer\] orphaned media cleanup did not fully succeed[\s\S]{0,120}full: cleanup\.full,[\s\S]{0,40}thumbnail: cleanup\.thumbnail,/.test(useComposerTs));
+  ok('useComposer.ts still re-throws the ORIGINAL batchErr unconditionally, regardless of the cleanup outcome — the publish error is never replaced by a cleanup error', /throw batchErr;/.test(useComposerTs));
+  ok('useComposer.ts writes mediaWidth/mediaHeight from the real uploaded media, never a hardcoded/fabricated value', /mediaWidth:\s*media\?\.width\s*\?\?\s*null/.test(useComposerTs) && /mediaHeight:\s*media\?\.height\s*\?\?\s*null/.test(useComposerTs));
+
+  ok('mediaDeleteRetry.ts exports MediaDeleteOutcome/MediaDeleteResult, classifyAndRetryDelete, and deriveMediaDeleteResult as a Storage-SDK-independent, unit-testable seam', /export type MediaDeleteOutcome/.test(mediaDeleteRetryTs) && /export async function classifyAndRetryDelete/.test(mediaDeleteRetryTs) && /export function deriveMediaDeleteResult/.test(mediaDeleteRetryTs));
+  ok('classifyAndRetryDelete treats storage/object-not-found as "already-missing", not "failed" — idempotent cleanup counts as success', /code === 'storage\/object-not-found'/.test(mediaDeleteRetryTs) && /return 'already-missing';/.test(mediaDeleteRetryTs));
+  ok('classifyAndRetryDelete only retries a bounded, named set of transient error codes — never storage/unauthorized (a retry cannot fix a permission denial)', /RETRYABLE_STORAGE_ERROR_CODES/.test(mediaDeleteRetryTs) && !/RETRYABLE_STORAGE_ERROR_CODES = new Set\(\[[\s\S]{0,200}storage\/unauthorized/.test(mediaDeleteRetryTs));
+  ok('the retry loop is bounded by a fixed DELETE_MAX_RETRIES constant, never an unbounded/while(true) loop', /export const DELETE_MAX_RETRIES = 2;/.test(mediaDeleteRetryTs) && /for \(let attempt = 0; attempt <= DELETE_MAX_RETRIES; attempt\+\+\)/.test(mediaDeleteRetryTs));
+  ok('deriveMediaDeleteResult never reports fullySucceeded=true when either object failed — failedCount drives all three flags from one source of truth', /const failedCount = \[full, thumbnail\]\.filter\(outcome => outcome === 'failed'\)\.length;/.test(mediaDeleteRetryTs));
+
+  ok('PostComposer.tsx\'s image file input is no longer disabled', !/type="file"[\s\S]{0,200}disabled/.test(postComposerTsx));
+  ok('PostComposer.tsx\'s "uploads disabled" messaging has been removed now that uploads are enabled', !/رفع الصور غير متاح حالياً/.test(postComposerTsx));
+  ok('PostComposer.tsx validates MIME type before accepting a picked file', /isAllowedImageMimeType\(file\.type\)/.test(postComposerTsx));
+  ok('PostComposer.tsx validates raw file size before accepting a picked file', /file\.size > MAX_RAW_INPUT_BYTES/.test(postComposerTsx));
+  ok('PostComposer.tsx decode-verifies the file before accepting it (rejects a renamed non-image)', /verifyImageDecodable\(file\)/.test(postComposerTsx));
+  ok('PostComposer.tsx offers a "replace image" affordance, not merely add/remove', /استبدال الصورة/.test(postComposerTsx));
+  ok('the video button remains disabled and untouched (D4, out of scope for this phase)', /<Video size=\{16\} \/> فيديو/.test(postComposerTsx) && /قريباً/.test(postComposerTsx));
+
+  ok('ImageLightbox.tsx exists and is portaled to document.body (escapes AppShell\'s stacking context, same convention as ReportButton/ProfileSheet)', /createPortal\(/.test(imageLightboxTsx) && /document\.body/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx closes on Escape', /key === 'Escape'/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx closes on backdrop click', /onClick=\{onClose\}/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx has an explicit close button', /aria-label="إغلاق المعاينة"/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx uses object-fit: contain — the full, uncropped image, unlike the feed thumbnail\'s intentional cover-crop', /objectFit:\s*'contain'/.test(imageLightboxTsx));
+  ok('PostDetail.tsx wires the lightbox to the full post image', /ImageLightbox/.test(postDetailTsx) && /setPreviewOpen\(true\)/.test(postDetailTsx));
+  ok('PostDetail.tsx reserves aspect-ratio space from the post\'s own real mediaWidth/mediaHeight (no layout shift)', /mediaWidth && post\.mediaHeight/.test(postDetailTsx));
+
+  // Correction pass — independent-review-flagged accessibility gaps.
+  ok('ImageLightbox.tsx exposes role="dialog" and aria-modal="true" with a meaningful Arabic label', /role="dialog"/.test(imageLightboxTsx) && /aria-modal="true"/.test(imageLightboxTsx) && /aria-label="معاينة الصورة بحجمها الكامل"/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx focuses the close button when it opens', /closeButtonRef\.current\?\.focus\(\)/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx traps Tab/Shift+Tab inside the dialog instead of letting focus escape to the page behind the backdrop', /e\.key !== 'Tab'/.test(imageLightboxTsx) && /e\.shiftKey && document\.activeElement === first/.test(imageLightboxTsx) && /!e\.shiftKey && document\.activeElement === last/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx captures the pre-open focused element and restores focus to it on close/unmount', /const previouslyFocused = document\.activeElement/.test(imageLightboxTsx) && /previouslyFocused\?\.focus\(\)/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx locks body scroll while open and restores the exact previous overflow value on close/unmount', /document\.body\.style\.overflow = 'hidden'/.test(imageLightboxTsx) && /document\.body\.style\.overflow = previousBodyOverflow/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx removes its keydown listener on cleanup — no listener leak across opens/closes', /window\.removeEventListener\('keydown', onKeyDown\)/.test(imageLightboxTsx));
+  ok('ImageLightbox.tsx\'s image alt text is a meaningful (non-empty) Arabic description, not decorative alt=""', /alt = 'صورة المنشور بحجمها الكامل'/.test(imageLightboxTsx));
+
+  ok('storage.rules\' community-posts path now includes a {uid} segment', /match \/community\/posts\/\{uid\}\/\{postId\}\/\{fileName\}/.test(storageRulesTxt));
+  ok('storage.rules\' write rule checks request.auth.uid == uid — real per-user path scoping, not merely "any active user"', /request\.auth\.uid == uid/.test(storageRulesTxt));
+  ok('storage.rules uses an exact MIME allow-list, not a wildcard — SVG/GIF are structurally rejected', /contentType in \['image\/jpeg', 'image\/png', 'image\/webp'\]/.test(storageRulesTxt));
+  ok('storage.rules never uses the broad "allow read, write: if request.auth != null" anti-pattern', !/allow read, write: if request\.auth != null/.test(storageRulesTxt));
+  ok('storage.rules grants delete only to the path\'s own owner (required for useComposer.ts\'s client-side orphan cleanup)', /allow delete: if request\.auth != null && request\.auth\.uid == uid/.test(storageRulesTxt));
+
+  ok('firestore.rules\' post-create allow-list includes mediaWidth/mediaHeight', /'mediaWidth', 'mediaHeight'/.test(rulesTxt));
+  ok('firestore.rules\' image-post mediaPath check is uid-scoped (matches storage.rules\' own path shape exactly)', /mediaPath == 'community\/posts\/' \+ request\.auth\.uid \+ '\/' \+ postId/.test(rulesTxt));
+  ok('firestore.rules bounds mediaWidth/mediaHeight to a sane positive ceiling, not merely "is a number"', /mediaWidth is number[\s\S]{0,60}mediaWidth > 0[\s\S]{0,60}mediaWidth <= 10000/.test(rulesTxt));
+
+  ok('cleanupPostMedia is exported as an onDocumentUpdated trigger scoped to posts/{postId}', /export const cleanupPostMedia = onDocumentUpdated\(\s*\{ document: 'posts\/\{postId\}'/.test(functionsIndexTs));
+  ok('cleanupPostMedia uses the same active->non-active guard as cleanupPostLikes (self-terminating, no cascade)', (functionsIndexTs.match(/if \(before\.status !== 'active' \|\| after\.status === 'active'\) return;/g) ?? []).length >= 2);
+  ok('cleanupPostMedia no-ops on a text-only post (no mediaPath to clean up)', /if \(!mediaPath\) return;/.test(functionsIndexTs));
+  ok('cleanupPostMedia deletes via the Admin Storage SDK (bypasses storage.rules by design, same trust model as the Firestore cleanup triggers)', /getStorage\(\)\.bucket\(\)\.getFiles\(\{ prefix: `\$\{mediaPath\}\/` \}\)/.test(functionsIndexTs));
+  ok('cleanupPostMedia never crashes the trigger on a Storage error (try/catch around the delete)', /\[cleanupPostMedia\] postId=\$\{event\.params\.postId\} failed/.test(functionsIndexTs));
+
+  // Correction pass — the independent review found the function's own doc
+  // comment claimed a single bucket.deleteFiles({ prefix }) call while the
+  // real code does getFiles({ prefix }) + a per-file delete(). The comment
+  // is now corrected to match; these assertions pin BOTH the corrected
+  // comment text and the real implementation so they can never silently
+  // diverge again.
+  ok('cleanupPostMedia\'s doc comment accurately describes getFiles({ prefix }) + per-file delete(), not a nonexistent bucket.deleteFiles({ prefix }) call', /bucket\.getFiles\(\{ prefix \}\) below treats "no/.test(functionsIndexTs) && !/bucket\.deleteFiles\(\{ prefix \}\) treats "no/.test(functionsIndexTs));
+  ok('cleanupPostMedia\'s actual delete call really is getFiles + Promise.all(files.map(file => file.delete()...)), matching the corrected comment', /const \[files\] = await getStorage\(\)\.bucket\(\)\.getFiles\(\{ prefix: `\$\{mediaPath\}\/` \}\);/.test(functionsIndexTs) && /await Promise\.all\(files\.map\(file => file\.delete\(\)\.catch/.test(functionsIndexTs));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -378,6 +459,7 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'firestore.rules' &&
     f !== 'firestore.indexes.json' &&
     f !== 'firebase.json' &&
+    f !== 'storage.rules' && // Phase 9: uid-scoped media paths + exact MIME allow-list + owner-delete
     f !== 'vercel.json' && // Phase 7: CSP connect-src fix for the deployed comment-publish bug
     f !== 'src/views/HomeView.tsx' && // Phase 8: Home-screen-state reset on the bottom-nav Home press
     f !== 'src/components/BottomNavigation.tsx' && // Phase 8: centralized Home-reset navigation signal
@@ -385,7 +467,8 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('functions/') &&
     !f.startsWith('scripts/testCommunity') &&
     !f.startsWith('scripts/seedCommunityEmulator') &&
-    f !== 'scripts/migrateDisplayNameNormalized.ts',
+    f !== 'scripts/migrateDisplayNameNormalized.ts' &&
+    f !== 'scripts/testMediaDeleteRetry.ts', // correction pass: pure-Node unit test for deleteMedia's retry/classification state machine
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

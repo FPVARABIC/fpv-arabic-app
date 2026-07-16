@@ -14,8 +14,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:community-rules": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/testCommunityRules.ts\"",
-    "test:community-functions": "npm --prefix functions run build && firebase emulators:exec --project demo-community-rules-test --only auth,firestore,functions \"npx tsx scripts/testCommunityFunctions.ts\"",
-    "test:community-e2e": "npm --prefix functions run build && firebase emulators:exec --project demo-community-rules-test --only auth,firestore,functions \"npx tsx scripts/testCommunityE2E.ts\"",
+    "test:community-functions": "npm --prefix functions run build && firebase emulators:exec --project demo-community-rules-test --only auth,firestore,functions,storage \"npx tsx scripts/testCommunityFunctions.ts\"",
+    "test:community-e2e": "npm --prefix functions run build && firebase emulators:exec --project demo-community-rules-test --only auth,firestore,functions,storage \"npx tsx scripts/testCommunityE2E.ts\"",
     "seed:community-emulator": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/seedCommunityEmulator.ts\"",
     "migrate:display-name-normalized": "firebase emulators:exec --project demo-community-rules-test \"npx tsx scripts/migrateDisplayNameNormalized.ts\""
   },

@@ -11,7 +11,8 @@
  * this is the end-to-end proof from inside a real page.
  */
 import { doc, setDoc, deleteDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
-import { firestoreDb, firebaseAuth } from '../../../lib/firebase';
+import { ref, uploadBytes, deleteObject } from 'firebase/storage';
+import { firestoreDb, firebaseAuth, firebaseStorage } from '../../../lib/firebase';
 
 export interface BypassResult {
   ok: boolean;
@@ -79,6 +80,29 @@ export async function e2eAttemptDirectPostLikesCountBump(postId: string): Promis
     await updateDoc(doc(firestoreDb, 'posts', postId), {
       likesCount: increment(1),
     });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: (err as { code?: string } | null)?.code };
+  }
+}
+
+// Direct Storage upload/delete bypass attempts (Phase 9) — same rationale as
+// the Firestore bypass functions above: proves the REAL signed-in browser
+// session cannot write/delete outside its own uid-scoped path, from inside
+// a real page, using the app's own already-authenticated firebaseStorage
+// instance.
+export async function e2eAttemptDirectStorageUpload(path: string, contentType: string): Promise<BypassResult> {
+  try {
+    await uploadBytes(ref(firebaseStorage, path), new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), { contentType });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, code: (err as { code?: string } | null)?.code };
+  }
+}
+
+export async function e2eAttemptDirectStorageDelete(path: string): Promise<BypassResult> {
+  try {
+    await deleteObject(ref(firebaseStorage, path));
     return { ok: true };
   } catch (err) {
     return { ok: false, code: (err as { code?: string } | null)?.code };
