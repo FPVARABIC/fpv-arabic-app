@@ -200,8 +200,23 @@ service cloud.firestore {
                     && request.resource.data.authorPhoto == callerProfile().photoURL
                     && request.resource.data.status == 'active'
                     && request.resource.data.text is string
-                    && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 2000
+                    // Correction pass: an image post's text is optional —
+                    // the image itself is valid content on its own — but a
+                    // text-only post (mediaType == 'none') still requires
+                    // MEANINGFUL, non-whitespace-only text. matches('^\\s*$')
+                    // tests "the entire string is whitespace or empty";
+                    // negated, this demands at least one non-whitespace
+                    // character whenever there is no image to fall back on.
+                    // Mirrors PostComposer.tsx's own client-side
+                    // hasValidText || hasValidImage gate exactly, so a post
+                    // that the UI would allow is never denied here, and a
+                    // post the UI would block (a raw client bypass sending
+                    // whitespace-only text with no image) is still denied.
+                    && (
+                         request.resource.data.mediaType == 'image'
+                         || !request.resource.data.text.matches('^\\s*$')
+                       )
                     && (
                          !('category' in request.resource.data)
                          ||

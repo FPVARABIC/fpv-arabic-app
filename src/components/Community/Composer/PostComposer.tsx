@@ -27,7 +27,18 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createPost, submitting, error } = useComposer();
 
-  const canSubmit = text.trim().length > 0 && !submitting;
+  // Correction pass: the image-only publish flow must be independently
+  // publishable — an image and a non-empty text body are two SEPARATE ways
+  // to satisfy "this post has content," not one mandatory field plus an
+  // optional attachment. The rule is deliberately `hasValidText ||
+  // hasValidImage`, not `hasValidText` alone. `imageFile` only ever holds a
+  // value that has already passed the MIME/size/decode pipeline in
+  // handleImagePick below, so its mere presence here is itself proof of a
+  // valid, ready-to-upload image — no separate "is it valid" recheck is
+  // needed at this call site.
+  const hasValidText = text.trim().length > 0;
+  const hasValidImage = imageFile !== null;
+  const canSubmit = (hasValidText || hasValidImage) && !submitting;
 
   // Pre-upload validation pipeline (Phase 9) — every check runs BEFORE the
   // file is accepted into state/preview, so an invalid pick never gets as
@@ -79,6 +90,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
 
   const submit = async () => {
     if (!canSubmit) return;
+    // Reset before this attempt — a retry after a previous failed
+    // image-post submission must not show a stale 100% progress bar left
+    // over from that earlier attempt.
+    setUploadProgress(0);
     const postId = await createPost({
       text: text.trim(),
       category,
@@ -87,6 +102,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
     });
     if (postId) onPosted(postId);
   };
+
+  // Three honest, distinct phases while submitting an image post — the app
+  // must never claim "published" before Storage AND Firestore both
+  // succeed, and must never claim "uploading" for a text-only post (which
+  // has no Storage step at all, so onUploadProgress is never called and
+  // uploadProgress stays 0 for the whole, brief Firestore-only write).
+  const submitLabel = !submitting
+    ? 'نشر'
+    : imageFile && uploadProgress < 100
+      ? 'جارٍ رفع الصورة...'
+      : 'جارٍ نشر المنشور...';
 
   return (
     <div style={{ padding: 16, background: '#ffffff', minHeight: '100%' }}>
@@ -101,28 +127,43 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
       <textarea
         value={text}
         onChange={e => setText(e.target.value.slice(0, 2000))}
-        placeholder="بماذا تحتاج المساعدة اليوم؟"
+        placeholder={imageFile ? 'أضف وصفًا أو سؤالًا للصورة — اختياري' : 'بماذا تحتاج المساعدة اليوم؟'}
         dir="auto"
         rows={5}
         style={{ width: '100%', border: '0.5px solid #e5eaf0', borderRadius: 12, padding: 12, fontSize: 14, color: '#1a2b3c', resize: 'none' }}
       />
       <p style={{ fontSize: 11, color: '#94a3b3', textAlign: 'left', margin: '4px 0 14px' }} dir="ltr">{text.length}/2000</p>
 
-      {imageError && <p style={{ fontSize: 12, color: '#dc2626', marginBottom: 10 }}>{imageError}</p>}
-      {validatingImage && <p style={{ fontSize: 12, color: '#94a3b3', marginBottom: 10 }}>جارٍ التحقق من الصورة...</p>}
+      {/* Single aria-live region for every readiness/validation/error state
+          below — a screen-reader user gets each transition announced
+          (rejected pick, "ready to publish", upload/publish phase) without
+          needing to poll the DOM themselves. Visual state is never
+          color-only: each status is also a distinct, readable Arabic
+          sentence. */}
+      <div aria-live="polite">
+        {imageError && <p style={{ fontSize: 12, color: '#dc2626', marginBottom: 10 }}>{imageError}</p>}
+        {validatingImage && <p style={{ fontSize: 12, color: '#94a3b3', marginBottom: 10 }}>جارٍ التحقق من الصورة...</p>}
+        {imageFile && !validatingImage && !submitting && (
+          <p style={{ fontSize: 12, color: '#0e7c86', fontWeight: 600, marginBottom: 10 }}>الصورة جاهزة للنشر</p>
+        )}
+        {submitting && imageFile && (
+          <p style={{ fontSize: 12, color: '#5a6b7c', marginBottom: 10 }}>{submitLabel}</p>
+        )}
+      </div>
 
       {imagePreviewUrl && (
         <div style={{ position: 'relative', marginBottom: 14 }}>
           <div style={{ width: '100%', aspectRatio: '16/10', borderRadius: 10, overflow: 'hidden', background: '#eef2f6' }}>
-            <img src={imagePreviewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={imagePreviewUrl} alt="معاينة الصورة المختارة قبل النشر" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <button
             onClick={removeImage}
+            disabled={submitting}
             aria-label="إزالة الصورة"
             style={{
               position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%',
               background: 'rgba(26,43,60,0.7)', border: 'none', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', cursor: 'pointer',
+              justifyContent: 'center', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1,
             }}
           >
             <X size={14} color="#ffffff" />
@@ -165,14 +206,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={validatingImage}
+          disabled={validatingImage || submitting}
           aria-label={imageFile ? 'استبدال الصورة' : 'إضافة صورة'}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
             border: imageFile ? '1px solid #0e7c86' : '0.5px solid #e5eaf0',
             background: imageFile ? '#e6f4f3' : '#ffffff',
             color: imageFile ? '#0e7c86' : '#5a6b7c', fontSize: 13,
-            cursor: validatingImage ? 'not-allowed' : 'pointer', opacity: validatingImage ? 0.7 : 1,
+            cursor: (validatingImage || submitting) ? 'not-allowed' : 'pointer', opacity: (validatingImage || submitting) ? 0.7 : 1,
           }}
         >
           <ImageIcon size={16} /> {imageFile ? 'استبدال الصورة' : 'صورة'}
@@ -207,7 +248,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
           fontSize: 15, fontWeight: 700, cursor: canSubmit ? 'pointer' : 'not-allowed',
         }}
       >
-        {submitting ? 'جارٍ النشر...' : 'نشر'}
+        {submitLabel}
       </button>
     </div>
   );

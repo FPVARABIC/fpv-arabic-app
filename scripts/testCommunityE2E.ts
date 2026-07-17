@@ -36,7 +36,7 @@ import {
   initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, serverTimestamp,
+  doc, setDoc, getDoc, getDocs, updateDoc, collection, query, where, orderBy, limit, serverTimestamp,
   type DocumentSnapshot, type DocumentData, type QuerySnapshot,
 } from 'firebase/firestore';
 import { ref, listAll } from 'firebase/storage';
@@ -1102,6 +1102,22 @@ async function main() {
       });
       return result;
     }
+    // findPostIdByText matches on exact text, which does not work for an
+    // image-only post (text: '') — an empty-string query would ambiguously
+    // match every image-only post ever created in this run, not just the
+    // one just published. This instead takes the single most-recent post
+    // by a specific author, which is unambiguous immediately after a
+    // controlled, sequential test submission.
+    async function findLatestPostIdByAuthor(uid: string): Promise<string | null> {
+      let result: string | null = null;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        const snap = await getDocs(
+          query(collection(ctx.firestore(), 'posts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(1)),
+        );
+        result = snap.empty ? null : snap.docs[0].id;
+      });
+      return result;
+    }
     async function countMediaFilesAdmin(uid: string, postId: string): Promise<number> {
       let count = 0;
       await testEnv.withSecurityRulesDisabled(async ctx => {
@@ -1227,11 +1243,20 @@ async function main() {
     await pickImage(userB.page, JPEG_1X1_B64, 'dup-guard.jpg', 'image/jpeg');
     await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
     const submitClickPromise = submitPost(userB.page);
+    // Correction pass: the button now shows a phase-specific label for an
+    // image submission ("جارٍ رفع الصورة..." while uploading, "جارٍ نشر
+    // المنشور..." once uploads finish and the Firestore write is underway)
+    // instead of one generic "جارٍ النشر..." string — either phase string
+    // is valid evidence of "real, honest feedback and disabled," since
+    // which one is captured depends on exactly when this poll fires
+    // relative to the upload's own progress.
     const submitDisabledWhilePending = await userB.page.waitForFunction(
-      () => Array.from(document.querySelectorAll('button')).some(b => b.textContent === 'جارٍ النشر...' && b.disabled),
+      () => Array.from(document.querySelectorAll('button')).some(
+        b => (b.textContent === 'جارٍ رفع الصورة...' || b.textContent === 'جارٍ نشر المنشور...') && b.disabled,
+      ),
       undefined, { timeout: 3000 },
     ).then(() => true, () => false);
-    assertValue('U-DUPLICATE the publish button shows real feedback ("جارٍ النشر...") and is disabled while the upload+publish is pending', submitDisabledWhilePending, true);
+    assertValue('U-DUPLICATE the publish button shows real, phase-specific feedback ("جارٍ رفع الصورة..." / "جارٍ نشر المنشور...") and is disabled while the upload+publish is pending', submitDisabledWhilePending, true);
     await submitClickPromise;
     await userB.page.waitForFunction(() => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 });
 
@@ -1339,6 +1364,206 @@ async function main() {
       })();
       assertValue('U-DELETE-DENIED the real files are STILL present in Storage afterward — the denial was real, not merely reported', stillPresentCount, 2);
     }
+
+    console.log('\n=== 14i. Composer audit: image-only publish is independently valid (correction pass) ===');
+    // Root cause of the pre-fix defect: PostComposer.tsx's own canSubmit was
+    // `text.trim().length > 0 && !submitting` — it ignored imageFile
+    // entirely, so a valid, ready-to-publish image with no text could never
+    // enable the publish button. The fix is `(hasValidText ||
+    // hasValidImage) && !submitting`, mirrored server-side in
+    // firestore.rules (text may be empty when mediaType == 'image', but a
+    // text-only post's text must still be genuinely non-whitespace). Every
+    // assertion below drives the REAL composer UI, not an admin bypass.
+
+    await resetPostRateLimit(userB.uid);
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+
+    const publishButton = () => userB.page.locator('button').filter({ hasText: /^نشر$/ });
+
+    const emptyComposerDisabled = await publishButton().isDisabled();
+    assertValue('IMG1 an entirely empty composer (no text, no image) keeps the publish button disabled', emptyComposerDisabled, true);
+
+    await pickImage(userB.page, JPEG_1X1_B64, 'image-only.jpg', 'image/jpeg');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+
+    const enabledAfterImageOnly = await publishButton().isDisabled().then(disabled => !disabled);
+    assertValue('IMG2 selecting a valid image with EMPTY text enables the publish button — the core correction-pass fix', enabledAfterImageOnly, true);
+
+    const readinessTextShown = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('الصورة جاهزة للنشر') ?? false, undefined, { timeout: 5000 },
+    ).then(() => true, () => false);
+    assertValue('IMG3 an honest "الصورة جاهزة للنشر" readiness status appears once the image is locally ready (not yet uploaded)', readinessTextShown, true);
+
+    await userB.page.locator('button[aria-label="إزالة الصورة"]').click();
+    const disabledAfterRemovingOnlyImage = await publishButton().isDisabled();
+    assertValue('IMG4 removing the ONLY image (with text still empty) disables the publish button again', disabledAfterRemovingOnlyImage, true);
+
+    // Text present + image removed -> still publishable via text alone.
+    await userB.page.locator('textarea').fill(`نص فقط بدون صورة ${Date.now()}`);
+    const enabledWithTextOnly = await publishButton().isDisabled().then(disabled => !disabled);
+    assertValue('IMG5 with text present, the publish button is enabled even with no image selected (unaffected by the image-only fix)', enabledWithTextOnly, true);
+    await userB.page.locator('textarea').fill('');
+
+    // Re-pick for the actual image-only publish below.
+    await pickImage(userB.page, JPEG_1X1_B64, 'image-only-2.jpg', 'image/jpeg');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+    await submitPost(userB.page);
+    const imageOnlyPublished = await userB.page.waitForFunction(
+      () => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 },
+    ).then(() => true, () => false);
+    assertValue('IMG6 an image-only post (no text at all) publishes successfully end-to-end', imageOnlyPublished, true);
+
+    const imageOnlyPostId = await findLatestPostIdByAuthor(userB.uid);
+    assertValue('IMG6b the image-only post document was actually created', imageOnlyPostId !== null, true);
+
+    if (imageOnlyPostId) {
+      const imageOnlyDoc = await readPostAdmin(imageOnlyPostId);
+      assertValue('IMG7 the created post has mediaType "image"', imageOnlyDoc.data()?.mediaType, 'image');
+      assertValue('IMG7b the created post\'s text is genuinely empty, not a placeholder string', imageOnlyDoc.data()?.text, '');
+
+      const noEmptyParagraph = await userB.page.evaluate(() =>
+        !Array.from(document.querySelectorAll('p')).some(p => (p.textContent ?? '').trim() === ''),
+      );
+      assertValue('IMG8 the post-detail screen renders NO empty <p> element for the missing text (no meaningless empty paragraph)', noEmptyParagraph, true);
+
+      const detailImageStillDecodes = await userB.page.waitForFunction(
+        () => {
+          const img = document.querySelector('main img, div img') as HTMLImageElement | null;
+          return !!img && img.complete && img.naturalWidth > 0;
+        },
+        undefined, { timeout: 8000 },
+      ).then(() => true, () => false);
+      assertValue('IMG9 the image-only post\'s image still genuinely decodes on its own detail page', detailImageStillDecodes, true);
+
+      // Post-like and comment regression on an image-only post specifically
+      // — the like/comment systems must not assume post.text is non-empty.
+      const likeButtonBefore = await userB.page.locator('button[aria-label="أعجبني هذا المنشور"]').click().then(() => true, () => false);
+      assertValue('IMG10 the real like button on an image-only post\'s detail page is clickable', likeButtonBefore, true);
+      // Reuses the file's own waitUntilE2E polling helper (defined above,
+      // already used by the likes/cleanup sections earlier in this suite)
+      // instead of a duplicated inline poll — same bounded-timeout, exact-
+      // condition polling, just not reimplemented a second time.
+      const likeLandedOnImageOnly = await waitUntilE2E(
+        async () => ((await readPostAdmin(imageOnlyPostId)).data()?.likesCount ?? 0) >= 1,
+        10000,
+      );
+      assertValue('IMG11 liking an image-only post genuinely lands server-side (likesCount >= 1)', likeLandedOnImageOnly, true);
+
+      await submitComment(userB.page, `تعليق على منشور صورة فقط ${Date.now()}`);
+      const commentLandedOnImageOnly = await waitUntilE2E(
+        async () => ((await readPostAdmin(imageOnlyPostId)).data()?.commentsCount ?? 0) >= 1,
+        10000,
+      );
+      assertValue('IMG12 commenting on an image-only post genuinely lands server-side (commentsCount >= 1)', commentLandedOnImageOnly, true);
+    }
+
+    console.log('\n--- 14i(ii). Image + optional caption publishes both correctly ---');
+    await resetPostRateLimit(userB.uid);
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+    const captionText = `أي نوع من الموتورات هذا؟ ${Date.now()}`;
+    await userB.page.locator('textarea').fill(captionText);
+    await pickImage(userB.page, PNG_1X1_B64, 'image-caption.png', 'image/png');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+    await submitPost(userB.page);
+    await userB.page.waitForFunction(() => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 });
+    const captionPostId = await findPostIdByText(captionText);
+    assertValue('IMG13 the image+caption post was created', captionPostId !== null, true);
+    if (captionPostId) {
+      const captionDoc = await readPostAdmin(captionPostId);
+      assertValue('IMG14 the image+caption post keeps mediaType "image"', captionDoc.data()?.mediaType, 'image');
+      assertValue('IMG15 the image+caption post\'s text is the real caption, appearing exactly once (not duplicated)', captionDoc.data()?.text, captionText);
+    }
+
+    console.log('\n--- 14i(iii). Duplicate-submission proof: a genuine second real click on the same live button ---');
+    // A unique per-run marker in the TEXT field (not an image-only post) —
+    // deliberately so this section can query Firestore for an EXACT count
+    // of posts carrying this marker, scoped to nothing else. This is the
+    // correction-pass fix for the prior version's weaker proof, which only
+    // checked findLatestPostIdByAuthor's single most-recent post and its
+    // file count — that can never distinguish "exactly one post created"
+    // from "a second post was also created a moment earlier/later by the
+    // same author," since it never queries the total matching set.
+    async function countPostsByAuthorAndText(uid: string, text: string): Promise<number> {
+      let count = 0;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        const snap = await getDocs(
+          query(collection(ctx.firestore(), 'posts'), where('authorId', '==', uid), where('text', '==', text)),
+        );
+        count = snap.size;
+      });
+      return count;
+    }
+    async function findPostIdByAuthorAndText(uid: string, text: string): Promise<string | null> {
+      let result: string | null = null;
+      await testEnv.withSecurityRulesDisabled(async ctx => {
+        const snap = await getDocs(
+          query(collection(ctx.firestore(), 'posts'), where('authorId', '==', uid), where('text', '==', text)),
+        );
+        result = snap.empty ? null : snap.docs[0].id;
+      });
+      return result;
+    }
+
+    await resetPostRateLimit(userB.uid);
+    await backToFeed(userB.page).catch(() => {});
+    await openComposer(userB.page);
+    const dupMarker = `منشور فريد لإثبات منع النقر المزدوج الحقيقي ${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await userB.page.locator('textarea').fill(dupMarker);
+    await pickImage(userB.page, WEBP_1X1_B64, 'image-only-dup.webp', 'image/webp');
+    await userB.page.waitForFunction(() => !!document.querySelector('button[aria-label="إزالة الصورة"]'), undefined, { timeout: 8000 });
+
+    const dupCountBefore = await countPostsByAuthorAndText(userB.uid, dupMarker);
+    assertValue('IMG-DUP-PRE precondition: no post carrying this unique marker exists yet', dupCountBefore, 0);
+
+    const dupButton = publishButton();
+    // The FIRST real click on the real DOM button — this is what actually
+    // starts the upload+publish flow.
+    await dupButton.click();
+    // A SECOND real activation attempt on the exact same live button,
+    // fired immediately, without waiting for the first submission to
+    // settle — a genuine double-click, not merely an inspection of the
+    // disabled attribute afterward. force:true bypasses Playwright's own
+    // actionability wait (which would otherwise simply refuse to click a
+    // disabled/detaching element and never tell us what a real second
+    // click would do); if the click is swallowed, that is the BROWSER's
+    // own native behavior for a disabled <button> (or one that has since
+    // unmounted) receiving a dispatched click — a real observed outcome,
+    // not a gap in this test's coverage. Whatever happens, the backend
+    // cardinality checks below are the actual proof, not this outcome
+    // string alone.
+    const secondClickOutcome = await dupButton.click({ force: true, timeout: 2000 }).then(
+      () => 'delivered' as const,
+      (err: unknown) => `blocked (${String(err).split('\n')[0]})` as const,
+    );
+    console.log(`    second real click attempt on the same button: ${secondClickOutcome}`);
+
+    await userB.page.waitForFunction(() => document.body.textContent?.includes('المنشور') ?? false, undefined, { timeout: 15000 });
+
+    const dupCountAfter = await countPostsByAuthorAndText(userB.uid, dupMarker);
+    assertValue('IMG16 exactly ONE post document exists for this unique marker after a genuine double-click attempt — never zero, never two', dupCountAfter, 1);
+
+    const dupPostId = await findPostIdByAuthorAndText(userB.uid, dupMarker);
+    if (dupPostId) {
+      const dupFileCount = await countMediaFilesAdmin(userB.uid, dupPostId);
+      assertValue('IMG17 exactly 2 Storage objects (1 full image + 1 thumbnail) exist for the surviving post — never 4, which a real duplicate publish would have produced', dupFileCount, 2);
+
+      const dupDoc = await readPostAdmin(dupPostId);
+      assertValue('IMG17b the surviving post genuinely carries this test\'s unique marker (proves it is THIS attempt\'s post, not a stray from elsewhere in the run)', dupDoc.data()?.text, dupMarker);
+    }
+
+    const dupNoErrorRemains = await userB.page.evaluate(() => !(document.body.textContent ?? '').includes('تعذر نشر المنشور'));
+    assertValue('IMG18 no publish-error message remains visible after the double-click attempt settles', dupNoErrorRemains, true);
+
+    // The real, correct "returns to expected state" here is that a
+    // SUCCESSFUL publish navigates away from the composer entirely (see
+    // HomeView.tsx's handlePosted -> setScreen({ name: 'post', ... })) —
+    // there is no idle "نشر" button left to reappear, because the whole
+    // composer (including its textarea) unmounts. Asserting a lingering
+    // idle button would be asserting behavior this app does not have.
+    const composerUnmountedAfterSuccess = await userB.page.locator('textarea').count().then(c => c === 0);
+    assertValue('IMG19 the composer itself is gone (navigated to the post-detail screen) after a successful publish — no stray in-flight button left behind either', composerUnmountedAfterSuccess, true);
 
     console.log('\n=== 15. Image rendering across every Community surface ===');
 

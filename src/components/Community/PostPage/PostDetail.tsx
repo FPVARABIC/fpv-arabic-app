@@ -104,9 +104,14 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
             <span style={{ fontSize: 12, color: '#94a3b3' }} dir="ltr">{timeAgo(post.createdAt)}</span>
           </div>
 
-          <p style={{ fontSize: 15, color: '#1a2b3c', lineHeight: 1.7, marginBottom: 12, wordBreak: 'break-word' }}>
-            {post.text}
-          </p>
+          {/* Image-only posts have text: '' — an unconditional <p> would
+              render a meaningless empty paragraph. Only render it when
+              there is real text to show. */}
+          {post.text && (
+            <p style={{ fontSize: 15, color: '#1a2b3c', lineHeight: 1.7, marginBottom: 12, wordBreak: 'break-word' }}>
+              {post.text}
+            </p>
+          )}
 
           {post.mediaType === 'image' && post.mediaURL && (
             <>

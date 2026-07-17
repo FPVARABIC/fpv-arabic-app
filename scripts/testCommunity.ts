@@ -446,6 +446,27 @@ console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
   ok('cleanupPostMedia\'s actual delete call really is getFiles + Promise.all(files.map(file => file.delete()...)), matching the corrected comment', /const \[files\] = await getStorage\(\)\.bucket\(\)\.getFiles\(\{ prefix: `\$\{mediaPath\}\/` \}\);/.test(functionsIndexTs) && /await Promise\.all\(files\.map\(file => file\.delete\(\)\.catch/.test(functionsIndexTs));
 }
 
+console.log('\n[24] Image-only publish is independently valid (composer audit correction pass)');
+{
+  ok('PostComposer.tsx derives hasValidText and hasValidImage as two SEPARATE conditions, not one dependent on the other', /const hasValidText = text\.trim\(\)\.length > 0;/.test(postComposerTsx) && /const hasValidImage = imageFile !== null;/.test(postComposerTsx));
+  ok('PostComposer.tsx\'s canSubmit is (hasValidText || hasValidImage) && !submitting — the exact root-cause fix, not hasValidText alone', /const canSubmit = \(hasValidText \|\| hasValidImage\) && !submitting;/.test(postComposerTsx));
+  ok('PostComposer.tsx no longer gates canSubmit on text length alone (the pre-fix defect pattern is fully gone, not merely supplemented)', !/const canSubmit = text\.trim\(\)\.length > 0 && !submitting;/.test(postComposerTsx));
+  ok('PostComposer.tsx\'s textarea placeholder becomes optional/caption-oriented once an image is selected', /imageFile \? 'أضف وصفًا أو سؤالًا للصورة/.test(postComposerTsx));
+  ok('PostComposer.tsx shows an honest "الصورة جاهزة للنشر" readiness status once a valid image is locally ready (and not yet submitting)', /الصورة جاهزة للنشر/.test(postComposerTsx));
+  ok('PostComposer.tsx distinguishes an uploading phase ("جارٍ رفع الصورة...") from a publishing phase ("جارٍ نشر المنشور...") rather than one generic label for every case', /جارٍ رفع الصورة\.\.\./.test(postComposerTsx) && /جارٍ نشر المنشور\.\.\./.test(postComposerTsx));
+  ok('PostComposer.tsx disables the remove-image button while submitting (no conflicting mutation of in-flight state)', /onClick=\{removeImage\}\s*\n\s*disabled=\{submitting\}/.test(postComposerTsx));
+  ok('PostComposer.tsx disables the add/replace-image button while submitting too, not only while validating', /disabled=\{validatingImage \|\| submitting\}/.test(postComposerTsx));
+  ok('PostComposer.tsx wraps its readiness/validation/error status in an aria-live region for screen-reader announcements', /aria-live="polite"/.test(postComposerTsx));
+  ok('PostComposer.tsx\'s image preview alt text is meaningful, not decorative alt=""', /alt="معاينة الصورة المختارة قبل النشر"/.test(postComposerTsx));
+
+  ok('firestore.rules no longer requires text.size() > 0 unconditionally for every post (the pre-fix defect that would deny image-only posts even after the UI fix)', !/request\.resource\.data\.text\.size\(\) > 0\s*\n\s*&& request\.resource\.data\.text\.size\(\) <= 2000/.test(rulesTxt));
+  ok('firestore.rules allows empty text specifically when mediaType == "image" (image-only publish, server-side)', /request\.resource\.data\.mediaType == 'image'\s*\n\s*\|\| !request\.resource\.data\.text\.matches\('\^\\\\s\*\$'\)/.test(rulesTxt));
+  ok('firestore.rules still requires genuinely non-whitespace text for a text-only post (mediaType != "image") via a whole-string whitespace regex, not merely text.size() > 0', /matches\('\^\\\\s\*\$'\)/.test(rulesTxt));
+
+  ok('PostCard.tsx (shared by feed/search/profile/saved) only renders the post-text paragraph when there is real text — no meaningless empty <p> for image-only posts', /\{post\.text && \(/.test(postCardTsx) && /Image-only posts have text: ''/.test(postCardTsx));
+  ok('PostDetail.tsx only renders the post-text paragraph when there is real text — same fix as PostCard.tsx', /\{post\.text && \(/.test(postDetailTsx) && /Image-only posts have text: ''/.test(postDetailTsx));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');

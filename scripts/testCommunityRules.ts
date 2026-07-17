@@ -183,6 +183,35 @@ async function main() {
       mediaHeight: 1000,
     })));
 
+  // Correction pass — image-only publish: an image post's text may be
+  // completely empty (the image itself is valid content on its own), which
+  // requires a genuinely different rule branch than P2 above (P2 still
+  // carries validPostDoc's own default non-empty text). This is the exact
+  // server-side counterpart to PostComposer.tsx's canSubmit fix.
+  await record('P2b image post with EMPTY text is allowed — image-only publishing', 'allow', () =>
+    setDoc(doc(asA.firestore(), 'posts/post-p2b-image-only'), validPostDoc('uidA', {
+      text: '',
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 400 * 1024,
+      mediaPath: 'community/posts/uidA/post-p2b-image-only',
+      mediaWidth: 1600,
+      mediaHeight: 1000,
+    })));
+
+  await record('P2c image post with a non-empty caption is allowed (image + optional text together)', 'allow', () =>
+    setDoc(doc(asA.firestore(), 'posts/post-p2c-image-caption'), validPostDoc('uidA', {
+      text: 'أي نوع من الموتورات هذا؟',
+      mediaType: 'image',
+      mediaURL: 'https://firebasestorage.googleapis.com/fake-full.jpg',
+      thumbnailURL: 'https://firebasestorage.googleapis.com/fake-thumb.jpg',
+      mediaSize: 400 * 1024,
+      mediaPath: 'community/posts/uidA/post-p2c-image-caption',
+      mediaWidth: 1600,
+      mediaHeight: 1000,
+    })));
+
   // Comment creation moved entirely to the createComment Cloud Function
   // (Phase 6 correction) — even a well-formed, otherwise-legitimate direct
   // client comment create must now be denied. See section 16 below for the
@@ -292,6 +321,24 @@ async function main() {
 
   await record('reject post text over 2000 chars', 'deny', () =>
     setDoc(doc(asB.firestore(), 'posts/post-oversized'), validPostDoc('uidB', { text: 'ا'.repeat(2001) })));
+
+  console.log('\n=== 4b. Empty/whitespace-only text — image-only publish correction pass ===');
+
+  await record('reject a completely empty post (mediaType none, text empty) — no image and no text is not valid content', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-empty'), validPostDoc('uidB', { text: '' })));
+
+  await record('reject a text-only post whose text is whitespace-only (a single space) — meaningless content, not merely "non-zero length"', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-whitespace-only'), validPostDoc('uidB', { text: ' ' })));
+
+  await record('reject a text-only post whose text is multiple whitespace characters (spaces/tabs/newlines only)', 'deny', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-whitespace-only-2'), validPostDoc('uidB', { text: '   \t\n  ' })));
+
+  // Uses asB, not asA — uidA was deliberately rate-limited by the "Rate-limit
+  // distance" section above (its lastPostAt was bumped to simulate "just
+  // posted"), and this is an ALLOW case that must not collide with an
+  // unrelated, already-tested rate-limit denial.
+  await record('allow a text-only post whose text has LEADING/TRAILING whitespace around real content (the content itself is meaningful; Rules only reject ALL-whitespace text)', 'allow', () =>
+    setDoc(doc(asB.firestore(), 'posts/post-p2d-padded-text'), validPostDoc('uidB', { text: '  محتوى حقيقي  ' })));
 
   console.log('\n=== 5. Wrong mediaPath ===');
 

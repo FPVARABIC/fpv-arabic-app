@@ -93,9 +93,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
         document.body,
       )}
 
-      <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word' }}>
-        {post.text}
-      </p>
+      {/* Image-only posts have text: '' — an unconditional <p> would render
+          a meaningless empty paragraph (extra vertical space, nothing to
+          read). Only render it when there is real text to show. */}
+      {post.text && (
+        <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word' }}>
+          {post.text}
+        </p>
+      )}
 
       {post.mediaType === 'image' && post.thumbnailURL && (
         <div style={{
