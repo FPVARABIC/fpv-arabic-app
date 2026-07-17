@@ -193,7 +193,8 @@ service cloud.firestore {
                          'authorId', 'authorName', 'authorPhoto', 'text', 'category',
                          'mediaType', 'mediaURL', 'thumbnailURL', 'mediaSize', 'mediaDuration', 'mediaPath',
                          'mediaWidth', 'mediaHeight',
-                         'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount'
+                         'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount',
+                         'feedScore', 'feedScoreComputedAt', 'feedScoreFrozen'
                        ])
                     && request.resource.data.authorId == request.auth.uid
                     && request.resource.data.authorName == callerProfile().displayName
@@ -237,6 +238,27 @@ service cloud.firestore {
                     // it post-creation, via the Admin SDK, which bypasses these
                     // Rules by design.
                     && request.resource.data.likesCount == 0
+                    // Feed ranking (Phase 2) — feedScore starts at a fixed,
+                    // Rules-validated constant (the freshness(0) value from
+                    // the approved ranking formula), never a client-computed
+                    // engagement value: this is shape-trust, not
+                    // derivation-trust, the same model already used for
+                    // searchTokens/likesCount above. feedScoreComputedAt and
+                    // feedScoreFrozen have no legitimate value at creation
+                    // time (the scheduled recomputeFeedScores Function hasn't
+                    // run yet) — a client is allowed to omit them entirely,
+                    // but if either is present at all, it must be exactly the
+                    // "not yet computed" default, never a forged non-null
+                    // timestamp or a forged true.
+                    && request.resource.data.feedScore == 100
+                    && (
+                         !('feedScoreComputedAt' in request.resource.data)
+                         || request.resource.data.feedScoreComputedAt == null
+                       )
+                    && (
+                         !('feedScoreFrozen' in request.resource.data)
+                         || request.resource.data.feedScoreFrozen == false
+                       )
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.searchTokens is list
                     && request.resource.data.searchTokens.size() <= 30
@@ -287,6 +309,14 @@ service cloud.firestore {
                          request.time > callerProfile().lastPostAt + duration.value(60, 's')
                        );
 
+      // feedScore / feedScoreComputedAt / feedScoreFrozen (Phase 2) have NO
+      // client-writable update path at all — every branch below is an
+      // explicit hasOnly() allow-list, none of which include any of the
+      // three, so a diff touching them is denied by construction, exactly
+      // like likesCount above. The scheduled recomputeFeedScores Cloud
+      // Function is the only thing that ever changes them post-creation,
+      // via the Admin SDK, which bypasses these Rules entirely by design —
+      // the same trust boundary already established for likesCount.
       allow update: if isSignedIn()
                     && (
                          // owner soft-deletes their own post — status only, and only to 'deleted'

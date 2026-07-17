@@ -54,6 +54,10 @@ const migrationProdTs = readFileSync(join(ROOT, 'functions/scripts/migrateDispla
 const homeViewTsx = readFileSync(join(ROOT, 'src/views/HomeView.tsx'), 'utf8');
 const bottomNavTsx = readFileSync(join(ROOT, 'src/components/BottomNavigation.tsx'), 'utf8');
 const mediaUploaderTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/MediaUploader.tsx'), 'utf8');
+const feedRankingTs = readFileSync(join(ROOT, 'functions/src/feedRanking.ts'), 'utf8');
+const useFeedTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useFeed.ts'), 'utf8');
+const feedDiversityTs = readFileSync(join(ROOT, 'src/components/Community/utils/feedDiversity.ts'), 'utf8');
+const indexesJson = readFileSync(join(ROOT, 'firestore.indexes.json'), 'utf8');
 const postComposerTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/PostComposer.tsx'), 'utf8');
 const imageLightboxTsx = readFileSync(join(ROOT, 'src/components/Community/ImageLightbox.tsx'), 'utf8');
 const storageRulesTxt = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
@@ -467,6 +471,44 @@ console.log('\n[24] Image-only publish is independently valid (composer audit co
   ok('PostDetail.tsx only renders the post-text paragraph when there is real text — same fix as PostCard.tsx', /\{post\.text && \(/.test(postDetailTsx) && /Image-only posts have text: ''/.test(postDetailTsx));
 }
 
+console.log('\n[25] Community feed ranking (Phase 2)');
+{
+  ok('types.ts declares feedScore, feedScoreComputedAt, and feedScoreFrozen on Post', /feedScore\?: number;/.test(typesTs) && /feedScoreComputedAt\?: Timestamp \| null;/.test(typesTs) && /feedScoreFrozen\?: boolean;/.test(typesTs));
+
+  ok('firestore.rules\' post-create allow-list includes all three new feedScore* fields', /'feedScore', 'feedScoreComputedAt', 'feedScoreFrozen'/.test(rulesTxt));
+  ok('firestore.rules requires feedScore == 100 exactly at creation (the approved formula\'s freshness(0) constant, never a client-computed value)', /request\.resource\.data\.feedScore == 100/.test(rulesTxt));
+  ok('firestore.rules allows feedScoreComputedAt to be absent OR null at creation, never a forged timestamp', /!\('feedScoreComputedAt' in request\.resource\.data\)\s*\n\s*\|\| request\.resource\.data\.feedScoreComputedAt == null/.test(rulesTxt));
+  ok('firestore.rules allows feedScoreFrozen to be absent OR false at creation, never a forged true', /!\('feedScoreFrozen' in request\.resource\.data\)\s*\n\s*\|\| request\.resource\.data\.feedScoreFrozen == false/.test(rulesTxt));
+  ok('firestore.rules documents that feedScore has no client-writable update path at all (same trust boundary as likesCount)', /feedScore \/ feedScoreComputedAt \/ feedScoreFrozen \(Phase 2\) have NO/.test(rulesTxt));
+
+  ok('firestore.indexes.json includes the status+feedScore+createdAt composite index for the ranked default feed query', /"fieldPath": "feedScore", "order": "DESCENDING"/.test(indexesJson) && /"fieldPath": "createdAt", "order": "DESCENDING"/.test(indexesJson));
+  ok('firestore.indexes.json includes the status+feedScoreFrozen+feedScore composite index for the scheduled recompute function\'s own query', /"fieldPath": "feedScoreFrozen", "order": "ASCENDING"/.test(indexesJson));
+
+  ok('feedRanking.ts exports the exact approved constants: 40h momentum window, 9-day recompute horizon, 2h velocity window', /MOMENTUM_WINDOW_HOURS = 40/.test(feedRankingTs) && /RECOMPUTE_HORIZON_MS = 9 \* 24 \* 60 \* 60 \* 1000/.test(feedRankingTs) && /VELOCITY_WINDOW_MS = 2 \* 60 \* 60 \* 1000/.test(feedRankingTs));
+  ok('feedRanking.ts\'s freshness() uses the corrected ^1.5 exponent, not a linear fade', /Math\.pow\(remaining, 1\.5\)/.test(feedRankingTs));
+  ok('feedRanking.ts\'s engagementScore() is sqrt-dampened (anti-gaming), not a raw linear count', /Math\.sqrt\(Math\.max\(0, likesCount\)\)/.test(feedRankingTs) && /Math\.sqrt\(Math\.max\(0, commentsCount\)\)/.test(feedRankingTs));
+  ok('feedRanking.ts\'s velocityBonus() is capped (VELOCITY_CAP=150), never unbounded', /const VELOCITY_CAP = 150;/.test(feedRankingTs) && /Math\.min\(VELOCITY_CAP, raw\)/.test(feedRankingTs));
+  ok('feedRanking.ts\'s computeFeedScore() caps the final result at SCORE_CAP=1000', /Math\.min\(SCORE_CAP, raw\)/.test(feedRankingTs));
+  ok('feedRanking.ts\'s recomputeFeedScoresBatch queries only active, unfrozen posts (bounds the candidate set over time)', /where\('status', '==', 'active'\)/.test(feedRankingTs) && /where\('feedScoreFrozen', '==', false\)/.test(feedRankingTs));
+  ok('feedRanking.ts batches writes in bounded groups (Firestore\'s 500-write batch limit), same pattern as index.ts\'s deleteAllDocsInBatches', /FEED_SCORE_BATCH_SIZE = 500/.test(feedRankingTs));
+
+  ok('functions/src/index.ts wires recomputeFeedScores as a genuine onSchedule export, not deployed automatically by this phase', /export const recomputeFeedScores = onSchedule\('every 10 minutes', /.test(functionsIndexTs));
+
+  ok('useComposer.ts writes feedScore: 100 at post creation (a fixed constant, not an import from functions/src which would pull firebase-admin into the client bundle)', /feedScore: 100,/.test(useComposerTs));
+
+  ok('useFeed.ts\'s unfiltered "all" feed orders by feedScore desc then createdAt desc (the required determinism tiebreaker)', /orderBy\('feedScore', 'desc'\)/.test(useFeedTs) && /orderBy\('createdAt', 'desc'\)/.test(useFeedTs));
+  ok('useFeed.ts fetches a 30-candidate window (3x PAGE_SIZE), the approved candidatePageSize, not the 20-candidate alternative', /CANDIDATE_PAGE_SIZE = 30/.test(useFeedTs));
+  ok('useFeed.ts\'s category-filtered path is unchanged — still plain createdAt-desc, no ranking, no diversity filter (Section M\'s explicit scoping)', /loadChronologicalPage/.test(useFeedTs) && /where\('category', '==', category as PostCategory\)/.test(useFeedTs));
+  ok('useFeed.ts delegates diversity/newest-post-guarantee logic to the Firebase-free utils/feedDiversity module, not reimplemented inline', /from '\.\.\/utils\/feedDiversity'/.test(useFeedTs));
+
+  ok('feedDiversity.ts enforces the approved caps: max 2 posts/author, max 4 posts/category per displayed page', /AUTHOR_DIVERSITY_CAP = 2/.test(feedDiversityTs) && /CATEGORY_DIVERSITY_CAP = 4/.test(feedDiversityTs));
+  ok('feedDiversity.ts\'s greedy fill defers excess candidates rather than discarding them outright', /deferred\.push\(post\);/.test(feedDiversityTs));
+  ok('feedDiversity.ts\'s newest-post guarantee looks for the newest post within the already-fetched stream before falling back to a separately-supplied candidate', /combinedStream\.find\(p => p\.id === newestCandidate\.id\)/.test(feedDiversityTs));
+
+  ok('CommentsList.tsx adds an opt-in "top comments" toggle without changing the default chronological order', /type CommentSortMode = 'oldest' \| 'top';/.test(commentsListTsx) && /useState<CommentSortMode>\('oldest'\)/.test(commentsListTsx));
+  ok('CommentsList.tsx\'s top-comment score uses sqrt(likesCount) with a small per-hour age penalty, never Date.now() or a ref read during render (React purity)', /Math\.sqrt\(comment\.likesCount \?\? 0\) - 0\.02 \* ageHours/.test(commentsListTsx) && /setTopSortComputedAt\(Date\.now\(\)\)/.test(commentsListTsx));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -489,7 +531,12 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('scripts/testCommunity') &&
     !f.startsWith('scripts/seedCommunityEmulator') &&
     f !== 'scripts/migrateDisplayNameNormalized.ts' &&
-    f !== 'scripts/testMediaDeleteRetry.ts', // correction pass: pure-Node unit test for deleteMedia's retry/classification state machine
+    f !== 'scripts/testMediaDeleteRetry.ts' && // correction pass: pure-Node unit test for deleteMedia's retry/classification state machine
+    f !== 'scripts/testFeedRanking.ts' && // Phase 2: pure-Node unit tests for the feed ranking formula
+    f !== 'scripts/testFeedDiversity.ts' && // Phase 2: pure-Node unit tests for the diversity/newest-post-guarantee page assembly
+    f !== 'scripts/migrateFeedScoreBackfill.ts' && // Phase 2: one-time feedScore backfill, same emulator-only pattern as migrateDisplayNameNormalized.ts
+    f !== 'docs/KNOWN_ISSUES.md' && // Phase 2: documents the pagination-mutation limitation
+    f !== 'docs/PRE_LAUNCH_CHECKLIST.md', // Phase 2: defers the pagination-mutation E2E test with an explicit trigger condition
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

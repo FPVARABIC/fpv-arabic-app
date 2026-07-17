@@ -127,6 +127,12 @@ const validPostDoc = (authorId: string, overrides: Record<string, unknown> = {})
   createdAt: serverTimestamp(),
   status: 'active',
   searchTokens: ['منشور', 'تجريبي'],
+  // Feed ranking (Phase 2) — every ALLOW-case post create must now include
+  // this exact constant, or the new rule denies it outright. Included here
+  // in the shared default so every pre-existing ALLOW test in this file
+  // keeps working unchanged; overrides below intentionally omit/replace it
+  // to test the new validation branch itself.
+  feedScore: 100,
   ...overrides,
 });
 
@@ -1049,6 +1055,72 @@ async function main() {
     void _omit;
     return setDoc(doc(asPostCreateLikesCountB.firestore(), 'posts/post-likescount-missing'), withoutLikesCount);
   });
+
+  console.log('\n=== 22. Feed ranking (Phase 2) — feedScore/feedScoreComputedAt/feedScoreFrozen validation ===');
+
+  // Fresh, never-posted uids per the same rationale as section 21 — a
+  // shared uid across many create attempts would risk the real, correct
+  // 60s rate limit masking the SPECIFIC feedScore validation this section
+  // exists to prove.
+  const asFeedScoreA = testEnv.authenticatedContext('uidFeedScoreA');
+  const asFeedScoreB = testEnv.authenticatedContext('uidFeedScoreB');
+  const asFeedScoreC = testEnv.authenticatedContext('uidFeedScoreC');
+  const asFeedScoreD = testEnv.authenticatedContext('uidFeedScoreD');
+  const asFeedScoreE = testEnv.authenticatedContext('uidFeedScoreE');
+  const asFeedScoreF = testEnv.authenticatedContext('uidFeedScoreF');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    for (const [uid, name] of [
+      ['uidFeedScoreA', 'FeedScore Pilot A'], ['uidFeedScoreB', 'FeedScore Pilot B'],
+      ['uidFeedScoreC', 'FeedScore Pilot C'], ['uidFeedScoreD', 'FeedScore Pilot D'],
+      ['uidFeedScoreE', 'FeedScore Pilot E'], ['uidFeedScoreF', 'FeedScore Pilot F'],
+    ]) {
+      await setDoc(doc(db, `users/${uid}`), validUserDoc({ displayName: name }));
+    }
+  });
+
+  await record('FS1 post create with feedScore != 100 (a forged client-computed value) is rejected', 'deny', () =>
+    setDoc(doc(asFeedScoreA.firestore(), 'posts/post-feedscore-forged'), validPostDoc('uidFeedScoreA', {
+      authorName: 'FeedScore Pilot A', feedScore: 999,
+    })));
+
+  await record('FS2 post create with feedScore missing entirely is rejected', 'deny', () => {
+    const { feedScore: _omit, ...withoutFeedScore } = validPostDoc('uidFeedScoreB', { authorName: 'FeedScore Pilot B' });
+    void _omit;
+    return setDoc(doc(asFeedScoreB.firestore(), 'posts/post-feedscore-missing'), withoutFeedScore);
+  });
+
+  await record('FS3 post create with a forged non-null feedScoreComputedAt is rejected', 'deny', () =>
+    setDoc(doc(asFeedScoreC.firestore(), 'posts/post-feedscorecomputedat-forged'), validPostDoc('uidFeedScoreC', {
+      authorName: 'FeedScore Pilot C', feedScoreComputedAt: serverTimestamp(),
+    })));
+
+  await record('FS4 post create with feedScoreComputedAt explicitly null (the only legitimate value at creation) is allowed', 'allow', () =>
+    setDoc(doc(asFeedScoreD.firestore(), 'posts/post-feedscorecomputedat-null'), validPostDoc('uidFeedScoreD', {
+      authorName: 'FeedScore Pilot D', feedScoreComputedAt: null,
+    })));
+
+  await record('FS5 post create with a forged feedScoreFrozen=true is rejected', 'deny', () =>
+    setDoc(doc(asFeedScoreE.firestore(), 'posts/post-feedscorefrozen-forged'), validPostDoc('uidFeedScoreE', {
+      authorName: 'FeedScore Pilot E', feedScoreFrozen: true,
+    })));
+
+  await record('FS6 post create with feedScoreFrozen explicitly false (the only legitimate value at creation) is allowed', 'allow', () =>
+    setDoc(doc(asFeedScoreF.firestore(), 'posts/post-feedscorefrozen-false'), validPostDoc('uidFeedScoreF', {
+      authorName: 'FeedScore Pilot F', feedScoreFrozen: false,
+    })));
+
+  // Update-path proof — feedScore has NO client-writable update path at
+  // all (firestore.rules' own comment on the update rule): every one of
+  // its three OR-branches is an explicit hasOnly() allow-list that does
+  // not include feedScore, so a diff touching it is denied by
+  // construction, exactly like likesCount. This directly exercises that
+  // real behavior rather than just trusting the comment.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'posts/post-feedscore-update-target'), validPostDoc('uidFeedScoreA', { authorName: 'FeedScore Pilot A' }));
+  });
+  await record('FS7 a direct client update attempting to change feedScore post-creation is rejected (no client update path exists)', 'deny', () =>
+    updateDoc(doc(asFeedScoreA.firestore(), 'posts/post-feedscore-update-target'), { feedScore: 500 }));
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

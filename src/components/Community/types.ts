@@ -83,6 +83,26 @@ export interface Post {
   // created before this field existed; every read site must coalesce with
   // `?? 0` rather than assume every document has it.
   likesCount?: number;
+  // Feed ranking (Phase 2). Written as exactly 100 by the client at creation
+  // (firestore.rules validates this literal constant — the same
+  // shape-trust model already used for searchTokens/likesCount, never a
+  // client-computed value), then owned exclusively by the scheduled
+  // recomputeFeedScores Cloud Function (functions/src/index.ts) via the
+  // Admin SDK from that point on, the same trust boundary already
+  // established for Post.likesCount. Absent on any post created before this
+  // field existed — every read site must coalesce with `?? 0` rather than
+  // assume every document has it (a missing feedScore must never be
+  // treated as ranking above a genuinely fresh post's real 100).
+  feedScore?: number;
+  // Null until the scheduled recomputeFeedScores function's first pass
+  // touches this post; Admin-SDK-written only, never client-writable.
+  feedScoreComputedAt?: Timestamp | null;
+  // Set true once a post ages past the scheduled function's recompute
+  // horizon (40h momentum window + 168h decay tail + buffer) and its score
+  // has settled at the permanent decay floor — lets that function's own
+  // candidate query shrink over time instead of re-touching every post ever
+  // created on every run. false at creation; Admin-SDK-written only.
+  feedScoreFrozen?: boolean;
 }
 
 export interface Comment {

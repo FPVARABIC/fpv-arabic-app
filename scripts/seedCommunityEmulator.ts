@@ -137,6 +137,12 @@ async function main() {
         createdAt: serverTimestamp(),
         status: 'active',
         searchTokens: generateSearchTokens(seedPost.text),
+        // Feed ranking (Phase 2) — required on every post now; the default
+        // "all" feed orders by feedScore, and Firestore excludes any
+        // document missing the ordered field entirely from such a query's
+        // results. Without this, every seeded post here would silently
+        // vanish from the feed a manual dev walkthrough is meant to show.
+        feedScore: 100,
       });
 
       postIds.push(postId);

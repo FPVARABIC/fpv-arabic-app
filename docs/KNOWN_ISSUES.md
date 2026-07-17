@@ -70,3 +70,51 @@ wiring it in requires three specific changes, none done yet: (1) add
 `selections.videoSystems`/`selections.videoUnits` from `FinalReportScreen.tsx`.
 Treated as a genuine new scope decision deserving its own review round, not
 rushed in at the end of an already long session.
+
+---
+
+## Community feed pagination can skip a post whose feedScore changes mid-session
+
+**Found during:** Community feed ranking Phase 2 pre-approval review (2026-07-17).
+
+**Symptom:** `useFeed.ts`'s ranked ("all" category) feed paginates via
+`startAfter(cursorSnapshot)`, where `cursorSnapshot` is the raw
+`QueryDocumentSnapshot` from the tail of the previously fetched candidate
+window. If a post's `feedScore` changes (a scheduled `recomputeFeedScores`
+pass, or a like/comment landing) WHILE a user has an open feed session
+spanning more than one page fetch, a post that becomes newly high-scoring
+after the cursor has already passed its old position will not surface in
+that session — it's skipped, not duplicated, until the user does a full
+pull-to-refresh (which re-fetches from the top with no cursor).
+
+**Root cause (verified by tracing the actual cursor mechanics, not
+guessed):** Firestore's `startAfter(documentSnapshot)` uses the field
+values frozen inside that snapshot at fetch time, never a live re-read.
+`loadRankedPage` sets `cursorRef.current = snap.docs[snap.docs.length - 1]`
+once per fetch and never revisits it. A separate, related risk — a post
+held in `carryOverRef` (deferred by the author/category diversity cap)
+being independently re-matched by a LATER fresh query if its score changed
+enough to fall into that query's range, which would show it TWICE — is
+**mitigated** by two layers, not one: an independent review (2026-07-17)
+found that the `seenIdsRef` cross-page dedup-by-id safeguard alone did NOT
+close this specific case, because a stale `carryOverRef` copy and a fresh
+copy of the SAME post can both appear in the SAME call's merged candidate
+stream before either has ever been added to `seenIdsRef`. The fix adds a
+merge-level dedup in `loadRankedPage`: before diversity assembly, any
+carry-over post whose id also appears in the freshly fetched batch is
+dropped in favor of the fresh copy (which reflects live field values, not
+the stale snapshot). `seenIdsRef` then continues to catch the separate
+cross-page case (a post already displayed on an earlier page reappearing
+on a later one) exactly as before. Together the two layers close the
+duplicate-rendering risk fully; the skip-until-refresh risk below is
+unrelated to either layer and remains open.
+
+**Status:** Accepted for the current stage — a single internal tester, ~2
+total posts, no realistic multi-page session exists yet to trigger this in
+practice. The duplicate-rendering risk is mitigated (merge-level dedup +
+`seenIdsRef`, see above); the skip-until-refresh risk is not fixed (it's a
+genuinely separate problem — closing it would require either
+live-re-ranking within an open session or a different cursor strategy,
+both a real design decision, not a small patch). A dedicated E2E test
+simulating a mid-session `feedScore` mutation across two page fetches is
+deferred to `docs/PRE_LAUNCH_CHECKLIST.md` rather than built now.

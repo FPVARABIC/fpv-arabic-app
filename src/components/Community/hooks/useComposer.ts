@@ -104,6 +104,19 @@ export const useComposer = (): UseComposerResult => {
             createdAt: serverTimestamp(),
             status: 'active',
             searchTokens: generateSearchTokens(text),
+            // Feed ranking (Phase 2) — a fixed constant, not a client-
+            // computed engagement value: exactly freshness(0) from the
+            // approved ranking formula (functions/src/feedRanking.ts),
+            // Rules-validated (firestore.rules requires this literal value
+            // on create). feedScoreComputedAt/feedScoreFrozen are
+            // deliberately omitted here — they have no legitimate value
+            // yet (the scheduled recomputeFeedScores Function hasn't run),
+            // and Rules only allow them to be either absent or their
+            // "not yet computed" default. Kept as a literal `100`, not an
+            // import from functions/src, since that module also imports
+            // firebase-admin — a Node-only package that must never end up
+            // in this client bundle.
+            feedScore: 100,
           });
           batch.update(userRef, { lastPostAt: serverTimestamp(), postsCount: increment(1) });
 

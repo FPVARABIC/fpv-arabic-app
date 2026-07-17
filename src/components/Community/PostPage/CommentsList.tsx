@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, Heart } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -71,10 +71,41 @@ const CommentLikeButton: React.FC<CommentLikeButtonProps> = ({ postId, commentId
   );
 };
 
+type CommentSortMode = 'oldest' | 'top';
+
 export const CommentsList: React.FC<CommentsListProps> = ({ postId, comments, onOpenAuthor, onCommentDeleted }) => {
   const { currentUser, isGuest } = useAuthContext();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Feed ranking (Phase 2, Section O) — a pure client-side re-sort of the
+  // comments this component was ALREADY given by usePost.ts; never a new
+  // query, never a schema change. Default stays exactly the existing
+  // chronological (oldest-first) order — "top comments" is strictly opt-in.
+  const [sortMode, setSortMode] = useState<CommentSortMode>('oldest');
+  // Date.now() must never be called during render (React purity rule), and
+  // a ref must never be READ during render either — so the "now" this sort
+  // uses is captured as plain STATE, set only from the toggle button's own
+  // event handler below (an explicitly legitimate place for an impure
+  // read), never computed inline here. null until the user opts into
+  // "top" at least once; "reasonably fresh" is all Section O's tiny
+  // 0.02/hour age penalty needs, not a live-updating clock.
+  const [topSortComputedAt, setTopSortComputedAt] = useState<number | null>(null);
+
+  const sortedComments = useMemo(() => {
+    if (sortMode === 'oldest' || topSortComputedAt === null) return comments;
+    const now = topSortComputedAt;
+    // commentScore = sqrt(likesCount) - 0.02 * ageHours (Section O) — a
+    // small per-hour penalty only to break near-ties between comments with
+    // equal likes; deliberately tiny (0.48/day) so it essentially never
+    // overrides a genuine likesCount lead within a typical comment page's
+    // age spread.
+    const scored = comments.map(comment => {
+      const ageHours = Math.max(0, (now - comment.createdAt.toMillis()) / (60 * 60 * 1000));
+      return { comment, score: Math.sqrt(comment.likesCount ?? 0) - 0.02 * ageHours };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map(s => s.comment);
+  }, [comments, sortMode, topSortComputedAt]);
 
   const handleGuestLikeTap = () => {
     setToast('يجب تسجيل الدخول للإعجاب');
@@ -97,7 +128,36 @@ export const CommentsList: React.FC<CommentsListProps> = ({ postId, comments, on
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {comments.map(comment => {
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => setSortMode('oldest')}
+          aria-pressed={sortMode === 'oldest'}
+          style={{
+            fontSize: 12, fontWeight: sortMode === 'oldest' ? 700 : 400,
+            color: sortMode === 'oldest' ? '#0e7c86' : '#94a3b3',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+          }}
+        >
+          الأقدم أولاً
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setTopSortComputedAt(Date.now());
+            setSortMode('top');
+          }}
+          aria-pressed={sortMode === 'top'}
+          style={{
+            fontSize: 12, fontWeight: sortMode === 'top' ? 700 : 400,
+            color: sortMode === 'top' ? '#0e7c86' : '#94a3b3',
+            background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+          }}
+        >
+          الأعلى تقييماً
+        </button>
+      </div>
+      {sortedComments.map(comment => {
         const isOwn = !!currentUser && comment.authorId === currentUser.uid;
         return (
           <div key={comment.id} style={{ display: 'flex', gap: 8 }}>

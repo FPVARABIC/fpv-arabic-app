@@ -15,10 +15,12 @@
  */
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
+import { recomputeFeedScoresBatch } from './feedRanking';
 
 initializeApp();
 const db = getFirestore();
@@ -438,3 +440,17 @@ export const cleanupPostMedia = onDocumentUpdated(
     }
   },
 );
+
+// Community feed ranking (Phase 2) — recomputes every active, not-yet-
+// frozen post's feedScore on a fixed schedule (see feedRanking.ts for the
+// formula and batch job itself; this export is only the thin scheduling
+// wrapper). NOT deployed to production yet per this phase's explicit
+// instruction — build/test locally and against the emulator only, until
+// the project's billing plan upgrade completes. The exported
+// recomputeFeedScoresBatch function is what tests call directly (passing
+// an emulator-connected Firestore instance and an injectable `now`),
+// bypassing the need to actually trigger Cloud Scheduler at all.
+export const recomputeFeedScores = onSchedule('every 10 minutes', async () => {
+  const result = await recomputeFeedScoresBatch(db);
+  console.log(`[recomputeFeedScores] updated=${result.updatedCount} frozen=${result.frozenCount}`);
+});

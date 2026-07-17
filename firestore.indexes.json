@@ -49,6 +49,24 @@
       "fields": [
         { "fieldPath": "followedId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "feedScore", "order": "DESCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "feedScoreFrozen", "order": "ASCENDING" },
+        { "fieldPath": "feedScore", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -351,6 +351,14 @@ async function main() {
         text: SEED_POST_TEXT, category: 'questions', mediaType: 'none', mediaURL: null,
         thumbnailURL: null, mediaSize: null, mediaDuration: null, mediaPath: null,
         commentsCount: 0, likesCount: 0, createdAt: serverTimestamp(), status: 'active', searchTokens: ['منشور', 'اختبار'],
+        // Feed ranking (Phase 2) — this fixture is created via a direct
+        // admin-bypass write (not the real composer), so it must set
+        // feedScore itself: the default "all" feed's ranked query orders by
+        // feedScore, and Firestore excludes any document missing the
+        // ordered field entirely from such a query's results — an admin
+        // fixture without this field would silently vanish from the feed
+        // this suite's own openPostByText() looks for it in.
+        feedScore: 100,
       });
     });
 
@@ -768,6 +776,7 @@ async function main() {
         mediaURL: 'https://example-test.invalid/full.jpg', thumbnailURL: 'https://example-test.invalid/thumb.jpg',
         mediaSize: 100000, mediaDuration: null, mediaPath: `community/posts/${IMAGE_POST_ID}`,
         commentsCount: 0, likesCount: 0, createdAt: serverTimestamp(), status: 'active', searchTokens: ['منشور', 'صورة'],
+        feedScore: 100, // Phase 2 — see SEED_POST_ID's own comment above for why this is required on every admin fixture
       });
     });
 
