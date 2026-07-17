@@ -3,23 +3,33 @@ import { AppShell } from '../components/AppShell';
 import { AssemblyLayout } from '../components/Assembly/AssemblyLayout';
 import { AssemblyHome } from '../components/Assembly/AssemblyHome';
 import { BuildFlow } from '../components/Assembly/BuildFlow';
+import { loadAndValidateAssemblyProject, type RestoredAssemblyProject } from '../components/Assembly/utils/assemblyPersistence';
 
-// KNOWN GAP: useAssemblyBuild.ts currently holds build progress in memory
-// only (no localStorage persistence despite the originally-planned
-// 'fpv-assembly-project-v1' key). Navigating away from التجميع via the
-// bottom nav resets any in-progress selection. Fixing this requires a
-// serialization/rehydration strategy for selections.parts (full BasePart
-// objects) — a separate, dedicated task, not bundled into this integration.
+// Persistence (Phase 2): a valid saved project (see
+// components/Assembly/utils/assemblyPersistence.ts) is restored once, here,
+// at the initial screen-state decision — read synchronously in the
+// useState lazy initializer below, so a page refresh (or simply navigating
+// back to التجميع via the bottom nav) lands the user directly back inside
+// their in-progress build instead of AssemblyHome. An invalid/corrupt/
+// stale save (see that file's validation) resolves to `null` here, which
+// falls through to the same clean AssemblyHome start as a brand-new user.
 //
 // The "تغيير نوع الدرون" link inside BuildFlow calls onChangeType below to
 // return here directly, without relying on stage-index navigation (which
 // still can't represent "go to AssemblyHome" — see BuildFlow.tsx's fixed
-// stage-1 dead-end, now bypassed rather than fixed at its root).
+// stage-1 dead-end, now bypassed rather than fixed at its root). It also
+// clears the persisted project itself (see BuildFlow.tsx's
+// handleChangeType), so returning here never leaves stale progress behind.
 
-type Screen = { name: 'home' } | { name: 'flow'; droneTypeId: string };
+type Screen =
+  | { name: 'home' }
+  | { name: 'flow'; droneTypeId: string; restored?: RestoredAssemblyProject };
 
 export const AssemblyView: React.FC = () => {
-  const [screen, setScreen] = useState<Screen>({ name: 'home' });
+  const [screen, setScreen] = useState<Screen>(() => {
+    const restored = loadAndValidateAssemblyProject();
+    return restored ? { name: 'flow', droneTypeId: restored.droneTypeId, restored } : { name: 'home' };
+  });
 
   return (
     <AppShell tint="cyan">
@@ -28,7 +38,11 @@ export const AssemblyView: React.FC = () => {
           <AssemblyHome onSelectType={droneTypeId => setScreen({ name: 'flow', droneTypeId })} />
         )}
         {screen.name === 'flow' && (
-          <BuildFlow droneTypeId={screen.droneTypeId} onChangeType={() => setScreen({ name: 'home' })} />
+          <BuildFlow
+            droneTypeId={screen.droneTypeId}
+            restoredProject={screen.restored}
+            onChangeType={() => setScreen({ name: 'home' })}
+          />
         )}
       </AssemblyLayout>
     </AppShell>

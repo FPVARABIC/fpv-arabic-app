@@ -168,10 +168,11 @@ export const frames: Frame[] = [
     specs: { sizeInch: 7, wheelbaseMm: 336, stackSizeMm: '30.5x30.5 / 25.5x25.5 / 20x20', maxPropSizeInch: 8 },
     // batteryVoltages: [4, 6] — a frame has no electrical dependency on
     // battery cell count (FrameSpec has no voltage field, and no
-    // frame-battery compatibility rule exists in compatibility/rules.ts);
-    // every other frame in this file already carries [4, 6] for the same
-    // reason. This entry was the sole outlier, tagged [6] only; corrected
-    // to match the category's own established pattern, not a new claim.
+    // frame-battery compatibility validator exists in
+    // compatibility/validators.ts); every other frame in this file already
+    // carries [4, 6] for the same reason. This entry was the sole outlier,
+    // tagged [6] only; corrected to match the category's own established
+    // pattern, not a new claim.
     compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6] },
     whyChoose: 'إطار 7 إنش مصمم للرحلات الطويلة والمسافات البعيدة، مع تصميم مخصص لوحدة DJI O4 Air Unit Pro ومكان تركيب مخصص لوحدات GPS من سلسلة M1025 — الإطار الوحيد من بين الثلاثة مع اعتبار GPS صريح. يدعم مراوح حتى 8 إنش رغم تصنيفه كـ7 إنش.',
     notFor: 'لا تختاره إذا كنت تبحث عن إطار خفيف للطيران العدواني القريب؛ مصمم للكفاءة والمدى لا السرعة أو الرشاقة.',

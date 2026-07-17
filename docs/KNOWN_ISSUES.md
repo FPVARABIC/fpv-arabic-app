@@ -39,37 +39,40 @@ approved on its own, separate from any feature branch.
 
 ---
 
-## validateVideoSystemVideoUnit exists but is not wired to any UI
+## Video system / video unit cross-check — resolved by the Stage 3 merge, not by wiring a validator
 
 **Found during:** Assembly Part B evidence review (2026-07-07), while
 reconciling A2's expert-rules research with the compatibility engine.
+**Corrected:** Phase 4 GPS/cleanup pass (2026-07-17) — the entry below
+originally described `validateVideoSystemVideoUnit()` as an existing,
+correct, but unwired validator with a 3-step wiring plan. That function no
+longer exists at all, so that plan no longer applies; this entry now
+describes what actually happened instead.
 
-**Symptom:** A user can select an "Analog" video system at stage 3 and then a
-DJI/Walksnail/HDZero-protocol video unit at stage 10 (or any other
-cross-protocol combination) with zero warning anywhere in the app — the
-final compatibility check (stage 17) never flags this mismatch.
+**Original concern:** A user could select an "Analog" video system at the
+old, separate stage-3 and then a DJI/Walksnail/HDZero-protocol video unit at
+the old stage-10 (or any other cross-protocol combination) with zero
+warning anywhere in the app.
 
-**Root cause (verified by tracing the actual call graph, not guessed):**
-`src/data/assembly/compatibility/validators.ts` has a correct
-`validateVideoSystemVideoUnit()` function (compares `protocolOrSystem` on the
-selected `VideoSystem`/`VideoUnit` for equality), but it has zero call sites.
-`src/components/Assembly/utils/buildReport.ts`'s `ReportableSelections`
-interface only has `frame?/motor?/esc?/battery?/propeller?` — no
-`videoSystem`/`videoUnit` fields — and `buildCompatibilityReport()` never
-calls the new validator. `FinalReportScreen.tsx` (the real, live stage-17
-screen) only passes `frame/motor/esc/battery/propeller` into the report
-builder. The other 4 validators (`validateFrameMotor`, `validateMotorBattery`,
-`validateEscBattery`, `validateFramePropeller`) are genuinely wired in and
-visible to users today via this same path — only the video-system/video-unit
-one is missing from it.
+**What actually resolved it:** the two-stage split (a conceptual
+`videoSystems` pick, then a separate concrete `videoUnits` pick) was merged
+into a single stage-3 that selects a concrete video unit directly — see
+`src/data/assembly/buildStages.ts`'s own comment on stage-3. There is no
+longer a separate `videoSystems` selection to cross-check against a
+`videoUnits` selection, so `validateVideoSystemVideoUnit()` was removed
+entirely (not merely left unwired) — confirmed via
+`src/data/assembly/compatibility/validators.ts`'s own trailing comment.
+The original goggles-must-match-system guidance was preserved, just moved:
+it now lives directly in stage-3's `descriptionAr` product copy ("يجب أن
+تكون من نفس نظام نظارتك... فالأنظمة غير متوافقة مع بعضها"), read by the
+user at the moment of selection instead of being cross-checked after the
+fact in the final report.
 
-**Status:** Deferred. The validator itself is correct and already committed;
-wiring it in requires three specific changes, none done yet: (1) add
-`videoSystem?`/`videoUnit?` to `ReportableSelections`, (2) call
-`validateVideoSystemVideoUnit` inside `buildCompatibilityReport()`, (3) pass
-`selections.videoSystems`/`selections.videoUnits` from `FinalReportScreen.tsx`.
-Treated as a genuine new scope decision deserving its own review round, not
-rushed in at the end of an already long session.
+**Status:** Resolved by design, not by implementation. The other 4
+validators (`validateFrameMotor`, `validateMotorBattery`,
+`validateEscBattery`, `validateFramePropeller`) remain genuinely wired in
+via `buildCompatibilityReport()`/`FinalReportScreen.tsx`. No wiring work
+remains for video system/unit — there is nothing left to wire.
 
 ---
 

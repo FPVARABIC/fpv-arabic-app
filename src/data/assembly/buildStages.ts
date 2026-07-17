@@ -14,7 +14,7 @@ import type { BuildStage } from './types';
 export const buildStages: BuildStage[] = [
   { id: 'stage-1',  number: 1,  titleAr: 'اختيار نوع الدرون',            descriptionAr: 'حدد نوع البناء المناسب لهدفك (Freestyle، سباقات، Cinematic...)', partCategory: null },
   // BuildFlow special-cases this stage id — reads from droneSizeOptions.ts / batteryVoltageOptions.ts, not a parts/*.ts array
-  { id: 'stage-2',  number: 2,  titleAr: 'اختيار الحجم',                 descriptionAr: 'حدد حجم الإطار المناسب (3.5 أو 5 أو 7 إنش)', partCategory: null },
+  { id: 'stage-2',  number: 2,  titleAr: 'اختيار الحجم',                 descriptionAr: 'حدد حجم الإطار المناسب — الخيارات المعروضة هنا مبنية على القطع المتوفرة فعلياً لنوع الدرون الذي اخترته', partCategory: null },
   { id: 'stage-3',  number: 3,  titleAr: 'اختيار نظام الفيديو (VTX)',    descriptionAr: 'اختر وحدة بث الفيديو المناسبة — يجب أن تكون من نفس نظام نظارتك (DJI أو Walksnail أو HDZero أو Analog)، فالأنظمة غير متوافقة مع بعضها.', partCategory: 'videoUnits' },
   // BuildFlow special-cases this stage id — reads from droneSizeOptions.ts / batteryVoltageOptions.ts, not a parts/*.ts array
   { id: 'stage-4',  number: 4,  titleAr: 'اختيار فولتية البطارية',       descriptionAr: 'حدد فولتية البطارية (4S أو 6S) التي ستبني عليها', partCategory: null },

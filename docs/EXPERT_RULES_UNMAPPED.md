@@ -2,9 +2,14 @@
 
 22 real, sourced expert-rule insights gathered during A2's part-category
 research (`17-قواعد الخبير-التجميع` in the source workbook) that do not
-currently map onto any of the 5 rules declared in
-`src/data/assembly/compatibility/rules.ts`. Kept here as documented
-reference material — not built into new `CompatibilityRuleId`/validator code.
+currently map onto any of the 4 live compatibility checks implemented in
+`src/data/assembly/compatibility/validators.ts` (`validateFrameMotor`,
+`validateMotorBattery`, `validateEscBattery`, `validateFramePropeller`).
+Kept here as documented reference material — not built into validator code.
+(A separate `compatibility/rules.ts` file used to describe these same 4
+checks in prose; it was removed in the Phase 4 cleanup pass since it had no
+runtime consumers of its own — this document's own reference now points
+directly at the real, live validators instead.)
 
 Forbidden-term substitutions already applied throughout: the Condition column
 and the Valid/Invalid Example columns have each been checked and rephrased

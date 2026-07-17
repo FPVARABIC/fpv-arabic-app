@@ -1,30 +1,14 @@
 import React from 'react';
-import { droneSizeOptions } from '../../data/assembly/droneSizeOptions';
 import { batteryVoltageOptions } from '../../data/assembly/batteryVoltageOptions';
 import { buildStages } from '../../data/assembly/buildStages';
-import { frames } from '../../data/assembly/parts/frames';
-import { motors } from '../../data/assembly/parts/motors';
-import { escs } from '../../data/assembly/parts/escs';
-import { flightControllers } from '../../data/assembly/parts/flightControllers';
-import { receivers } from '../../data/assembly/parts/receivers';
-import { videoUnits } from '../../data/assembly/parts/videoUnits';
-import { gps } from '../../data/assembly/parts/gps';
-import { buzzers } from '../../data/assembly/parts/buzzers';
-import { capacitors } from '../../data/assembly/parts/capacitors';
-import { propellers } from '../../data/assembly/parts/propellers';
-import { batteries } from '../../data/assembly/parts/batteries';
-import { tools } from '../../data/assembly/parts/tools';
 import { StageHeader } from './StageHeader';
 import { PartCardsContainer } from './PartCardsContainer';
 import { StageNavigation } from './StageNavigation';
 import { FinalReportScreen } from './FinalReportScreen';
 import { useAssemblyBuild } from './hooks/useAssemblyBuild';
-import type { BasePart } from '../../data/assembly/types';
-
-const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
-  frames, motors, escs, flightControllers, receivers, videoUnits,
-  gps, buzzers, capacitors, propellers, batteries, tools,
-};
+import { PART_CATEGORY_MAP, clearAssemblyProject, type RestoredAssemblyProject } from './utils/assemblyPersistence';
+import { frameMatchesSize, getAvailableSizeOptions } from './utils/frameSizeMatch';
+import type { Frame } from '../../data/assembly/types';
 
 // Every part category a build cannot be completed without — i.e. all
 // part-backed stages except GPS (stage-10), the only optional one. Stage-4
@@ -101,16 +85,25 @@ const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconK
 interface BuildFlowProps {
   droneTypeId: string;
   onChangeType: () => void;
+  // Present only when AssemblyView restored a saved project matching this
+  // exact droneTypeId (see AssemblyView.tsx); undefined for a fresh manual
+  // drone-type selection from AssemblyHome, which always starts clean.
+  restoredProject?: RestoredAssemblyProject | null;
 }
 
-// Starts at stage index 1 (Stage 2 — Size): Stage 1 (drone type) is already
-// resolved by AssemblyHome before BuildFlow mounts.
-export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType }) => {
+// Starts at stage index 1 (Stage 2 — Size) unless a matching restored
+// project says otherwise: Stage 1 (drone type) is already resolved by
+// AssemblyHome (or by persistence restoration) before BuildFlow mounts.
+export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType, restoredProject }) => {
+  // Defensive re-check, not just trusting the caller: only ever hydrate
+  // from a restored project that genuinely belongs to THIS droneTypeId.
+  const initialRestored = restoredProject && restoredProject.droneTypeId === droneTypeId ? restoredProject : null;
   const { stage, stageIndex, totalStages, selections, goNext, goPrev, selectSize, selectBatteryVoltage, selectPart } =
-    useAssemblyBuild(1);
+    useAssemblyBuild(droneTypeId, initialRestored);
 
   const handleChangeType = () => {
     if (window.confirm('سيتم فقدان اختياراتك الحالية في هذا البناء. هل تريد المتابعة؟')) {
+      clearAssemblyProject();
       onChangeType();
     }
   };
@@ -155,24 +148,40 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
   }
 
   if (stage.id === 'stage-2') {
+    // Only sizes with at least one real, reachable frame for THIS drone type
+    // are offered — droneSizeOptions.ts stays the canonical label/order
+    // source, but getAvailableSizeOptions (single source of truth, shared
+    // with assemblyPersistence.ts's restore validation below) derives the
+    // live subset from the real frame catalog, so a size that would
+    // guarantee an empty frame stage is never selectable in the first place.
+    const availableSizes = getAvailableSizeOptions(droneTypeId);
     return (
       <div>
         <ChangeTypeLink />
         <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
-        <div style={{ padding: '4px 16px', display: 'flex', gap: 8 }}>
-          {droneSizeOptions.map(opt => (
-            <OptionCard
-              key={opt.sizeInch}
-              testId={`assembly-size-${opt.sizeInch}`}
-              label={opt.labelAr}
-              selected={selections.sizeInch === opt.sizeInch}
-              onClick={() => selectSize(opt.sizeInch)}
-              iconKind="size"
-              imagePath={opt.imagePath}
-              placeholderIcon={opt.placeholderIcon}
-            />
-          ))}
-        </div>
+        {availableSizes.length === 0 ? (
+          // Defensive only — every drone type reachable from AssemblyHome
+          // currently has at least one real matching frame; this covers a
+          // future/data-gap drone type rather than a normal selectable path.
+          <p style={{ padding: '8px 16px', fontSize: 13, color: '#7a6a52' }}>
+            لا توجد أحجام إطار متاحة لهذا النوع حالياً.
+          </p>
+        ) : (
+          <div style={{ padding: '4px 16px', display: 'flex', gap: 8 }}>
+            {availableSizes.map(opt => (
+              <OptionCard
+                key={opt.sizeInch}
+                testId={`assembly-size-${opt.sizeInch}`}
+                label={opt.labelAr}
+                selected={selections.sizeInch === opt.sizeInch}
+                onClick={() => selectSize(opt.sizeInch)}
+                iconKind="size"
+                imagePath={opt.imagePath}
+                placeholderIcon={opt.placeholderIcon}
+              />
+            ))}
+          </div>
+        )}
         <StageNavigation canGoPrev canGoNext={selections.sizeInch !== undefined} isLastStage={false} onPrev={goPrev} onNext={goNext} />
       </div>
     );
@@ -228,9 +237,14 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType 
 
   const category = stage.partCategory;
   const parts = category ? (PART_CATEGORY_MAP[category] ?? []) : [];
+  // Stage 2's size is a real, functional constraint on the frames stage
+  // specifically (Phase 3) — the same "not yet chosen -> no filter" pattern
+  // already used for batteryVoltage above. No other category has a
+  // sizeInch-based compatibility field of its own to check here.
   const relevantParts = parts.filter(p =>
     p.compatibilityTags.droneTypes.includes(droneTypeId) &&
-    (!selections.batteryVoltage || p.compatibilityTags.batteryVoltages.includes(selections.batteryVoltage)),
+    (!selections.batteryVoltage || p.compatibilityTags.batteryVoltages.includes(selections.batteryVoltage)) &&
+    (category !== 'frames' || selections.sizeInch === undefined || frameMatchesSize(p as Frame, selections.sizeInch)),
   );
   const selectedPart = category ? selections.parts[category] : undefined;
 

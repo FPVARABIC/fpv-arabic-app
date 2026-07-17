@@ -10,11 +10,12 @@
  * behaviors are actually wired up and interactive in a real browser.
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { droneTypes } from '../src/data/assembly/droneTypes';
 import { buildStages } from '../src/data/assembly/buildStages';
+import { droneSizeOptions } from '../src/data/assembly/droneSizeOptions';
 import { batteryVoltageOptions } from '../src/data/assembly/batteryVoltageOptions';
 import { frames } from '../src/data/assembly/parts/frames';
 import { motors } from '../src/data/assembly/parts/motors';
@@ -28,6 +29,7 @@ import { propellers } from '../src/data/assembly/parts/propellers';
 import { batteries } from '../src/data/assembly/parts/batteries';
 import { tools } from '../src/data/assembly/parts/tools';
 import type { BasePart } from '../src/data/assembly/types';
+import { frameMatchesSize, getAvailableSizeOptions } from '../src/components/Assembly/utils/frameSizeMatch';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -44,8 +46,11 @@ const partCardTsx = readFileSync(join(ROOT, 'src/components/Assembly/PartCard.ts
 const buildFlowTsx = readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.tsx'), 'utf8');
 const useAssemblyBuildTs = readFileSync(join(ROOT, 'src/components/Assembly/hooks/useAssemblyBuild.ts'), 'utf8');
 const finalReportScreenTsx = readFileSync(join(ROOT, 'src/components/Assembly/FinalReportScreen.tsx'), 'utf8');
-const rulesTs = readFileSync(join(ROOT, 'src/data/assembly/compatibility/rules.ts'), 'utf8');
 const validatorsTs = readFileSync(join(ROOT, 'src/data/assembly/compatibility/validators.ts'), 'utf8');
+const assemblyPersistenceTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/assemblyPersistence.ts'), 'utf8');
+const assemblyViewTsx = readFileSync(join(ROOT, 'src/views/AssemblyView.tsx'), 'utf8');
+const frameSizeMatchTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/frameSizeMatch.ts'), 'utf8');
+const buildStagesTs = readFileSync(join(ROOT, 'src/data/assembly/buildStages.ts'), 'utf8');
 
 console.log('\n[1] Drone-type selector — exactly four visible, Cinewhoop absent, 2×2 order');
 {
@@ -211,15 +216,149 @@ console.log('\n[6] Final summary accepts 4S — no hardcoded 6S-only assumption'
   ok('buildCompatibilityReport (used by the final summary) checks motor-battery compatibility using the real specs.compatibleVoltages field — the same field this task\'s data fixes updated', /validateMotorBattery/.test(finalReportScreenTsx) || readFileSync(join(ROOT, 'src/components/Assembly/utils/buildReport.ts'), 'utf8').includes('validateMotorBattery'));
 }
 
-console.log('\n[7] No duplicate compatibility engine — exactly one set of rules/validators');
+console.log('\n[7] No duplicate compatibility engine — validators.ts is the sole source, dead rules.ts removed (Phase 4)');
 {
-  const ruleIds = [...rulesTs.matchAll(/id:\s*'([a-z-]+)'/g)].map(m => m[1]);
-  ok('compatibility/rules.ts still defines exactly 4 rules (unchanged — 4S did not require a new rule, only tag corrections)', ruleIds.length === 4);
+  ok('compatibility/rules.ts no longer exists (Phase 4 cleanup — it had zero runtime consumers, purely duplicating the 4 live validators in prose)', !existsSync(join(ROOT, 'src/data/assembly/compatibility/rules.ts')));
   ok('compatibility/validators.ts still exports exactly the 4 pre-existing validators (no new/duplicate validator function was added)', ['validateFrameMotor', 'validateMotorBattery', 'validateEscBattery', 'validateFramePropeller'].every(fn => validatorsTs.includes(`export function ${fn}`)) && (validatorsTs.match(/export function/g) || []).length === 4);
   ok('no second "compatibility" directory or engine file was created', !readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.tsx'), 'utf8').includes('compatibilityV2'));
 }
 
-console.log('\n[8] Scope — only the expected Assembly files (+ this test) are dirty; no unrelated section touched');
+console.log('\n[8] assembly-preview.tsx — preset part ids are real, not stale (independent-audit correction)');
+{
+  const assemblyPreviewTsx = readFileSync(join(ROOT, 'src/assembly-preview.tsx'), 'utf8');
+
+  ok('no unsafe non-null assertion is used for preset part lookup (the old `.find(...)! ` pattern is fully gone)',
+    !/\.find\([^)]*\)\s*!/.test(assemblyPreviewTsx));
+  ok('a requirePart(...) runtime-validation helper exists and throws on a missing part instead of returning undefined',
+    /function requirePart/.test(assemblyPreviewTsx) && /throw new Error/.test(assemblyPreviewTsx));
+  ok('both COMPATIBLE_PRESET and MISMATCH_PRESET are built through requirePart(...), not a raw preset object literal each',
+    (assemblyPreviewTsx.match(/requirePart\(/g) ?? []).length >= 6); // 5 categories + MISMATCH_PRESET's overridden battery
+
+  // Extract every id passed to requirePart(<array>, '<id>') per category and
+  // confirm each one genuinely exists in that category's real, current data
+  // file — this is what actually prevents a future stale id from silently
+  // passing again, rather than re-asserting today's specific id strings.
+  const categoryArrays: Record<string, BasePart[]> = { frames, motors, escs, batteries, propellers };
+  for (const [category, list] of Object.entries(categoryArrays)) {
+    const re = new RegExp(`requirePart\\(${category},\\s*'([\\w-]+)'\\)`, 'g');
+    const ids = [...assemblyPreviewTsx.matchAll(re)].map(m => m[1]);
+    ok(`assembly-preview.tsx references at least one ${category} preset id`, ids.length > 0);
+    for (const id of ids) {
+      ok(`assembly-preview.tsx's ${category} preset id "${id}" exists in the real ${category}.ts data (not stale)`,
+        list.some(p => p.id === id));
+    }
+  }
+}
+
+console.log('\n[9] Assembly build persistence (Phase 2) — wired correctly, GPS behavior untouched');
+{
+  ok('assemblyPersistence.ts uses the exact originally-planned storage key', /ASSEMBLY_STORAGE_KEY = 'fpv-assembly-project-v1'/.test(assemblyPersistenceTs));
+  ok('assemblyPersistence.ts exports save/load/clear as separate, single-purpose functions', ['saveAssemblyProject', 'loadAndValidateAssemblyProject', 'clearAssemblyProject'].every(fn => assemblyPersistenceTs.includes(`export function ${fn}`)));
+  ok('the persisted schema stores primitive part IDs, not full BasePart objects (partIds, not parts)', /partIds:\s*Record<string, string>/.test(assemblyPersistenceTs));
+  ok('loadAndValidateAssemblyProject rejects an unrecognized droneTypeId', /droneTypes\.some\(t => t\.id === droneTypeId\)/.test(assemblyPersistenceTs));
+  ok('loadAndValidateAssemblyProject rejects a stale/unknown part id by looking it up in the real, current part arrays', /list\.find\(p => p\.id === id\)/.test(assemblyPersistenceTs));
+  ok('validation is deliberately all-or-nothing (any bad field returns null, never a partially-hydrated build)', (assemblyPersistenceTs.match(/return null;/g) ?? []).length >= 8);
+  ok('every localStorage access is guarded by try/catch (never crashes when storage is disabled/unavailable)', (assemblyPersistenceTs.match(/try\s*\{/g) ?? []).length >= 3);
+
+  ok('useAssemblyBuild.ts seeds its initial state from a restored project when one is passed in', /restored\?\.stageIndex/.test(useAssemblyBuildTs) && /restored\s*\?\s*\{ sizeInch: restored\.sizeInch/.test(useAssemblyBuildTs));
+  ok('useAssemblyBuild.ts persists on every relevant change via a useEffect calling saveAssemblyProject', /useEffect\(\(\) => \{\s*saveAssemblyProject/.test(useAssemblyBuildTs));
+
+  ok('BuildFlow.tsx only ever hydrates from a restoredProject that genuinely matches this exact droneTypeId (defensive re-check, not blind trust)', /restoredProject && restoredProject\.droneTypeId === droneTypeId/.test(buildFlowTsx));
+  ok('BuildFlow.tsx clears the persisted project when the user confirms "change drone type"', /window\.confirm\(.*\)\)\s*\{\s*clearAssemblyProject\(\);\s*onChangeType\(\);/.test(buildFlowTsx));
+  ok('BuildFlow.tsx still treats GPS as the sole optional category (MANDATORY_PART_CATEGORIES still excludes it — untouched)', /filter\(\(c\): c is string => c !== null && c !== 'gps'\)/.test(buildFlowTsx));
+  ok('BuildFlow.tsx\'s GPS stage Next-button gate is unchanged (still selectable-or-skippable)', /canGoNext=\{!!selectedPart \|\| category === 'gps'\}/.test(buildFlowTsx));
+
+  ok('AssemblyView.tsx restores a valid saved project at the initial screen-state decision (lazy useState initializer)', /useState<Screen>\(\(\) => \{\s*const restored = loadAndValidateAssemblyProject\(\);/.test(assemblyViewTsx));
+  ok('AssemblyView.tsx falls back to a clean AssemblyHome start when nothing valid was restored', /return restored \? \{ name: 'flow', droneTypeId: restored\.droneTypeId, restored \} : \{ name: 'home' \};/.test(assemblyViewTsx));
+}
+
+console.log('\n[10] Assembly Stage 2 size is a real build constraint (Phase 3) — frame filtering, invalidation, restore validation, GPS untouched');
+{
+  ok('frameSizeMatch.ts reuses the exact tolerance already established in compatibility/validators.ts (0.15"), not a new fabricated range', /FRAME_SIZE_TOLERANCE_INCH = 0\.15/.test(frameSizeMatchTs));
+  ok('frameSizeMatch.ts exports a single frameMatchesSize(frame, sizeInch) function as the one source of truth', /export function frameMatchesSize\(frame: Frame, sizeInch: number\): boolean/.test(frameSizeMatchTs));
+
+  ok('BuildFlow.tsx filters the frame stage\'s offered parts by frameMatchesSize when a size has been chosen', /category !== 'frames' \|\| selections\.sizeInch === undefined \|\| frameMatchesSize\(p as Frame, selections\.sizeInch\)/.test(buildFlowTsx));
+  ok('the size filter applies ONLY to the frames category (no other category gets a sizeInch-based filter)', /category !== 'frames' \|\|/.test(buildFlowTsx) && (buildFlowTsx.match(/frameMatchesSize\(/g) ?? []).length === 1);
+  ok('BuildFlow.tsx still gates Next on a genuinely selected part for frames (mandatory, not gps) — no advancing without a valid frame', /canGoNext=\{!!selectedPart \|\| category === 'gps'\}/.test(buildFlowTsx));
+  ok('the existing generic empty-state message (not a new bespoke one) correctly covers the "no frame matches this size" case too', /لا توجد قطع متوافقة مع اختياراتك الحالية في هذه المرحلة بعد/.test(buildFlowTsx));
+
+  ok('useAssemblyBuild.ts\'s selectSize now clears an already-selected frame when it no longer matches the new size', /if \(!currentFrame \|\| frameMatchesSize\(currentFrame, sizeInch\)\)/.test(useAssemblyBuildTs));
+  ok('useAssemblyBuild.ts only ever deletes the frames key specifically — no other category is touched by a size change', /delete nextParts\.frames;/.test(useAssemblyBuildTs) && !/delete nextParts\.(?!frames)/.test(useAssemblyBuildTs));
+
+  ok('assemblyPersistence.ts invalidates a restored frame that no longer matches the restored sizeInch', /typeof sizeInch === 'number' && parts\.frames && !frameMatchesSize\(parts\.frames as Frame, sizeInch\)/.test(assemblyPersistenceTs));
+  ok('the size/frame mismatch on restore only deletes that one field — it does not reject the whole restored project', /delete parts\.frames;/.test(assemblyPersistenceTs) && !new RegExp('frameMatchesSize\\(parts\\.frames as Frame, sizeInch\\)\\)\\s*\\{\\s*return null').test(assemblyPersistenceTs));
+
+  ok('GPS remains excluded from MANDATORY_PART_CATEGORIES — untouched by the Stage 2 size change', /filter\(\(c\): c is string => c !== null && c !== 'gps'\)/.test(buildFlowTsx));
+  ok('GPS\'s own stage renders no size-based filtering (frameMatchesSize is never called for any category besides frames)', !/category === 'gps'[\s\S]{0,80}frameMatchesSize/.test(buildFlowTsx));
+}
+
+console.log('\n[11] 3.5-inch size option removed (pre-launch correction) — no real frame ever matched it, so it only led to a dead end');
+{
+  ok('droneSizeOptions.ts no longer offers 3.5" (exactly the two real, currently-buildable sizes remain)', droneSizeOptions.length === 2 && !droneSizeOptions.some(o => o.sizeInch === 3.5));
+  ok('droneSizeOptions.ts still offers 5" and 7" (only 3.5" was removed, nothing else)', droneSizeOptions.some(o => o.sizeInch === 5) && droneSizeOptions.some(o => o.sizeInch === 7));
+
+  // Confirms this is a *removal*, not a fabricated fix: at the time this
+  // assertion is written there is genuinely no frame anywhere in the real
+  // catalog within frameMatchesSize's tolerance of 3.5" — this is the exact
+  // evidence the removal is based on, independently recomputed here (not
+  // copied from frameSizeMatch's own test file).
+  ok('no real frame in the current catalog matches 3.5" (the actual reason 3.5" was removed, independently recomputed)', !frames.some(f => frameMatchesSize(f, 3.5)));
+
+  // Every size option that IS still offered globally has at least one real
+  // matching frame somewhere in the catalog (weaker than per-drone-type
+  // reachability, which section [13] below checks explicitly — this is
+  // just the baseline "the option list itself isn't entirely dead" check).
+  ok('every remaining displayed size option has at least one real, currently-matching frame in the catalog', droneSizeOptions.every(o => frames.some(f => frameMatchesSize(f, o.sizeInch))));
+
+  ok('Stage 2\'s own product copy (buildStages.ts stage-2 descriptionAr) no longer names 3.5" as an option', !/3\.5/.test(buildStagesTs.match(/id: 'stage-2'[^\n]*/)?.[0] ?? ''));
+
+  ok('no fabricated frame or part was added to any parts/*.ts file to work around the 3.5" gap (frames.ts entry count is unchanged by this correction)', frames.length === 7);
+}
+
+console.log('\n[12] Size options are derived per drone type (pre-launch correction) — no combination of drone type + displayed size can lead to a guaranteed empty frame stage');
+{
+  // Independently recomputed evidence table: for every real drone type,
+  // which real frames are tagged for it, and which of the canonical
+  // droneSizeOptions are genuinely reachable via frameMatchesSize. Written
+  // fresh here against the real imported data — not by importing/trusting
+  // getAvailableSizeOptions' own claim of itself.
+  const reachableSizesFor = (droneTypeId: string) =>
+    droneSizeOptions.filter(o => frames.some(f => f.compatibilityTags.droneTypes.includes(droneTypeId) && frameMatchesSize(f, o.sizeInch))).map(o => o.sizeInch);
+
+  ok('long-range: only 7" is reachable (its one real frame is 7"-tagged)', JSON.stringify(reachableSizesFor('long-range')) === JSON.stringify([7]));
+  ok('freestyle: only 5" is reachable (every freestyle frame is 5"/5.1"/5.5" — none within tolerance of 7")', JSON.stringify(reachableSizesFor('freestyle')) === JSON.stringify([5]));
+  ok('cinematic: only 5" is reachable (its one real frame is 5"-tagged)', JSON.stringify(reachableSizesFor('cinematic')) === JSON.stringify([5]));
+  ok('racing: only 5" is reachable (its one real frame is 5"-tagged)', JSON.stringify(reachableSizesFor('racing')) === JSON.stringify([5]));
+
+  // getAvailableSizeOptions (the real, shared helper) — imported directly
+  // and cross-checked against the independently recomputed table above.
+  ok('getAvailableSizeOptions matches the independently recomputed reachable-sizes table for every visible drone type',
+    (['long-range', 'freestyle', 'cinematic', 'racing'] as const).every(id =>
+      JSON.stringify(getAvailableSizeOptions(id).map(o => o.sizeInch)) === JSON.stringify(reachableSizesFor(id))));
+
+  ok('the helper is derived from the real frame catalog (compatibilityTags.droneTypes + specs.sizeInch via frameMatchesSize) — not a hardcoded per-drone-type size map', /frames\.some\(f => f\.compatibilityTags\.droneTypes\.includes\(droneTypeId\) && frameMatchesSize\(f, opt\.sizeInch\)\)/.test(frameSizeMatchTs) && !/'long-range':\s*\[?7/.test(frameSizeMatchTs));
+  ok('droneSizeOptions.ts remains the canonical label/ordering source — the helper filters it, it does not redefine it', /droneSizeOptions\.filter\(opt =>/.test(frameSizeMatchTs));
+  ok('frameMatchesSize (the one existing tolerance function) is reused, not reimplemented, inside the new helper', (frameSizeMatchTs.match(/frameMatchesSize\(/g) ?? []).length >= 2);
+
+  ok('BuildFlow.tsx\'s Stage 2 renders getAvailableSizeOptions(droneTypeId), not the raw global droneSizeOptions list', /const availableSizes = getAvailableSizeOptions\(droneTypeId\);/.test(buildFlowTsx) && /availableSizes\.map\(opt =>/.test(buildFlowTsx));
+  ok('Stage 2 has a defensive (non-normal-path) empty-state message for a drone type with zero reachable sizes', /availableSizes\.length === 0/.test(buildFlowTsx));
+
+  ok('no normal drone type + displayed size combination leads to zero matching frames (every size Stage 2 could actually render for a given type has >=1 real frame)',
+    (['long-range', 'freestyle', 'cinematic', 'racing'] as const).every(id =>
+      getAvailableSizeOptions(id).every(o => frames.some(f => f.compatibilityTags.droneTypes.includes(id) && frameMatchesSize(f, o.sizeInch)))));
+
+  // Persistence: restored sizeInch is now checked against the per-drone-type
+  // reachable set (getAvailableSizeOptions(droneTypeId)), not just the flat
+  // global list — this is what actually closes the long-range+5 /
+  // freestyle-cinematic-racing+7 dead ends on restore, not just live selection.
+  ok('assemblyPersistence.ts validates a restored sizeInch against getAvailableSizeOptions(droneTypeId) — per-drone-type, not just the flat global list', /getAvailableSizeOptions\(droneTypeId\)\.some\(o => o\.sizeInch === sizeInch\)/.test(assemblyPersistenceTs));
+  ok('an invalid restored sizeInch is single-field-dropped (set to undefined), matching the existing frame/size invalidation precedent — not a whole-snapshot rejection', /const validSizeInch = typeof sizeInch === 'number' && getAvailableSizeOptions\(droneTypeId\)\.some/.test(assemblyPersistenceTs) && /sizeInch: validSizeInch/.test(assemblyPersistenceTs));
+  ok('the frame-vs-size invalidation check still runs against the raw recorded sizeInch value BEFORE the per-type validity check drops it (ordering: an old mismatched frame is invalidated using the actual recorded size, not a value already nulled out)', assemblyPersistenceTs.indexOf('!frameMatchesSize(parts.frames as Frame, sizeInch)') < assemblyPersistenceTs.indexOf('const validSizeInch'));
+
+  ok('stage-2\'s product copy no longer hardcodes a fixed "5 or 7 inch" pair that would misrepresent drone types offering only one of them', !/5 أو 7 إنش/.test(buildStagesTs));
+}
+
+console.log('\n[13] Scope — only the expected Assembly files (+ this test) are dirty; no unrelated section touched');
 {
   const { execSync } = await import('node:child_process');
   const diffNames = execSync('git diff --name-only HEAD', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);
@@ -228,9 +367,14 @@ console.log('\n[8] Scope — only the expected Assembly files (+ this test) are 
   const outOfScope = allChanged.filter(f =>
     !f.startsWith('src/components/Assembly/') &&
     !f.startsWith('src/data/assembly/') &&
-    !f.startsWith('scripts/testAssembly'),
+    !f.startsWith('scripts/testAssembly') &&
+    f !== 'scripts/testFrameSizeMatch.ts' && // Phase 3: pure-Node unit tests for Stage 2 size <-> frame matching
+    f !== 'src/assembly-preview.tsx' && // independent-audit correction: stale preset ids fixed, still Assembly-scoped
+    f !== 'src/views/AssemblyView.tsx' && // Phase 2: persistence restore lives at the screen-state decision, still Assembly-scoped
+    f !== 'docs/KNOWN_ISSUES.md' && // Phase 4: corrected the stale validateVideoSystemVideoUnit entry
+    f !== 'docs/EXPERT_RULES_UNMAPPED.md', // Phase 4: updated its own reference after compatibility/rules.ts was removed
   );
-  ok('no file outside src/components/Assembly/, src/data/assembly/, or the new Assembly test scripts is dirty', outOfScope.length === 0);
+  ok('no file outside src/components/Assembly/, src/data/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
     f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' ||

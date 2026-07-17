@@ -183,9 +183,9 @@ export const propellers: Propeller[] = [
     brand: 'HQProp',
     specs: { sizeInch: 7, pitchInch: 4.5, bladeCount: 2, material: 'PC', weightG: 6.6 },
     // batteryVoltages: [4, 6] — a propeller has no electrical dependency on
-    // battery cell count (PropellerSpec has no voltage field, and no
-    // propeller-battery compatibility rule exists in compatibility/rules.ts,
-    // only frame-propeller size); every other propeller in this file already
+    // battery cell count (PropellerSpec has no voltage field, and
+    // compatibility/validators.ts only checks propeller-vs-frame size, not
+    // propeller-vs-battery); every other propeller in this file already
     // carries [4, 6] for the same reason. This entry was the sole outlier,
     // tagged [6] only; corrected to match the category's own established
     // pattern, not a new claim.

@@ -72,8 +72,17 @@ async function waitForFinalReport(page: Page, timeout = 5000) {
   );
 }
 
+// "Fresh" now means something real (Phase 2 persistence exists): every
+// existing call site in this file relies on this helper guaranteeing a
+// genuinely clean AssemblyHome start, including when called multiple times
+// against the SAME page/context in a loop (see section [1]) — without
+// explicitly clearing the persisted project first, a prior action earlier
+// in that same context would otherwise restore straight into BuildFlow
+// instead. The extra reload only runs after the persisted key is gone.
 async function freshAssembly(page: Page) {
   await page.goto(`${BASE}/assembly`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => localStorage.removeItem('fpv-assembly-project-v1'));
+  await page.reload({ waitUntil: 'networkidle' });
   await waitForAssemblyHome(page);
 }
 
@@ -136,16 +145,45 @@ async function main() {
       ok('freestyle (left column) sits near the physical-left edge', byId['assembly-drone-type-freestyle'].x < 50);
 
       // Each of the four opens the wizard at the correct stage-2 (size).
-      for (const [id, label] of [
-        ['assembly-drone-type-freestyle', 'Freestyle'],
-        ['assembly-drone-type-cinematic', 'Cinematic'],
-        ['assembly-drone-type-racing', 'سباقات'],
-        ['assembly-drone-type-long-range', 'مدى طويل'],
+      // Pre-launch correction: sizes are now derived per drone type from the
+      // real frame catalog (getAvailableSizeOptions) — freestyle/cinematic/
+      // racing each reach only "5 إنش" today (no real frame near 7" is
+      // tagged for them), long-range reaches only "7 إنش" (its one real
+      // frame is 7"-tagged). Verified live, per type, then driven all the
+      // way to the frame stage to confirm a real frame actually renders —
+      // no normal selectable path reaches the frame empty state.
+      for (const [id, label, expectedSizes, videoUnitName, frameName] of [
+        ['assembly-drone-type-freestyle', 'Freestyle', ['5'], 'DJI O4 Air Unit', 'AOS 5 EVO V1.2 Frame Kit'],
+        ['assembly-drone-type-cinematic', 'Cinematic', ['5'], 'DJI O4 Air Unit Pro', 'AOS 5 V5.1 Frame Kit'],
+        ['assembly-drone-type-racing', 'سباقات', ['5'], 'DJI O4 Air Unit', 'AOS RC 5R V5 Race Frame Kit'],
+        ['assembly-drone-type-long-range', 'مدى طويل', ['7'], 'TBS Unify Pro32 HV MMCX', 'GEPRC MOZ7 V2 Frame Kit'],
       ] as const) {
         await freshAssembly(page);
         await page.locator(`[data-testid="${id}"]`).click();
         await waitForStage(page, 2, 'اختيار الحجم');
         ok(`selecting ${label} opens the build wizard at stage 2 (size)`, true);
+
+        ok(`${label}'s size stage no longer offers "3.5 إنش" (removed — no real frame ever matched it)`, await page.locator('[data-testid="assembly-size-3.5"]').count() === 0);
+        const sizeCards = page.locator('[data-testid^="assembly-size-"]');
+        const renderedSizes = await sizeCards.evaluateAll(els => els.map(el => el.getAttribute('data-testid')!.replace('assembly-size-', '')));
+        ok(`${label}'s size stage renders exactly its reachable size(s) (${expectedSizes.join(',')}) — no unreachable size is offered`, JSON.stringify(renderedSizes) === JSON.stringify([...expectedSizes]));
+
+        // Select the (only) available size, proceed through video unit and
+        // battery voltage, then confirm the frame stage genuinely renders a
+        // real, selectable frame — never the empty state.
+        await page.locator(`[data-testid="assembly-size-${expectedSizes[0]}"]`).click();
+        await clickNext(page);
+        await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+        await page.locator(`text=${videoUnitName}`, { exact: true }).first().click();
+        await clickNext(page);
+        await waitForStage(page, 4, 'اختيار فولتية البطارية');
+        await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+        await clickNext(page);
+        await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+        ok(`${label} + "${expectedSizes[0]} إنش" reaches the frame stage with a real, matching frame offered (not the empty state)`, await page.locator(`text=${frameName}`, { exact: true }).count() === 1);
+        ok(`${label}'s frame stage does NOT show the empty-state message (a real frame is always reachable through this normal path)`, await page.locator('text=لا توجد قطع متوافقة مع اختياراتك الحالية في هذه المرحلة بعد').count() === 0);
+        await page.locator(`text=${frameName}`, { exact: true }).first().click();
+        ok(`${label}'s matching frame is genuinely selectable (Next enabled)`, await page.locator('button', { hasText: 'التالي' }).isEnabled());
       }
 
       // Keyboard activation on a native <button> (Tab + Enter), no mouse.
@@ -456,6 +494,334 @@ async function main() {
       ok('the incompatible 6S-only battery was invalidated by the switch to 4S (Next disabled, nothing selected)', !(await page.locator('button', { hasText: 'التالي' }).isEnabled()));
       ok('only the genuinely 4S-compatible battery is offered at this stage now', await page.locator('text=Tattu R-Line 1550mAh 4S 95C XT60', { exact: true }).count() === 1);
       ok('the invalidated 6S-only battery no longer appears as an offered option', await page.locator(`text=${battery6sName}`, { exact: true }).count() === 0);
+
+      await ctx.close();
+    }
+
+    // ── [5b] Persistence (Phase 2): real refresh restore (incl. GPS), SPA
+    // nav-away-and-back, corrupted/stale saved data fails safe, explicit
+    // reset clears it ──
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      // Real click-through (not a seeded fixture) all the way past the
+      // optional GPS stage, explicitly selecting a GPS module rather than
+      // skipping it, so the actual write-on-interaction path is exercised.
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-freestyle"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      await clickNext(page);
+      await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+      await page.locator('text=DJI O4 Air Unit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 4, 'اختيار فولتية البطارية');
+      await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      await page.locator('text=iFlight XING2 2207 1750KV', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 7, 'اختيار الـESC');
+      await page.locator('text=T-Motor F55A Pro II 55A 4-in-1 ESC', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 8, 'اختيار الـFlight Controller');
+      await page.locator('text=SpeedyBee F405 V4 Flight Controller / Stack', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 9, 'اختيار الـReceiver');
+      await page.locator('text=RadioMaster RP1 V2 ExpressLRS 2.4GHz Nano Receiver', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 10, 'اختيار GPS (اختياري)');
+      await page.locator('text=HGLRC M100 Mini GPS', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+
+      const savedAfterRealClicks = await page.evaluate(() => localStorage.getItem('fpv-assembly-project-v1'));
+      const parsedSaved = savedAfterRealClicks ? JSON.parse(savedAfterRealClicks) : null;
+      ok('a real click-through session writes a saved project to localStorage', parsedSaved !== null);
+      ok('the saved project records the real stage reached (index 10, stage-11)', parsedSaved?.stageIndex === 10);
+      ok('the real, explicitly-selected GPS part id is captured in the saved project (not skipped/omitted)', parsedSaved?.partIds?.gps === 'gps-hglrc-m100-mini-budget');
+      ok('the real frame selection is also captured', parsedSaved?.partIds?.frames === 'frame-aos5-evo-mid');
+
+      // Refresh/restore: a full page reload must land back on the exact
+      // same stage, not AssemblyHome and not stage 1.
+      await page.reload({ waitUntil: 'networkidle' });
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+      ok('a full page refresh restores the exact stage reached (11 — Buzzer), not AssemblyHome', true);
+
+      // Navigate away via a real SPA route change (bottom nav), then back —
+      // this unmounts/remounts AssemblyView exactly like a fresh visit, and
+      // must restore identically to a hard refresh.
+      await page.locator('button, a', { hasText: 'الرئيسية' }).first().click();
+      await page.waitForTimeout(200);
+      await page.locator('button, a', { hasText: 'التجميع' }).first().click();
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+      ok('navigating away to another tab and back to التجميع restores the exact same stage (not just a hard refresh)', true);
+
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+
+      // Corrupted saved data must never crash the UI — it must fail safe
+      // straight back to AssemblyHome.
+      await page.goto(`${BASE}/assembly`, { waitUntil: 'networkidle' });
+      await page.evaluate(() => localStorage.setItem('fpv-assembly-project-v1', '{not valid json'));
+      await page.reload({ waitUntil: 'networkidle' });
+      await waitForAssemblyHome(page);
+      ok('corrupted (malformed JSON) saved data fails safe to a clean AssemblyHome, no crash', true);
+
+      // A stale/unknown part id must be rejected wholesale (not partially
+      // trusted), also falling back to a clean AssemblyHome.
+      await page.evaluate(() => localStorage.setItem('fpv-assembly-project-v1', JSON.stringify({
+        version: 1, droneTypeId: 'freestyle', stageIndex: 5, sizeInch: 5, batteryVoltage: 6,
+        partIds: { frames: 'frame-this-id-no-longer-exists' },
+      })));
+      await page.reload({ waitUntil: 'networkidle' });
+      await waitForAssemblyHome(page);
+      ok('a saved project referencing a stale/unknown part id fails safe to a clean AssemblyHome, no crash', true);
+
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+
+      // Explicit reset ("تغيير نوع الدرون", confirmed) must clear the
+      // persisted project, not merely reset in-memory React state.
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-freestyle"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      page.once('dialog', d => d.accept());
+      await page.locator('button', { hasText: 'تغيير نوع الدرون' }).click();
+      await waitForAssemblyHome(page);
+      const clearedRaw = await page.evaluate(() => localStorage.getItem('fpv-assembly-project-v1'));
+      ok('confirming "change drone type" clears the persisted project entirely (localStorage key is gone)', clearedRaw === null);
+
+      await ctx.close();
+    }
+
+    // ── [5c] Stage 2 size is a real build constraint (Phase 3): frame
+    // filtering, defensive empty-state via injected stale data (pre-launch
+    // correction — every reachable size now genuinely has a real frame, so
+    // this can no longer be triggered through a normal selectable option),
+    // GPS untouched ──
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      // Freestyle + "5 إنش": the two real 5.1"-tagged frames (within
+      // tolerance) must be offered; the 5.5"-tagged frame must not be.
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-freestyle"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      await clickNext(page);
+      await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+      await page.locator('text=DJI O4 Air Unit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 4, 'اختيار فولتية البطارية');
+      await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      ok('a real 5.1"-tagged frame (AOS 5 EVO) IS offered for a "5 إنش" selection (within tolerance)', await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).count() === 1);
+      ok('another real 5.1"-tagged frame (SpeedyBee Mario 5) IS also offered for "5 إنش"', await page.locator('text=SpeedyBee Mario 5 DC O4 Pro Frame', { exact: true }).count() === 1);
+      ok('the real 5.5"-tagged frame (AOS 5.5 EVO) is NOT offered for a "5 إنش" selection (beyond tolerance)', await page.locator('text=AOS 5.5 EVO V1.2 Frame Kit', { exact: true }).count() === 0);
+      await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).first().click();
+      ok('the matching frame is genuinely selectable (Next enabled)', await page.locator('button', { hasText: 'التالي' }).isEnabled());
+
+      // Continue forward to GPS (stage 10) — unaffected by any of this,
+      // still optional with its own normal options.
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      await page.locator('text=iFlight XING2 2207 1750KV', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 7, 'اختيار الـESC');
+      await page.locator('text=T-Motor F55A Pro II 55A 4-in-1 ESC', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 8, 'اختيار الـFlight Controller');
+      await page.locator('text=SpeedyBee F405 V4 Flight Controller / Stack', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 9, 'اختيار الـReceiver');
+      await page.locator('text=RadioMaster RP1 V2 ExpressLRS 2.4GHz Nano Receiver', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 10, 'اختيار GPS (اختياري)');
+      ok('GPS remains untouched by Stage 2 size behavior: its own real options still render', await page.locator('text=HGLRC M100 Mini GPS', { exact: true }).count() === 1);
+      ok('GPS remains optional: Next stays enabled with nothing selected', await page.locator('button', { hasText: 'التالي' }).isEnabled());
+
+      // Defensive empty-state, reached only through injected/stale state —
+      // not a normal selectable path. 'cinewhoop' is a real droneTypeId in
+      // droneTypes.ts (passes structural validation) but is not offered on
+      // AssemblyHome and has zero real frames tagged for it anywhere in the
+      // catalog, so Stage 2 for it has zero reachable sizes: exactly the
+      // "future/data-gap drone type" case the new defensive message exists
+      // for, not something a real user can ever select into today.
+      await page.evaluate(() => {
+        localStorage.setItem('fpv-assembly-project-v1', JSON.stringify({
+          version: 1, droneTypeId: 'cinewhoop', stageIndex: 1, partIds: {},
+        }));
+      });
+      await page.goto(`${BASE}/assembly`);
+      await waitForStage(page, 2, 'اختيار الحجم');
+      ok('a drone type with zero reachable sizes (injected stale state, not normally selectable) shows the defensive "no sizes available" message instead of crashing or rendering a blank grid', await page.locator('text=لا توجد أحجام إطار متاحة لهذا النوع حالياً').count() === 1);
+      ok('no size OptionCard renders for a drone type with zero reachable sizes', await page.locator('[data-testid^="assembly-size-"]').count() === 0);
+      ok('Next stays disabled (no size can ever be chosen for this defensive case)', !(await page.locator('button', { hasText: 'التالي' }).isEnabled()));
+
+      await ctx.close();
+    }
+
+    // ── [5d] GPS coverage (Phase 4): a real GPS selection survives to the
+    // final report AND the copied summary, without affecting the
+    // compatibility score; persistence restores it across refresh and
+    // SPA navigate-away-and-back ──
+    {
+      const ctx = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+        permissions: ['clipboard-read', 'clipboard-write'],
+      });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-freestyle"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      await clickNext(page);
+      await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+      await page.locator('text=DJI O4 Air Unit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 4, 'اختيار فولتية البطارية');
+      await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      await page.locator('text=iFlight XING2 2207 1750KV', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 7, 'اختيار الـESC');
+      await page.locator('text=T-Motor F55A Pro II 55A 4-in-1 ESC', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 8, 'اختيار الـFlight Controller');
+      await page.locator('text=SpeedyBee F405 V4 Flight Controller / Stack', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 9, 'اختيار الـReceiver');
+      await page.locator('text=RadioMaster RP1 V2 ExpressLRS 2.4GHz Nano Receiver', { exact: true }).first().click();
+      await clickNext(page);
+
+      await waitForStage(page, 10, 'اختيار GPS (اختياري)');
+      const gpsName = 'HGLRC M100 Mini GPS';
+      await page.locator(`text=${gpsName}`, { exact: true }).first().click();
+      ok('a real GPS module is genuinely selectable (Next enabled)', await page.locator('button', { hasText: 'التالي' }).isEnabled());
+      await clickNext(page);
+
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+      await page.locator('text=Generic 5V Active Buzzer', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 12, 'اختيار الـCapacitor');
+      await page.locator('text=Low ESR Capacitor 1000uF 35V (Rubycon/Panasonic/Nichicon equivalent)', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 13, 'اختيار المراوح (Props)');
+      await page.locator('text=HQProp ETHiX S5 5x4x3', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 14, 'اختيار البطارية (LiPo)');
+      await page.locator('text=GNB 1100mAh 6S 120C XT60', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 15, 'تجهيز الأدوات');
+      await page.locator('text=Starter FPV Tool Kit', { exact: true }).first().click();
+      await clickNext(page);
+
+      await waitForFinalReport(page);
+      ok('the selected GPS module appears in the final "القطع المختارة" selected-parts summary', (await page.locator('text=القطع المختارة').locator('..').textContent() ?? '').includes(gpsName));
+      // buildCompatibilityReport only ever runs the 4 frame/motor/esc/battery/
+      // propeller checks — GPS was never wired into any of them, so its
+      // presence cannot change scorePercent at all; 100% here proves that,
+      // not merely that the other 4 parts happen to be compatible.
+      ok('a fully-selected, genuinely-compatible build (GPS included) still reaches 100% — GPS is not itself a compatibility-report item', await page.locator('text=100%').count() === 1);
+
+      await page.locator('button', { hasText: 'نسخ ملخص البناء' }).click();
+      const copiedText = await page.evaluate(() => navigator.clipboard.readText());
+      ok('the copied build summary genuinely includes the selected GPS module\'s real name', copiedText.includes(gpsName));
+      ok('the copied build summary labels it under the real "GPS" category label', copiedText.includes('GPS:'));
+
+      // Persistence (Phase 2 mechanism, unmodified): GPS survives a hard
+      // refresh and an SPA navigate-away-and-back, same as any other part.
+      await page.reload({ waitUntil: 'networkidle' });
+      await waitForFinalReport(page);
+      ok('after a full page refresh, the GPS module still appears in the restored final report', await page.locator(`text=${gpsName}`).count() >= 1);
+
+      await page.locator('button, a', { hasText: 'الرئيسية' }).first().click();
+      await page.waitForTimeout(200);
+      await page.locator('button, a', { hasText: 'التجميع' }).first().click();
+      await waitForFinalReport(page);
+      ok('after navigating away and back (SPA route change, not a reload), the GPS module still appears in the restored final report', await page.locator(`text=${gpsName}`).count() >= 1);
+
+      await ctx.close();
+    }
+    {
+      // Skipping GPS entirely must still work end-to-end — GPS remains the
+      // one genuinely optional category.
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-freestyle"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      await clickNext(page);
+      await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+      await page.locator('text=DJI O4 Air Unit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 4, 'اختيار فولتية البطارية');
+      await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      await page.locator('text=iFlight XING2 2207 1750KV', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 7, 'اختيار الـESC');
+      await page.locator('text=T-Motor F55A Pro II 55A 4-in-1 ESC', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 8, 'اختيار الـFlight Controller');
+      await page.locator('text=SpeedyBee F405 V4 Flight Controller / Stack', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 9, 'اختيار الـReceiver');
+      await page.locator('text=RadioMaster RP1 V2 ExpressLRS 2.4GHz Nano Receiver', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 10, 'اختيار GPS (اختياري)');
+      await clickNext(page); // skip entirely, no selection
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+      await page.locator('text=Generic 5V Active Buzzer', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 12, 'اختيار الـCapacitor');
+      await page.locator('text=Low ESR Capacitor 1000uF 35V (Rubycon/Panasonic/Nichicon equivalent)', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 13, 'اختيار المراوح (Props)');
+      await page.locator('text=HQProp ETHiX S5 5x4x3', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 14, 'اختيار البطارية (LiPo)');
+      await page.locator('text=GNB 1100mAh 6S 120C XT60', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 15, 'تجهيز الأدوات');
+      await page.locator('text=Starter FPV Tool Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForFinalReport(page);
+      ok('a build that entirely skips GPS still reaches the final report and 100% (identical score with or without GPS)', await page.locator('text=100%').count() === 1);
+      ok('no GPS row appears anywhere in the selected-parts summary when it was skipped', await page.locator('text=GPS').count() === 0);
 
       await ctx.close();
     }
