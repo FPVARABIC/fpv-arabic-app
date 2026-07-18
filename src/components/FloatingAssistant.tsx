@@ -243,7 +243,10 @@ export const FloatingAssistant: React.FC = () => {
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
-          background: 'linear-gradient(135deg, #0a93b8, #06b6d4)',
+          // Exact match to BottomNavigation.tsx's <nav> background (same
+          // sheen gradient + #5EEAD4 base) so the FAB visually belongs to
+          // the same bottom-bar surface instead of its own distinct brand.
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 12px), #5EEAD4',
           boxShadow: open
             ? '0 0 28px rgba(34,211,238,0.6), 0 6px 20px rgba(0,0,0,0.5)'
             : '0 0 18px rgba(34,211,238,0.4), 0 6px 16px rgba(0,0,0,0.5)',
@@ -253,7 +256,11 @@ export const FloatingAssistant: React.FC = () => {
         onMouseEnter={e => { if (!isDragging) (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 36px rgba(34,211,238,0.75), 0 6px 20px rgba(0,0,0,0.5)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = open ? '0 0 28px rgba(34,211,238,0.6), 0 6px 20px rgba(0,0,0,0.5)' : '0 0 18px rgba(34,211,238,0.4), 0 6px 16px rgba(0,0,0,0.5)'; }}
         aria-label="مساعد FPV">
-        {open ? <X size={22} className="text-white" /> : <QuadcopterIcon size={24} className="text-white" />}
+        {/* Dark icon, not white: the background is now #5EEAD4 (light
+            mint), the exact same color BottomNavigation.tsx pairs with its
+            own dark active-icon tone (#12222a) for contrast — a white icon
+            here would be low-contrast on this lighter background. */}
+        {open ? <X size={22} style={{ color: '#12222a' }} /> : <QuadcopterIcon size={24} style={{ color: '#12222a' }} />}
       </button>
     </>
   );
