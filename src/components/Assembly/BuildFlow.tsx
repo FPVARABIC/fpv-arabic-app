@@ -5,6 +5,7 @@ import { StageHeader } from './StageHeader';
 import { PartCardsContainer } from './PartCardsContainer';
 import { StageNavigation } from './StageNavigation';
 import { FinalReportScreen } from './FinalReportScreen';
+import { FallbackImage } from './FallbackImage';
 import { useAssemblyBuild } from './hooks/useAssemblyBuild';
 import { PART_CATEGORY_MAP, clearAssemblyProject, type RestoredAssemblyProject } from './utils/assemblyPersistence';
 import { frameMatchesSize, getAvailableSizeOptions } from './utils/frameSizeMatch';
@@ -42,7 +43,12 @@ interface OptionCardProps {
 // hardcoded per-option flag; whichever voltage a drone type's real part
 // data doesn't yet cover end-to-end renders disabled, exactly like any
 // other not-yet-buildable option elsewhere in Assembly.
-const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconKind, imagePath, placeholderIcon, disabled, testId }) => (
+// Exported (visibility change only, no behavior change) solely so
+// assembly-preview.tsx's dev-only QA harness can mount it directly with
+// controlled imagePath fixtures — no real size/voltage option has an
+// imagePath yet, so there is no other way to exercise its FallbackImage
+// wiring with a real success/failure image load in a real browser.
+export const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconKind, imagePath, placeholderIcon, disabled, testId }) => (
   <button
     type="button"
     data-testid={testId}
@@ -63,11 +69,11 @@ const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconK
       width: '100%', aspectRatio: '4 / 3', borderRadius: 8, background: '#f5f1e8',
       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, overflow: 'hidden',
     }}>
-      {imagePath ? (
-        <img src={imagePath} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <span>{placeholderIcon ?? OPTION_ICON_DEFAULTS[iconKind]}</span>
-      )}
+      <FallbackImage
+        key={imagePath}
+        imagePath={imagePath}
+        fallback={<span>{placeholderIcon ?? OPTION_ICON_DEFAULTS[iconKind]}</span>}
+      />
       {disabled && (
         <span style={{
           position: 'absolute', top: 4, insetInlineStart: 4,

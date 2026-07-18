@@ -49,6 +49,7 @@ const finalReportScreenTsx = readFileSync(join(ROOT, 'src/components/Assembly/Fi
 const validatorsTs = readFileSync(join(ROOT, 'src/data/assembly/compatibility/validators.ts'), 'utf8');
 const assemblyPersistenceTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/assemblyPersistence.ts'), 'utf8');
 const assemblyViewTsx = readFileSync(join(ROOT, 'src/views/AssemblyView.tsx'), 'utf8');
+const fallbackImageTsx = readFileSync(join(ROOT, 'src/components/Assembly/FallbackImage.tsx'), 'utf8');
 const frameSizeMatchTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/frameSizeMatch.ts'), 'utf8');
 const buildStagesTs = readFileSync(join(ROOT, 'src/data/assembly/buildStages.ts'), 'utf8');
 
@@ -358,7 +359,33 @@ console.log('\n[12] Size options are derived per drone type (pre-launch correcti
   ok('stage-2\'s product copy no longer hardcodes a fixed "5 or 7 inch" pair that would misrepresent drone types offering only one of them', !/5 أو 7 إنش/.test(buildStagesTs));
 }
 
-console.log('\n[13] Scope — only the expected Assembly files (+ this test) are dirty; no unrelated section touched');
+console.log('\n[13] Image rendering fixes (Phase 5A) — OptionCard and FinalReportScreen summary rows use the shared FallbackImage, no broken-image state possible');
+{
+  ok('FallbackImage.tsx exists as a single shared component (not duplicated per call site)', existsSync(join(ROOT, 'src/components/Assembly/FallbackImage.tsx')));
+  ok('FallbackImage renders the caller-supplied fallback whenever imagePath is absent', /if \(!imagePath \|\| failed\)/.test(fallbackImageTsx));
+  ok('FallbackImage tracks its own load-failure state via onError (never a raw unguarded <img>)', /onError=\{\(\) => setFailed\(true\)\}/.test(fallbackImageTsx));
+  ok('FallbackImage preserves the objectFit: cover / 100%x100% sizing contract already used everywhere else in Assembly', /objectFit: 'cover'/.test(fallbackImageTsx) && /width: '100%', height: '100%'/.test(fallbackImageTsx));
+
+  ok('BuildFlow.tsx imports the shared FallbackImage (no separate reimplementation of the same state/onError logic)', /import \{ FallbackImage \} from '\.\/FallbackImage';/.test(buildFlowTsx));
+  ok('OptionCard no longer renders a raw <img> with no onError handling (the old unguarded pattern is fully gone)', !/<img src=\{imagePath\} alt="" style=\{\{ width: '100%', height: '100%', objectFit: 'cover' \}\} \/>/.test(buildFlowTsx));
+  ok('OptionCard passes imagePath through to FallbackImage, keyed so a changed path always retries fresh', /<FallbackImage[\s\S]{0,40}key=\{imagePath\}[\s\S]{0,40}imagePath=\{imagePath\}/.test(buildFlowTsx));
+  ok('OptionCard still falls back to the existing placeholderIcon/category-default emoji (fallback content unchanged)', /fallback=\{<span>\{placeholderIcon \?\? OPTION_ICON_DEFAULTS\[iconKind\]\}<\/span>\}/.test(buildFlowTsx));
+  ok('the disabled "قريباً" badge overlay is untouched by this change (still a sibling inside the same image container)', /قريباً/.test(buildFlowTsx));
+
+  ok('FinalReportScreen.tsx imports the shared FallbackImage', /import \{ FallbackImage \} from '\.\/FallbackImage';/.test(finalReportScreenTsx));
+  ok('the selected-parts summary row now actually reads part.imagePath (the previously-identified gap is closed)', /imagePath=\{part\.imagePath\}/.test(finalReportScreenTsx));
+  ok('the summary row still falls back to part.placeholderIcon ?? DEFAULT_PART_ICON when no real image loads', /fallback=\{<span>\{part\.placeholderIcon \?\? DEFAULT_PART_ICON\}<\/span>\}/.test(finalReportScreenTsx));
+  ok('the summary-row image is keyed by part.imagePath (a different part restoring under the same category key gets a fresh load attempt, not a stale failure state)', /<FallbackImage[\s\S]{0,40}key=\{part\.imagePath\}/.test(finalReportScreenTsx));
+  ok('the summary-row container gained overflow: hidden (needed only once a real <img> can render there; sizing/position otherwise unchanged)', /width: 36, height: 36, borderRadius: 8, background: '#f5f1e8', flexShrink: 0,\s*\n\s*display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden',/.test(finalReportScreenTsx));
+
+  // The hero image block (droneType image at the top of the final report)
+  // is explicitly out of scope for this fix and must be untouched.
+  ok('the hero drone-type image block is untouched (still its own independent imageFailed/showImage state, not migrated to FallbackImage)', /const \[imageFailed, setImageFailed\] = useState\(false\);/.test(finalReportScreenTsx) && /const showImage = !!droneType\?\.imagePath && !imageFailed;/.test(finalReportScreenTsx));
+
+  ok('no business logic, compatibility, persistence, scoring, or stage-order file was touched by this change', !readFileSync(join(ROOT, 'src/components/Assembly/utils/buildReport.ts'), 'utf8').includes('FallbackImage') && !readFileSync(join(ROOT, 'src/data/assembly/compatibility/validators.ts'), 'utf8').includes('FallbackImage'));
+}
+
+console.log('\n[14] Scope — only the expected Assembly files (+ this test) are dirty; no unrelated section touched');
 {
   const { execSync } = await import('node:child_process');
   const diffNames = execSync('git diff --name-only HEAD', { cwd: ROOT }).toString().trim().split('\n').filter(Boolean);

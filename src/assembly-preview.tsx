@@ -3,7 +3,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AssemblyLayout } from './components/Assembly/AssemblyLayout';
 import { AssemblyHome } from './components/Assembly/AssemblyHome';
-import { BuildFlow } from './components/Assembly/BuildFlow';
+import { BuildFlow, OptionCard } from './components/Assembly/BuildFlow';
 import { FinalReportScreen } from './components/Assembly/FinalReportScreen';
 import { frames } from './data/assembly/parts/frames';
 import { motors } from './data/assembly/parts/motors';
@@ -15,7 +15,8 @@ import type { BasePart } from './data/assembly/types';
 type Screen =
   | { name: 'home' }
   | { name: 'flow'; droneTypeId: string }
-  | { name: 'report'; preset: 'compatible' | 'mismatch' };
+  | { name: 'report'; preset: 'compatible' | 'mismatch' }
+  | { name: 'images-qa' };
 
 // Looks up a preset part by id and throws immediately (loud, at module-load
 // time) if the id no longer matches anything in the real data file, instead
@@ -64,6 +65,24 @@ const MISMATCH_PRESET: Record<string, BasePart> = {
   batteries: requirePart(batteries, 'battery-tattu-rline-1550-4s-budget'),
 };
 
+// Phase 5A image-rendering QA fixtures — no real Assembly image asset
+// exists yet (see the Phase 5 audit), so these controlled test paths are
+// the only way to exercise FallbackImage's real success/failure branches
+// in a real browser. REAL_TEST_IMAGE is a genuine, already-on-disk asset
+// unrelated to Assembly (an existing lesson image) used purely as a
+// stand-in "this image actually loads" fixture; BROKEN_TEST_IMAGE is a
+// deliberately nonexistent path. Neither touches any real Assembly data
+// file — this preset only overrides imagePath on local copies of two
+// COMPATIBLE_PRESET parts, purely for this dev-only harness.
+const REAL_TEST_IMAGE = '/assets/lesson-images/lesson-11-frame-assembly.png';
+const BROKEN_TEST_IMAGE = '/assets/assembly/__qa-nonexistent-image.png';
+
+const IMAGE_QA_PRESET: Record<string, BasePart> = {
+  ...COMPATIBLE_PRESET,
+  frames: { ...COMPATIBLE_PRESET.frames, imagePath: REAL_TEST_IMAGE },
+  motors: { ...COMPATIBLE_PRESET.motors, imagePath: BROKEN_TEST_IMAGE },
+};
+
 const PreviewApp = () => {
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
 
@@ -81,6 +100,9 @@ const PreviewApp = () => {
             <button onClick={() => setScreen({ name: 'report', preset: 'mismatch' })} style={{ fontSize: 11, padding: '4px 8px' }}>
               تقرير غير متوافق
             </button>
+            <button data-testid="preview-nav-images-qa" onClick={() => setScreen({ name: 'images-qa' })} style={{ fontSize: 11, padding: '4px 8px' }}>
+              اختبار الصور
+            </button>
           </div>
 
           {screen.name === 'home' && (
@@ -94,6 +116,32 @@ const PreviewApp = () => {
               selections={screen.preset === 'compatible' ? COMPATIBLE_PRESET : MISMATCH_PRESET}
               onBack={() => setScreen({ name: 'home' })}
             />
+          )}
+          {screen.name === 'images-qa' && (
+            <div style={{ padding: 16 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 800, color: '#3a2e1f', margin: '0 0 12px' }}>اختبار عرض الصور (Phase 5A)</h2>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                <OptionCard
+                  testId="qa-option-success"
+                  label="نجاح"
+                  selected={false}
+                  onClick={() => {}}
+                  iconKind="size"
+                  imagePath={REAL_TEST_IMAGE}
+                  placeholderIcon="✅"
+                />
+                <OptionCard
+                  testId="qa-option-broken"
+                  label="فشل"
+                  selected={false}
+                  onClick={() => {}}
+                  iconKind="size"
+                  imagePath={BROKEN_TEST_IMAGE}
+                  placeholderIcon="🔥"
+                />
+              </div>
+              <FinalReportScreen selections={IMAGE_QA_PRESET} onBack={() => setScreen({ name: 'home' })} />
+            </div>
           )}
         </AssemblyLayout>
       </div>

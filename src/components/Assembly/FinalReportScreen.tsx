@@ -3,6 +3,7 @@ import type { BasePart, Frame, Motor, Esc, Battery, Propeller } from '../../data
 import { droneTypes } from '../../data/assembly/droneTypes';
 import { buildStages } from '../../data/assembly/buildStages';
 import { buildCompatibilityReport } from './utils/buildReport';
+import { FallbackImage } from './FallbackImage';
 
 const DEFAULT_REPORT_ICON = '🚁';
 // Same fallback convention as PartCard.tsx — per-category custom icons are
@@ -155,9 +156,13 @@ export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({ selections
               >
                 <div style={{
                   width: 36, height: 36, borderRadius: 8, background: '#f5f1e8', flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden',
                 }}>
-                  {part.placeholderIcon ?? DEFAULT_PART_ICON}
+                  <FallbackImage
+                    key={part.imagePath}
+                    imagePath={part.imagePath}
+                    fallback={<span>{part.placeholderIcon ?? DEFAULT_PART_ICON}</span>}
+                  />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 10.5, color: '#7a6a52' }}>{CATEGORY_LABELS_AR[category] ?? category}</div>
