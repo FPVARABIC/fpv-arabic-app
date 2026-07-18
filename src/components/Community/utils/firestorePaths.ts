@@ -55,6 +55,35 @@ export const followingPath = (uid: string): string =>
 export const followingRelationPath = (followerUid: string, followedUid: string): string =>
   `${followingPath(followerUid)}/${followedUid}`;
 
+// Notifications (Phase 1) — private per-recipient inbox, nested under the
+// recipient's own user document, same "private data -> owner-scoped
+// subcollection" precedent as savedPosts above (never a top-level
+// collection filtered by a recipientId field).
+export const NOTIFICATIONS_SUBCOLLECTION = 'notifications';
+
+export const notificationsPath = (uid: string): string =>
+  `${userPath(uid)}/${NOTIFICATIONS_SUBCOLLECTION}`;
+
+export const notificationPath = (uid: string, notificationId: string): string =>
+  `${notificationsPath(uid)}/${notificationId}`;
+
+// Push device tokens (Phase 1 infra) — same private, owner-scoped
+// subcollection shape as notifications above.
+export const DEVICE_TOKENS_SUBCOLLECTION = 'deviceTokens';
+
+export const deviceTokensPath = (uid: string): string =>
+  `${userPath(uid)}/${DEVICE_TOKENS_SUBCOLLECTION}`;
+
+export const deviceTokenPath = (uid: string, tokenId: string): string =>
+  `${deviceTokensPath(uid)}/${tokenId}`;
+
+// Announcements (Phase 1) — top-level, small-volume, moderator-authored;
+// public to every signed-in user, unlike everything else in this file.
+export const ANNOUNCEMENTS_COLLECTION = 'announcements';
+
+export const announcementPath = (announcementId: string): string =>
+  `${ANNOUNCEMENTS_COLLECTION}/${announcementId}`;
+
 // Storage folder path — matches Firestore Rules' mediaPath ==
 // 'community/posts/' + authorUid + '/' + postId check exactly. The uid
 // segment (Phase 9 fix) is what lets storage.rules enforce "write only

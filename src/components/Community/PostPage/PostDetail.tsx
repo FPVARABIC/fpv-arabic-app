@@ -152,7 +152,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
           )}
 
           <div style={{ marginTop: 12 }}>
-            <PostLikeButton postId={post.id} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} size={18} />
+            <PostLikeButton postId={post.id} authorId={post.authorId} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} size={18} />
           </div>
 
           {toast && createPortal(
@@ -216,7 +216,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
               التعليق يتطلب تسجيل الدخول — القراءة متاحة للجميع
             </p>
           ) : (
-            <CommentInput postId={postId} onCommentAdded={appendCreatedComment} />
+            <CommentInput postId={postId} postAuthorId={post.authorId} onCommentAdded={appendCreatedComment} />
           )}
         </div>
       )}

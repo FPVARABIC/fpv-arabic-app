@@ -1172,6 +1172,289 @@ async function main() {
   await record('FS7 a direct client update attempting to change feedScore post-creation is rejected (no client update path exists)', 'deny', () =>
     updateDoc(doc(asFeedScoreA.firestore(), 'posts/post-feedscore-update-target'), { feedScore: 500 }));
 
+  console.log('\n=== 23. Notifications system (Phase 1, in-app only) — anti-forgery + read-state + deviceTokens + announcements ===');
+
+  // ── 23a. Follow notifications ──────────────────────────────────────────
+  const asFollowNotifA = testEnv.authenticatedContext('uidFollowNotifA');
+  const asFollowNotifB = testEnv.authenticatedContext('uidFollowNotifB');
+  const asFollowNotifNoRel = testEnv.authenticatedContext('uidFollowNotifNoRel');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidFollowNotifA'), validUserDoc({ displayName: 'Follow Notif Pilot A' }));
+    await setDoc(doc(db, 'users/uidFollowNotifB'), validUserDoc({ displayName: 'Follow Notif Pilot B' }));
+    await setDoc(doc(db, 'users/uidFollowNotifNoRel'), validUserDoc({ displayName: 'Follow Notif No-Rel Pilot' }));
+    // Real, already-committed follow relation — the exact proof the create
+    // rule's exists() check demands.
+    await setDoc(doc(db, 'users/uidFollowNotifA/following/uidFollowNotifB'), {
+      followedId: 'uidFollowNotifB', createdAt: serverTimestamp(),
+    });
+  });
+
+  await record('N1 real follow notification (actor really follows recipient) is allowed', 'allow', () =>
+    setDoc(doc(asFollowNotifA.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-real'), {
+      type: 'follow', actorId: 'uidFollowNotifA', actorName: 'Follow Notif Pilot A', actorPhoto: null,
+      targetType: 'profile', targetId: 'uidFollowNotifB', postId: null, read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('N2 forged actorId (claims to be someone other than the caller) is denied', 'deny', () =>
+    setDoc(doc(asFollowNotifA.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-forged-actor'), {
+      type: 'follow', actorId: 'uidFollowNotifNoRel', actorName: 'Follow Notif Pilot A', actorPhoto: null,
+      targetType: 'profile', targetId: 'uidFollowNotifB', postId: null, read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('N3 self-notification (writing into your own inbox as if you followed yourself) is denied', 'deny', () =>
+    setDoc(doc(asFollowNotifA.firestore(), 'users/uidFollowNotifA/notifications/notif-follow-self'), {
+      type: 'follow', actorId: 'uidFollowNotifA', actorName: 'Follow Notif Pilot A', actorPhoto: null,
+      targetType: 'profile', targetId: 'uidFollowNotifA', postId: null, read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('N4 no real following relation exists yet — the exists() proof fails, so this is denied', 'deny', () =>
+    setDoc(doc(asFollowNotifNoRel.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-norel'), {
+      type: 'follow', actorId: 'uidFollowNotifNoRel', actorName: 'Follow Notif No-Rel Pilot', actorPhoto: null,
+      targetType: 'profile', targetId: 'uidFollowNotifB', postId: null, read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('N5 forged actorName (does not match the caller\'s real profile displayName) is denied', 'deny', () =>
+    setDoc(doc(asFollowNotifA.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-forged-name'), {
+      type: 'follow', actorId: 'uidFollowNotifA', actorName: 'Someone Else Entirely', actorPhoto: null,
+      targetType: 'profile', targetId: 'uidFollowNotifB', postId: null, read: false, createdAt: serverTimestamp(),
+    }));
+
+  // ── 23b. Post-like notifications ───────────────────────────────────────
+  const asLikePostNotifA = testEnv.authenticatedContext('uidLikePostNotifA');
+  const asLikePostNotifNoLike = testEnv.authenticatedContext('uidLikePostNotifNoLike');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidLikePostNotifA'), validUserDoc({ displayName: 'Like Post Notif Pilot A' }));
+    await setDoc(doc(db, 'users/uidLikePostNotifB'), validUserDoc({ displayName: 'Like Post Notif Pilot B' }));
+    await setDoc(doc(db, 'users/uidLikePostNotifC'), validUserDoc({ displayName: 'Like Post Notif Pilot C' }));
+    await setDoc(doc(db, 'users/uidLikePostNotifNoLike'), validUserDoc({ displayName: 'Like Post Notif No-Like Pilot' }));
+    await setDoc(doc(db, 'posts/post-likepostnotif-target'), validPostDoc('uidLikePostNotifB', { authorName: 'Like Post Notif Pilot B' }));
+    await setDoc(doc(db, 'posts/post-likepostnotif-target/likes/uidLikePostNotifA'), { createdAt: serverTimestamp() });
+  });
+
+  await record('LP1 real post-like notification (actor really liked the post, recipient really is its author) is allowed', 'allow', () =>
+    setDoc(doc(asLikePostNotifA.firestore(), 'users/uidLikePostNotifB/notifications/notif-likepost-real'), {
+      type: 'like_post', actorId: 'uidLikePostNotifA', actorName: 'Like Post Notif Pilot A', actorPhoto: null,
+      targetType: 'post', targetId: 'post-likepostnotif-target', postId: 'post-likepostnotif-target',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LP2 no real like exists for this actor — the exists() proof fails, so this is denied', 'deny', () =>
+    setDoc(doc(asLikePostNotifNoLike.firestore(), 'users/uidLikePostNotifB/notifications/notif-likepost-nolike'), {
+      type: 'like_post', actorId: 'uidLikePostNotifNoLike', actorName: 'Like Post Notif No-Like Pilot', actorPhoto: null,
+      targetType: 'post', targetId: 'post-likepostnotif-target', postId: 'post-likepostnotif-target',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LP3 wrong recipient — the real like exists but this post\'s real author is B, not C — is denied', 'deny', () =>
+    setDoc(doc(asLikePostNotifA.firestore(), 'users/uidLikePostNotifC/notifications/notif-likepost-wrongrecipient'), {
+      type: 'like_post', actorId: 'uidLikePostNotifA', actorName: 'Like Post Notif Pilot A', actorPhoto: null,
+      targetType: 'post', targetId: 'post-likepostnotif-target', postId: 'post-likepostnotif-target',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LP4 forged actorName on an otherwise-real post-like notification is denied', 'deny', () =>
+    setDoc(doc(asLikePostNotifA.firestore(), 'users/uidLikePostNotifB/notifications/notif-likepost-forged-name'), {
+      type: 'like_post', actorId: 'uidLikePostNotifA', actorName: 'Forged Name', actorPhoto: null,
+      targetType: 'post', targetId: 'post-likepostnotif-target', postId: 'post-likepostnotif-target',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  // ── 23c. Comment-like notifications ────────────────────────────────────
+  const asLikeCommentNotifA = testEnv.authenticatedContext('uidLikeCommentNotifA');
+  const asLikeCommentNotifNoLike = testEnv.authenticatedContext('uidLikeCommentNotifNoLike');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidLikeCommentNotifA'), validUserDoc({ displayName: 'Like Comment Notif Pilot A' }));
+    await setDoc(doc(db, 'users/uidLikeCommentNotifB'), validUserDoc({ displayName: 'Like Comment Notif Pilot B' }));
+    await setDoc(doc(db, 'users/uidLikeCommentNotifNoLike'), validUserDoc({ displayName: 'Like Comment Notif No-Like Pilot' }));
+    await setDoc(doc(db, 'posts/post-likecommentnotif-host'), validPostDoc('uidLikeCommentNotifB', { authorName: 'Like Comment Notif Pilot B' }));
+    // Comment authored by B (the recipient of the like notification) — the
+    // comment author, not the post author, is who a comment-like notifies.
+    await setDoc(doc(db, 'posts/post-likecommentnotif-host/comments/comment-likecommentnotif-target'), {
+      authorId: 'uidLikeCommentNotifB', authorName: 'Like Comment Notif Pilot B', authorPhoto: null,
+      text: 'تعليق قابل للإعجاب', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    });
+    await setDoc(doc(db, 'posts/post-likecommentnotif-host/comments/comment-likecommentnotif-target/likes/uidLikeCommentNotifA'), {
+      createdAt: serverTimestamp(),
+    });
+  });
+
+  await record('LC1 real comment-like notification (actor really liked the comment, recipient really authored it) is allowed', 'allow', () =>
+    setDoc(doc(asLikeCommentNotifA.firestore(), 'users/uidLikeCommentNotifB/notifications/notif-likecomment-real'), {
+      type: 'like_comment', actorId: 'uidLikeCommentNotifA', actorName: 'Like Comment Notif Pilot A', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-likecommentnotif-target', postId: 'post-likecommentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LC2 no real like exists for this actor on this comment — denied', 'deny', () =>
+    setDoc(doc(asLikeCommentNotifNoLike.firestore(), 'users/uidLikeCommentNotifB/notifications/notif-likecomment-nolike'), {
+      type: 'like_comment', actorId: 'uidLikeCommentNotifNoLike', actorName: 'Like Comment Notif No-Like Pilot', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-likecommentnotif-target', postId: 'post-likecommentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LC3 wrong recipient — the real like exists but this comment\'s real author is B, not A — is denied', 'deny', () =>
+    setDoc(doc(asLikeCommentNotifA.firestore(), 'users/uidLikeCommentNotifA/notifications/notif-likecomment-wrongrecipient'), {
+      type: 'like_comment', actorId: 'uidLikeCommentNotifA', actorName: 'Like Comment Notif Pilot A', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-likecommentnotif-target', postId: 'post-likecommentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('LC4 forged actorPhoto on an otherwise-real comment-like notification is denied', 'deny', () =>
+    setDoc(doc(asLikeCommentNotifA.firestore(), 'users/uidLikeCommentNotifB/notifications/notif-likecomment-forged-photo'), {
+      type: 'like_comment', actorId: 'uidLikeCommentNotifA', actorName: 'Like Comment Notif Pilot A', actorPhoto: 'https://forged.example/photo.jpg',
+      targetType: 'comment', targetId: 'comment-likecommentnotif-target', postId: 'post-likecommentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  // ── 23d. Comment notifications ─────────────────────────────────────────
+  const asCommentNotifA = testEnv.authenticatedContext('uidCommentNotifA');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidCommentNotifA'), validUserDoc({ displayName: 'Comment Notif Pilot A' }));
+    await setDoc(doc(db, 'users/uidCommentNotifB'), validUserDoc({ displayName: 'Comment Notif Pilot B' }));
+    await setDoc(doc(db, 'users/uidCommentNotifC'), validUserDoc({ displayName: 'Comment Notif Pilot C' }));
+    await setDoc(doc(db, 'posts/post-commentnotif-host'), validPostDoc('uidCommentNotifB', { authorName: 'Comment Notif Pilot B' }));
+    // Comment really authored by A (the actor) on B's post.
+    await setDoc(doc(db, 'posts/post-commentnotif-host/comments/comment-commentnotif-real'), {
+      authorId: 'uidCommentNotifA', authorName: 'Comment Notif Pilot A', authorPhoto: null,
+      text: 'تعليق حقيقي', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    });
+    // A second comment on the SAME post, but authored by C — used to prove
+    // the create rule checks the comment's REAL authorId, not merely
+    // whichever actorId the caller claims.
+    await setDoc(doc(db, 'posts/post-commentnotif-host/comments/comment-commentnotif-by-c'), {
+      authorId: 'uidCommentNotifC', authorName: 'Comment Notif Pilot C', authorPhoto: null,
+      text: 'تعليق من مستخدم آخر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
+    });
+  });
+
+  await record('CN1 real comment notification (actor really authored the comment, recipient really is the post author) is allowed', 'allow', () =>
+    setDoc(doc(asCommentNotifA.firestore(), 'users/uidCommentNotifB/notifications/notif-comment-real'), {
+      type: 'comment', actorId: 'uidCommentNotifA', actorName: 'Comment Notif Pilot A', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-commentnotif-real', postId: 'post-commentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('CN2 wrong author — A claims credit for a comment that was really authored by C — is denied', 'deny', () =>
+    setDoc(doc(asCommentNotifA.firestore(), 'users/uidCommentNotifB/notifications/notif-comment-wrongauthor'), {
+      type: 'comment', actorId: 'uidCommentNotifA', actorName: 'Comment Notif Pilot A', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-commentnotif-by-c', postId: 'post-commentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('CN3 wrong recipient — the comment is real but this post\'s real author is B, not C — is denied', 'deny', () =>
+    setDoc(doc(asCommentNotifA.firestore(), 'users/uidCommentNotifC/notifications/notif-comment-wrongrecipient'), {
+      type: 'comment', actorId: 'uidCommentNotifA', actorName: 'Comment Notif Pilot A', actorPhoto: null,
+      targetType: 'comment', targetId: 'comment-commentnotif-real', postId: 'post-commentnotif-host',
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  // ── 23e. Notification read-state updates ───────────────────────────────
+  await record('R1 the recipient CAN mark their own notification as read', 'allow', () =>
+    updateDoc(doc(asFollowNotifB.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-real'), { read: true }));
+
+  await record('R2 a DIFFERENT user cannot update someone else\'s notification', 'deny', () =>
+    updateDoc(doc(asFollowNotifA.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-real'), { read: false }));
+
+  await record('R3 the owner cannot sneak an actorId change in alongside a read-state update (hasOnly() boundary)', 'deny', () =>
+    updateDoc(doc(asFollowNotifB.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-real'), {
+      read: true, actorId: 'uidFollowNotifB',
+    }));
+
+  await record('R4 the owner setting read to a non-boolean value is denied', 'deny', () =>
+    updateDoc(doc(asFollowNotifB.firestore(), 'users/uidFollowNotifB/notifications/notif-follow-real'), { read: 'yes' }));
+
+  await record('R5 the owner CAN still read their own notifications list', 'allow', () =>
+    getDocs(collection(asFollowNotifB.firestore(), 'users/uidFollowNotifB/notifications')));
+
+  await record('R6 a different user cannot read someone else\'s notifications list', 'deny', () =>
+    getDocs(collection(asFollowNotifA.firestore(), 'users/uidFollowNotifB/notifications')));
+
+  // ── 23f. Device tokens ──────────────────────────────────────────────────
+  const asDeviceTokenA = testEnv.authenticatedContext('uidDeviceTokenA');
+  const asDeviceTokenB = testEnv.authenticatedContext('uidDeviceTokenB');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'users/uidDeviceTokenA'), validUserDoc({ displayName: 'Device Token Pilot A' }));
+    await setDoc(doc(db, 'users/uidDeviceTokenB'), validUserDoc({ displayName: 'Device Token Pilot B' }));
+  });
+
+  await record('DT1 the owner can register their own device token', 'allow', () =>
+    setDoc(doc(asDeviceTokenA.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-a1'), {
+      token: 'fcm-fake-token-a1', platform: 'web', userAgent: 'Mozilla/5.0 (test)', createdAt: serverTimestamp(),
+    }));
+
+  await record('DT2 the owner can read their own device tokens', 'allow', () =>
+    getDoc(doc(asDeviceTokenA.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-a1')));
+
+  await record('DT3 a different user cannot read someone else\'s device tokens', 'deny', () =>
+    getDoc(doc(asDeviceTokenB.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-a1')));
+
+  await record('DT4 a different user cannot register a token into someone else\'s subcollection', 'deny', () =>
+    setDoc(doc(asDeviceTokenB.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-spoofed'), {
+      token: 'fcm-fake-spoofed', platform: 'web', userAgent: null, createdAt: serverTimestamp(),
+    }));
+
+  await record('DT5 an invalid platform value (not \'web\') is rejected', 'deny', () =>
+    setDoc(doc(asDeviceTokenA.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-badplatform'), {
+      token: 'fcm-fake-token', platform: 'ios', userAgent: null, createdAt: serverTimestamp(),
+    }));
+
+  await record('DT6 a token update (patch) is always denied — replace via delete+recreate only', 'deny', () =>
+    updateDoc(doc(asDeviceTokenA.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-a1'), {
+      token: 'fcm-changed-token',
+    }));
+
+  await record('DT7 the owner can delete their own device token', 'allow', () =>
+    deleteDoc(doc(asDeviceTokenA.firestore(), 'users/uidDeviceTokenA/deviceTokens/token-a1')));
+
+  // ── 23g. Announcements ──────────────────────────────────────────────────
+  const asAnnouncementMod = testEnv.authenticatedContext('uidMod');
+  const asAnnouncementUser = testEnv.authenticatedContext('uidAnnouncementUser');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'users/uidAnnouncementUser'), validUserDoc({ displayName: 'Announcement Pilot' }));
+  });
+
+  await record('AN1 a moderator can create an announcement', 'allow', () =>
+    setDoc(doc(asAnnouncementMod.firestore(), 'announcements/announcement-real'), {
+      title: 'تحديث جديد للتطبيق', body: 'أضفنا ميزات جديدة هذا الأسبوع.', createdAt: serverTimestamp(), ctaLink: null,
+    }));
+
+  await record('AN2 a regular (non-moderator) user cannot create an announcement', 'deny', () =>
+    setDoc(doc(asAnnouncementUser.firestore(), 'announcements/announcement-forged'), {
+      title: 'إعلان مزيف', body: 'محاولة انتحال صفة المشرف.', createdAt: serverTimestamp(), ctaLink: null,
+    }));
+
+  await record('AN3 any signed-in user can read announcements', 'allow', () =>
+    getDoc(doc(asAnnouncementUser.firestore(), 'announcements/announcement-real')));
+
+  await record('AN4 a guest (signed out) cannot read announcements', 'deny', () =>
+    getDoc(doc(asGuest.firestore(), 'announcements/announcement-real')));
+
+  await record('AN5 a user mirroring a REAL announcement into their own inbox is allowed', 'allow', () =>
+    setDoc(doc(asAnnouncementUser.firestore(), 'users/uidAnnouncementUser/notifications/notif-announcement-real'), {
+      type: 'announcement', actorId: null, actorName: null, actorPhoto: null,
+      targetType: 'announcement', targetId: 'announcement-real', postId: null,
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('AN6 mirroring a NON-EXISTENT announcement id is denied — the exists() proof fails', 'deny', () =>
+    setDoc(doc(asAnnouncementUser.firestore(), 'users/uidAnnouncementUser/notifications/notif-announcement-fake'), {
+      type: 'announcement', actorId: null, actorName: null, actorPhoto: null,
+      targetType: 'announcement', targetId: 'announcement-does-not-exist', postId: null,
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('AN7 mirroring a real announcement into a DIFFERENT user\'s inbox is denied — announcement notifications are self-write only', 'deny', () =>
+    setDoc(doc(asAnnouncementMod.firestore(), 'users/uidAnnouncementUser/notifications/notif-announcement-cross'), {
+      type: 'announcement', actorId: null, actorName: null, actorPhoto: null,
+      targetType: 'announcement', targetId: 'announcement-real', postId: null,
+      read: false, createdAt: serverTimestamp(),
+    }));
+
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
   await testEnv.cleanup();

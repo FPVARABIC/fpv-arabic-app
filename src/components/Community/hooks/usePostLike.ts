@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { doc, getDoc, writeBatch, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, writeBatch, increment, serverTimestamp } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
-import { postLikePath, postPath } from '../utils/firestorePaths';
+import { postLikePath, postPath, userPath, notificationsPath } from '../utils/firestorePaths';
+import type { CommunityUser } from '../types';
 
 export interface UsePostLikeResult {
   liked: boolean;
@@ -36,7 +37,7 @@ const likeStatusKey = (postId: string, uid: string | null): string => `${postId}
 // toggle race (not the common single-click case, which `toggling` below
 // already guards) now surfaces as a denied write / toggleError, rather than
 // the Function's silent idempotent no-op — see docs/KNOWN_ISSUES.md.
-export const usePostLike = (postId: string): UsePostLikeResult => {
+export const usePostLike = (postId: string, authorId: string): UsePostLikeResult => {
   const { currentUser } = useAuthContext();
   const currentUid = currentUser?.uid ?? null;
   const key = likeStatusKey(postId, currentUid);
@@ -91,6 +92,40 @@ export const usePostLike = (postId: string): UsePostLikeResult => {
         }
         await batch.commit();
         setResult({ key, liked: !wasLiked });
+
+        // Notifications (Phase 1) — a SEPARATE write, issued only after the
+        // like batch above has actually committed, never inside that same
+        // batch: firestore.rules' anti-forgery check requires exists() on
+        // the just-committed like doc, and Rules cannot see writes still
+        // pending within the same batch, only already-committed state.
+        // Never fires on unlike (no "someone unliked you" notification),
+        // and never fires when liking your own post. ACCEPTED TRADE-OFF
+        // (same disclosure discipline as the commentsCount/likesCount
+        // accepted risks elsewhere in this codebase): if THIS write fails
+        // after the like itself already succeeded, the like is NOT rolled
+        // back — only the notification silently fails to appear.
+        if (!wasLiked && authorId !== currentUid) {
+          try {
+            const ownProfileSnap = await getDoc(doc(firestoreDb, userPath(currentUid)));
+            const ownProfile = ownProfileSnap.exists() ? (ownProfileSnap.data() as CommunityUser) : null;
+            if (ownProfile) {
+              const notifRef = doc(collection(firestoreDb, notificationsPath(authorId)));
+              await setDoc(notifRef, {
+                type: 'like_post',
+                actorId: currentUid,
+                actorName: ownProfile.displayName,
+                actorPhoto: ownProfile.photoURL,
+                targetType: 'post',
+                targetId: postId,
+                postId,
+                read: false,
+                createdAt: serverTimestamp(),
+              });
+            }
+          } catch (err) {
+            console.error('[usePostLike:notify]', err);
+          }
+        }
       } catch (err) {
         console.error('[usePostLike:toggle]', err);
         setResult({ key, liked: wasLiked }); // rollback the optimistic flip
@@ -99,7 +134,7 @@ export const usePostLike = (postId: string): UsePostLikeResult => {
         setToggling(false);
       }
     })();
-  }, [currentUid, toggling, liked, key, postId]);
+  }, [currentUid, toggling, liked, key, postId, authorId]);
 
   return { liked, likedLoading, toggling, toggleError, toggleLike };
 };

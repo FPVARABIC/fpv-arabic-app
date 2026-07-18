@@ -167,3 +167,59 @@ export interface SavedPost {
 }
 
 export type FollowStatus = 'loading' | 'not-following' | 'following';
+
+// Notifications (Phase 1, in-app only — push send is blocked until Firebase
+// Blaze billing is restored, see docs/KNOWN_ISSUES.md). Every notification
+// is a direct client write, issued as a SEPARATE write after the primary
+// action (follow/like/comment) has already committed — see the matching
+// comment in each of useFollow.ts/usePostLike.ts/useCommentLike.ts/
+// useCommentComposer.ts and firestore.rules' notifications/{notificationId}
+// block for the full anti-forgery design (exists()/get() checks against the
+// already-committed primary artifact, not shape-only trust).
+export type NotificationType = 'follow' | 'like_post' | 'like_comment' | 'comment' | 'announcement';
+export type NotificationTargetType = 'profile' | 'post' | 'comment' | 'announcement';
+
+export interface CommunityNotification {
+  type: NotificationType;
+  // null only for 'announcement' — an announcement has no acting user.
+  actorId: string | null;
+  actorName: string | null;
+  actorPhoto: string | null;
+  targetType: NotificationTargetType | null;
+  targetId: string | null;
+  // Parent post id, present for like_comment/comment (navigation needs it
+  // to open the right post); null for follow/like_post/announcement.
+  postId: string | null;
+  read: boolean;
+  createdAt: Timestamp;
+}
+
+export interface CommunityNotificationWithId extends CommunityNotification {
+  id: string;
+}
+
+// Push device tokens (Phase 1 infra — sending stays blocked until Blaze).
+// Never publicly readable, unlike almost every other document in this app —
+// see firestore.rules' deviceTokens/{tokenId} block.
+export interface DeviceToken {
+  token: string;
+  platform: 'web';
+  userAgent: string | null;
+  createdAt: Timestamp;
+}
+
+// Simple admin/broadcast mechanism (Phase 1) — created only by a moderator
+// (reuses the existing isModerator() Rules function, no new auth
+// infrastructure), read by every signed-in user, mirrored client-side into
+// a signed-in user's own notifications inbox the first time they see it
+// (see firestore.rules' notifications 'announcement' create branch).
+export interface Announcement {
+  title: string;
+  body: string;
+  createdAt: Timestamp;
+  ctaLink: string | null;
+}
+
+export interface AnnouncementWithId extends Announcement {
+  id: string;
+}

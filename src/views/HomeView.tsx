@@ -7,9 +7,11 @@ import { SearchScreen } from '../components/Community/Search/SearchScreen';
 import { PublicProfile } from '../components/Community/Profile/PublicProfile';
 import { PostComposer } from '../components/Community/Composer/PostComposer';
 import { SavedPostsScreen } from '../components/Community/Saved/SavedPostsScreen';
+import { NotificationsScreen } from '../components/Community/Notifications/NotificationsScreen';
 import { SavedPostIdsProvider } from '../components/Community/hooks/useSavedPostIds';
 import { useFeed } from '../components/Community/hooks/useFeed';
 import { useEnsureCommunityUser } from '../components/Community/hooks/useEnsureCommunityUser';
+import { useNotifications } from '../components/Community/hooks/useNotifications';
 import type { ChipValue } from '../components/Community/Feed/CategoryChips';
 import { useAuthContext } from '../contexts/AuthContext';
 import { HomeDashboardLegacy } from './HomeDashboardLegacy';
@@ -31,6 +33,7 @@ type Screen =
   | { name: 'search' }
   | { name: 'saved' }
   | { name: 'compose' }
+  | { name: 'notifications' }
   | { name: 'profile'; authorId: string };
 
 const getScrollY = (): number => window.scrollY;
@@ -43,6 +46,7 @@ const CommunityHomeScreens: React.FC = () => {
   const [category, setCategory] = useState<ChipValue>('all');
   const { currentUser, isGuest } = useAuthContext();
   const feed = useFeed(category);
+  const notifications = useNotifications();
   const location = useLocation();
   const lastHomeResetRef = useRef<number | undefined>(undefined);
   // Single dedicated lifecycle owner for the Community user-document
@@ -91,8 +95,14 @@ const CommunityHomeScreens: React.FC = () => {
       setMenuOpen(false);
       scrollTopRef.current = 0;
       setScrollY(0);
+      notifications.refresh();
     }
-  }, [location.state]);
+    // notifications.refresh is a stable useCallback keyed only on currentUid;
+    // the `notifications` object itself is a new literal every render, so
+    // depending on it (as exhaustive-deps requests) would re-fire this reset
+    // effect every single render instead of only on a fresh Home press.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, notifications.refresh]);
 
   // Category change: the newly selected category always starts at the top —
   // the previous category's scroll position must never carry over. Skipped
@@ -147,6 +157,8 @@ const CommunityHomeScreens: React.FC = () => {
           onOpenMenu={() => setMenuOpen(true)}
           onOpenSaved={() => goTo({ name: 'saved' })}
           onOpenCompose={() => goTo({ name: 'compose' })}
+          onOpenNotifications={() => goTo({ name: 'notifications' })}
+          unreadNotificationsCount={notifications.unreadCount}
         />
       )}
       {screen.name === 'post' && (
@@ -174,6 +186,17 @@ const CommunityHomeScreens: React.FC = () => {
         <PostComposer
           onPosted={handlePosted}
           onCancel={() => setScreen({ name: 'feed' })}
+        />
+      )}
+      {screen.name === 'notifications' && (
+        <NotificationsScreen
+          notifications={notifications.notifications}
+          loading={notifications.loading}
+          error={notifications.error}
+          markAsRead={notifications.markAsRead}
+          onBack={() => setScreen({ name: 'feed' })}
+          onOpenPost={postId => setScreen({ name: 'post', postId })}
+          onOpenAuthor={authorId => setScreen({ name: 'profile', authorId })}
         />
       )}
       {screen.name === 'profile' && (

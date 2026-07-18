@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Search as SearchIcon, MoreVertical, Bookmark, Image as ImageIcon, Video } from 'lucide-react';
+import { Search as SearchIcon, MoreVertical, Bookmark, Bell, Image as ImageIcon, Video } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { CategoryChips, type ChipValue } from './Feed/CategoryChips';
 import { FeedList } from './Feed/FeedList';
@@ -17,15 +17,21 @@ interface CommunityHomeProps {
   onOpenMenu: () => void;
   onOpenSaved: () => void;
   onOpenCompose: () => void;
+  onOpenNotifications: () => void;
+  unreadNotificationsCount: number;
 }
 
-// Header layout (locked, D1.3/D14 amendment + Phase 2 bookmark addition):
-// [menu/profile icon] on the left, title centered, [search + bookmark] as a
-// group on the right — that right-side group already existed as a flex
-// container in Phase 1 specifically so this addition wouldn't require
-// restructuring.
+// Header layout (locked, D1.3/D14 amendment + Phase 2 bookmark addition,
+// Notifications Phase 1 bell addition, persistent-search-bar amendment):
+// [menu/profile icon] on the right (RTL), title centered, [bookmark + bell]
+// as a group on the left — that group already existed as a flex container
+// in Phase 1 specifically so additions wouldn't require restructuring. The
+// persistent search bar is a second row below this one, occupying the full
+// header width — it replaces the small search-icon button that used to sit
+// in the left-side group above.
 export const CommunityHome: React.FC<CommunityHomeProps> = ({
   category, onCategoryChange, feed, onOpenPost, onOpenAuthor, onOpenSearch, onOpenMenu, onOpenSaved, onOpenCompose,
+  onOpenNotifications, unreadNotificationsCount,
 }) => {
   const { currentUser, isGuest } = useAuthContext();
   const [toast, setToast] = useState<string | null>(null);
@@ -72,15 +78,54 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
             <Bookmark size={16} color="#5a6b7c" />
           </button>
           <button
-            onClick={onOpenSearch}
-            aria-label="بحث"
+            onClick={onOpenNotifications}
+            aria-label="الإشعارات"
             style={{
+              position: 'relative',
               width: 36, height: 36, borderRadius: 10, border: '0.5px solid #e5eaf0',
               background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             }}
           >
-            <SearchIcon size={16} color="#5a6b7c" />
+            <Bell size={16} color="#5a6b7c" />
+            {unreadNotificationsCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -4, left: -4,
+                minWidth: 16, height: 16, borderRadius: 999, padding: '0 3px',
+                background: '#dc2626', color: '#ffffff', fontSize: 9, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+              </span>
+            )}
           </button>
+        </div>
+      </div>
+
+      {/* Persistent search bar (D-search amendment) — a real, always-visible
+          input rather than a small icon that opens a separate screen
+          (Facebook Groups' pattern). readOnly keeps it a genuine, focusable,
+          screen-reader-visible text field without duplicating useSearch.ts/
+          useUserSearch.ts's debounced query state up here — tapping it just
+          transitions to the existing SearchScreen exactly as the old icon
+          button did (onOpenSearch is unchanged, still calls the same
+          goTo({ name: 'search' }) in HomeView.tsx). onClick is added
+          alongside onFocus because some browsers don't reliably fire focus
+          from a tap on a readOnly field. */}
+      <div style={{ padding: '0 16px 14px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: '#ffffff', border: '0.5px solid #e5eaf0', borderRadius: 12, padding: '10px 14px',
+        }}>
+          <SearchIcon size={16} color="#94a3b3" />
+          <input
+            readOnly
+            onFocus={onOpenSearch}
+            onClick={onOpenSearch}
+            placeholder="ابحث في المجتمع..."
+            dir="auto"
+            aria-label="بحث"
+            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a2b3c', cursor: 'pointer' }}
+          />
         </div>
       </div>
 

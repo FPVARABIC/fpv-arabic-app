@@ -24,6 +24,7 @@ interface CommentsListProps {
 interface CommentLikeButtonProps {
   postId: string;
   commentId: string;
+  authorId: string;
   likesCount: number;
   isGuest: boolean;
   onGuestTap: () => void;
@@ -36,8 +37,8 @@ interface CommentLikeButtonProps {
 // generic "like button" label. A real native <button> — full keyboard
 // support and a visible focus outline come from the browser for free, not
 // reimplemented here.
-const CommentLikeButton: React.FC<CommentLikeButtonProps> = ({ postId, commentId, likesCount, isGuest, onGuestTap }) => {
-  const { liked, likedLoading, toggling, toggleError, toggleLike } = useCommentLike(postId, commentId);
+const CommentLikeButton: React.FC<CommentLikeButtonProps> = ({ postId, commentId, authorId, likesCount, isGuest, onGuestTap }) => {
+  const { liked, likedLoading, toggling, toggleError, toggleLike } = useCommentLike(postId, commentId, authorId);
 
   const handleClick = () => {
     if (isGuest) {
@@ -192,6 +193,7 @@ export const CommentsList: React.FC<CommentsListProps> = ({ postId, comments, on
               <CommentLikeButton
                 postId={postId}
                 commentId={comment.id}
+                authorId={comment.authorId}
                 likesCount={comment.likesCount ?? 0}
                 isGuest={isGuest}
                 onGuestTap={handleGuestLikeTap}

@@ -125,7 +125,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
           </span>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <PostLikeButton postId={post.id} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} />
+          <PostLikeButton postId={post.id} authorId={post.authorId} likesCount={post.likesCount ?? 0} isGuest={isGuest} onGuestTap={handleGuestLikeTap} />
           <span style={{ fontSize: 12, color: '#5a6b7c' }} dir="ltr">{post.commentsCount} تعليق</span>
         </div>
       </div>

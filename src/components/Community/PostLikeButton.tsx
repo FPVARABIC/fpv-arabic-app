@@ -4,6 +4,7 @@ import { usePostLike } from './hooks/usePostLike';
 
 interface PostLikeButtonProps {
   postId: string;
+  authorId: string;
   likesCount: number;
   isGuest: boolean;
   onGuestTap: () => void;
@@ -24,8 +25,8 @@ interface PostLikeButtonProps {
 // <button> gives full keyboard support and a visible focus outline for
 // free. The count span is always rendered (even as an empty string at 0)
 // so toggling never shifts the button's own layout.
-export const PostLikeButton: React.FC<PostLikeButtonProps> = ({ postId, likesCount, isGuest, onGuestTap, size = 15 }) => {
-  const { liked, likedLoading, toggling, toggleError, toggleLike } = usePostLike(postId);
+export const PostLikeButton: React.FC<PostLikeButtonProps> = ({ postId, authorId, likesCount, isGuest, onGuestTap, size = 15 }) => {
+  const { liked, likedLoading, toggling, toggleError, toggleLike } = usePostLike(postId, authorId);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

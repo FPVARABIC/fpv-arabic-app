@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   doc,
   getDoc,
+  setDoc,
   runTransaction,
   serverTimestamp,
   collection,
@@ -12,8 +13,8 @@ import {
 } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
-import { FOLLOWING_COLLECTION, followingRelationPath } from '../utils/firestorePaths';
-import type { FollowStatus } from '../types';
+import { FOLLOWING_COLLECTION, followingRelationPath, userPath, notificationsPath } from '../utils/firestorePaths';
+import type { FollowStatus, CommunityUser } from '../types';
 import type { CommunityBootstrapState } from './useEnsureCommunityUser';
 
 export interface UseFollowResult {
@@ -230,6 +231,38 @@ export const useFollow = (profileUid: string, bootstrapState: CommunityBootstrap
       // to an error state.
       if (mutationSucceeded && localMutationId === mutationIdRef.current) {
         await loadCounts();
+
+        // Notifications (Phase 1) — a SEPARATE write, issued only after the
+        // follow relation above has actually committed, never inside that
+        // same transaction: firestore.rules' anti-forgery check for this
+        // notification type requires exists() on the just-committed
+        // relation doc, and Rules cannot see writes still pending within
+        // the same transaction/batch, only already-committed state.
+        // ACCEPTED TRADE-OFF (same disclosure discipline as the
+        // commentsCount/likesCount accepted risks elsewhere in this
+        // codebase): if THIS write fails after the follow itself already
+        // succeeded, the follow is NOT rolled back — only the notification
+        // silently fails to appear.
+        try {
+          const ownProfileSnap = await getDoc(doc(firestoreDb, userPath(currentUid)));
+          const ownProfile = ownProfileSnap.exists() ? (ownProfileSnap.data() as CommunityUser) : null;
+          if (ownProfile) {
+            const notifRef = doc(collection(firestoreDb, notificationsPath(profileUid)));
+            await setDoc(notifRef, {
+              type: 'follow',
+              actorId: currentUid,
+              actorName: ownProfile.displayName,
+              actorPhoto: ownProfile.photoURL,
+              targetType: 'profile',
+              targetId: profileUid,
+              postId: null,
+              read: false,
+              createdAt: serverTimestamp(),
+            });
+          }
+        } catch (err) {
+          console.error('[useFollow:notify]', err);
+        }
       }
     })();
   }, [currentUid, profileUid, mutating, bootstrapState, loadCounts]);

@@ -11,4 +11,5 @@ export const STORAGE_KEYS = {
   CUSTOM_DISPLAY_NAME: 'fpv_custom_display_name',
   EXPRESSLRS_SETUP_PROGRESS: 'fpv_expresslrs_setup_progress',
   EXPRESSLRS_TROUBLESHOOTING_PROGRESS: 'fpv_expresslrs_troubleshooting_progress',
+  LESSON_REMINDER_LAST_SHOWN: 'fpv_lesson_reminder_last_shown',
 } as const;

@@ -182,6 +182,134 @@ service cloud.firestore {
         // banned), and idempotent delete-of-nonexistent must stay safe.
         allow delete: if isSignedIn() && request.auth.uid == uid;
       }
+
+      // Notifications (Phase 1, in-app only — push send is blocked until
+      // Firebase Blaze billing is restored, see docs/KNOWN_ISSUES.md).
+      // Private per-recipient inbox, nested under the recipient's own doc —
+      // same "private data -> owner-scoped subcollection" precedent as
+      // savedPosts above (never a top-level collection filtered by a
+      // recipientId field; path-scoping makes "can only read your own"
+      // structural, not query-dependent).
+      //
+      // Anti-forgery design: every create branch below requires proof, via
+      // exists()/get() against an ALREADY-COMMITTED document written by the
+      // same caller, that the real action (follow/like/comment) genuinely
+      // happened — not merely that the written shape looks right. This is
+      // why every notification write in the client code is issued as a
+      // SEPARATE write AFTER the primary batch/transaction commits, never
+      // inside it: Firestore Rules cannot see sibling writes still pending
+      // within the same batch/transaction, only already-committed state, so
+      // a same-batch existence check would pass regardless of whether the
+      // paired write actually succeeded.
+      match /notifications/{notificationId} {
+        allow read: if isOwner(uid);
+
+        allow create: if isSignedIn()
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly([
+                           'type', 'actorId', 'actorName', 'actorPhoto',
+                           'targetType', 'targetId', 'postId', 'read', 'createdAt'
+                         ])
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                      && (
+                           (request.resource.data.type == 'follow'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'profile'
+                             && request.resource.data.targetId == uid
+                             && request.resource.data.postId == null
+                             // Real proof: the actor's own following relation
+                             // to this recipient must already be committed.
+                             && exists(/databases/$(database)/documents/users/$(request.auth.uid)/following/$(uid)))
+                           ||
+                           (request.resource.data.type == 'like_post'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'post'
+                             && request.resource.data.postId == request.resource.data.targetId
+                             // Real proof: the actor's own like on this post
+                             // must already be committed, AND the recipient
+                             // really is that post's own author.
+                             && exists(/databases/$(database)/documents/posts/$(request.resource.data.targetId)/likes/$(request.auth.uid))
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.targetId)).data.authorId == uid)
+                           ||
+                           (request.resource.data.type == 'like_comment'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'comment'
+                             && request.resource.data.postId is string
+                             // Real proof: the actor's own like on this
+                             // comment must already be committed, AND the
+                             // recipient really is that comment's own author.
+                             && exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)/likes/$(request.auth.uid))
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)).data.authorId == uid)
+                           ||
+                           (request.resource.data.type == 'comment'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'comment'
+                             && request.resource.data.postId is string
+                             // Real proof: the actor really authored this
+                             // exact comment, AND the recipient really is
+                             // the PARENT POST's author (not the comment's).
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)).data.authorId == request.auth.uid
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.authorId == uid)
+                           ||
+                           // Announcement mirror — self-write only (the
+                           // client fetches announcements/ and mirrors any
+                           // new one into its OWN inbox the first time it's
+                           // seen; there is no "actor" pushing this to
+                           // someone else, unlike the four branches above).
+                           (request.resource.data.type == 'announcement'
+                             && request.auth.uid == uid
+                             && request.resource.data.actorId == null
+                             && request.resource.data.actorName == null
+                             && request.resource.data.actorPhoto == null
+                             && request.resource.data.targetType == 'announcement'
+                             && request.resource.data.postId == null
+                             // Real proof: the announcement being mirrored
+                             // genuinely exists.
+                             && exists(/databases/$(database)/documents/announcements/$(request.resource.data.targetId)))
+                         );
+
+        // Read-state only — structurally incapable of touching actorId/
+        // actorName/actorPhoto/type/targetType/targetId/postId, the same
+        // hasOnly()-as-total-boundary pattern used everywhere else in this
+        // file (e.g. the displayNameNormalized backfill branch above).
+        allow update: if isOwner(uid)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+                      && request.resource.data.read is bool;
+
+        allow delete: if false; // no user-initiated deletion in V1, matching posts/comments precedent
+      }
+
+      // Push device tokens (Phase 1 infra-only — sending is blocked until
+      // Firebase Blaze billing is restored, see docs/KNOWN_ISSUES.md).
+      // Unlike almost every other document in this app, tokens are NEVER
+      // publicly readable — not even the owner's own doc's public fields
+      // leak here; this subcollection is fully private, read and written
+      // only by its own owner.
+      match /deviceTokens/{tokenId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+                      && request.resource.data.keys().hasOnly(['token', 'platform', 'userAgent', 'createdAt'])
+                      && request.resource.data.token is string
+                      && request.resource.data.token.size() > 0
+                      && request.resource.data.platform == 'web'
+                      && (request.resource.data.userAgent == null || request.resource.data.userAgent is string)
+                      && request.resource.data.createdAt == request.time;
+        allow update: if false; // replace via delete+recreate, never patched
+        allow delete: if isOwner(uid);
+      }
     }
 
     // Authenticated-only collection-group rule (Phase 5, Option B) —
@@ -537,6 +665,31 @@ service cloud.firestore {
                     && request.resource.data.createdAt == request.time;
 
       allow update: if false; // 'resolved' flipped via console only
+      allow delete: if false;
+    }
+
+    // Announcements (Notifications Phase 1) — simple admin/broadcast
+    // mechanism, deliberately not a Cloud Function: created only by a
+    // moderator (reuses the existing isModerator() function, no new auth
+    // infrastructure), readable by every signed-in user. A client mirrors a
+    // newly-seen announcement into its own notifications inbox — see that
+    // block's 'announcement' create branch — rather than this collection
+    // tracking any per-user read state itself.
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+
+      allow create: if isModerator()
+                    && request.resource.data.keys().hasOnly(['title', 'body', 'createdAt', 'ctaLink'])
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.body is string
+                    && request.resource.data.body.size() > 0
+                    && request.resource.data.body.size() <= 2000
+                    && (request.resource.data.ctaLink == null || request.resource.data.ctaLink is string)
+                    && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
       allow delete: if false;
     }
   }

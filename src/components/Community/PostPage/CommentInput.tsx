@@ -4,6 +4,10 @@ import { useCommentComposer } from '../hooks/useCommentComposer';
 
 interface CommentInputProps {
   postId: string;
+  // Used only to address the Phase-1 notification write (see
+  // useCommentComposer.ts) — never rendered, never written into the
+  // comment doc itself.
+  postAuthorId: string;
   // Called with the created (or duplicate-collapsed) comment's id — the
   // caller fetches/upserts just that one document (usePost's
   // appendCreatedComment) instead of re-running the whole paginated query.
@@ -12,14 +16,14 @@ interface CommentInputProps {
 
 // Only rendered for logged-in users — PostDetail handles the logged-out
 // branch (unchanged note) itself.
-export const CommentInput: React.FC<CommentInputProps> = ({ postId, onCommentAdded }) => {
+export const CommentInput: React.FC<CommentInputProps> = ({ postId, postAuthorId, onCommentAdded }) => {
   const [text, setText] = useState('');
   const { createComment, submitting, error } = useCommentComposer();
 
   const submit = async () => {
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
-    const result = await createComment(postId, trimmed);
+    const result = await createComment(postId, trimmed, postAuthorId);
     if (result) {
       setText('');
       onCommentAdded(result.commentId);

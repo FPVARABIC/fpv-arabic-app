@@ -8,7 +8,7 @@
  * actually enforced against a real Firestore Security Rules emulator.
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { normalizeDisplayName, prefixRangeEnd, MIN_USER_SEARCH_QUERY_LENGTH } from '../src/components/Community/utils/userSearch';
@@ -62,6 +62,12 @@ const postComposerTsx = readFileSync(join(ROOT, 'src/components/Community/Compos
 const imageLightboxTsx = readFileSync(join(ROOT, 'src/components/Community/ImageLightbox.tsx'), 'utf8');
 const storageRulesTxt = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
 const mediaDeleteRetryTs = readFileSync(join(ROOT, 'src/components/Community/Composer/mediaDeleteRetry.ts'), 'utf8');
+const communityHomeTsx = readFileSync(join(ROOT, 'src/components/Community/CommunityHome.tsx'), 'utf8');
+const useFollowTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useFollow.ts'), 'utf8');
+const useNotificationsTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useNotifications.ts'), 'utf8');
+const useLessonReminderTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useLessonReminder.ts'), 'utf8');
+const notificationsScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Notifications/NotificationsScreen.tsx'), 'utf8');
+const storageKeysTs = readFileSync(join(ROOT, 'src/utils/storageKeys.ts'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -545,6 +551,60 @@ console.log('\n[25] Community feed ranking (Phase 2)');
   ok('CommentsList.tsx\'s top-comment score uses sqrt(likesCount) with a small per-hour age penalty, never Date.now() or a ref read during render (React purity)', /Math\.sqrt\(comment\.likesCount \?\? 0\) - 0\.02 \* ageHours/.test(commentsListTsx) && /setTopSortComputedAt\(Date\.now\(\)\)/.test(commentsListTsx));
 }
 
+console.log('\n[26] Notifications system (Phase 1, in-app only) + persistent search bar');
+{
+  ok('types.ts declares the CommunityNotification/CommunityNotificationWithId, DeviceToken, and Announcement/AnnouncementWithId interfaces', /export interface CommunityNotification\b/.test(typesTs) && /export interface CommunityNotificationWithId/.test(typesTs) && /export interface DeviceToken/.test(typesTs) && /export interface Announcement\b/.test(typesTs) && /export interface AnnouncementWithId/.test(typesTs));
+  ok('types.ts\'s NotificationType enumerates exactly the 5 approved kinds', /export type NotificationType = 'follow' \| 'like_post' \| 'like_comment' \| 'comment' \| 'announcement';/.test(typesTs));
+
+  ok('firestorePaths.ts exports notificationsPath/notificationPath (owner-scoped subcollection, savedPosts precedent)', /export const notificationsPath = \(uid: string\)/.test(firestorePathsTs) && /export const notificationPath = \(uid: string, notificationId: string\)/.test(firestorePathsTs));
+  ok('firestorePaths.ts exports deviceTokensPath/deviceTokenPath', /export const deviceTokensPath = \(uid: string\)/.test(firestorePathsTs) && /export const deviceTokenPath = \(uid: string, tokenId: string\)/.test(firestorePathsTs));
+  ok('firestorePaths.ts exports announcementPath (top-level collection)', /export const announcementPath = \(announcementId: string\)/.test(firestorePathsTs));
+
+  ok('firestore.rules\' notifications create rule is anti-forgery: every branch requires exists()/get() proof against an already-committed primary artifact, never shape-only trust', /Anti-forgery design: every create branch below requires proof/.test(rulesTxt));
+  ok('firestore.rules\' follow-notification branch requires a real, already-committed following relation', /exists\(\/databases\/\$\(database\)\/documents\/users\/\$\(request\.auth\.uid\)\/following\/\$\(uid\)\)/.test(rulesTxt));
+  ok('firestore.rules\' like_post branch requires both a real like doc AND the recipient to really be that post\'s author', /exists\(\/databases\/\$\(database\)\/documents\/posts\/\$\(request\.resource\.data\.targetId\)\/likes\/\$\(request\.auth\.uid\)\)/.test(rulesTxt) && /get\(\/databases\/\$\(database\)\/documents\/posts\/\$\(request\.resource\.data\.targetId\)\)\.data\.authorId == uid\)/.test(rulesTxt));
+  ok('firestore.rules\' comment-notification branch checks the REAL comment author (get(), not the caller\'s claimed actorId)', /get\(\/databases\/\$\(database\)\/documents\/posts\/\$\(request\.resource\.data\.postId\)\/comments\/\$\(request\.resource\.data\.targetId\)\)\.data\.authorId == request\.auth\.uid/.test(rulesTxt));
+  ok('firestore.rules\' announcement-notification branch is self-write only (auth.uid == uid), the mirror of every other branch\'s auth.uid != uid', /request\.resource\.data\.type == 'announcement'[\s\S]{0,80}request\.auth\.uid == uid/.test(rulesTxt));
+  ok('firestore.rules\' notification read-state update is bounded to the read field alone via hasOnly()', /request\.resource\.data\.diff\(resource\.data\)\.affectedKeys\(\)\.hasOnly\(\['read'\]\)/.test(rulesTxt));
+  ok('firestore.rules\' deviceTokens subcollection is fully private (owner read/write only), never publicly readable like posts/likes', /Unlike almost every other document in this app, tokens are NEVER/.test(rulesTxt));
+  ok('firestore.rules\' announcements collection is moderator-create, signed-in-read, reusing the existing isModerator() function (no new auth infrastructure)', /match \/announcements\/\{announcementId\}/.test(rulesTxt) && /allow create: if isModerator\(\)/.test(rulesTxt));
+
+  ok('useFollow.ts issues the follow-notification write as a SEPARATE write strictly AFTER the transaction commits, never inside it', /ACCEPTED TRADE-OFF/.test(useFollowTs) && /type: 'follow'/.test(useFollowTs));
+  ok('useFollow.ts never fires a notification on unfollow (one-directional: follow only)', (() => {
+    const followFnMatch = useFollowTs.match(/const follow = useCallback[\s\S]*?\n {2}\}, \[/);
+    const unfollowFnMatch = useFollowTs.match(/const unfollow = useCallback[\s\S]*?\n {2}\}, \[/);
+    return !!followFnMatch && /type: 'follow'/.test(followFnMatch[0]) && !!unfollowFnMatch && !/notificationsPath/.test(unfollowFnMatch[0]);
+  })());
+
+  ok('usePostLike.ts takes authorId and only notifies on a genuine new like by someone other than the post\'s own author', /usePostLike = \(postId: string, authorId: string\)/.test(usePostLikeTs) && /!wasLiked && authorId !== currentUid/.test(usePostLikeTs) && /ACCEPTED TRADE-OFF/.test(usePostLikeTs));
+  ok('useCommentLike.ts takes authorId and only notifies on a genuine new like by someone other than the comment\'s own author', /useCommentLike = \(postId: string, commentId: string, authorId: string\)/.test(useCommentLikeTs) && /authorId !== currentUid/.test(useCommentLikeTs) && /ACCEPTED TRADE-OFF/.test(useCommentLikeTs));
+  ok('useCommentComposer.ts\'s createComment takes postAuthorId and never notifies when commenting on your own post', /createComment: \(postId: string, text: string, postAuthorId: string\)/.test(useCommentComposerTs) && /postAuthorId !== currentUser\.uid/.test(useCommentComposerTs) && /ACCEPTED TRADE-OFF/.test(useCommentComposerTs));
+  ok('PostLikeButton.tsx/CommentInput.tsx thread authorId/postAuthorId down from data already in scope at the call site, no new Firestore read added', /authorId: string;/.test(postLikeButtonTsx) && /usePostLike\(postId, authorId\)/.test(postLikeButtonTsx) && /postAuthorId: string;/.test(commentInputTsx) && /createComment\(postId, trimmed, postAuthorId\)/.test(commentInputTsx));
+  ok('PostCard.tsx and PostDetail.tsx pass authorId={post.authorId} into PostLikeButton', /authorId=\{post\.authorId\}/.test(postCardTsx) && /authorId=\{post\.authorId\}/.test(postDetailTsx));
+  ok('PostDetail.tsx passes postAuthorId={post.authorId} into CommentInput', /postAuthorId=\{post\.authorId\}/.test(postDetailTsx));
+
+  ok('useNotifications.ts is a one-shot fetch + manual refresh (no onSnapshot listener call), matching useFeed.ts/useFollow.ts\'s existing convention', !/onSnapshot\(/.test(useNotificationsTs) && /refresh: load/.test(useNotificationsTs));
+  ok('useNotifications.ts computes unreadCount via getCountFromServer on a bare where(\'read\',\'==\',false) — no composite index needed', /getCountFromServer\(unreadQuery\)/.test(useNotificationsTs) && /where\('read', '==', false\)/.test(useNotificationsTs));
+  ok('useNotifications.ts orders the list by createdAt desc, bounded by a PAGE_SIZE limit — no unbounded read', /orderBy\('createdAt', 'desc'\)/.test(useNotificationsTs) && /limit\(PAGE_SIZE\)/.test(useNotificationsTs));
+
+  ok('useLessonReminder.ts is fully Firestore-independent — no firebase import at all, derived purely from local progress state', !/firebase/.test(useLessonReminderTs) && /useProgressContext/.test(useLessonReminderTs));
+  ok('useLessonReminder.ts captures Date.now() as state from an effect, never calling it inline during render/useMemo (React purity — same pattern CommentsList.tsx already established)', /useEffect\(\(\) => \{ setNow\(Date\.now\(\)\); \}, \[\]\);/.test(useLessonReminderTs) && !/if \(Date\.now\(\)/.test(useLessonReminderTs));
+  ok('storageKeys.ts declares the LESSON_REMINDER_LAST_SHOWN throttle key', /LESSON_REMINDER_LAST_SHOWN: 'fpv_lesson_reminder_last_shown',/.test(storageKeysTs));
+
+  ok('NotificationsScreen.tsx receives notifications/loading/error/markAsRead as PROPS, not a second useNotifications() call — avoids desyncing from the header badge', /notifications: CommunityNotificationWithId\[\];/.test(notificationsScreenTsx) && !/= useNotifications\(/.test(notificationsScreenTsx));
+  ok('NotificationsScreen.tsx renders the lesson-progress reminder as a local, client-only entry merged into the same inbox surface', /useLessonReminder\(\)/.test(notificationsScreenTsx) && /لم تكمل هذا الدرس بعد/.test(notificationsScreenTsx));
+  ok('NotificationsScreen.tsx lazily fetches an announcement\'s title/body only for announcement-type entries (the notification doc itself carries no title/body)', /AnnouncementRow/.test(notificationsScreenTsx) && /getDoc\(doc\(firestoreDb, announcementPath\(announcementId\)\)\)/.test(notificationsScreenTsx));
+
+  ok('HomeView.tsx owns a SINGLE useNotifications() instance shared between CommunityHome\'s badge and NotificationsScreen\'s list', (homeViewTsx.match(/useNotifications\(\)/g) ?? []).length === 1);
+  ok('HomeView.tsx\'s homeReset effect also refreshes notifications, and documents why it depends on notifications.refresh (a stable useCallback) rather than the whole notifications object', /notifications\.refresh\(\);/.test(homeViewTsx) && /the `notifications` object itself is a new literal every render/.test(homeViewTsx));
+
+  ok('CommunityHome.tsx replaces the small search-icon button with a persistent, always-visible pill-style search bar (readOnly input, onFocus\\/onClick navigation)', !/aria-label="بحث"[\s\S]{0,10}<\/button>/.test(communityHomeTsx) && /readOnly[\s\S]{0,40}onFocus=\{onOpenSearch\}/.test(communityHomeTsx) && /onClick=\{onOpenSearch\}/.test(communityHomeTsx));
+  ok('CommunityHome.tsx adds a notification bell button with an unread-count badge, wired to onOpenNotifications/unreadNotificationsCount props', /onOpenNotifications: \(\) => void;/.test(communityHomeTsx) && /unreadNotificationsCount: number;/.test(communityHomeTsx) && /onClick=\{onOpenNotifications\}/.test(communityHomeTsx) && /unreadNotificationsCount > 9 \? '9\+' : unreadNotificationsCount/.test(communityHomeTsx));
+
+  ok('no service worker file was created (Stage 3 — push — is explicitly out of scope for this phase)', !existsSync(join(ROOT, 'public/firebase-messaging-sw.js')));
+  ok('vercel.json was NOT touched for this phase (no worker-src/FCM CSP entries added yet — that is Stage 3)', !/worker-src/.test(vercelJson) && !/firebaseinstallations|fcm\.googleapis/.test(vercelJson));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -560,8 +620,9 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'firebase.json' &&
     f !== 'storage.rules' && // Phase 9: uid-scoped media paths + exact MIME allow-list + owner-delete
     f !== 'vercel.json' && // Phase 7: CSP connect-src fix for the deployed comment-publish bug
-    f !== 'src/views/HomeView.tsx' && // Phase 8: Home-screen-state reset on the bottom-nav Home press
+    f !== 'src/views/HomeView.tsx' && // Phase 8: Home-screen-state reset on the bottom-nav Home press; Notifications Phase 1 wires the shared useNotifications() instance here too
     f !== 'src/components/BottomNavigation.tsx' && // Phase 8: centralized Home-reset navigation signal
+    f !== 'src/utils/storageKeys.ts' && // Notifications Phase 1: LESSON_REMINDER_LAST_SHOWN throttle key
     f !== 'package.json' &&
     !f.startsWith('functions/') &&
     !f.startsWith('scripts/testCommunity') &&

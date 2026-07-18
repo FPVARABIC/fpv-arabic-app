@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
-import { doc, getDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, writeBatch, increment, collection } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
-import { userPath, postPath, commentsPath } from '../utils/firestorePaths';
+import { userPath, postPath, commentsPath, notificationsPath } from '../utils/firestorePaths';
 import { ensureCommunityUser } from '../utils/ensureCommunityUser';
 import { secondsRemaining, COMMENT_RATE_LIMIT_SECONDS, commentRateLimitMessage } from '../utils/rateLimit';
 import type { CommunityUser } from '../types';
@@ -16,7 +16,9 @@ interface UseCommentComposerResult {
   // Resolves to the created comment's id on success, so the caller
   // (CommentInput) can hand it to usePost's appendCreatedComment instead of
   // re-fetching the whole paginated comments list. null on failure.
-  createComment: (postId: string, text: string) => Promise<CreateCommentResult | null>;
+  // postAuthorId is used only to address the Phase-1 notification write
+  // (see below) — never written into the comment doc itself.
+  createComment: (postId: string, text: string, postAuthorId: string) => Promise<CreateCommentResult | null>;
   submitting: boolean;
   error: string | null;
 }
@@ -41,7 +43,7 @@ export const useCommentComposer = (): UseCommentComposerResult => {
   const [error, setError] = useState<string | null>(null);
 
   const createComment = useCallback(
-    async (postId: string, text: string): Promise<CreateCommentResult | null> => {
+    async (postId: string, text: string, postAuthorId: string): Promise<CreateCommentResult | null> => {
       if (!currentUser) {
         setError('يجب تسجيل الدخول للتعليق.');
         return null;
@@ -106,6 +108,37 @@ export const useCommentComposer = (): UseCommentComposerResult => {
         batch.update(userRef, { lastCommentAt: serverTimestamp() });
 
         await batch.commit();
+
+        // Notifications (Phase 1) — a SEPARATE write, issued only after the
+        // comment batch above has actually committed, never inside that
+        // same batch: firestore.rules' anti-forgery check get()-verifies
+        // the just-committed comment doc's real authorId, and Rules cannot
+        // see writes still pending within the same batch, only already-
+        // committed state. Never fires when commenting on your own post.
+        // ACCEPTED TRADE-OFF (same disclosure discipline as the
+        // commentsCount/likesCount accepted risks elsewhere in this
+        // codebase): if THIS write fails after the comment itself already
+        // succeeded, the comment is NOT rolled back — only the
+        // notification silently fails to appear.
+        if (postAuthorId !== currentUser.uid) {
+          try {
+            const notifRef = doc(collection(firestoreDb, notificationsPath(postAuthorId)));
+            await setDoc(notifRef, {
+              type: 'comment',
+              actorId: currentUser.uid,
+              actorName: authorName,
+              actorPhoto: authorPhoto,
+              targetType: 'comment',
+              targetId: commentRef.id,
+              postId,
+              read: false,
+              createdAt: serverTimestamp(),
+            });
+          } catch (err) {
+            console.error('[useCommentComposer:notify]', err);
+          }
+        }
+
         return { commentId: commentRef.id, collapsed: false };
       } catch (err) {
         console.error('[useCommentComposer]', err);
