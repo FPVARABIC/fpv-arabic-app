@@ -41,15 +41,18 @@ async function waitForServer(url: string, timeoutMs = 20000) {
 }
 
 // Waits for the Assembly wizard's own stage header (StageHeader.tsx's h2) to
-// contain the exact expected stage title, and for the "N/18" counter to
+// contain the exact expected stage title, and for the "N/16" counter to
 // match — the strongest possible signal that the intended stage (not a
-// stale previous one) has actually committed to the DOM.
+// stale previous one) has actually committed to the DOM. 16, not 18: the
+// counter shows only the functionally-real stages (buildStages.ts's
+// visibleStageCount) — stages 17/18 are non-functional placeholders,
+// excluded from this displayed total until they're actually built.
 async function waitForStage(page: Page, stageNumber: number, titleAr: string, timeout = 5000) {
   await page.waitForFunction(
     ({ n, t }) => {
       const h2 = document.querySelector('h2');
       const counter = document.body.textContent ?? '';
-      return !!h2 && h2.textContent === t && counter.includes(`${n}/18`);
+      return !!h2 && h2.textContent === t && counter.includes(`${n}/16`);
     },
     { n: stageNumber, t: titleAr },
     { timeout },
@@ -299,7 +302,7 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [3b] Freestyle: 4S honestly still locked (no fabricated coverage) ──
+    // ── [3b] Freestyle: 4S now genuinely unlocked (motor research pass) ──
     {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const page = await ctx.newPage();
@@ -316,8 +319,67 @@ async function main() {
       await clickNext(page);
       await waitForStage(page, 4, 'اختيار فولتية البطارية');
 
-      ok('4S remains honestly disabled for freestyle (no 4S-tagged freestyle motor exists)', !(await page.locator('[data-testid="assembly-battery-voltage-4s"]').isEnabled()));
+      ok('4S is now genuinely enabled for freestyle (new EMAX Freestyle FS2306/T-Motor Velox 2550KV motors close the coverage gap)', await page.locator('[data-testid="assembly-battery-voltage-4s"]').isEnabled());
       ok('6S remains enabled for freestyle (unaffected)', await page.locator('[data-testid="assembly-battery-voltage-6s"]').isEnabled());
+      ok('no "قريباً" badge renders on the 4S option for freestyle (it is a real, selectable option, not a locked placeholder)', await page.locator('[data-testid="assembly-battery-voltage-4s"]').locator('text=قريباً').count() === 0);
+
+      await page.locator('[data-testid="assembly-battery-voltage-4s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      await page.locator('text=AOS 5 EVO V1.2 Frame Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      ok('the new EMAX Freestyle FS2306 2400KV motor actually renders as a real, selectable option at the freestyle motor stage under 4S', await page.locator('text=EMAX Freestyle FS2306 2400KV', { exact: true }).count() === 1);
+      ok('the new T-Motor VELOX V2207 2550KV motor also renders as a real, selectable option', await page.locator('text=T-Motor VELOX V2207 2550KV', { exact: true }).count() === 1);
+      await page.locator('text=EMAX Freestyle FS2306 2400KV', { exact: true }).first().click();
+      ok('the new 4S motor is genuinely selectable (Next enabled)', await page.locator('button', { hasText: 'التالي' }).isEnabled());
+
+      await ctx.close();
+    }
+
+    // ── [3c] Racing: GPS stage now shows the 2 new racing-tagged options ──
+    // (GPS research pass — before this, racing had zero GPS options and
+    // showed the "optional, skip" empty-state message instead.)
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+      page.on('pageerror', e => consoleErrors.push(String(e)));
+
+      await freshAssembly(page);
+      await page.locator('[data-testid="assembly-drone-type-racing"]').click();
+      await waitForStage(page, 2, 'اختيار الحجم');
+      await page.locator('[data-testid="assembly-size-5"]').click();
+      await clickNext(page);
+      await waitForStage(page, 3, 'اختيار نظام الفيديو (VTX)');
+      await page.locator('text=DJI O4 Air Unit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 4, 'اختيار فولتية البطارية');
+      await page.locator('[data-testid="assembly-battery-voltage-6s"]').click();
+      await clickNext(page);
+      await waitForStage(page, 5, 'اختيار الإطار (Frame)');
+      await page.locator('text=AOS RC 5R V5 Race Frame Kit', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 6, 'اختيار المحركات (Motors)');
+      await page.locator('text=iFlight XING2 2207 1750KV', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 7, 'اختيار الـESC');
+      await page.locator('text=T-Motor F55A Pro II 55A 4-in-1 ESC', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 8, 'اختيار الـFlight Controller');
+      await page.locator('text=Foxeer F722 V4 Flight Controller', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 9, 'اختيار الـReceiver');
+      await page.locator('text=SpeedyBee Nano 2.4G ExpressLRS Receiver', { exact: true }).first().click();
+      await clickNext(page);
+      await waitForStage(page, 10, 'اختيار GPS (اختياري)');
+
+      ok('racing GPS stage no longer shows the "no GPS options, optional, skip" empty-state message (real options now exist)', await page.locator('text=لا توجد خيارات GPS مخصصة لهذا النوع حالياً').count() === 0);
+      ok('the new Diatone Mamba GPS/Beidou M8PLUS renders as a real, selectable racing GPS option', await page.locator('text=Diatone Mamba GPS/Beidou M8PLUS', { exact: true }).count() === 1);
+      ok('the new SEQURE M10-25Q GPS w/QMC5883L Compass renders as a real, selectable racing GPS option', await page.locator('text=SEQURE M10-25Q GPS w/QMC5883L Compass', { exact: true }).count() === 1);
+
+      await page.locator('text=Diatone Mamba GPS/Beidou M8PLUS', { exact: true }).first().click();
+      ok('the new racing GPS option is genuinely selectable (Next enabled)', await page.locator('button', { hasText: 'التالي' }).isEnabled());
 
       await ctx.close();
     }

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { batteryVoltageOptions } from '../../data/assembly/batteryVoltageOptions';
-import { buildStages } from '../../data/assembly/buildStages';
+import { buildStages, visibleStageCount } from '../../data/assembly/buildStages';
 import { StageHeader } from './StageHeader';
 import { PartCardsContainer } from './PartCardsContainer';
 import { StageNavigation } from './StageNavigation';
@@ -114,6 +114,22 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
     }
   };
 
+  // Stage 1 (drone-type selection) is owned by AssemblyHome/AssemblyView, a
+  // sibling screen BuildFlow never renders — BuildFlow only ever receives an
+  // already-fixed droneTypeId as a prop, so it has no real content for this
+  // stage id. Reachable defensively via: (a) a persisted project whose
+  // stageIndex is 0 (assemblyPersistence.ts's validation allows 0 as
+  // in-range) saved from an earlier session that hit this exact dead-end
+  // before the Stage 2 onPrev fix below existed, or (b) any future
+  // regression that decrements stageIndex past Stage 2. Always called
+  // (Rules of Hooks — never inside the conditional branches below), so
+  // this hands off to the real drone-type picker via onChangeType — the
+  // same already-working mechanism "تغيير نوع الدرون" already uses —
+  // instead of ever rendering broken/empty content, even momentarily.
+  useEffect(() => {
+    if (stage.id === 'stage-1') onChangeType();
+  }, [stage.id, onChangeType]);
+
   const ChangeTypeLink = () => (
     <button
       onClick={handleChangeType}
@@ -126,6 +142,14 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
       ↩ تغيير نوع الدرون
     </button>
   );
+
+  // See the useEffect above — this is reached only for the instant between
+  // that effect being scheduled and it actually firing (React commits the
+  // render before running effects), or if onChangeType itself is somehow a
+  // no-op. Rendering nothing here (rather than falling through to the
+  // generic part-category branch below, category=null, the confirmed
+  // dead-end) means there is never a flash of broken/empty content.
+  if (stage.id === 'stage-1') return null;
 
   if (stage.id === 'stage-16') {
     return (
@@ -140,7 +164,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
     return (
       <div>
         <ChangeTypeLink />
-        <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
+        <StageHeader stageNumber={stage.number} totalStages={visibleStageCount} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         <p style={{ padding: '0 16px', fontSize: 13, color: '#7a6a52' }}>هذه الميزة قيد التطوير — قريباً</p>
         <StageNavigation
           canGoPrev
@@ -164,7 +188,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
     return (
       <div>
         <ChangeTypeLink />
-        <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
+        <StageHeader stageNumber={stage.number} totalStages={visibleStageCount} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         {availableSizes.length === 0 ? (
           // Defensive only — every drone type reachable from AssemblyHome
           // currently has at least one real matching frame; this covers a
@@ -188,7 +212,17 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
             ))}
           </div>
         )}
-        <StageNavigation canGoPrev canGoNext={selections.sizeInch !== undefined} isLastStage={false} onPrev={goPrev} onNext={goNext} />
+        {/* Stage 2 is the first stage BuildFlow itself renders — going
+            "back" from here has nowhere else to land inside BuildFlow
+            (Stage 1's drone-type picker is AssemblyHome, a sibling
+            component BuildFlow doesn't own/render). Reusing
+            handleChangeType (the same confirm+clear+onChangeType call
+            already wired to the "تغيير نوع الدرون" link above) makes the
+            ACTUAL back button correctly return to the real drone-type
+            picker, instead of decrementing stageIndex to 0 and falling
+            into the generic part-category branch below with an empty
+            category — the confirmed dead-end this replaces. */}
+        <StageNavigation canGoPrev canGoNext={selections.sizeInch !== undefined} isLastStage={false} onPrev={handleChangeType} onNext={goNext} />
       </div>
     );
   }
@@ -204,7 +238,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
     return (
       <div>
         <ChangeTypeLink />
-        <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
+        <StageHeader stageNumber={stage.number} totalStages={visibleStageCount} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
         <div style={{ padding: '4px 16px', display: 'flex', gap: 8 }}>
           {batteryVoltageOptions.map(opt => (
             <OptionCard
@@ -257,7 +291,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
   return (
     <div>
       <ChangeTypeLink />
-      <StageHeader stageNumber={stage.number} totalStages={totalStages} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
+      <StageHeader stageNumber={stage.number} totalStages={visibleStageCount} titleAr={stage.titleAr} descriptionAr={stage.descriptionAr} />
       {relevantParts.length === 0 ? (
         // Empty stage must never render as a silent blank grid. GPS is the
         // only optional stage and legitimately has no entries for some

@@ -23,6 +23,7 @@ import { escs } from '../src/data/assembly/parts/escs';
 import { flightControllers } from '../src/data/assembly/parts/flightControllers';
 import { receivers } from '../src/data/assembly/parts/receivers';
 import { videoUnits } from '../src/data/assembly/parts/videoUnits';
+import { gps } from '../src/data/assembly/parts/gps';
 import { buzzers } from '../src/data/assembly/parts/buzzers';
 import { capacitors } from '../src/data/assembly/parts/capacitors';
 import { propellers } from '../src/data/assembly/parts/propellers';
@@ -169,20 +170,37 @@ console.log('\n[4] Full voltage-sensitive compatibility table — independently 
   ok('racing full 6S coverage remains intact (unchanged)', hasFullCoverage('racing', 6));
   ok('cinematic full 6S coverage remains intact (unchanged)', hasFullCoverage('cinematic', 6));
 
-  // Honest disclosure, proven structurally: freestyle/racing/cinematic do
-  // NOT have full 4S coverage today, because every motor tagged for those
-  // types is genuinely 6S-only in its own sourced spec data (no fabricated
-  // 4S motor was added for them). This assertion exists specifically to
-  // catch any future silent/accidental widening of motor compatibility.
-  ok('freestyle 4S coverage is honestly still incomplete (no fabricated 4S motor exists for it)', !hasFullCoverage('freestyle', 4));
-  ok('racing 4S coverage is honestly still incomplete (no fabricated 4S motor exists for it)', !hasFullCoverage('racing', 4));
-  ok('cinematic 4S coverage is honestly still incomplete (no fabricated 4S motor exists for it)', !hasFullCoverage('cinematic', 4));
+  // 4S-motor research pass (Issue 1 follow-up) — freestyle/racing/cinematic
+  // now ALSO have genuine, independently-verified full 4S coverage. This
+  // used to assert the OPPOSITE (coverage honestly incomplete, no
+  // fabricated 4S motor existed) before 3 new real motor entries closed
+  // the gap; every other mandatory category already had 4S coverage for
+  // these 3 types (via the pre-existing shared 4S battery entry), so the
+  // motors category was, and remains, the only thing this table needed to
+  // prove closed.
+  ok('freestyle now has genuine full 4S coverage across every mandatory category (new EMAX Freestyle FS2306 2400KV + T-Motor Velox 2550KV motors close the gap)', hasFullCoverage('freestyle', 4));
+  ok('racing now has genuine full 4S coverage across every mandatory category (same two new motors both qualify)', hasFullCoverage('racing', 4));
+  ok('cinematic now has genuine full 4S coverage across every mandatory category (new Lumenier JohnnyFPV Cinematic V2 2550KV motor closes the gap)', hasFullCoverage('cinematic', 4));
 
-  // The precise root cause is the motors category specifically (every other
-  // mandatory category already had, or was fixed to have, 4S coverage for
-  // these three types via the pre-existing shared 4S battery entry).
-  const freestyleMotor4s = motors.some(m => m.compatibilityTags.droneTypes.includes('freestyle') && m.compatibilityTags.batteryVoltages.includes(4));
-  ok('confirms motors is the actual (sole) blocker for freestyle 4S — no freestyle-tagged motor supports 4S', !freestyleMotor4s);
+  // Confirms exactly which motors now carry 4S for each type — not merely
+  // that coverage exists, but that it's the SPECIFIC expected new entries
+  // and nothing silently widened beyond them.
+  const freestyleMotor4sIds = motors.filter(m => m.compatibilityTags.droneTypes.includes('freestyle') && m.compatibilityTags.batteryVoltages.includes(4)).map(m => m.id).sort();
+  ok('exactly the 2 new motors (EMAX Freestyle FS2306, T-Motor Velox 2550KV) support freestyle 4S — nothing else', JSON.stringify(freestyleMotor4sIds) === JSON.stringify(['motor-emax-freestyle-fs2306-2400kv-4s', 'motor-tmotor-velox-v2207-2550kv-4s'].sort()));
+  const racingMotor4sIds = motors.filter(m => m.compatibilityTags.droneTypes.includes('racing') && m.compatibilityTags.batteryVoltages.includes(4)).map(m => m.id).sort();
+  ok('exactly the same 2 new motors support racing 4S — nothing else', JSON.stringify(racingMotor4sIds) === JSON.stringify(['motor-emax-freestyle-fs2306-2400kv-4s', 'motor-tmotor-velox-v2207-2550kv-4s'].sort()));
+  const cinematicMotor4sIds = motors.filter(m => m.compatibilityTags.droneTypes.includes('cinematic') && m.compatibilityTags.batteryVoltages.includes(4)).map(m => m.id);
+  ok('exactly the 1 new Lumenier motor supports cinematic 4S — nothing else', cinematicMotor4sIds.length === 1 && cinematicMotor4sIds[0] === 'motor-lumenier-johnnyfpv-cinematic-v2-2550kv-4s');
+
+  // Every new 4S motor's confidence is honestly disclosed as NOT 'مؤكد'
+  // (direct manufacturer-page fetches were blocked/403 for all 3) — never
+  // silently upgraded to the same confidence level as directly-verified entries.
+  const NEW_4S_MOTOR_IDS = ['motor-emax-freestyle-fs2306-2400kv-4s', 'motor-tmotor-velox-v2207-2550kv-4s', 'motor-lumenier-johnnyfpv-cinematic-v2-2550kv-4s'];
+  for (const id of NEW_4S_MOTOR_IDS) {
+    const m = motors.find(mm => mm.id === id)!;
+    ok(`${id} exists and its confidence is honestly NOT 'مؤكد' (spec sheet could not be directly verified)`, !!m && m.confidence !== 'مؤكد');
+    ok(`${id} has no priceRangeUSD/weightG fabricated (left out rather than invented)`, m.priceRangeUSD === undefined && m.specs.weightG === undefined);
+  }
 
   // Full compatibility table for every voltage-sensitive product touched by
   // this task's 5 data fixes — each one independently checked against its
@@ -195,9 +213,11 @@ console.log('\n[4] Full voltage-sensitive compatibility table — independently 
   ok('propeller-hqprop-7x45x2-biblade-budget (long-range propeller): tag now [4,6], matching every other propeller in the file (propellers are voltage-agnostic)', propellers.find(p => p.id === 'propeller-hqprop-7x45x2-biblade-budget')!.compatibilityTags.batteryVoltages.includes(4));
   ok('battery-tattu-rline-1550-4s-budget: droneTypes now includes long-range (matches the file\'s own pre-authorized revisit condition, satisfied by the motor fix above)', batteries.find(b => b.id === 'battery-tattu-rline-1550-4s-budget')!.compatibilityTags.droneTypes.includes('long-range'));
 
-  // Confirm no OTHER product was silently touched beyond the 5 identified fixes.
-  const otherMotorsUnchanged = motors.filter(m => m.id !== 'motor-emax-e3-2808-1300kv-premium').every(m => !m.compatibilityTags.batteryVoltages.includes(4));
-  ok('no other motor besides the one long-range entry was widened to support 4S', otherMotorsUnchanged);
+  // Confirm no OTHER product was silently touched beyond the 5 identified
+  // fixes + the 3 new 4S-research-pass motors (already itemized/verified by id above).
+  const KNOWN_4S_MOTOR_IDS = new Set(['motor-emax-e3-2808-1300kv-premium', ...NEW_4S_MOTOR_IDS]);
+  const otherMotorsUnchanged = motors.filter(m => !KNOWN_4S_MOTOR_IDS.has(m.id)).every(m => !m.compatibilityTags.batteryVoltages.includes(4));
+  ok('no motor besides these 4 known entries (1 pre-existing long-range fix + 3 new research-pass motors) supports 4S — nothing else silently widened', otherMotorsUnchanged);
   const otherEscsUnchanged = escs.filter(e => e.id !== 'esc-sequre-blueson-a2-65a-premium').every(e => e.compatibilityTags.droneTypes.includes('long-range') ? true : e.compatibilityTags.batteryVoltages.includes(4));
   void otherEscsUnchanged; // escs for freestyle/racing/cinematic were already [4,6] before this task — not a new change, no assertion needed beyond the coverage checks above.
 }
@@ -410,6 +430,35 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2'),
   ));
   ok('src/App.tsx was not modified (no new route was needed)', !allChanged.includes('src/App.tsx'));
+}
+
+console.log('\n[15] GPS racing-gap research pass (Issue 3 follow-up) — 2 new real, evidence-backed entries; cinematic gap honestly left open');
+{
+  // Before this task, zero GPS entries in gps.ts were tagged 'racing' (all
+  // 5 pre-existing entries were 'freestyle'-only or 'freestyle'+'long-range').
+  const preExistingRacingGps = gps.filter(g => !['gps-diatone-mamba-m8plus-racing', 'gps-sequre-m10-25q-racing'].includes(g.id) && g.compatibilityTags.droneTypes.includes('racing'));
+  ok('no PRE-EXISTING gps.ts entry was silently retagged for racing — only the 2 new entries carry it', preExistingRacingGps.length === 0);
+
+  const mamba = gps.find(g => g.id === 'gps-diatone-mamba-m8plus-racing');
+  ok('gps-diatone-mamba-m8plus-racing exists, tagged racing, real specs (18x18x6mm class -> 4.9g, no compass)', !!mamba && mamba.compatibilityTags.droneTypes.includes('racing') && mamba.specs.weightG === 4.9 && mamba.specs.hasCompass === false);
+  ok('gps-diatone-mamba-m8plus-racing confidence is honestly NOT \'مؤكد\' (manufacturer page fetch was blocked/403)', mamba?.confidence !== 'مؤكد');
+
+  const sequre = gps.find(g => g.id === 'gps-sequre-m10-25q-racing');
+  ok('gps-sequre-m10-25q-racing exists, tagged racing, real specs (25x25x8mm class -> 12.2g, QMC5883L compass)', !!sequre && sequre.compatibilityTags.droneTypes.includes('racing') && sequre.specs.weightG === 12.2 && sequre.specs.hasCompass === true);
+  ok('gps-sequre-m10-25q-racing confidence is honestly NOT \'مؤكد\' (manufacturer page fetch was blocked/403)', sequre?.confidence !== 'مؤكد');
+
+  ok('racing now has exactly 2 GPS options (the 2 new entries, nothing more)', gps.filter(g => g.compatibilityTags.droneTypes.includes('racing')).length === 2);
+
+  // The honestly-disclosed research gap: no genuine first-party 'cinematic'
+  // GPS candidate was found (every result was generic marketing prose, not
+  // a product's own name/description) — this is NOT silently patched with
+  // a low-confidence guess. Locks in the gap so a future change that adds
+  // one does so as a conscious, evidence-backed decision, not by accident.
+  ok('cinematic GPS coverage remains an honest, disclosed gap — no entry was force-added without real supporting evidence', gps.filter(g => g.compatibilityTags.droneTypes.includes('cinematic')).length === 0);
+
+  // Freestyle/long-range GPS coverage (pre-existing, untouched by this pass).
+  ok('freestyle GPS coverage is unchanged at 5 options (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('freestyle')).length === 5);
+  ok('long-range GPS coverage is unchanged at 1 option (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('long-range')).length === 1);
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

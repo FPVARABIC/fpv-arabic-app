@@ -207,4 +207,118 @@ export const motors: Motor[] = [
       'ملاحظة سعر: سعر رسمي واحد فقط من EMAX مباشرة ($23.99) تكرر عبر عدة عمليات بحث دون نطاق حقيقي من مصادر متعددة مختلفة السعر؛ تُرك priceRangeUSD فارغاً بدل افتراض نطاق.',
     ],
   },
+
+  // 4S-motor research pass (Assembly Issue 1 follow-up) — until these 3
+  // entries, freestyle/racing/cinematic had ZERO motors tagged for 4S
+  // (only the long-range EMAX E3 2808 above supports it), which is exactly
+  // why voltageHasFullCoverage(4) in BuildFlow.tsx locked 4S for those 3
+  // types. All 3 below are real, currently-sold products, cross-checked
+  // across multiple independent retailer listings via web search — but
+  // every direct manufacturer/retailer page fetch attempt (getfpv.com,
+  // emax-usa.com, tmotorhobby.com, newbeedrone.com) returned HTTP 403
+  // (blocked), so none of these could be confirmed against a single
+  // authoritative spec sheet the way every other entry in this file was.
+  // confidence is set to 'تجربة مجتمع' (or 'رأي أولي' where the gap is
+  // larger — see that entry) rather than 'مؤكد', and weightG/shaftDiameterMm/
+  // priceRangeUSD are left out entirely rather than transcribing numbers
+  // that could not be independently verified. Re-verify directly against
+  // manufacturer pages when possible.
+  {
+    id: 'motor-emax-freestyle-fs2306-2400kv-4s',
+    tier: 'budget',
+    nameAr: 'محرك 2306 فريستايل - اقتصادي (4S)',
+    nameEn: 'EMAX Freestyle FS2306 2400KV',
+    brand: 'EMAX',
+    specs: { kv: 2400, statorSize: '2306', compatibleVoltages: [3, 4] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [4], frameSizeInch: 5 },
+    // First-party EMAX product line named "Freestyle" (distinct from the
+    // existing "EMAX ECO II 2306" entry above — a different EMAX SKU, not
+    // a KV sibling of it), sold in two KV variants: 1700KV (3-6S) and
+    // 2400KV (3-4S) — cross-corroborated across 5 independent retailers
+    // (emaxmodel.com, speedyfpv.com, hobbytown.com, myfpvstore.com,
+    // emax-usa.com). The product's own listing title also ties it to
+    // racing ("for Buzz Hawk RC Drone FPV Racing"), supporting the racing
+    // tag on the same engineering-judgment basis already used elsewhere
+    // in this file for other 2207/2306-class motors.
+    whyChoose: 'محرك EMAX Freestyle FS2306 بنسخة 2400KV مخصصة لـ3-4S — أحد المحركات القليلة الموثقة بدعم 4S فعلي لبناء فريستايل/سباقات 5 إنش؛ نفس الشركة تسوّقه أيضاً لسباقات FPV.',
+    notFor: 'لا تختاره إذا تريد 6S (استخدم أحد المحركات الأخرى في هذا الملف) أو إذا تحتاج وزناً وسعراً مؤكدين قبل الشراء — هذا الصف لم يُتحقق من ورقة مواصفات المصنّع مباشرة (حجب 403 عند المحاولة)، راجع notFor/buildNotes.',
+    lastReviewed: '2026-07',
+    confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: '4S حقيقي 2400KV — من القليل الموثق لفريستايل/سباقات',
+      noteTag: 'وزن وسعر غير مؤكدين — لم يُتحقق من صفحة المصنّع مباشرة',
+      noteTagSource: 'notFor',
+    },
+    beginnerNotes: ['خيار 4S حقيقي إذا قررت بناء فريستايل أو سباقات على 4S بدل 6S.'],
+    safetyNotes: ['اختبر اتجاه المحركات بدون مراوح أولاً، ولا تركب مروحة أثناء إعداد Betaflight.'],
+    buildNotes: [
+      'مصدر البيانات: نتائج بحث ويب متعددة (5 متاجر مستقلة) تؤكد وجود نسختي 1700KV (3-6S) و2400KV (3-4S) لنفس الخط، لكن كل محاولة لجلب صفحة المنتج مباشرة من المصنّع/المتاجر أُعيقت (HTTP 403) — الوزن والسعر وتفاصيل التيار الدقيقة لم تُتحقق مباشرة، لذا تُركت فارغة بدل افتراضها.',
+    ],
+  },
+  {
+    id: 'motor-tmotor-velox-v2207-2550kv-4s',
+    tier: 'mid',
+    nameAr: 'محرك 2207 - متوسط (4S)',
+    nameEn: 'T-Motor VELOX V2207 2550KV',
+    brand: 'T-Motor',
+    specs: { kv: 2550, statorSize: '2207', compatibleVoltages: [4] },
+    compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [4], frameSizeInch: 5 },
+    // Genuine sibling KV variant of the SAME "T-Motor Velox V2207" family
+    // already carried above (1750KV, 6S) — multiple independent retailer
+    // listings (getfpv, t-hobby, racedayquads, pyrodrone, tmotorhobby.com)
+    // confirm 2550KV as the 4S-rated option in this line (1750/1950KV
+    // being 5-6S). Sources disagree on whether this specific KV sits under
+    // the "V2" or "V3" sub-line naming — this entry uses "V2" per the
+    // majority of sources found, but that naming detail specifically
+    // should be re-confirmed before treating it as settled.
+    whyChoose: 'نسخة 2550KV من نفس عائلة T-Motor Velox V2207 الموجودة في هذا الملف (1750KV/6S) — لكن مخصصة لـ4S، حسب عدة متاجر مستقلة تصنّفها ضمن نفس خط المنتج.',
+    notFor: 'لا تختاره إذا تحتاج تأكيداً دقيقاً لتصنيف V2 مقابل V3 أو للوزن/التيار قبل الشراء — لم يُتحقق من صفحة المصنّع مباشرة (حجب 403 عند المحاولة)؛ راجع buildNotes.',
+    lastReviewed: '2026-07',
+    confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: '4S من نفس عائلة Velox V2207 الموثوقة',
+      noteTag: 'تسمية V2/V3 وتفاصيل الوزن غير مؤكدة من مصدر واحد موثوق',
+      noteTagSource: 'notFor',
+    },
+    beginnerNotes: ['بديل 4S من عائلة محرك موثوقة (Velox) إذا كنت تفضل هذه العلامة التجارية.'],
+    safetyNotes: ['لا تخلط KV مختلف بين المحركات الأربعة.'],
+    buildNotes: [
+      'مصدر البيانات: نتائج بحث ويب متعددة (getfpv وt-hobby وracedayquads وpyrodrone وtmotorhobby.com) تؤكد وجود نسخة 2550KV 4S ضمن عائلة Velox V2207، مع تضارب طفيف بين المصادر حول تصنيفها V2 أو V3 — كل محاولة لجلب صفحة المنتج مباشرة أُعيقت (HTTP 403)، فتُركت تفاصيل الوزن/التيار/السعر فارغة بدل افتراضها.',
+    ],
+  },
+  {
+    id: 'motor-lumenier-johnnyfpv-cinematic-v2-2550kv-4s',
+    tier: 'mid',
+    nameAr: 'محرك 2306 سينمائي - متوسط (4S)',
+    nameEn: 'Lumenier 2306 JohnnyFPV Cinematic V2 Motor 2550KV',
+    brand: 'Lumenier',
+    specs: { kv: 2550, statorSize: '2306', compatibleVoltages: [4] },
+    compatibilityTags: { droneTypes: ['cinematic'], batteryVoltages: [4], frameSizeInch: 5 },
+    // First-party product name genuinely includes "Cinematic" (same
+    // evidentiary standard already used for the existing NewBeeDrone Smoov
+    // "...Cinematic FPV Motor" entry above) — real product, comes in
+    // 1750KV/2250KV/2550KV variants (confirmed via getfpv/newbeedrone
+    // listings). IMPORTANT GAP: unlike the other two new entries above,
+    // I could NOT confirm from this product's own spec sheet which KV
+    // variant is rated for 4S vs 6S — every direct fetch attempt
+    // (newbeedrone.com) returned HTTP 403. "2550KV = 4S" here is an
+    // INFERENCE from general 2306-motor voltage/KV conventions (4S 2306
+    // motors commonly run ~2300-2700KV), not a confirmed spec for this
+    // exact product. Recommend verifying directly before relying on this
+    // entry for a real build.
+    whyChoose: 'المسمى الرسمي من الشركة المصنّعة "Cinematic" (Lumenier 2306 JohnnyFPV Cinematic V2) — نفس معيار الإثبات المستخدم أعلاه لمحرك NewBeeDrone Smoov. يأتي بثلاث نسخ KV (1750/2250/2550)؛ 2550KV هنا مستنتج كنسخة 4S بناءً على تعارف صناعي عام لمحركات 2306 عند 4S، وليس تأكيداً من ورقة مواصفات هذا المنتج تحديداً.',
+    notFor: 'لا تختاره كمصدر تأكيد نهائي لتخصيص 4S — راجع صفحة المصنّع مباشرة أولاً (حجبت هذه المحاولة هنا بـHTTP 403)؛ إذا لم يتأكد أن 2550KV فعلاً لـ4S، استخدم بديلاً آخر لهذا الملف حتى يُتحقق.',
+    lastReviewed: '2026-07',
+    confidence: 'رأي أولي',
+    quickTags: {
+      whyTag: '"Cinematic" رسمياً — لكن ربط 2550KV بـ4S استنتاج غير مؤكد',
+      noteTag: 'يحتاج تحققاً مباشراً من صفحة المصنّع قبل الاعتماد عليه',
+      noteTagSource: 'notFor',
+    },
+    beginnerNotes: ['لا يُنصح به كخيار وحيد لأول بناء 4S سينمائي قبل التحقق المباشر من مواصفاته.'],
+    safetyNotes: ['استخدم عزم ربط مناسباً ولا تفرط في الشد؛ اختبر اتجاه الدوران بدون مراوح أولاً.'],
+    buildNotes: [
+      'مصدر البيانات: نتائج بحث ويب تؤكد أن المنتج نفسه واسمه ونسخ KV الثلاث (1750/2250/2550) حقيقية، لكن لا مصدر تم جلبه مباشرة يؤكد أي نسخة KV مخصصة لأي فولتية — الافتراض هنا (2550KV=4S) استنتاج هندسي عام وليس نصاً من مصدر المنتج نفسه؛ يتطلب تحققاً قبل استخدامه في قرار بناء حقيقي.',
+    ],
+  },
 ];

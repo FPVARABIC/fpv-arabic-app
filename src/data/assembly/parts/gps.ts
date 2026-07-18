@@ -145,4 +145,85 @@ export const gps: Gps[] = [
       'ملاحظة تدقيق: عمود الشريحة في المصدر كان نصاً وصفياً "GPS + Compass"، والعمود المجاور له كان "3.3-5V / 2.6g" بدل حقل Compass المعتاد (نعم/لا) — chipset تُرك فارغاً بدل اختراع اسم شريحة دقيق.',
     ],
   },
+
+  // Racing-gap research pass (Assembly Issue 3 follow-up) — until these 2
+  // entries, no GPS module in this file was tagged for 'racing' at all (all
+  // 5 above are 'freestyle'-only or 'freestyle'+'long-range'). Both entries
+  // below are real, currently-sold products whose OWN retailer listing
+  // titles explicitly name "Racing" (same evidentiary bar this file's own
+  // header comment sets), cross-checked across multiple independent
+  // retailers via web search — but every direct manufacturer/retailer page
+  // fetch attempt returned HTTP 403 (blocked), so weightG below is drawn
+  // from consistently-matching numbers across several independent listings,
+  // not a single directly-fetched authoritative spec sheet. confidence is
+  // set to 'تجربة مجتمع' rather than 'مؤكد' to reflect this; re-verify
+  // directly against a manufacturer page when possible. No genuine
+  // 'cinematic' GPS candidate was found — every search result tying GPS to
+  // "cinematic" use was generic marketing prose, never a product's own
+  // name/description, so cinematic GPS support remains an open data gap
+  // rather than being force-filled here.
+  {
+    id: 'gps-diatone-mamba-m8plus-racing',
+    tier: 'budget',
+    nameAr: 'وحدة GPS - اقتصادية (سباقات)',
+    nameEn: 'Diatone Mamba GPS/Beidou M8PLUS',
+    brand: 'Diatone',
+    specs: { chipset: 'M8PLUS', hasCompass: false, weightG: 4.9 },
+    compatibilityTags: { droneTypes: ['racing'], batteryVoltages: [4, 6] },
+    // Explicitly sold "for RC FPV Drone Racing Freestyle Long-Range
+    // Flight" — this exact framing repeats across Diatone's own site and
+    // multiple independent retailers (NewBeeDrone, SpeedyFPV, BuddyRC,
+    // Pyrodrone, MyFPV, Amazon), a real, first-party-adjacent racing claim,
+    // not an assumption. Only the 'racing' tag is added here — this file's
+    // strict evidence-gated standard for GPS (see the top-of-file comment)
+    // means freestyle/long-range are NOT added just because the same
+    // listing title also mentions them, since no OTHER researched GPS
+    // entry in this file extends its tag set on listing-title text alone.
+    whyChoose: 'وحدة GPS مباعة رسمياً "لسباقات/فريستايل/مدى طويل" حسب متاجر Diatone الرسمية ومتاجر مستقلة متعددة — من القليل الموثق بربط صريح بالسباقات في هذا الملف.',
+    notFor: 'لا تختارها إذا تحتاج Compass مدمج (لا يوجد compass مؤكد لهذه النسخة) أو تحتاج وزناً مؤكداً من ورقة مواصفات المصنّع مباشرة — لم تُجلب صفحة المنتج مباشرة (حجب 403).',
+    upgradePath: 'SEQURE M10-25Q (مع Compass)',
+    lastReviewed: '2026-07',
+    confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'مباعة رسمياً لسباقات FPV — خفيفة (4.9g)',
+      noteTag: 'بلا Compass — ووزنها من مصادر متعددة لا صفحة مصنّع مباشرة',
+      noteTagSource: 'notFor',
+    },
+    beginnerNotes: ['خيار GPS مخصص للسباقات إذا كان بناؤك من نوع سباقات ولا تحتاج Compass.'],
+    safetyNotes: ['GPS لا يعني أن الطائرة آمنة تلقائياً؛ اختبر Rescue/RTH في مكان مفتوح وبحذر.'],
+    buildNotes: [
+      'مصدر البيانات: نتائج بحث ويب عبر عدة متاجر مستقلة (Diatone الرسمي، NewBeeDrone، SpeedyFPV، BuddyRC، Pyrodrone، MyFPV) تتفق على 18×18×6mm و4.9g وشريحة Beidou M8PLUS مع GPS+BDS — لكن كل محاولة لجلب صفحة المنتج مباشرة أُعيقت (HTTP 403)، فهذه الأرقام مبنية على تطابق عدة مصادر مستقلة لا تحققاً من صفحة واحدة موثوقة مباشرة.',
+    ],
+  },
+  {
+    id: 'gps-sequre-m10-25q-racing',
+    tier: 'mid',
+    nameAr: 'وحدة GPS - متوسطة (سباقات)',
+    nameEn: 'SEQURE M10-25Q GPS w/QMC5883L Compass',
+    brand: 'SEQURE',
+    specs: { chipset: 'M10 + QMC5883L', hasCompass: true, weightG: 12.2 },
+    compatibilityTags: { droneTypes: ['racing'], batteryVoltages: [4, 6] },
+    // Explicitly marketed "for FPV Racing Drones" in its own Amazon/
+    // manufacturer listing title, corroborated across Amazon, Sequremall
+    // (manufacturer's own store), manuals.plus, rotorama, and MyFPV —
+    // the same first-party-adjacent racing evidence standard as the
+    // Diatone entry above, with a genuinely different tier (heavier, more
+    // full-featured: integrated compass, higher accuracy) rather than a
+    // duplicate of the same option.
+    whyChoose: 'وحدة GPS مباعة رسمياً "لطائرات السباقات FPV"، مع Compass QMC5883L مدمج ودقة موقع أعلى — بديل أثقل وأكمل مواصفات من الخيار الاقتصادي أعلاه لمن يحتاج Compass فعلاً.',
+    notFor: 'لا تختارها إذا تريد أخف وزن ممكن (12.2g هي الأثقل في عائلة SEQURE M10) أو تحتاج تأكيداً من صفحة المصنّع مباشرة — لم تُجلب صفحة المنتج مباشرة (حجب 403).',
+    upgradePath: 'Matek M10Q-5883',
+    lastReviewed: '2026-07',
+    confidence: 'تجربة مجتمع',
+    quickTags: {
+      whyTag: 'مباعة رسمياً لسباقات FPV — مع Compass QMC5883L',
+      noteTag: 'الأثقل في عائلتها (12.2g) — ووزنها من مصادر متعددة لا صفحة مصنّع مباشرة',
+      noteTagSource: 'notFor',
+    },
+    beginnerNotes: ['خيار GPS للسباقات إذا كنت تحتاج Compass مدمج ولا يزعجك الوزن الإضافي.'],
+    safetyNotes: ['عاير الـ Compass في النظام الذي يدعمه ولا تفترض أن Betaflight سيستفيد منه مثل INAV.'],
+    buildNotes: [
+      'مصدر البيانات: نتائج بحث ويب عبر عدة متاجر مستقلة (Amazon، Sequremall، manuals.plus، rotorama، MyFPV) تتفق على 25×25×8mm و12.2g وشريحة M10 مع QMC5883L Compass، دعم GPS/GLONASS/BDS/GALILEO/QZSS، ودقة 10Hz — لكن كل محاولة لجلب صفحة المنتج مباشرة أُعيقت (HTTP 403)، فهذه الأرقام مبنية على تطابق عدة مصادر مستقلة لا تحققاً من صفحة واحدة موثوقة مباشرة.',
+    ],
+  },
 ];

@@ -33,3 +33,14 @@ export const buildStages: BuildStage[] = [
   { id: 'stage-17', number: 17, titleAr: 'قائمة المشتريات',              descriptionAr: 'ملخص كل القطع المختارة (سيتم تفعيل الشراء لاحقًا)', partCategory: null },
   { id: 'stage-18', number: 18, titleAr: 'خريطة التركيب',                descriptionAr: 'دليل تركيب تفصيلي خطوة بخطوة (قريبًا)', partCategory: null },
 ];
+
+// Stages 17-18 are non-functional placeholders — BuildFlow.tsx renders only
+// "هذه الميزة قيد التطوير — قريباً" for both, with no real content. Kept in
+// buildStages above (not deleted) so their ids/titles/order stay reserved
+// for that future work; excluded here only from the user-visible stage
+// counter so "X من Y" never promises a total the flow can't yet deliver.
+// buildStages.length itself stays 18 (still used internally for real array
+// bounds/persistence validation in useAssemblyBuild.ts/assemblyPersistence.ts) —
+// this is purely the displayed number.
+const PLACEHOLDER_STAGE_IDS = new Set(['stage-17', 'stage-18']);
+export const visibleStageCount = buildStages.filter(s => !PLACEHOLDER_STAGE_IDS.has(s.id)).length;
