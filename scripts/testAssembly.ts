@@ -31,6 +31,7 @@ import { batteries } from '../src/data/assembly/parts/batteries';
 import { tools } from '../src/data/assembly/parts/tools';
 import type { BasePart } from '../src/data/assembly/types';
 import { frameMatchesSize, getAvailableSizeOptions } from '../src/components/Assembly/utils/frameSizeMatch';
+import { PART_CATEGORY_MAP } from '../src/components/Assembly/utils/assemblyPersistence';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -415,13 +416,14 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('src/components/Assembly/') &&
     !f.startsWith('src/data/assembly/') &&
     !f.startsWith('scripts/testAssembly') &&
+    !f.startsWith('public/assets/assembly/') && // category-icon SVGs — new asset folder, still Assembly-scoped
     f !== 'scripts/testFrameSizeMatch.ts' && // Phase 3: pure-Node unit tests for Stage 2 size <-> frame matching
     f !== 'src/assembly-preview.tsx' && // independent-audit correction: stale preset ids fixed, still Assembly-scoped
     f !== 'src/views/AssemblyView.tsx' && // Phase 2: persistence restore lives at the screen-state decision, still Assembly-scoped
     f !== 'docs/KNOWN_ISSUES.md' && // Phase 4: corrected the stale validateVideoSystemVideoUnit entry
     f !== 'docs/EXPERT_RULES_UNMAPPED.md', // Phase 4: updated its own reference after compatibility/rules.ts was removed
   );
-  ok('no file outside src/components/Assembly/, src/data/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
+  ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
     f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' ||
@@ -459,6 +461,37 @@ console.log('\n[15] GPS racing-gap research pass (Issue 3 follow-up) — 2 new r
   // Freestyle/long-range GPS coverage (pre-existing, untouched by this pass).
   ok('freestyle GPS coverage is unchanged at 5 options (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('freestyle')).length === 5);
   ok('long-range GPS coverage is unchanged at 1 option (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('long-range')).length === 1);
+}
+
+console.log('\n[16] Category icon system — 12 SVGs, CATEGORY_ICON_PATH map, PartCard/PartCardsContainer wiring');
+{
+  const partCategoryKeys = Object.keys(PART_CATEGORY_MAP);
+  ok('PART_CATEGORY_MAP has exactly the 12 known categories', partCategoryKeys.length === 12);
+
+  const { CATEGORY_ICON_PATH } = await import('../src/data/assembly/categoryIcons');
+  ok('CATEGORY_ICON_PATH has exactly one entry per PART_CATEGORY_MAP key, no more, no fewer', JSON.stringify(Object.keys(CATEGORY_ICON_PATH).sort()) === JSON.stringify(partCategoryKeys.sort()));
+
+  for (const key of partCategoryKeys) {
+    const relPath = CATEGORY_ICON_PATH[key];
+    ok(`${key}'s icon path starts with /assets/assembly/category-icons/ and matches its own key`, relPath === `/assets/assembly/category-icons/${key}.svg`);
+    const diskPath = join(ROOT, 'public', relPath);
+    ok(`${key}.svg actually exists on disk at public${relPath}`, existsSync(diskPath));
+    const svgContent = readFileSync(diskPath, 'utf8');
+    ok(`${key}.svg declares viewBox="0 0 400 300" (4:3, matches the real PartCard image-frame aspect ratio)`, svgContent.includes('viewBox="0 0 400 300"'));
+  }
+
+  const partCardTsx = readFileSync(join(ROOT, 'src/components/Assembly/PartCard.tsx'), 'utf8');
+  ok('PartCard.tsx imports CATEGORY_ICON_PATH', /import \{ CATEGORY_ICON_PATH \} from '\.\.\/\.\.\/data\/assembly\/categoryIcons';/.test(partCardTsx));
+  ok('PartCard.tsx takes a category prop', /category: string;/.test(partCardTsx));
+  ok('PartCard.tsx tries part.imagePath first, then falls back to CATEGORY_ICON_PATH[category] (3-tier chain, real photo wins if ever set)', /const iconSrc = part\.imagePath \?\? CATEGORY_ICON_PATH\[category\];/.test(partCardTsx));
+  ok('PartCard.tsx still falls back to part.placeholderIcon ?? DEFAULT_PART_ICON as the final emoji tier (unchanged)', /part\.placeholderIcon \?\? DEFAULT_PART_ICON/.test(partCardTsx));
+  ok('PartCard.tsx keys the <img> by iconSrc so a genuinely different path always gets a fresh load attempt', /key=\{iconSrc\}/.test(partCardTsx));
+
+  const partCardsContainerTsx = readFileSync(join(ROOT, 'src/components/Assembly/PartCardsContainer.tsx'), 'utf8');
+  ok('PartCardsContainer.tsx takes a category prop and threads it down to PartCard', /category: string;/.test(partCardsContainerTsx) && /<PartCard part=\{part\} category=\{category\}/.test(partCardsContainerTsx));
+
+  const buildFlowTsx = readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.tsx'), 'utf8');
+  ok('BuildFlow.tsx passes its already-computed category variable into PartCardsContainer', /category=\{category \?\? ''\}/.test(buildFlowTsx));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

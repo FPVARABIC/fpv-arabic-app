@@ -4,6 +4,7 @@ import type { BasePart } from '../../data/assembly/types';
 
 interface PartCardsContainerProps {
   parts: BasePart[];
+  category: string;
   selectedId?: string;
   onSelect: (part: BasePart) => void;
 }
@@ -44,7 +45,7 @@ interface PartCardsContainerProps {
 // (zero visual/height side effect) on escs (3), frames (4), and receivers
 // (5) -- the spacer only engages once content is genuinely tall enough to
 // need it.
-export const PartCardsContainer: React.FC<PartCardsContainerProps> = ({ parts, selectedId, onSelect }) => {
+export const PartCardsContainer: React.FC<PartCardsContainerProps> = ({ parts, category, selectedId, onSelect }) => {
   const isOddTrailing = (i: number) => parts.length % 2 === 1 && i === parts.length - 1;
 
   return (
@@ -60,7 +61,7 @@ export const PartCardsContainer: React.FC<PartCardsContainerProps> = ({ parts, s
           }}
         >
           <div style={isOddTrailing(i) ? { width: 'calc(50% - 6px)', minWidth: 0 } : undefined}>
-            <PartCard part={part} selected={part.id === selectedId} onSelect={() => onSelect(part)} />
+            <PartCard part={part} category={category} selected={part.id === selectedId} onSelect={() => onSelect(part)} />
           </div>
         </div>
       ))}

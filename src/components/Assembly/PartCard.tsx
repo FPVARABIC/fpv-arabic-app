@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Info } from 'lucide-react';
 import type { BasePart } from '../../data/assembly/types';
+import { CATEGORY_ICON_PATH } from '../../data/assembly/categoryIcons';
 
-// Generic hardcoded fallback — used whenever part.placeholderIcon is
-// undefined. Per-category custom icons are a dedicated future task.
+// Generic hardcoded fallback — used whenever neither part.imagePath nor a
+// category icon is available (or both fail to load).
 const DEFAULT_PART_ICON = '⚙️';
 
 // specs is added per-subtype (Frame/Motor/Esc/...), not on BasePart itself —
@@ -11,6 +12,7 @@ const DEFAULT_PART_ICON = '⚙️';
 // concrete part actually has, without needing a per-category prop type.
 interface PartCardProps {
   part: BasePart & { specs?: Record<string, unknown> };
+  category: string;
   selected: boolean;
   onSelect: () => void;
 }
@@ -33,11 +35,15 @@ interface PartCardProps {
 // within the real no-scroll ceiling on its own — see
 // PartCardsContainer.tsx's comment for the verified overflow amount and
 // the clearance fix that makes the resulting scroll actually work.
-export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) => {
+export const PartCard: React.FC<PartCardProps> = ({ part, category, selected, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const specEntries = Object.entries(part.specs ?? {});
   const detailContentId = `part-detail-content-${part.id}`;
+  // 3-tier chain: a part's own real photo (rare/future) wins if set; else the
+  // shared per-category icon; else the emoji below, on missing path or a
+  // failed <img> load of either.
+  const iconSrc = part.imagePath ?? CATEGORY_ICON_PATH[category];
 
   return (
     <div>
@@ -56,9 +62,10 @@ export const PartCard: React.FC<PartCardProps> = ({ part, selected, onSelect }) 
           background: '#f5f1e8', display: 'flex', alignItems: 'center', justifyContent: 'center',
           overflow: 'hidden', fontSize: 24, marginBottom: 6,
         }}>
-          {part.imagePath && !imageFailed ? (
+          {iconSrc && !imageFailed ? (
             <img
-              src={part.imagePath}
+              key={iconSrc}
+              src={iconSrc}
               alt=""
               onError={() => setImageFailed(true)}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}

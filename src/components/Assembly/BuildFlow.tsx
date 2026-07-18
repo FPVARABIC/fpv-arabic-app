@@ -305,6 +305,7 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
       ) : (
         <PartCardsContainer
           parts={relevantParts}
+          category={category ?? ''}
           selectedId={selectedPart?.id}
           onSelect={part => category && selectPart(category, part)}
         />
