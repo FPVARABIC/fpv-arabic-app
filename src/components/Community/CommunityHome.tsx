@@ -64,7 +64,9 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
           <MoreVertical size={20} color="#ffffff" />
         </button>
 
-        <h1 style={{ fontSize: 18, fontWeight: 800, color: '#1a2b3c', margin: 0 }}>المجتمع</h1>
+        <h1 style={{ fontSize: 19, fontWeight: 800, color: '#1a2b3c', margin: 0 }}>
+          <span style={{ color: '#0e7c86', letterSpacing: 0.3 }} dir="ltr">FPV</span> بالعربي
+        </h1>
 
         <div style={{ position: 'absolute', left: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
