@@ -310,11 +310,11 @@ export const QuadcopterLauncher: React.FC = () => {
             borderRadius: '50%',
             background: isOpen
               ? 'linear-gradient(135deg, rgba(37,99,235,0.28) 0%, rgba(30,64,175,0.18) 100%)' // botColors.primary → botColors.pressed
-              : 'linear-gradient(135deg, rgba(10,16,36,0.92) 0%, rgba(6,11,26,0.96) 100%)',
+              : 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 12px), #5EEAD4', // exact match to BottomNavigation.tsx's <nav> background
             border: isOpen
               ? `1px solid rgba(96,165,250,0.7)` // botColors.accent
               : `1px solid rgba(37,99,235,0.35)`, // botColors.primary
-            color: idle ? botColors.softAccent : botColors.text,
+            color: isOpen ? botColors.text : '#12222a', // dark icon for contrast on the new light-mint closed background — matches BottomNavigation's own dark active-icon tone; keyed on isOpen (not idle) so the closed+dragging case doesn't fall through to white-on-light-mint
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
