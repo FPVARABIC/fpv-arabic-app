@@ -850,9 +850,16 @@ async function main() {
   await record('R5 the rateLimits bookkeeping subcollection is fully closed to every client read/write, even the owner (Admin-SDK-only, defense-in-depth)', 'deny', () =>
     getDoc(doc(asDirectA.firestore(), 'users/uidDirectCommentA/rateLimits/comments')));
 
-  console.log('\n=== 17. Comment likes (Phase 6, corrected) — Cloud-Function-only, direct client bypass proofs ===');
-  console.log('    (real concurrent like/unlike behavior now lives server-side in');
-  console.log('    toggleCommentLike and is exercised in scripts/testCommunityFunctions.ts.)');
+  console.log('\n=== 17. Comment likes — TEMPORARY direct-client-write bridge (Blaze billing) ===');
+  console.log('    (TEMPORARY — see docs/KNOWN_ISSUES.md\'s "Post/comment likes temporarily');
+  console.log('    reverted..." entry. Direct client like create/delete is allowed again,');
+  console.log('    paired client-side with a likesCount ±1 update, enforced right here in');
+  console.log('    firestore.rules — NOT server-side anymore. toggleCommentLike/');
+  console.log('    functions/src/index.ts still exists and is exercised in');
+  console.log('    scripts/testCommunityFunctions.ts, but is unreachable from the client while');
+  console.log('    this bridge is live. REVERT this section back to "Cloud-Function-only,');
+  console.log('    direct client bypass proofs" (all-deny) once the permanent re-migration');
+  console.log('    happens.)');
 
   const asLikeA = testEnv.authenticatedContext('uidLikeA');
   const asLikeB = testEnv.authenticatedContext('uidLikeB');
@@ -867,43 +874,61 @@ async function main() {
     });
   });
 
-  await record('K1 direct client like create (own uid) is denied — like creation is Cloud-Function-only now', 'deny', () =>
+  await record('K1 direct client like create (own uid) is ALLOWED again (TEMPORARY revert)', 'allow', () =>
     setDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA'), { createdAt: serverTimestamp() }));
 
-  await record('K2 direct client like create at another user\'s uid path (spoofing another user\'s like) is denied', 'deny', () =>
+  await record('K2 direct client like create at another user\'s uid path (spoofing another user\'s like) is still denied — isOwner(likerUid) does not depend on the bridge', 'deny', () =>
     setDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeB'), { createdAt: serverTimestamp() }));
 
-  await record('K3 a guest cannot create a like', 'deny', () =>
+  await record('K3 a guest still cannot create a like', 'deny', () =>
     setDoc(doc(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidGuestLike'), { createdAt: serverTimestamp() }));
 
-  await record('K4 a direct +1 likesCount update is denied — no client write to this field remains in ANY shape now (closes the gap the previous pass explicitly accepted as a risk)', 'deny', () =>
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — an ISOLATED +1 likesCount update,
+  // with no paired likes/{uid} write in the same batch, is now ALLOWED.
+  // This is the disclosed, accepted-risk shape shared with commentsCount
+  // (see firestore.rules' own comment on this branch) — Rules validate the
+  // shape (exact +1, active user, comment still active) but cannot
+  // cryptographically confirm a real paired like-doc write happened; that
+  // guarantee only existed inside toggleCommentLike's Admin-SDK transaction.
+  // REVERT this assertion back to 'deny' once the permanent re-migration
+  // happens.
+  await record('K4 an isolated +1 likesCount update (no paired like-doc write) is ALLOWED — same accepted risk as commentsCount, not a new one (TEMPORARY)', 'allow', () =>
     updateDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target'), { likesCount: increment(1) }));
 
-  await record('K5 a direct arbitrary likesCount write is denied', 'deny', () =>
+  await record('K5 a direct arbitrary (non-±1) likesCount write is still denied', 'deny', () =>
     updateDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target'), { likesCount: 9999 }));
 
-  // Seed a real like document (rules disabled, simulating one already
-  // created by toggleCommentLike) so K6/K7 can prove delete is ALSO closed
-  // to the client, not merely create.
+  // Force the like doc back to a known state (rules disabled) regardless of
+  // K1's own outcome above, so K6/K7 below are deterministic.
   await testEnv.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA'), { createdAt: serverTimestamp() });
   });
 
-  await record('K6 the like\'s own owner cannot directly delete it — unlike is Cloud-Function-only too', 'deny', () =>
+  await record('K6 the like\'s own owner CAN now directly delete it (TEMPORARY revert) — unlike is a direct write again', 'allow', () =>
     deleteDoc(doc(asLikeA.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
 
-  await record('K7 a different user cannot delete uidLikeA\'s like either', 'deny', () =>
+  await record('K7 a different user still cannot delete uidLikeA\'s like — isOwner(likerUid) does not depend on the bridge', 'deny', () =>
     deleteDoc(doc(asLikeB.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
 
-  await record('K8 anyone (including a guest) CAN still read a like — likes remain public, only writes moved server-side', 'allow', () =>
+  await record('K8 anyone (including a guest) CAN still read a like — always public, unaffected by this bridge', 'allow', () =>
     getDoc(doc(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes/uidLikeA')));
 
-  console.log('\n=== 18. Concurrent DIRECT bypass attempts (Phase 6, corrected) ===');
-  console.log('    Real concurrency correctness (5 different users liking at once, one user');
-  console.log('    rapidly toggling) is now a Cloud Function / Admin-SDK-transaction property,');
-  console.log('    proven against the Functions Emulator in scripts/testCommunityFunctions.ts.');
-  console.log('    This suite\'s job is narrower: prove that even MANY simultaneous direct');
-  console.log('    client bypass attempts are ALL denied, none slipping through under race.');
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — this section previously proved
+  // that concurrent DIRECT bypass attempts were ALL denied (comment likes
+  // were Cloud-Function-only). Direct writes are allowed again now, so its
+  // purpose is inverted: prove that 5 different users concurrently creating
+  // their OWN distinct like — a legitimate scenario now, not a bypass — all
+  // succeed independently with no race/interference, each producing exactly
+  // one like document. REVERT this section back to "prove concurrent
+  // bypass attempts are ALL denied" once the permanent re-migration
+  // happens.
+  console.log('\n=== 18. Concurrent DISTINCT direct likes — TEMPORARY direct-write bridge ===');
+  console.log('    Real concurrency correctness under the PERMANENT design (Admin-SDK');
+  console.log('    transactions) is proven against the Functions Emulator in');
+  console.log('    scripts/testCommunityFunctions.ts. This suite\'s job here is narrower: prove');
+  console.log('    that 5 different users concurrently creating their own distinct like — a');
+  console.log('    legitimate action under this TEMPORARY bridge, not a bypass — all succeed');
+  console.log('    independently, with no race corrupting the result.');
 
   const concurrentBypassLikers = ['uidBypassA', 'uidBypassB', 'uidBypassC', 'uidBypassD', 'uidBypassE'];
   await testEnv.withSecurityRulesDisabled(async ctx => {
@@ -921,18 +946,18 @@ async function main() {
     ),
   );
   assertValue(
-    'C1 all 5 concurrent DIRECT like-create bypass attempts from 5 different users are rejected (none succeed)',
+    'C1 all 5 concurrent DISTINCT direct like-creates from 5 different users are ALLOWED (TEMPORARY) — each is a legitimate own-uid create, none conflicts with another',
     concurrentBypassResults.filter(r => r.status === 'fulfilled').length,
-    0,
+    5,
   );
 
   const likeDocsAfterBypassAttempt = await getDocs(
     collection(asGuest.firestore(), 'posts/post-like-target/comments/comment-like-target/likes'),
   );
   assertValue(
-    'C2 zero like documents exist after the concurrent bypass attempt (only the one seeded directly via withSecurityRulesDisabled for K6/K7 remains)',
+    'C2 exactly 5 like documents exist after the concurrent create burst (TEMPORARY) — uidLikeA\'s own like was already deleted by K6 above, so only the 5 new ones remain',
     likeDocsAfterBypassAttempt.docs.length,
-    1,
+    5,
   );
 
   console.log('\n=== 19. Field-injection / privacy regression locks (Phase 6) ===');
@@ -1003,9 +1028,14 @@ async function main() {
       privateSettings: { notificationsEnabled: true },
     }));
 
-  console.log('\n=== 20. Post likes (Phase 7) — Cloud-Function-only, direct client bypass proofs ===');
-  console.log('    (real concurrent like/unlike behavior now lives server-side in');
-  console.log('    togglePostLike and is exercised in scripts/testCommunityFunctions.ts.)');
+  console.log('\n=== 20. Post likes — TEMPORARY direct-client-write bridge (Blaze billing) ===');
+  console.log('    (TEMPORARY — see docs/KNOWN_ISSUES.md\'s "Post/comment likes temporarily');
+  console.log('    reverted..." entry. Same bridge and same reasoning as comment likes above.');
+  console.log('    togglePostLike/functions/src/index.ts still exists and is exercised in');
+  console.log('    scripts/testCommunityFunctions.ts, but is unreachable from the client while');
+  console.log('    this bridge is live. REVERT this section back to "Cloud-Function-only,');
+  console.log('    direct client bypass proofs" (all-deny) once the permanent re-migration');
+  console.log('    happens.)');
 
   const asPostLikeA = testEnv.authenticatedContext('uidPostLikeA');
   const asPostLikeB = testEnv.authenticatedContext('uidPostLikeB');
@@ -1016,35 +1046,38 @@ async function main() {
     await setDoc(doc(db, 'posts/post-like-target-post'), validPostDoc('uidA', { text: 'a likeable post' }));
   });
 
-  await record('PL1 direct client post-like create (own uid) is denied — like creation is Cloud-Function-only', 'deny', () =>
+  await record('PL1 direct client post-like create (own uid) is ALLOWED again (TEMPORARY revert)', 'allow', () =>
     setDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA'), { createdAt: serverTimestamp() }));
 
-  await record('PL2 direct client post-like create at another user\'s uid path (spoofing) is denied', 'deny', () =>
+  await record('PL2 direct client post-like create at another user\'s uid path (spoofing) is still denied — isOwner(likerUid) does not depend on the bridge', 'deny', () =>
     setDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeB'), { createdAt: serverTimestamp() }));
 
-  await record('PL3 a guest cannot create a post like', 'deny', () =>
+  await record('PL3 a guest still cannot create a post like', 'deny', () =>
     setDoc(doc(asGuest.firestore(), 'posts/post-like-target-post/likes/uidGuestPostLike'), { createdAt: serverTimestamp() }));
 
-  await record('PL4 a direct +1 post likesCount update is denied', 'deny', () =>
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — same accepted-risk shape as
+  // comment likes' K4 above: an isolated +1 post likesCount update, with no
+  // paired like-doc write in the same batch, is now ALLOWED. REVERT this
+  // assertion back to 'deny' once the permanent re-migration happens.
+  await record('PL4 an isolated +1 post likesCount update (no paired like-doc write) is ALLOWED — same accepted risk as commentsCount, not a new one (TEMPORARY)', 'allow', () =>
     updateDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post'), { likesCount: increment(1) }));
 
-  await record('PL5 a direct arbitrary post likesCount write is denied', 'deny', () =>
+  await record('PL5 a direct arbitrary (non-±1) post likesCount write is still denied', 'deny', () =>
     updateDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post'), { likesCount: 9999 }));
 
-  // Seed a real like document (rules disabled, simulating one already
-  // created by togglePostLike) so PL6/PL7 can prove delete is ALSO closed
-  // to the client, not merely create.
+  // Force the like doc back to a known state (rules disabled) regardless of
+  // PL1's own outcome above, so PL6/PL7 below are deterministic.
   await testEnv.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA'), { createdAt: serverTimestamp() });
   });
 
-  await record('PL6 the like\'s own owner cannot directly delete it — unlike is Cloud-Function-only too', 'deny', () =>
+  await record('PL6 the like\'s own owner CAN now directly delete it (TEMPORARY revert) — unlike is a direct write again', 'allow', () =>
     deleteDoc(doc(asPostLikeA.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
 
-  await record('PL7 a different user cannot delete uidPostLikeA\'s like either', 'deny', () =>
+  await record('PL7 a different user still cannot delete uidPostLikeA\'s like — isOwner(likerUid) does not depend on the bridge', 'deny', () =>
     deleteDoc(doc(asPostLikeB.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
 
-  await record('PL8 anyone (including a guest) CAN still read a post like — likes remain public, only writes moved server-side', 'allow', () =>
+  await record('PL8 anyone (including a guest) CAN still read a post like — always public, unaffected by this bridge', 'allow', () =>
     getDoc(doc(asGuest.firestore(), 'posts/post-like-target-post/likes/uidPostLikeA')));
 
   console.log('\n=== 21. Post creation likesCount field lock (Phase 7) ===');

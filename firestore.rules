@@ -350,21 +350,59 @@ service cloud.firestore {
                            && resource.data.status == 'active'
                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
                            && request.resource.data.commentsCount == resource.data.commentsCount + 1)
+                         ||
+                         // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                         // see docs/KNOWN_ISSUES.md) — likesCount ±1, paired client-side
+                         // with a posts/{postId}/likes/{likerUid} create-or-delete write
+                         // in the SAME batch (usePostLike.ts). Exactly the same accepted-
+                         // risk shape as commentsCount above, not a new one: shape-
+                         // validated (exact ±1, active user, post still active, never
+                         // negative) but NOT cryptographically bound to a real paired
+                         // like-doc write — Rules cannot see across documents/batches to
+                         // confirm one happened. Re-migrate back to togglePostLike's
+                         // Admin-SDK transaction (functions/src/index.ts) and DELETE this
+                         // branch once Functions are billable again.
+                         (isActiveCaller()
+                           && resource.data.status == 'active'
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+                           && (request.resource.data.likesCount == resource.data.likesCount + 1
+                               || request.resource.data.likesCount == resource.data.likesCount - 1)
+                           && request.resource.data.likesCount >= 0)
                        );
 
       allow delete: if false; // soft delete only, ever (D10)
 
       // One like document per (post, liker) — deterministic key, same model
-      // and same reasoning as comments/{commentId}/likes/{likerUid} below:
-      // BOTH create and delete are Cloud-Function-only (togglePostLike),
-      // since the Function atomically pairs this write with the post's
-      // likesCount adjustment inside one transaction, which a direct client
-      // write could never guarantee. Read stays public, matching the rest
-      // of this project's "a like is no more sensitive than the public
-      // content it's attached to" posture.
+      // as comments/{commentId}/likes/{likerUid} below.
+      //
+      // TEMPORARY REVERT (bridge until Firebase Blaze billing is restored,
+      // see docs/KNOWN_ISSUES.md) — create/delete are direct client writes
+      // again, paired client-side with the likesCount ±1 update above
+      // (usePostLike.ts). togglePostLike (functions/src/index.ts) is left in
+      // place, unchanged, just unreachable from the client while this path
+      // is live — restore `allow create, update, delete: if false;` here
+      // (and re-wire usePostLike.ts back to the callable) the moment
+      // Functions are billable again.
+      //
+      // Double-toggle/re-entrancy guard: `allow update: if false` below is
+      // the guard, not a separate check — Firestore classifies a write to
+      // an EXISTING document as an update regardless of which client SDK
+      // method was called, so a second "like" attempt on an already-liked
+      // post is denied outright (not a silent idempotent no-op the way the
+      // Cloud Function's transaction made it — see docs/KNOWN_ISSUES.md for
+      // this disclosed behavior difference). Because `allow update: if
+      // false` denies the like-doc half of that same batch, and a
+      // writeBatch().commit() is all-or-nothing, the paired likesCount
+      // increment in the SAME batch is denied too — it can never land
+      // without its paired like-doc write actually succeeding.
       match /likes/{likerUid} {
         allow read: if true;
-        allow create, update, delete: if false;
+        allow create: if isOwner(likerUid)
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly(['createdAt'])
+                      && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(likerUid);
       }
 
       match /comments/{commentId} {
@@ -423,28 +461,50 @@ service cloud.firestore {
                            (isModerator()
                              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                              && request.resource.data.status == 'hidden')
+                           ||
+                           // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                           // see docs/KNOWN_ISSUES.md) — likesCount ±1, paired
+                           // client-side with a likes/{likerUid} create-or-delete write
+                           // in the SAME batch (useCommentLike.ts). Same accepted-risk
+                           // shape as posts/{postId}'s own likesCount branch: shape-
+                           // validated, not cryptographically bound to a real paired
+                           // like-doc write. Re-migrate back to toggleCommentLike's
+                           // Admin-SDK transaction and DELETE this branch once Functions
+                           // are billable again.
+                           (isActiveCaller()
+                             && resource.data.status == 'active'
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+                             && (request.resource.data.likesCount == resource.data.likesCount + 1
+                                 || request.resource.data.likesCount == resource.data.likesCount - 1)
+                             && request.resource.data.likesCount >= 0)
                          );
-        // likesCount is no longer client-writable in ANY shape (Phase 6
-        // correction) — toggleCommentLike (functions/src/index.ts) is the
-        // only writer, via the Admin SDK, inside the same transaction that
-        // creates/deletes the paired likes/{uid} document. This closes the
-        // exact gap the previous pass explicitly disclosed as an accepted
-        // risk: likesCount can no longer be forged by ±1 without a real,
-        // atomically-paired like relation.
 
         allow delete: if false;
 
         // One like document per (comment, liker) — deterministic key.
-        // Phase 6 correction: BOTH create and delete are now Cloud-
-        // Function-only (toggleCommentLike), same reasoning as comments
-        // create above — the function atomically pairs this write with the
-        // comment's likesCount adjustment inside one transaction, which a
-        // direct client write could never guarantee. Read stays public,
-        // matching the rest of this project's "a like is no more sensitive
-        // than the public content it's attached to" posture.
+        //
+        // TEMPORARY REVERT (bridge until Firebase Blaze billing is
+        // restored, see docs/KNOWN_ISSUES.md) — create/delete are direct
+        // client writes again, paired client-side with the likesCount ±1
+        // update above (useCommentLike.ts). toggleCommentLike (functions/
+        // src/index.ts) is left in place, unchanged, just unreachable from
+        // the client while this path is live — restore `allow create,
+        // update, delete: if false;` here (and re-wire useCommentLike.ts
+        // back to the callable) the moment Functions are billable again.
+        // Same double-toggle guard as posts/{postId}/likes above: `allow
+        // update: if false` denies a second "like" on an already-liked
+        // comment outright (not a silent idempotent no-op — see
+        // docs/KNOWN_ISSUES.md), and batch atomicity means the paired
+        // likesCount increment in that same batch is denied right along
+        // with it.
         match /likes/{likerUid} {
           allow read: if true;
-          allow create, update, delete: if false;
+          allow create: if isOwner(likerUid)
+                        && isActiveCaller()
+                        && request.resource.data.keys().hasOnly(['createdAt'])
+                        && request.resource.data.createdAt == request.time;
+          allow update: if false;
+          allow delete: if isOwner(likerUid);
         }
       }
     }

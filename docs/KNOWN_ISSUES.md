@@ -149,3 +149,36 @@ restoring `allow create: if false;` in `firestore.rules`, removing the added
 implementation: commit `b60405d`), and deleting `COMMENT_RATE_LIMIT_SECONDS`/
 `commentRateLimitMessage` from `rateLimit.ts` — once Firebase Blaze billing is
 restored and Functions are deployable again.
+
+---
+
+## Post/comment likes temporarily reverted to direct client writes (Blaze billing bridge)
+
+**Found during:** Temporary revert task (2026-07-18), same Firebase Blaze plan billing
+issue that prompted the comment-creation revert.
+
+**What changed:** `posts/{postId}/likes/{likerUid}` and `comments/{commentId}/likes/{likerUid}`
+in `firestore.rules`, plus `usePostLike.ts`/`useCommentLike.ts`, were reverted from the
+Cloud-Function-only design (`togglePostLike`/`toggleCommentLike` in
+`functions/src/index.ts`) to direct, Rules-validated client writes — a paired batch
+(like-doc create/delete + `likesCount` ±1 on the parent), the same accepted-risk shape
+already used for `commentsCount` (shape-validated, not cryptographically bound to a real
+paired document write, since Rules cannot see across documents/batches). Unlike
+comments, no prior direct-write version of likes ever existed (confirmed via
+`git log -p`) — this is a new design, not a restoration.
+
+**Known gap while reverted:** a genuine double-toggle race (not the common single-click
+case, which client-side `toggling` state already guards) now surfaces as a denied write
+and a visible error, instead of the Cloud Function's transaction giving a silent
+idempotent no-op. Rules deny it outright (an already-existing like doc can never be
+"created" again, and batch atomicity denies the paired count change alongside it), so
+`likesCount` can never be double-counted — but the UX degrades from silent-success to
+an error message in that rare race.
+
+**Status:** TEMPORARY. `togglePostLike`/`toggleCommentLike` Function code is untouched
+and remains the intended permanent design. Re-migrate by: restoring
+`allow create, update, delete: if false;` on both `likes/{likerUid}` blocks, removing the
+added `likesCount` branches from the `posts/{postId}` and `comments/{commentId}` update
+rules, and reverting `usePostLike.ts`/`useCommentLike.ts` to call their respective
+callables (reference implementations: commits `82b79ce` and `b60405d`) — once Firebase
+Blaze billing is restored and Functions are deployable again.

@@ -136,17 +136,25 @@ console.log('\n[7] CommentInput.tsx — duplicate-submit-while-pending guard pre
   ok('onCommentAdded is called with the created comment\'s id (not a bare no-arg refresh callback)', /onCommentAdded\(result\.commentId\)/.test(commentInputTsx));
 }
 
-console.log('\n[8] useCommentLike.ts — calls the toggleCommentLike Cloud Function with an explicit desiredState, no set-state-in-effect');
+// TEMPORARY (bridge until Firebase Blaze billing is restored — see
+// docs/KNOWN_ISSUES.md's "Post/comment likes temporarily reverted..." entry)
+// — this section previously asserted the Cloud-Function-only design (calls
+// toggleCommentLike, no client-side batch write). It now asserts the
+// reverted direct-client-write design instead. REVERT THESE ASSERTIONS back
+// to the Cloud-Function-only checks (see git history at commit b60405d, or
+// this file's own history before this change) once the permanent
+// re-migration happens.
+console.log('\n[8] useCommentLike.ts — TEMPORARY: direct client batch write (like-doc create/delete + likesCount ±1), no set-state-in-effect');
 {
-  ok('imports httpsCallable from firebase/functions', /import\s*\{\s*httpsCallable\s*\}\s*from\s*'firebase\/functions'/.test(useCommentLikeTs));
-  ok('the callable is bound to the exact name "toggleCommentLike"', /httpsCallable[^(]*\(\s*\n?\s*firebaseFunctions,\s*\n?\s*'toggleCommentLike'/.test(useCommentLikeTs));
-  ok('the request carries an explicit desiredState (\'like\'|\'unlike\') — a blind toggle is not retry-safe, see this hook\'s own comment', /desiredState/.test(useCommentLikeTs));
-  ok('no client-side runTransaction against Firestore remains for the toggle (moved to the Function\'s Admin-SDK transaction)', !/runTransaction/.test(useCommentLikeTs));
-  ok('no direct client write to likesCount remains (increment(...) against Firestore)', !/tx\.update\(commentRef|updateDoc\([^)]*likesCount/.test(useCommentLikeTs));
+  ok('no longer imports httpsCallable/firebaseFunctions — replaced by a direct batch write', !/httpsCallable|firebaseFunctions/.test(useCommentLikeTs));
+  ok('imports writeBatch/increment/serverTimestamp for the direct paired write', /writeBatch/.test(useCommentLikeTs) && /increment/.test(useCommentLikeTs) && /serverTimestamp/.test(useCommentLikeTs));
+  ok('imports commentPath (in addition to commentLikePath) to reference the parent comment doc for the likesCount update', /commentPath/.test(useCommentLikeTs));
+  ok('the batch either (create like-doc + likesCount +1) or (delete like-doc + likesCount -1), never a bare desiredState call', /batch\.set/.test(useCommentLikeTs) && /batch\.delete/.test(useCommentLikeTs) && /increment\(1\)/.test(useCommentLikeTs) && /increment\(-1\)/.test(useCommentLikeTs));
   ok('a failed toggle rolls back the optimistic UI flip', /rollback the optimistic flip/.test(useCommentLikeTs));
   ok('the effect that fetches the current like status never calls setState synchronously in its own body (only inside the async result) — avoids react-hooks/set-state-in-effect', /ever calls setState from inside the async result/.test(useCommentLikeTs));
   ok('likedLoading/liked are DERIVED from a keyed result object compared against the current key, not tracked as separate state kept in sync via effect', /result\.key !== key|result\.key === key/.test(useCommentLikeTs));
   ok('this hook does not fetch or return a like COUNT itself (count comes from the comment doc\'s own denormalized field, never an unbounded liker query)', !/getDocs\(/.test(useCommentLikeTs) && !/collection\(firestoreDb, commentLikesPath/.test(useCommentLikeTs));
+  ok('the revert is explicitly marked TEMPORARY, pointing back to the permanent Cloud-Function design', /TEMPORARY/.test(useCommentLikeTs));
 }
 
 console.log('\n[8b] usePost.ts — bounded cursor-based comment pagination, no synchronous setState in the main effect');
@@ -212,7 +220,7 @@ console.log('\n[12] SearchScreen.tsx — accounts section clearly labeled and vi
   ok('user result cards render only avatar + displayName, no other field from the search result object', /<Avatar photoURL=\{user\.photoURL\} name=\{user\.displayName\}/.test(searchScreenTsx));
 }
 
-console.log('\n[13] firestore.rules — comment likes remain Cloud-Function-only; comment creation is TEMPORARILY reverted to a direct client write (Blaze billing bridge — see docs/KNOWN_ISSUES.md)');
+console.log('\n[13] firestore.rules — comment creation AND comment likes are both TEMPORARILY reverted to direct client writes (Blaze billing bridge — see docs/KNOWN_ISSUES.md)');
 {
   ok('the obsolete commentCooldowns subcollection is fully removed', !/commentCooldowns/.test(rulesTxt));
   ok('the obsolete 3s/15s duration-based comment-cooldown guards are fully removed (the TEMPORARY revert uses a new, shorter 5s window, not the old ones)', !/duration\.value\(3, 's'\)/.test(rulesTxt) && !/duration\.value\(15, 's'\)/.test(rulesTxt));
@@ -224,9 +232,13 @@ console.log('\n[13] firestore.rules — comment likes remain Cloud-Function-only
   ok('the reverted create rule enforces the new, shorter 5s global-per-user cooldown', /duration\.value\(5, 's'\)/.test(rulesTxt));
   ok('the rateLimits bookkeeping subcollection is fully closed to every client read/write (defense-in-depth — still Admin-SDK-only, unaffected by the comment-create revert)', /match \/rateLimits\/\{document=\*\*\}[\s\S]{0,100}?allow read, write: if false;/.test(rulesTxt));
   ok('the likes/{likerUid} subcollection is defined, nested under comments/{commentId}', /match \/likes\/\{likerUid\}/.test(rulesTxt));
-  ok('like create/update/delete are ALL denied to the client (allow create, update, delete: if false) — toggleCommentLike is the only writer, untouched by this revert', /match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
-  ok('likes remain publicly readable (only writes moved server-side, not reads)', /match \/likes\/\{likerUid\}[\s\S]{0,50}?allow read: if true;/.test(rulesTxt));
-  ok('likesCount is no longer touchable by the client in ANY update shape (the old ±1-only branch is fully removed from the comment update rule, untouched by this revert)', !/likesCount == resource\.data\.get\('likesCount'/.test(rulesTxt));
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — comment likes are a real,
+  // Rules-validated client-writable create/delete again, not `if false`.
+  // REVERT this assertion back to checking total denial once the permanent
+  // re-migration happens.
+  ok('comment like create/delete are real client-writable rules again (TEMPORARY revert); update stays denied outright (this IS the double-toggle guard)', /One like document per \(comment, liker\)[\s\S]{0,2000}?match \/likes\/\{likerUid\}[\s\S]{0,300}?allow create: if isOwner\(likerUid\)[\s\S]{0,400}?allow update: if false;[\s\S]{0,100}?allow delete: if isOwner\(likerUid\);/.test(rulesTxt));
+  ok('likes remain publicly readable, unaffected by the revert', /match \/likes\/\{likerUid\}[\s\S]{0,50}?allow read: if true;/.test(rulesTxt));
+  ok('the old forged-diff pattern for likesCount (a stale, already-removed alternate implementation) is still absent — unrelated to the TEMPORARY accepted-risk likesCount ±1 branch this revert adds (see docs/KNOWN_ISSUES.md), which intentionally IS client-writable again', !/likesCount == resource\.data\.get\('likesCount'/.test(rulesTxt));
   ok('displayNameNormalized is allow-listed on user bootstrap create', /'displayNameNormalized'/.test(rulesTxt));
   ok('displayNameNormalized is locked (cannot change) on update, same as displayName/photoURL', /request\.resource\.data\.displayNameNormalized == resource\.data\.displayNameNormalized/.test(rulesTxt));
   // TEMPORARY (see docs/KNOWN_ISSUES.md) — the users/{uid} update rule has a
@@ -320,21 +332,28 @@ console.log('\n[15] Privacy leak scan — no email field anywhere in changed Com
   ok('types.ts never declares an actual "email" interface member anywhere', !/^\s*email[?:]/m.test(typesTs));
 }
 
-console.log('\n[17] Post likes (Phase 7) — schema, path helpers, Rules, and Function are all consistent');
+console.log('\n[17] Post likes (Phase 7) — schema/path helpers/Function are consistent; Rules and usePostLike.ts are TEMPORARILY reverted (Blaze billing bridge — see docs/KNOWN_ISSUES.md)');
 {
   ok('Post.likesCount is declared', /likesCount\?:\s*number/.test(typesTs) && (typesTs.match(/likesCount\?:\s*number/g) ?? []).length >= 2);
   ok('PostLike interface exists, mirroring CommentLike', /export interface PostLike/.test(typesTs));
   ok('postLikesPath/postLikePath helpers exist in firestorePaths.ts', /export const postLikesPath/.test(firestorePathsTs) && /export const postLikePath/.test(firestorePathsTs));
   ok('firestore.rules requires likesCount == 0 at post creation', /request\.resource\.data\.likesCount == 0/.test(rulesTxt));
   ok('firestore.rules\' post create key allow-list includes likesCount', /'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount'/.test(rulesTxt));
-  ok('firestore.rules denies create/update/delete on posts/{postId}/likes/{likerUid} to the client', /One like document per \(post, liker\)[\s\S]{0,600}?match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — post like create/delete are real
+  // client-writable rules again, not `if false`. REVERT this assertion back
+  // to checking total denial once the permanent re-migration happens.
+  ok('post like create/delete are real client-writable rules again (TEMPORARY revert); update stays denied outright (this IS the double-toggle guard)', /One like document per \(post, liker\)[\s\S]{0,2000}?match \/likes\/\{likerUid\}[\s\S]{0,300}?allow create: if isOwner\(likerUid\)[\s\S]{0,400}?allow update: if false;[\s\S]{0,100}?allow delete: if isOwner\(likerUid\);/.test(rulesTxt));
   ok('togglePostLike is exported as an onCall function', /export const togglePostLike = onCall/.test(functionsIndexTs));
   ok('togglePostLike takes an explicit desiredState (\'like\'|\'unlike\') rather than blindly inverting current state', /export const togglePostLike[\s\S]{0,600}?desiredState/.test(functionsIndexTs));
-  ok('togglePostLike writes the like doc and adjusts likesCount inside the SAME transaction (atomic, no split-write drift)', /tx\.set\(likeRef, \{ createdAt: FieldValue\.serverTimestamp\(\) \}\);\s*\n\s*tx\.update\(postRef, \{ likesCount: FieldValue\.increment/.test(functionsIndexTs));
+  ok('togglePostLike writes the like doc and adjusts likesCount inside the SAME transaction (atomic, no split-write drift) — unchanged, still the intended permanent design', /tx\.set\(likeRef, \{ createdAt: FieldValue\.serverTimestamp\(\) \}\);\s*\n\s*tx\.update\(postRef, \{ likesCount: FieldValue\.increment/.test(functionsIndexTs));
   ok('cleanupPostLikes is exported as an onDocumentUpdated trigger scoped to posts/{postId}', /export const cleanupPostLikes = onDocumentUpdated\(\s*\n\s*\{ document: 'posts\/\{postId\}'/.test(functionsIndexTs));
   ok('cleanupPostLikes and cleanupCommentLikes share the same bounded-batch delete helper (no duplicated batching loop)', (functionsIndexTs.match(/deleteAllDocsInBatches\(/g) ?? []).length >= 3); // 1 definition + 2 call sites
   ok('useComposer.ts writes likesCount: 0 at post creation, alongside commentsCount: 0', /commentsCount: 0,\s*\n\s*likesCount: 0,/.test(useComposerTs));
-  ok('usePostLike.ts calls the togglePostLike Cloud Function with an explicit desiredState', /httpsCallable[^(]*\(\s*\n?\s*firebaseFunctions,\s*\n?\s*'togglePostLike'/.test(usePostLikeTs));
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — usePostLike.ts performs a direct
+  // batch write again, not a callable invocation. REVERT this assertion
+  // back to checking the httpsCallable('togglePostLike', ...) binding once
+  // the permanent re-migration happens.
+  ok('usePostLike.ts performs a direct batch write (create/delete like-doc + likesCount ±1), not a Cloud Function call (TEMPORARY revert)', !/httpsCallable|firebaseFunctions/.test(usePostLikeTs) && /writeBatch/.test(usePostLikeTs) && /batch\.set/.test(usePostLikeTs) && /batch\.delete/.test(usePostLikeTs));
 }
 
 console.log('\n[18] Post-like UI — one shared component, used consistently, accessible');

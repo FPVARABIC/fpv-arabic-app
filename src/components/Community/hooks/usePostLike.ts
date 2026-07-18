@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { firestoreDb, firebaseFunctions } from '../../../lib/firebase';
+import { doc, getDoc, writeBatch, increment, serverTimestamp } from 'firebase/firestore';
+import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
-import { postLikePath } from '../utils/firestorePaths';
-import { functionsErrorMessage } from '../utils/functionsError';
+import { postLikePath, postPath } from '../utils/firestorePaths';
 
 export interface UsePostLikeResult {
   liked: boolean;
@@ -14,30 +12,30 @@ export interface UsePostLikeResult {
   toggleLike: () => void;
 }
 
-interface TogglePostLikeResponse {
-  liked: boolean;
-}
-
-// togglePostLike (functions/src/index.ts) is the ONLY write path for a post
-// like — firestore.rules denies the client SDK create/update/delete on both
-// likes/{uid} and the post's likesCount entirely. Same shape and same
-// retry-safety guarantee as useCommentLike.ts (desiredState, not a blind
-// toggle) — kept as its own hook rather than a shared generic because the
-// two target genuinely different documents/collections and Function names;
-// a forced abstraction here would only obscure which callable a given
-// component is actually invoking.
-const togglePostLikeCallable = httpsCallable<
-  { postId: string; desiredState: 'like' | 'unlike' },
-  TogglePostLikeResponse
->(firebaseFunctions, 'togglePostLike');
-
 const likeStatusKey = (postId: string, uid: string | null): string => `${postId}/${uid ?? 'guest'}`;
 
-// The current user's own like STATE is a single doc read (their own
-// likes/{uid} doc, publicly readable) — never a query over every liker. The
-// displayed COUNT comes from the post's own denormalized likesCount field
-// (already part of the PostWithId the caller already has) — this hook
-// deliberately does not fetch or return a count itself.
+// TEMPORARY REVERT (bridge until Firebase Blaze billing is restored) — back
+// to a direct client Firestore batch write (create-or-delete the
+// likes/{uid} doc, paired with a likesCount ±1 update on the post), since no
+// prior direct-write version of this hook ever existed (togglePostLike was
+// Cloud-Function-only from the moment this hook was first introduced — see
+// git history). togglePostLike (functions/src/index.ts) is left in place,
+// unchanged, just unreachable from the client while this path is live —
+// re-wire this hook back to that callable the moment Functions are billable
+// again; firestore.rules' posts/{postId}/likes/{likerUid} block documents
+// the exact restore steps.
+//
+// Accepted-risk model: identical shape to commentsCount's own accepted risk
+// (see firestore.rules) — Rules validate the likesCount change is shape-
+// correct (exact ±1, active user, post still active, never negative), but
+// cannot cryptographically confirm the paired likes/{uid} write actually
+// happened in the SAME batch, since Rules have no visibility across
+// documents/batches. This is not a new risk introduced here.
+//
+// Behavior difference from the Function this replaces: a genuine double-
+// toggle race (not the common single-click case, which `toggling` below
+// already guards) now surfaces as a denied write / toggleError, rather than
+// the Function's silent idempotent no-op — see docs/KNOWN_ISSUES.md.
 export const usePostLike = (postId: string): UsePostLikeResult => {
   const { currentUser } = useAuthContext();
   const currentUid = currentUser?.uid ?? null;
@@ -74,20 +72,29 @@ export const usePostLike = (postId: string): UsePostLikeResult => {
     setToggling(true);
     setToggleError(null);
     const wasLiked = liked;
-    const desiredState: 'like' | 'unlike' = wasLiked ? 'unlike' : 'like';
-    // Optimistic flip — rolled back in the catch block below if the call
+    // Optimistic flip — rolled back in the catch block below if the write
     // fails, so a denied/offline request never leaves the UI showing a
     // state the server didn't actually accept.
     setResult({ key, liked: !wasLiked });
 
     (async () => {
       try {
-        const res = await togglePostLikeCallable({ postId, desiredState });
-        setResult({ key, liked: res.data.liked });
+        const likeRef = doc(firestoreDb, postLikePath(postId, currentUid));
+        const postRef = doc(firestoreDb, postPath(postId));
+        const batch = writeBatch(firestoreDb);
+        if (wasLiked) {
+          batch.delete(likeRef);
+          batch.update(postRef, { likesCount: increment(-1) });
+        } else {
+          batch.set(likeRef, { createdAt: serverTimestamp() });
+          batch.update(postRef, { likesCount: increment(1) });
+        }
+        await batch.commit();
+        setResult({ key, liked: !wasLiked });
       } catch (err) {
         console.error('[usePostLike:toggle]', err);
         setResult({ key, liked: wasLiked }); // rollback the optimistic flip
-        setToggleError(functionsErrorMessage(err, 'تعذّر تسجيل الإعجاب. حاول مرة أخرى.'));
+        setToggleError('تعذّر تسجيل الإعجاب. حاول مرة أخرى.');
       } finally {
         setToggling(false);
       }
