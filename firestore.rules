@@ -97,6 +97,19 @@ service cloud.firestore {
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayNameNormalized'])
                            && request.resource.data.displayNameNormalized is string
                            && request.resource.data.displayNameNormalized.size() <= 200)
+                         ||
+                         // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                         // see comments/{commentId} below) — comment creation is back to
+                         // a direct client write, so lastCommentAt needs a client-
+                         // reachable update path again, same pattern as the lastPostAt
+                         // branch above. hasOnly(['lastCommentAt']) alone already makes
+                         // this branch structurally incapable of touching any other
+                         // field. Re-migrate back to createComment's Admin-SDK merge
+                         // write (functions/src/index.ts) and DELETE this branch once
+                         // Functions are billable again.
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastCommentAt'])
+                           && request.resource.data.lastCommentAt == request.time
+                           && (resource.data.lastCommentAt == null || request.time > resource.data.lastCommentAt + duration.value(5, 's')))
                        );
 
       allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
@@ -357,19 +370,49 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if resource.data.status == 'active';
 
-        // Phase 6 correction: comment creation is Cloud-Function-only.
-        // Direct client creation is denied outright — the earlier two-layer
-        // client-writable rate-limit design (a 3s global guard + a 15s
-        // per-post cooldown) is GONE, not merely tightened, because it still
-        // blocked a normal user's second, DISTINCT comment on the same post
-        // for 15 real seconds — an actual UX defect the earlier pass did not
-        // fully fix. createComment (functions/src/index.ts) now enforces
-        // anti-spam via a user-partitioned rolling-window + duplicate-
-        // fingerprint transaction instead, using the Admin SDK, which
-        // bypasses this rule entirely — so `if false` here does not block
-        // real comment creation, only DIRECT client attempts to bypass the
-        // trusted function.
-        allow create: if false;
+        // TEMPORARY REVERT (bridge until Firebase Blaze billing is restored)
+        // — comment creation is back to a direct, Rules-validated client
+        // write. createComment (functions/src/index.ts) is left in place,
+        // unchanged, just unreachable from the client while this path is
+        // live — restore `allow create: if false;` here (and re-wire
+        // useCommentComposer.ts back to the callable) the moment Functions
+        // are billable again.
+        //
+        // Rate limit: the pre-Phase-6 design this reverts to used a single
+        // 15s cooldown keyed on this same callerProfile().lastCommentAt
+        // field — and it was GLOBAL PER USER, not per-post (a prior version
+        // of this comment mischaracterized it as "a 3s global guard + a 15s
+        // per-post cooldown"; no such 3s guard exists anywhere in this
+        // project's history — checked via `git log -p`). Being global, it
+        // blocked a normal user's second, DISTINCT comment on ANY post for
+        // 15 real seconds, which was the actual disclosed defect. This
+        // revert keeps the same global-per-user shape but shortens the
+        // window to 5s (see rateLimit.ts) so it still stops obvious rapid
+        // double-submits without meaningfully blocking a real second
+        // comment in practice.
+        //
+        // Duplicate-content collapse (functions/src/index.ts's fingerprint-
+        // based retry-collapse) has NO equivalent here — Rules cannot read
+        // prior comments to detect a duplicate, and no partial Rules-only
+        // approximation is attempted. This is a disclosed, accepted gap for
+        // the duration of this bridge.
+        allow create: if isSignedIn()
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt', 'status', 'likesCount'])
+                      && request.resource.data.authorId == request.auth.uid
+                      && request.resource.data.authorName == callerProfile().displayName
+                      && request.resource.data.authorPhoto == callerProfile().photoURL
+                      && request.resource.data.status == 'active'
+                      && request.resource.data.likesCount == 0
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 500
+                      && request.resource.data.createdAt == request.time
+                      // TEMPORARY rate limit — see comment above this rule.
+                      && (
+                           callerProfile().lastCommentAt == null ||
+                           request.time > callerProfile().lastCommentAt + duration.value(5, 's')
+                         );
 
         allow update: if isSignedIn()
                       && (

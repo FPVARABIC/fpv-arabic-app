@@ -19,13 +19,25 @@ export const POST_RATE_LIMIT_SECONDS = 60;
 export const postRateLimitMessage = (seconds: number): string =>
   `الرجاء الانتظار ${seconds} ثانية قبل نشر منشور آخر`;
 
-// Comment rate limiting (Phase 6, corrected) is enforced entirely
-// server-side now — see functions/src/index.ts's createComment (rolling
-// window + duplicate-fingerprint collapse) and firestore.rules (which
-// denies direct client comment creation outright). There is deliberately no
-// client-side pre-check/cooldown constant here anymore: that is exactly
-// what caused the defect this correction pass fixes — a client-visible
-// per-post cooldown that blocked a legitimate second, distinct comment on
-// the same post. The server can allow unlimited distinct comments while
-// still blocking floods; a client-side timer cannot make that distinction
-// without an extra round-trip, so the client no longer tries.
+// TEMPORARY REVERT (bridge until Firebase Blaze billing is restored) —
+// comment creation is back to a direct client write (useCommentComposer.ts),
+// so a client-side pre-check constant is needed again. This is deliberately
+// NOT the old pre-Phase-6 value: that design used a single 15s cooldown,
+// GLOBAL PER USER (not per-post — verified via `git log -p`, despite
+// firestore.rules' own prior comment describing it as per-post), which
+// blocked a normal user's second, DISTINCT comment on ANY post for a full
+// 15 real seconds — the actual disclosed defect. 5s keeps the same
+// global-per-user shape (a per-post cooldown would need a Firestore read
+// per post to check, which Rules can't do cheaply) but short enough that a
+// real second comment — which takes a human at least a few seconds to type
+// — is essentially never blocked by it in practice. Duplicate-content
+// collapse (functions/src/index.ts's fingerprint-based retry-collapse) has
+// NO equivalent here — that requires a server read of prior submissions,
+// which a direct client write cannot do; this is a disclosed, accepted gap
+// for the duration of this bridge, not something approximated here.
+// DELETE this constant and its uses once re-migrated back to
+// createComment.
+export const COMMENT_RATE_LIMIT_SECONDS = 5;
+
+export const commentRateLimitMessage = (seconds: number): string =>
+  `الرجاء الانتظار ${seconds} ثانية قبل إضافة تعليق آخر`;

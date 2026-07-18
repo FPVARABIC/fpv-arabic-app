@@ -110,15 +110,23 @@ console.log('\n[5] rateLimit.ts — post rate limit unchanged; comment rate limi
   ok('the obsolete GLOBAL_COMMENT_BURST_GUARD_SECONDS/POST_COMMENT_COOLDOWN_SECONDS/message-function exports are fully removed', !/GLOBAL_COMMENT_BURST_GUARD_SECONDS|POST_COMMENT_COOLDOWN_SECONDS|globalCommentBurstMessage|postCommentCooldownMessage/.test(rateLimitTs));
 }
 
-console.log('\n[6] useCommentComposer.ts — calls the createComment Cloud Function, no client-side cooldown pre-check left');
+// TEMPORARY (bridge until Firebase Blaze billing is restored — see
+// docs/KNOWN_ISSUES.md's "Comment creation temporarily reverted..." entry)
+// — this section previously asserted the Phase 6 Cloud-Function-only
+// design (imports httpsCallable, no client write, no client cooldown).
+// It now asserts the reverted direct-client-write design instead. REVERT
+// THESE ASSERTIONS back to the Cloud-Function-only checks (see git history
+// at commit b60405d, or this file's own history before this change) once
+// the permanent re-migration happens.
+console.log('\n[6] useCommentComposer.ts — TEMPORARY: direct client write with a 5s client-side rate-limit pre-check (Blaze billing bridge)');
 {
-  ok('imports httpsCallable from firebase/functions', /import\s*\{\s*httpsCallable\s*\}\s*from\s*'firebase\/functions'/.test(useCommentComposerTs));
-  ok('imports firebaseFunctions (the shared Functions SDK instance)', /firebaseFunctions/.test(useCommentComposerTs));
-  ok('the callable is bound to the exact name "createComment"', /httpsCallable[^(]*\(\s*firebaseFunctions,\s*\n?\s*'createComment'/.test(useCommentComposerTs));
-  ok('no client-side cooldown pre-check read exists anymore (no cooldownRef/getDoc-before-write guard)', !/cooldownRef|commentCooldownPath/.test(useCommentComposerTs));
-  ok('no direct Firestore write (writeBatch/setDoc at a comments path) remains — creation is Function-only now', !/writeBatch|batch\.set/.test(useCommentComposerTs));
-  ok('createComment resolves to a { commentId, collapsed } shape the caller can use to upsert locally', /CreateCommentResult/.test(useCommentComposerTs));
-  ok('functionsErrorMessage is used to surface a real Arabic error rather than a generic fallback for every failure', /functionsErrorMessage/.test(useCommentComposerTs));
+  ok('no longer imports httpsCallable/firebaseFunctions — replaced by a direct write', !/httpsCallable|firebaseFunctions/.test(useCommentComposerTs));
+  ok('imports ensureCommunityUser for the bootstrap fallback (matches useComposer.ts\'s own pattern)', /ensureCommunityUser/.test(useCommentComposerTs));
+  ok('imports COMMENT_RATE_LIMIT_SECONDS/commentRateLimitMessage from rateLimit.ts (client-side pre-check restored)', /COMMENT_RATE_LIMIT_SECONDS/.test(useCommentComposerTs) && /commentRateLimitMessage/.test(useCommentComposerTs));
+  ok('performs a direct Firestore batch write (writeBatch/batch.set) at a comments path — creation is client-side again', /writeBatch/.test(useCommentComposerTs) && /batch\.set/.test(useCommentComposerTs));
+  ok('the batch pairs the comment write with commentsCount and lastCommentAt updates, matching the pre-Phase-6 shape', /batch\.update\([^)]*commentsCount/.test(useCommentComposerTs) && /batch\.update\([^)]*lastCommentAt/.test(useCommentComposerTs));
+  ok('createComment resolves to a { commentId, collapsed } shape the caller can use to upsert locally (collapsed is always false — no duplicate-fingerprint collapse in this temporary design)', /CreateCommentResult/.test(useCommentComposerTs) && /collapsed:\s*false/.test(useCommentComposerTs));
+  ok('the revert is explicitly marked TEMPORARY, pointing back to the permanent Cloud-Function design', /TEMPORARY/.test(useCommentComposerTs));
 }
 
 console.log('\n[7] CommentInput.tsx — duplicate-submit-while-pending guard preserved, hands the created commentId upward');
@@ -204,19 +212,28 @@ console.log('\n[12] SearchScreen.tsx — accounts section clearly labeled and vi
   ok('user result cards render only avatar + displayName, no other field from the search result object', /<Avatar photoURL=\{user\.photoURL\} name=\{user\.displayName\}/.test(searchScreenTsx));
 }
 
-console.log('\n[13] firestore.rules — comment creation and comment likes are Cloud-Function-only (Phase 6 correction)');
+console.log('\n[13] firestore.rules — comment likes remain Cloud-Function-only; comment creation is TEMPORARILY reverted to a direct client write (Blaze billing bridge — see docs/KNOWN_ISSUES.md)');
 {
   ok('the obsolete commentCooldowns subcollection is fully removed', !/commentCooldowns/.test(rulesTxt));
-  ok('the obsolete 3s/15s duration-based comment-cooldown guards are fully removed', !/duration\.value\(3, 's'\)/.test(rulesTxt) && !/duration\.value\(15, 's'\)/.test(rulesTxt));
-  ok('comment creation is denied outright to the client (allow create: if false) — createComment is the only writer', /match \/comments\/\{commentId\}[\s\S]{0,1200}?allow create: if false;/.test(rulesTxt));
-  ok('the rateLimits bookkeeping subcollection is fully closed to every client read/write (defense-in-depth)', /match \/rateLimits\/\{document=\*\*\}[\s\S]{0,100}?allow read, write: if false;/.test(rulesTxt));
+  ok('the obsolete 3s/15s duration-based comment-cooldown guards are fully removed (the TEMPORARY revert uses a new, shorter 5s window, not the old ones)', !/duration\.value\(3, 's'\)/.test(rulesTxt) && !/duration\.value\(15, 's'\)/.test(rulesTxt));
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — comment creation is a real,
+  // Rules-validated client-writable rule again, not `if false`. REVERT this
+  // assertion back to checking `allow create: if false;` is the active rule
+  // once the permanent re-migration happens.
+  ok('comment creation is a real client-writable rule again (TEMPORARY revert), not denied outright', /match \/comments\/\{commentId\}[\s\S]{0,2500}?allow create: if isSignedIn\(\)/.test(rulesTxt));
+  ok('the reverted create rule enforces the new, shorter 5s global-per-user cooldown', /duration\.value\(5, 's'\)/.test(rulesTxt));
+  ok('the rateLimits bookkeeping subcollection is fully closed to every client read/write (defense-in-depth — still Admin-SDK-only, unaffected by the comment-create revert)', /match \/rateLimits\/\{document=\*\*\}[\s\S]{0,100}?allow read, write: if false;/.test(rulesTxt));
   ok('the likes/{likerUid} subcollection is defined, nested under comments/{commentId}', /match \/likes\/\{likerUid\}/.test(rulesTxt));
-  ok('like create/update/delete are ALL denied to the client (allow create, update, delete: if false) — toggleCommentLike is the only writer', /match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
+  ok('like create/update/delete are ALL denied to the client (allow create, update, delete: if false) — toggleCommentLike is the only writer, untouched by this revert', /match \/likes\/\{likerUid\}[\s\S]{0,150}?allow create, update, delete: if false;/.test(rulesTxt));
   ok('likes remain publicly readable (only writes moved server-side, not reads)', /match \/likes\/\{likerUid\}[\s\S]{0,50}?allow read: if true;/.test(rulesTxt));
-  ok('likesCount is no longer touchable by the client in ANY update shape (the old ±1-only branch is fully removed from the comment update rule)', !/likesCount == resource\.data\.get\('likesCount'/.test(rulesTxt));
+  ok('likesCount is no longer touchable by the client in ANY update shape (the old ±1-only branch is fully removed from the comment update rule, untouched by this revert)', !/likesCount == resource\.data\.get\('likesCount'/.test(rulesTxt));
   ok('displayNameNormalized is allow-listed on user bootstrap create', /'displayNameNormalized'/.test(rulesTxt));
   ok('displayNameNormalized is locked (cannot change) on update, same as displayName/photoURL', /request\.resource\.data\.displayNameNormalized == resource\.data\.displayNameNormalized/.test(rulesTxt));
-  ok('the users/{uid} update rule no longer has a client-reachable lastCommentAt bump path (written only by createComment via the Admin SDK now)', !/lastCommentAt == request\.time/.test(rulesTxt));
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — the users/{uid} update rule has a
+  // client-reachable lastCommentAt bump path again, paired with the
+  // reverted direct comment write. REVERT this assertion back to checking
+  // this path is ABSENT once the permanent re-migration happens.
+  ok('the users/{uid} update rule has a client-reachable lastCommentAt bump path again (TEMPORARY revert)', /lastCommentAt == request\.time/.test(rulesTxt));
   ok('no overly-broad "allow read, write: if request.auth != null" catch-all pattern was introduced anywhere', !/allow read, write: if request\.auth != null/.test(rulesTxt));
   ok('the word "email" never appears as a real field name in an allow-listed keys() list (only in explanatory comments)', !/hasOnly\(\[[^\]]*'email'[^\]]*\]\)/.test(rulesTxt));
 }

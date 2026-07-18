@@ -218,11 +218,16 @@ async function main() {
       mediaHeight: 1000,
     })));
 
-  // Comment creation moved entirely to the createComment Cloud Function
-  // (Phase 6 correction) — even a well-formed, otherwise-legitimate direct
-  // client comment create must now be denied. See section 16 below for the
-  // full set of direct-bypass proofs across every caller identity.
-  await record('P3 direct client comment create (even with an otherwise-valid shape) is denied — comment creation is Cloud-Function-only now', 'deny', () =>
+  // TEMPORARY (bridge until Firebase Blaze billing is restored — see
+  // docs/KNOWN_ISSUES.md's "Comment creation temporarily reverted..."
+  // entry) — comment creation is back to a direct, Rules-validated client
+  // write; a well-formed comment create is allowed again (uidA has no
+  // lastCommentAt yet at this point in the suite, so the new 5s cooldown
+  // does not block it). REVERT this assertion back to 'deny' (Cloud-
+  // Function-only) once the permanent re-migration happens. See section 16
+  // below for the full set of direct-write proofs (allow + rate-limit deny)
+  // across every caller identity.
+  await record('P3 direct client comment create (valid shape) is ALLOWED again (TEMPORARY revert)', 'allow', () =>
     setDoc(doc(asA.firestore(), 'posts/post-existing/comments/comment-p3'), {
       authorId: 'uidA', authorName: 'Pilot A', authorPhoto: null,
       text: 'تعليق صالح', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
@@ -787,11 +792,15 @@ async function main() {
   await record('Q10 guest CAN read active-post-count aggregation (public)', 'allow', () =>
     getCountFromServer(query(collection(asGuest.firestore(), 'posts'), where('authorId', '==', 'uidAggAuthorMain'), where('status', '==', 'active'))));
 
-  console.log('\n=== 16. Comment creation (Phase 6, corrected) — Cloud-Function-only, direct client bypass proofs ===');
-  console.log('    (the real anti-spam rolling-window + duplicate-collapse behavior now lives');
-  console.log('    server-side in functions/src/index.ts and is exercised in');
-  console.log('    scripts/testCommunityFunctions.ts against the Functions Emulator, not here —');
-  console.log('    Firestore Rules no longer implement or know about rate limiting at all.)');
+  console.log('\n=== 16. Comment creation — TEMPORARY direct-client-write bridge (Blaze billing) ===');
+  console.log('    (TEMPORARY — see docs/KNOWN_ISSUES.md\'s "Comment creation temporarily');
+  console.log('    reverted..." entry. Direct client comment create is allowed again, gated by a');
+  console.log('    short 5s global-per-user cooldown on users/{uid}.lastCommentAt, enforced right');
+  console.log('    here in firestore.rules — NOT server-side anymore. createComment/');
+  console.log('    functions/src/index.ts still exists and is exercised by');
+  console.log('    scripts/testCommunityFunctions.ts, but is unreachable from the client while');
+  console.log('    this bridge is live. REVERT this section back to "Cloud-Function-only, direct');
+  console.log('    client bypass proofs" (all-deny) once the permanent re-migration happens.)');
 
   const asDirectA = testEnv.authenticatedContext('uidDirectCommentA');
   await testEnv.withSecurityRulesDisabled(async ctx => {
@@ -800,11 +809,19 @@ async function main() {
     await setDoc(doc(db, 'posts/post-direct-comment'), validPostDoc('uidA', { text: 'target for direct-create bypass proofs' }));
   });
 
-  await record('R1 direct client comment create (valid shape, active user) is denied — creation is Cloud-Function-only now', 'deny', () =>
+  await record('R1 direct client comment create (valid shape, active user) is ALLOWED again (TEMPORARY revert)', 'allow', () =>
     setDoc(doc(asDirectA.firestore(), 'posts/post-direct-comment/comments/comment-direct-1'), {
       authorId: 'uidDirectCommentA', authorName: 'Direct Comment Pilot', authorPhoto: null,
       text: 'محاولة إنشاء مباشر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
     }));
+
+  // Mirror the real client's batch pairing (useCommentComposer.ts writes
+  // commentsCount/lastCommentAt in the SAME batch as the comment itself) so
+  // R4 below is evaluated against a real lastCommentAt bump, not a stale
+  // null — a raw setDoc alone (as R1 above does) never touches the user
+  // doc, so without this the rate limit below could never actually engage.
+  await updateDoc(doc(asDirectA.firestore(), 'posts/post-direct-comment'), { commentsCount: increment(1) });
+  await updateDoc(doc(asDirectA.firestore(), 'users/uidDirectCommentA'), { lastCommentAt: serverTimestamp() });
 
   await record('R2 direct client comment create by a guest is denied', 'deny', () =>
     setDoc(doc(asGuest.firestore(), 'posts/post-direct-comment/comments/comment-direct-2'), {
@@ -818,12 +835,13 @@ async function main() {
       text: 'محاولة محظور', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
     }));
 
-  // Proves the boundary is total, not merely a re-imposed cooldown — a
-  // SECOND, DISTINCT direct attempt on the same post is denied for exactly
-  // the same reason as the first (there is no client-visible path at all
-  // anymore, so there is nothing left that could time-gate a legitimate
-  // second comment the way the earlier, corrected design did).
-  await record('R4 a second, DISTINCT direct comment create attempt on the same post is ALSO denied', 'deny', () =>
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — a second, DISTINCT direct attempt
+  // on the same post, immediately after R1's, is now denied by the new 5s
+  // global-per-user cooldown on lastCommentAt (just bumped above), NOT
+  // because the path is Cloud-Function-only anymore. REVERT this back to
+  // asserting total denial (no time-gating reason at all) once the
+  // permanent re-migration happens.
+  await record('R4 a second, DISTINCT direct comment create attempt on the same post is denied by the new 5s cooldown (TEMPORARY)', 'deny', () =>
     setDoc(doc(asDirectA.firestore(), 'posts/post-direct-comment/comments/comment-direct-4'), {
       authorId: 'uidDirectCommentA', authorName: 'Direct Comment Pilot', authorPhoto: null,
       text: 'تعليق مختلف تماماً بمحتوى آخر', createdAt: serverTimestamp(), status: 'active', likesCount: 0,
@@ -955,16 +973,15 @@ async function main() {
       email: 'leaked@example.com',
     }));
 
-  // Comment creation is denied outright now regardless of shape (section
-  // 16), so this is no longer testing an email-specific rejection — it is
-  // testing that the total denial still holds even when an attacker adds an
-  // email field to see if it slips through some overlooked allow-listed
-  // shape. It structurally cannot, on two independent levels: this Rules
-  // denial, AND createComment (functions/src/index.ts) itself never reading
-  // or writing anything from request.data beyond postId/text in the first
-  // place — a client-supplied email in the callable's request payload is
-  // simply never looked at.
-  await record('E5 direct client comment create with an injected email field is denied (same total denial as any other direct comment create)', 'deny', () =>
+  // TEMPORARY (see docs/KNOWN_ISSUES.md) — comment creation is no longer
+  // denied outright (section 16), so this now genuinely tests the
+  // hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt',
+  // 'status', 'likesCount']) allow-list on the reverted create rule: an
+  // injected `email` field is rejected because it isn't in that list, not
+  // because comment creation is Cloud-Function-only. REVERT this comment
+  // back to describing total denial once the permanent re-migration
+  // happens.
+  await record('E5 direct client comment create with an injected email field is denied by the hasOnly() allow-list', 'deny', () =>
     setDoc(doc(asA.firestore(), 'posts/post-existing/comments/comment-email-inject'), {
       authorId: 'uidA', authorName: 'Pilot A', authorPhoto: null,
       text: 'محاولة تسريب', createdAt: serverTimestamp(), status: 'active', likesCount: 0,

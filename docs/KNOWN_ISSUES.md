@@ -121,3 +121,31 @@ live-re-ranking within an open session or a different cursor strategy,
 both a real design decision, not a small patch). A dedicated E2E test
 simulating a mid-session `feedScore` mutation across two page fetches is
 deferred to `docs/PRE_LAUNCH_CHECKLIST.md` rather than built now.
+
+---
+
+## Comment creation temporarily reverted to a direct client write (Blaze billing bridge)
+
+**Found during:** Temporary revert task (2026-07-18), prompted by the Firebase Blaze plan
+billing issue blocking Cloud Functions deployment/invocation.
+
+**What changed:** `comments/{commentId}` create in `firestore.rules`, and
+`useCommentComposer.ts`, were reverted from the Phase 6 Cloud-Function-only design
+(`createComment` in `functions/src/index.ts`) back to a direct, Rules-validated client
+write — the pre-Phase-6 shape, but with a shortened 5s (not 15s) global-per-user
+cooldown on `users/{uid}.lastCommentAt`, so the original disclosed bug (blocking a
+user's next DISTINCT comment on any post for a full 15s) is not reintroduced.
+
+**Known gap while reverted:** duplicate-content collapse (the fingerprint-based
+retry-collapse `createComment` provided) has no equivalent here — a flaky network
+retry can now create a genuine duplicate comment instead of being silently collapsed.
+Accepted as a temporary trade-off.
+
+**Status:** TEMPORARY. `createComment`/`toggleCommentLike`/`togglePostLike`'s
+Function code is untouched and remains the intended permanent design. Re-migrate by:
+restoring `allow create: if false;` in `firestore.rules`, removing the added
+`lastCommentAt` branch from `users/{uid}`'s update rule, reverting
+`useCommentComposer.ts` to call the `createComment` callable (reference
+implementation: commit `b60405d`), and deleting `COMMENT_RATE_LIMIT_SECONDS`/
+`commentRateLimitMessage` from `rateLimit.ts` — once Firebase Blaze billing is
+restored and Functions are deployable again.
