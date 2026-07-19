@@ -203,6 +203,13 @@ async function main() {
       ok('HomeView.tsx (Community/Home feed) was not modified by this task', !/scrollIntoView|latestMsgRef|stepTopRef|issueTopRef/.test(readFileSync(join(ROOT, 'src/views/HomeView.tsx'), 'utf8')));
     }
 
+    // ── F. QuadcopterLauncher hides while the overlay is open (composer overlap fix) ──
+    console.log('\n[7] QuadcopterLauncher.tsx hides while the chat overlay is open (prevents composer/UI overlap)');
+    {
+      const launcherTsx = readFileSync(join(ROOT, 'src/components/QuadcopterLauncher.tsx'), 'utf8');
+      ok('QuadcopterLauncher returns null when isOpen is true, after the existing pathname/position guards', /if \(isOpen\) return null;/.test(launcherTsx));
+    }
+
     ok('no unexpected browser console error was raised across all scenarios (ignoring known sandbox network errors)',
       consoleErrors.every(e => /firestore|ERR_CONNECTION_RESET|ERR_TUNNEL_CONNECTION_FAILED/i.test(e)));
 

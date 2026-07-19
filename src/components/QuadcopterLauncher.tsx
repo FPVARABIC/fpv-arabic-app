@@ -220,8 +220,16 @@ export const QuadcopterLauncher: React.FC = () => {
 
   if (pathname === '/bot') return null;
   if (!position) return null;
+  // Once open, BotV2Overlay's own header close button and backdrop-tap-to-
+  // dismiss are the only close controls this needs — the launcher fully
+  // hides rather than risk overlapping any part of the now-covering panel
+  // (composer, header, message bubbles), not just the one specific 46px
+  // composer overlap this was found from. Its position/state are untouched
+  // (this only skips rendering), so it reappears exactly where it was once
+  // closed.
+  if (isOpen) return null;
 
-  const idle = !isOpen && !isDragging;
+  const idle = !isDragging; // isOpen is always false past the guard above
 
   return (
     <>
