@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  doc, getDoc, collection, query, where, orderBy, limit, startAfter, getDocs,
+  doc, getDoc, collection, query, where, orderBy, limit, startAfter, getDocs, onSnapshot,
 } from 'firebase/firestore';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { firestoreDb } from '../../../lib/firebase';
@@ -44,6 +44,19 @@ const commentsErrorMessage = (type: CommentsErrorType): string =>
 // cost small and predictable regardless of how large a thread grows, while
 // still showing a substantial first screen without an extra tap.
 const COMMENTS_PAGE_SIZE = 25;
+
+// REAL-TIME (Phase 10) — the comments-tail live listener's safety cap. Only
+// ever attached once one-shot pagination has fully caught up
+// (commentsHasMore === false), at which point the entire existing thread is
+// already loaded — so this listener's own initial snapshot re-reads the
+// WHOLE thread from scratch (a deliberate, disclosed cost: it's what lets a
+// LIKE on an already-loaded comment update live too, "riding along" on the
+// same listener, rather than requiring a second, comment-scoped listener
+// per comment — see the effect below). 500 is a defensive ceiling against a
+// pathological thread size, not a realistic one: at this app's current
+// stage no thread is remotely close to it, and even 500 extra reads is
+// trivial against the Spark plan's 50,000/day quota.
+const COMMENTS_TAIL_SAFETY_LIMIT = 500;
 
 interface CommentsPage {
   items: CommentWithId[];
@@ -118,8 +131,15 @@ interface UsePostResult {
   removeCommentLocally: (commentId: string) => void;
 }
 
-// One-time fetch (re-triggerable via retryComments()/loadMoreComments()),
-// not a realtime listener — no live-update requirement in the locked spec.
+// REAL-TIME (Phase 10): the post document itself is now a live listener
+// (gives live likesCount + live status — e.g. the post being hidden/deleted
+// while open), scoped to this hook's own mount/postId lifecycle. Comments
+// pagination stays exactly the one-shot cursor-based model it always was;
+// only a SEPARATE, later-attached tail listener (see the dedicated effect
+// below) goes live, and only once the entire existing thread has already
+// been paginated in (commentsHasMore === false) — see that effect's own
+// comment for why attaching any earlier would be actively wrong, not just
+// unnecessary.
 export const usePost = (postId: string): UsePostResult => {
   const [postState, setPostState] = useState<PostState>({ postId, post: null, error: null, done: false });
   const [commentsState, setCommentsState] = useState<CommentsState>({
@@ -134,6 +154,13 @@ export const usePost = (postId: string): UsePostResult => {
   // postId that was current when it was issued.
   const generationRef = useRef(0);
   const cursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  // Which generation currently has (or is in the process of attaching) the
+  // comments-tail live listener — null when none. Guarantees the tail
+  // listener attaches AT MOST ONCE per postId, exactly at the render where
+  // commentsHasMore first becomes false, even though the effect that
+  // attaches it re-runs on every commentsState change (loading/hasMore/
+  // error all changing repeatedly during normal pagination).
+  const tailAttachedGenerationRef = useRef<number | null>(null);
 
   // Derived, not stored: whether the currently committed state actually
   // belongs to the postId this render is asking about. When it doesn't (a
@@ -183,33 +210,130 @@ export const usePost = (postId: string): UsePostResult => {
   useEffect(() => {
     const myGeneration = ++generationRef.current;
     cursorRef.current = null;
+    tailAttachedGenerationRef.current = null;
+    // Guards against runInitialCommentsLoad being kicked off more than once
+    // for this generation — the live post-doc listener below fires again on
+    // every subsequent change (a like, a status flip), not just the first
+    // snapshot, and comments should only ever be (re-)loaded from scratch
+    // once per postId, exactly like the one-shot getDoc version did.
+    let commentsLoadStarted = false;
+    let cancelled = false;
 
-    (async () => {
-      try {
-        const postSnap = await getDoc(doc(firestoreDb, postPath(postId)));
-        if (generationRef.current !== myGeneration) return;
+    const unsubscribe = onSnapshot(
+      doc(firestoreDb, postPath(postId)),
+      snap => {
+        if (cancelled || generationRef.current !== myGeneration) return;
 
-        const postData = postSnap.exists() ? (postSnap.data() as Post) : null;
+        const postData = snap.exists() ? (snap.data() as Post) : null;
         if (!postData || postData.status !== 'active') {
           setPostState({ postId, post: null, error: null, done: true });
           return;
         }
 
-        setPostState({ postId, post: { id: postSnap.id, ...postData }, error: null, done: true });
-        await runInitialCommentsLoad(postId, myGeneration);
-      } catch (err) {
-        if (generationRef.current !== myGeneration) return;
+        setPostState({ postId, post: { id: snap.id, ...postData }, error: null, done: true });
+        if (!commentsLoadStarted) {
+          commentsLoadStarted = true;
+          void runInitialCommentsLoad(postId, myGeneration);
+        }
+      },
+      err => {
+        if (cancelled || generationRef.current !== myGeneration) return;
         setPostState({ postId, post: null, error: 'تعذّر تحميل المنشور.', done: true });
         console.error('[usePost] post', err);
-      }
-    })();
+      },
+    );
 
     // Unmount (or a postId change starting the next effect run) invalidates
-    // anything still in flight for this generation.
+    // anything still in flight for this generation and detaches the live
+    // post listener. `cancelled` covers a snapshot callback already queued
+    // from THIS run landing after cleanup fires — onSnapshot's own
+    // unsubscribe is synchronous, but that in-flight callback is not
+    // retroactively cancelled by calling it, which matters under fast
+    // in/out navigation (open a post, immediately hit back).
     return () => {
+      cancelled = true;
       generationRef.current += 1;
+      unsubscribe();
     };
   }, [postId, runInitialCommentsLoad]);
+
+  // REAL-TIME (Phase 10) comments-tail listener. Re-runs on every
+  // commentsState change (loading/hasMore/error all flip repeatedly during
+  // normal one-shot pagination), but tailAttachedGenerationRef ensures the
+  // actual `onSnapshot` call happens AT MOST ONCE per postId generation —
+  // exactly at the render where commentsHasMore first becomes false.
+  //
+  // WHY NOT EARLIER: comments are paginated oldest-first (createdAt asc).
+  // While commentsHasMore is still true, more comments that ALREADY EXIST
+  // server-side simply haven't been paginated into view yet — there is no
+  // field distinguishing "existed already, not yet loaded" from "created
+  // after I opened this post". A listener scoped to "newer than the last
+  // loaded page" attached at that point would incorrectly present
+  // already-existing, not-yet-paginated comments as if they'd just arrived
+  // live. Only once the user (or the initial auto-load) has caught up to
+  // the true end of the thread is "anything from here on is genuinely new"
+  // a safe assumption.
+  //
+  // WHY THE FULL QUERY, NOT startAfter(cursor): a query scoped to
+  // createdAt > cursor would only ever match brand-new comments, so a like
+  // on an ALREADY-loaded comment (no createdAt change) would never re-enter
+  // that window and could never update live. Re-querying the full thread
+  // (see COMMENTS_TAIL_SAFETY_LIMIT above) lets likesCount on every
+  // already-loaded comment ride along on this same listener too, with no
+  // second, comment-scoped listener needed.
+  useEffect(() => {
+    if (!commentsAreCurrent) return undefined;
+    if (commentsState.loading || commentsState.loadingMore) return undefined;
+    if (commentsState.hasMore) return undefined;
+    if (commentsState.error) return undefined;
+
+    const myGeneration = generationRef.current;
+    if (tailAttachedGenerationRef.current === myGeneration) return undefined;
+    tailAttachedGenerationRef.current = myGeneration;
+
+    let cancelled = false;
+    const q = query(
+      collection(firestoreDb, commentsPath(postId)),
+      where('status', '==', 'active'),
+      orderBy('createdAt', 'asc'),
+      limit(COMMENTS_TAIL_SAFETY_LIMIT),
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      snap => {
+        if (cancelled || generationRef.current !== myGeneration) return;
+        setCommentsState(prev => {
+          if (prev.postId !== postId) return prev;
+          // Map preserves insertion order: updating an EXISTING id's value
+          // (a like landing) keeps its original position; a brand-new id
+          // is appended at the end via .set() — correct here specifically
+          // because snap.docs already arrives createdAt-ascending, and
+          // anything not already in prev.comments at this point is, by
+          // construction, newer than everything already loaded.
+          const byId = new Map(prev.comments.map(c => [c.id, c] as const));
+          for (const d of snap.docs) {
+            byId.set(d.id, { id: d.id, ...(d.data() as Comment) });
+          }
+          return { ...prev, comments: Array.from(byId.values()) };
+        });
+      },
+      err => {
+        if (cancelled || generationRef.current !== myGeneration) return;
+        // Deliberately no user-facing error here — the already-loaded
+        // comments (from one-shot pagination) remain fully valid and
+        // visible; only NEW comments/like updates silently stop arriving
+        // live until the post is reopened.
+        console.error('[usePost] comments tail listener', err);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      if (tailAttachedGenerationRef.current === myGeneration) tailAttachedGenerationRef.current = null;
+    };
+  }, [postId, commentsAreCurrent, commentsState.loading, commentsState.loadingMore, commentsState.hasMore, commentsState.error]);
 
   const loadMoreComments = useCallback(() => {
     if (commentsState.postId !== postId) return;

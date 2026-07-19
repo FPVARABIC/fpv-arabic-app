@@ -552,7 +552,7 @@ console.log('\n[25] Community feed ranking (Phase 2)');
 
   ok('useFeed.ts\'s unfiltered "all" feed orders by feedScore desc then createdAt desc (the required determinism tiebreaker)', /orderBy\('feedScore', 'desc'\)/.test(useFeedTs) && /orderBy\('createdAt', 'desc'\)/.test(useFeedTs));
   ok('useFeed.ts fetches a 30-candidate window (3x PAGE_SIZE), the approved candidatePageSize, not the 20-candidate alternative', /CANDIDATE_PAGE_SIZE = 30/.test(useFeedTs));
-  ok('useFeed.ts\'s category-filtered path is unchanged — still plain createdAt-desc, no ranking, no diversity filter (Section M\'s explicit scoping)', /loadChronologicalPage/.test(useFeedTs) && /where\('category', '==', category as PostCategory\)/.test(useFeedTs));
+  ok('useFeed.ts\'s category-filtered path is unchanged — still plain createdAt-desc, no ranking, no diversity filter (Section M\'s explicit scoping; Phase 10 extracted the query into chronologicalConstraints(), typed PostCategory directly, so the cast now lives at each call site instead of next to where())', /loadChronologicalPage/.test(useFeedTs) && /where\('category', '==', category\)/.test(useFeedTs) && /chronologicalConstraints\(category as PostCategory, cursorRef\.current\)/.test(useFeedTs));
   ok('useFeed.ts delegates diversity/newest-post-guarantee logic to the Firebase-free utils/feedDiversity module, not reimplemented inline', /from '\.\.\/utils\/feedDiversity'/.test(useFeedTs));
 
   ok('feedDiversity.ts enforces the approved caps: max 2 posts/author, max 4 posts/category per displayed page', /AUTHOR_DIVERSITY_CAP = 2/.test(feedDiversityTs) && /CATEGORY_DIVERSITY_CAP = 4/.test(feedDiversityTs));
@@ -595,7 +595,7 @@ console.log('\n[26] Notifications system (Phase 1, in-app only) + persistent sea
   ok('PostCard.tsx and PostDetail.tsx pass authorId={post.authorId} into PostLikeButton', /authorId=\{post\.authorId\}/.test(postCardTsx) && /authorId=\{post\.authorId\}/.test(postDetailTsx));
   ok('PostDetail.tsx passes postAuthorId={post.authorId} into CommentInput', /postAuthorId=\{post\.authorId\}/.test(postDetailTsx));
 
-  ok('useNotifications.ts is a one-shot fetch + manual refresh (no onSnapshot listener call), matching useFeed.ts/useFollow.ts\'s existing convention', !/onSnapshot\(/.test(useNotificationsTs) && /refresh: load/.test(useNotificationsTs));
+  ok('useNotifications.ts is a one-shot fetch + manual refresh (no onSnapshot listener call), matching useFollow.ts\'s convention — useFeed.ts itself moved to a live first page in Phase 10, so it is no longer this comparison\'s reference example', !/onSnapshot\(/.test(useNotificationsTs) && /refresh: load/.test(useNotificationsTs));
   ok('useNotifications.ts computes unreadCount via getCountFromServer on a bare where(\'read\',\'==\',false) — no composite index needed', /getCountFromServer\(unreadQuery\)/.test(useNotificationsTs) && /where\('read', '==', false\)/.test(useNotificationsTs));
   ok('useNotifications.ts orders the list by createdAt desc, bounded by a PAGE_SIZE limit — no unbounded read', /orderBy\('createdAt', 'desc'\)/.test(useNotificationsTs) && /limit\(PAGE_SIZE\)/.test(useNotificationsTs));
 
@@ -615,6 +615,30 @@ console.log('\n[26] Notifications system (Phase 1, in-app only) + persistent sea
 
   ok('no service worker file was created (Stage 3 — push — is explicitly out of scope for this phase)', !existsSync(join(ROOT, 'public/firebase-messaging-sw.js')));
   ok('vercel.json was NOT touched for this phase (no worker-src/FCM CSP entries added yet — that is Stage 3)', !/worker-src/.test(vercelJson) && !/firebaseinstallations|fcm\.googleapis/.test(vercelJson));
+}
+
+console.log('\n[27] Real-time feed + comments/likes (Phase 10)');
+{
+  ok('useFeed.ts now takes an `active` parameter (screen-based attach/detach), not just category', /export const useFeed = \(category: FeedCategory, active: boolean\): UseFeedResult =>/.test(useFeedTs));
+  ok('useFeed.ts imports onSnapshot for the live first-page listener', /\bonSnapshot\b/.test(useFeedTs));
+  ok('the live listener attach\\/detach effect is keyed on [category, active, refreshTick] — not on component unmount alone (CommunityHomeScreens never unmounts)', /\}, \[category, active, refreshTick\]\);/.test(useFeedTs));
+  ok('category changes force a full reset (a resetKey comparison), but an active-only change does not wipe already-loaded pages/scroll state', /const resetKey = `\$\{category\}:\$\{refreshTick\}`;/.test(useFeedTs) && /lastResetKeyRef\.current !== resetKey/.test(useFeedTs));
+  ok('pagination is locked (loadMore owns cursorRef\\/carryOverRef\\/hasMore from then on) synchronously BEFORE the async fetch starts, closing the race with a concurrent live update', /paginationLockedRef\.current = true;/.test(useFeedTs) && /Lock BEFORE the async fetch starts/.test(useFeedTs));
+  ok('seenIdsRef is REPLACED (not accumulated) by the live listener while unlocked — a post that transiently passes through the live top-N window and gets pushed back out must remain reachable via loadMore, not permanently hidden', /seenIdsRef\.current = new Set\(displayed\.map\(p => p\.id\)\)/.test(useFeedTs) && /seenIdsRef\.current = new Set\(freshBatch\.map\(p => p\.id\)\)/.test(useFeedTs));
+  ok('the live-prefix\\/one-shot-tail splice boundary (liveDisplayedCountRef) updates on every snapshot regardless of lock state, not frozen at lock time (a second post-lock update would otherwise slice at a stale index)', /liveDisplayedCountRef\.current = displayed\.length;/.test(useFeedTs) && /liveDisplayedCountRef\.current = freshBatch\.length;/.test(useFeedTs));
+  ok('pages beyond the first (loadMore) remain a plain one-shot getDocs fetch, unchanged in shape from before this feature', /const loadRankedPage = useCallback\(async \(localRequestId: number\)/.test(useFeedTs) && /const loadChronologicalPage = useCallback\(async \(localRequestId: number\)/.test(useFeedTs));
+
+  ok('usePost.ts\'s post document is now a live onSnapshot listener (gives live likesCount + live status), not a one-shot getDoc', /const unsubscribe = onSnapshot\(\s*doc\(firestoreDb, postPath\(postId\)\),/.test(usePostTs));
+  ok('comments pagination itself stays exactly the one-shot cursor model (fetchCommentsPage\\/loadMoreComments untouched)', /const fetchCommentsPage = async \(/.test(usePostTs) && /const loadMoreComments = useCallback/.test(usePostTs));
+  ok('a SEPARATE comments-tail live listener exists, gated so it can only ever attach once commentsHasMore is false (never while more already-existing, not-yet-paginated comments remain)', /if \(commentsState\.hasMore\) return undefined;/.test(usePostTs) && /tailAttachedGenerationRef/.test(usePostTs));
+  ok('the tail listener queries the FULL comment thread (not startAfter(cursor)) specifically so a like on an ALREADY-loaded comment can ride along too, not just brand-new comments', /where\('status', '==', 'active'\),\s*orderBy\('createdAt', 'asc'\),\s*limit\(COMMENTS_TAIL_SAFETY_LIMIT\),\s*\);/.test(usePostTs));
+  ok('the tail listener attaches at most once per postId generation (tailAttachedGenerationRef guard), even though its effect re-runs on every loading/hasMore/error change during normal pagination', /if \(tailAttachedGenerationRef\.current === myGeneration\) return undefined;/.test(usePostTs));
+
+  ok('HomeView.tsx threads `screen.name === \'feed\'` into useFeed as the active flag', /useFeed\(category, screen\.name === 'feed'\)/.test(homeViewTsx));
+
+  ok('the test-only real-time harness (RealtimeHarness.tsx) exists and is never imported by any real application entry point', existsSync(join(ROOT, 'src/components/Community/testHelpers/RealtimeHarness.tsx')) &&
+    !homeViewTsx.includes('RealtimeHarness') && !communityHomeTsx.includes('RealtimeHarness'));
+  ok('scripts/testCommunityRealtime.ts exists as a permanent live-browser regression suite for this feature', existsSync(join(ROOT, 'scripts/testCommunityRealtime.ts')));
 }
 
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
@@ -645,7 +669,8 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'scripts/testFeedDiversity.ts' && // Phase 2: pure-Node unit tests for the diversity/newest-post-guarantee page assembly
     f !== 'scripts/migrateFeedScoreBackfill.ts' && // Phase 2: one-time feedScore backfill, same emulator-only pattern as migrateDisplayNameNormalized.ts
     f !== 'docs/KNOWN_ISSUES.md' && // Phase 2: documents the pagination-mutation limitation
-    f !== 'docs/PRE_LAUNCH_CHECKLIST.md', // Phase 2: defers the pagination-mutation E2E test with an explicit trigger condition
+    f !== 'docs/PRE_LAUNCH_CHECKLIST.md' && // Phase 2: defers the pagination-mutation E2E test with an explicit trigger condition
+    f !== 'realtime-harness.html', // Phase 10: entry point for the test-only RealtimeHarness.tsx mount, never linked from the real app
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

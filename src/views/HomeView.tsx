@@ -45,7 +45,14 @@ const CommunityHomeScreens: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [category, setCategory] = useState<ChipValue>('all');
   const { currentUser, isGuest } = useAuthContext();
-  const feed = useFeed(category);
+  // The live first-page listener (Phase 10) only needs to be connected
+  // while the feed screen is actually visible — CommunityHomeScreens itself
+  // never unmounts for as long as the user stays anywhere in Community
+  // (search/post/saved/compose/notifications/profile all live under it), so
+  // relying on component unmount to detach the listener would leave it
+  // running the ENTIRE time the user is in Community, not just while
+  // looking at the feed.
+  const feed = useFeed(category, screen.name === 'feed');
   const notifications = useNotifications();
   const location = useLocation();
   const lastHomeResetRef = useRef<number | undefined>(undefined);
