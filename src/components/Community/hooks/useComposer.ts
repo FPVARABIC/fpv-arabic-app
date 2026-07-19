@@ -6,7 +6,7 @@ import { userPath } from '../utils/firestorePaths';
 import { ensureCommunityUser } from '../utils/ensureCommunityUser';
 import { generateSearchTokens } from '../utils/searchSynonyms';
 import { secondsRemaining, POST_RATE_LIMIT_SECONDS, postRateLimitMessage } from '../utils/rateLimit';
-import { uploadMedia, deleteMedia, type UploadedMedia } from '../Composer/MediaUploader';
+import { uploadMedia, deleteMedia, MediaUploadTimeoutError, type UploadedMedia } from '../Composer/MediaUploader';
 import type { CommunityUser, PostCategory } from '../types';
 
 interface CreatePostInput {
@@ -153,7 +153,10 @@ export const useComposer = (): UseComposerResult => {
         }
       } catch (err) {
         console.error('[useComposer]', err);
-        setError('تعذر نشر المنشور. حاول مرة أخرى.');
+        // A media-upload timeout gets its own message — the image step
+        // specifically stalled, not the post-publish write — so the user
+        // knows what to retry rather than assuming the whole post failed.
+        setError(err instanceof MediaUploadTimeoutError ? 'تعذّر رفع الصورة، حاول مرة أخرى' : 'تعذر نشر المنشور. حاول مرة أخرى.');
         return null;
       } finally {
         setSubmitting(false);

@@ -15,9 +15,9 @@ const MAX_MEDIA_SIZE_BYTES = 500 * 1024;
 // MAX_MEDIA_SIZE_BYTES above, which caps the COMPRESSED output. A modern
 // phone photo can legitimately be 10-15MB before compression, so this only
 // exists to reject truly unreasonable inputs (a mis-selected video file
-// renamed to .jpg, a multi-hundred-MB image) before wasting a
-// main-thread-adjacent Web Worker cycle compressing something no real photo
-// would ever be.
+// renamed to .jpg, a multi-hundred-MB image) before wasting a main-thread
+// compression pass (see IMAGE_COMPRESSION_OPTIONS below) on something no
+// real photo would ever be.
 export const MAX_RAW_INPUT_BYTES = 20 * 1024 * 1024;
 
 // Exact allow-list, not a wildcard — matches storage.rules' own allow-list
@@ -46,6 +46,45 @@ export const verifyImageDecodable = async (file: Blob): Promise<{ width: number;
   } catch {
     return null;
   }
+};
+
+// browser-image-compression's useWebWorker:true creates its Worker from a
+// blob: URL. vercel.json's CSP has no worker-src directive, so per spec that
+// falls back to script-src — which allows 'self'/'unsafe-inline'/
+// 'unsafe-eval' plus https://apis.google.com, but not blob: — so the browser
+// silently blocks the Worker's creation. useWebWorker:false runs compression
+// on the main thread instead, sidestepping the CSP gap entirely rather than
+// widening the CSP to admit blob: workers.
+const IMAGE_COMPRESSION_OPTIONS = { useWebWorker: false } as const;
+
+// With compression now on the main thread and Storage upload subject to
+// whatever the user's real network conditions are, neither step had an
+// upper bound — a stalled connection (or, before this fix, the CSP-blocked
+// Worker silently never resolving) left `submitting` stuck true forever,
+// with no feedback and no way to retry short of a full reload. 40s is
+// comfortably above what real main-thread compression of a typical phone
+// photo (well under 2s even on modest hardware) plus two Storage uploads
+// (full + thumbnail, under 1MB combined post-compression) take on a normal
+// connection, while still short enough that a genuinely broken connection
+// surfaces a retry prompt instead of an indefinitely frozen composer.
+const MEDIA_UPLOAD_TIMEOUT_MS = 40_000;
+
+// Thrown only by the timeout race below — lets useComposer.ts's catch block
+// show a specific "the image failed to upload" message instead of the
+// generic post-publish-failed one, without any other error path changing.
+export class MediaUploadTimeoutError extends Error {
+  constructor() {
+    super('MEDIA_UPLOAD_TIMEOUT');
+    this.name = 'MediaUploadTimeoutError';
+  }
+}
+
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new MediaUploadTimeoutError()), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 };
 
 export interface UploadedMedia {
@@ -83,9 +122,18 @@ export const uploadMedia = async (
     throw new Error('NOT_AN_ALLOWED_IMAGE_TYPE');
   }
 
+  return withTimeout(uploadMediaInner(file, uid, postId, onProgress), MEDIA_UPLOAD_TIMEOUT_MS);
+};
+
+const uploadMediaInner = async (
+  file: File,
+  uid: string,
+  postId: string,
+  onProgress?: (fullPct: number, thumbPct: number) => void,
+): Promise<UploadedMedia | null> => {
   const [fullBlob, thumbBlob] = await Promise.all([
-    imageCompression(file, { maxWidthOrHeight: 1600, maxSizeMB: 0.3, useWebWorker: true, fileType: 'image/jpeg' }),
-    imageCompression(file, { maxWidthOrHeight: 400, maxSizeMB: 0.04, useWebWorker: true, fileType: 'image/jpeg' }),
+    imageCompression(file, { maxWidthOrHeight: 1600, maxSizeMB: 0.3, fileType: 'image/jpeg', ...IMAGE_COMPRESSION_OPTIONS }),
+    imageCompression(file, { maxWidthOrHeight: 400, maxSizeMB: 0.04, fileType: 'image/jpeg', ...IMAGE_COMPRESSION_OPTIONS }),
   ]);
 
   // Best-effort library target, not a mathematical guarantee (documented
