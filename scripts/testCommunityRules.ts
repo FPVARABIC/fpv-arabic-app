@@ -1455,6 +1455,68 @@ async function main() {
       read: false, createdAt: serverTimestamp(),
     }));
 
+  // ── 23h. Admin dashboard (Phase 2) — reports read/resolve, ban/unban ────
+  console.log('\n=== Admin dashboard — reports read/resolve, user ban/unban ===');
+
+  const asAdminMod = testEnv.authenticatedContext('uidMod');
+  const asAdminA = testEnv.authenticatedContext('uidA');
+  const asAdminB = testEnv.authenticatedContext('uidB');
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    await setDoc(doc(ctx.firestore(), 'users/uidAdminTarget'), validUserDoc({ displayName: 'Admin Target' }));
+  });
+
+  // reports/{reportId} — read (uses report-ok, created earlier as
+  // resolved: false by asA in the reports-validation section above).
+  await record('AD1 a moderator can read a report', 'allow', () =>
+    getDoc(doc(asAdminMod.firestore(), 'reports/report-ok')));
+
+  await record('AD2 a non-moderator cannot read a report, even one they reported themselves', 'deny', () =>
+    getDoc(doc(asAdminA.firestore(), 'reports/report-ok')));
+
+  await record('AD3 a non-moderator (not the reporter) cannot read a report', 'deny', () =>
+    getDoc(doc(asAdminB.firestore(), 'reports/report-ok')));
+
+  await record('AD4 a guest cannot read a report', 'deny', () =>
+    getDoc(doc(asGuest.firestore(), 'reports/report-ok')));
+
+  // reports/{reportId} — update (resolved-only).
+  await record('AD5 a moderator can mark a report resolved (resolved-only update)', 'allow', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'reports/report-ok'), { resolved: true }));
+
+  await record('AD6 a moderator cannot flip a report back to unresolved', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'reports/report-ok'), { resolved: false }));
+
+  await record('AD7 a moderator cannot change any OTHER report field, even alongside resolved', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'reports/report-dangerous-ok'), { resolved: true, reason: 'spam' }));
+
+  await record('AD8 a non-moderator cannot update a report at all, even the reporter marking their own report resolved', 'deny', () =>
+    updateDoc(doc(asAdminA.firestore(), 'reports/report-dangerous-ok'), { resolved: true }));
+
+  // users/{uid} — status-only moderator branch (ban/unban).
+  await record('AD9 a moderator can ban another user (status-only update)', 'allow', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidAdminTarget'), { status: 'banned' }));
+
+  await record('AD10 a moderator can unban that same user again', 'allow', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidAdminTarget'), { status: 'active' }));
+
+  await record('AD11 a moderator cannot change role in the SAME write as status — proves the hasOnly([\'status\']) boundary holds', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidAdminTarget'), { status: 'banned', role: 'moderator' }));
+
+  await record('AD12 a moderator cannot change role alone via this path either — role stays console-only', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidAdminTarget'), { role: 'moderator' }));
+
+  await record('AD13 a moderator cannot set an invalid status value', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidAdminTarget'), { status: 'pending' }));
+
+  await record('AD14 a moderator cannot ban/unban their OWN account via this path (self-targeting guard)', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'users/uidMod'), { status: 'banned' }));
+
+  await record('AD15 a non-moderator cannot change another user\'s status', 'deny', () =>
+    updateDoc(doc(asAdminA.firestore(), 'users/uidAdminTarget'), { status: 'banned' }));
+
+  await record('AD16 a non-moderator cannot change their OWN status either — status is not self-writable at all', 'deny', () =>
+    updateDoc(doc(asAdminA.firestore(), 'users/uidA'), { status: 'banned' }));
+
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
   await testEnv.cleanup();

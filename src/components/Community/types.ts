@@ -161,6 +161,10 @@ export interface Report {
   resolved: boolean;
 }
 
+export interface ReportWithId extends Report {
+  id: string;
+}
+
 export interface SavedPost {
   postId: string;
   savedAt: Timestamp;

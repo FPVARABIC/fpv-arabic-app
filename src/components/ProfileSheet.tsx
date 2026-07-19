@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Info, Shield, LogOut, Pencil, Check, X, ChevronLeft } from 'lucide-react';
+import { Settings, Info, Shield, ShieldCheck, LogOut, Pencil, Check, X, ChevronLeft } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -14,6 +14,12 @@ interface ProfileSheetProps {
   // screen to navigate to (e.g. the legacy dashboard) — in that case the
   // avatar/name simply render as before, non-interactive.
   onOpenProfile?: (uid: string) => void;
+  // Admin dashboard (Phase 2) — omitted by call sites with no admin screen
+  // to navigate to (mirrors onOpenProfile's own convention). The row itself
+  // is only rendered when isModerator is true; see useIsModerator.ts for
+  // where that comes from — this component never fetches role itself.
+  isModerator?: boolean;
+  onOpenAdmin?: () => void;
 }
 
 const getFrameRect = (): DOMRect | null => {
@@ -139,7 +145,7 @@ const MENU_BTN: React.CSSProperties = {
   cursor: 'pointer', fontFamily: 'inherit', borderRadius: 10,
 };
 
-export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpenProfile }) => {
+export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpenProfile, isModerator, onOpenAdmin }) => {
   const navigate = useNavigate();
   const { currentUser, isGuest, signInWithGoogle, signOut } = useAuthContext();
   const {
@@ -365,6 +371,19 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
         {/* Menu */}
         <div style={{ padding: '14px 14px 88px' }}>
           {/* icon is first DOM child → right in RTL; chevron is last → left in RTL */}
+          {/* لوحة الإشراف — moderator-only entry point (Phase 2). Rendered
+              conditionally, never disabled-but-visible: a non-moderator must
+              never even see this row exists. Purely a UX gate — the
+              destination screen independently re-checks isModerator on its
+              own mount, and every underlying write is separately enforced by
+              firestore.rules' isModerator() checks regardless of this. */}
+          {isModerator && onOpenAdmin && (
+            <button onClick={() => { onClose(); onOpenAdmin(); }} style={MENU_BTN}>
+              <div style={ICON_WRAP}><ShieldCheck size={16} color="#3b7dd8" /></div>
+              <span style={{ flex: 1, fontSize: 14, color: '#0f2543', fontWeight: 600, textAlign: 'right' }}>لوحة الإشراف</span>
+              <ChevronLeft size={15} color="#60a5fa" style={{ flexShrink: 0 }} />
+            </button>
+          )}
           <button onClick={() => navAndClose('/settings')} style={MENU_BTN}>
             <div style={ICON_WRAP}><Settings size={16} color="#3b7dd8" /></div>
             <span style={{ flex: 1, fontSize: 14, color: '#0f2543', fontWeight: 600, textAlign: 'right' }}>الإعدادات</span>

@@ -67,6 +67,14 @@
         { "fieldPath": "feedScoreFrozen", "order": "ASCENDING" },
         { "fieldPath": "feedScore", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resolved", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

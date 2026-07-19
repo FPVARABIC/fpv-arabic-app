@@ -73,7 +73,7 @@ service cloud.firestore {
       // (D10); displayName/photoURL have no V1 edit feature (the
       // ProfileSheet "edit name" feature writes to localStorage only, never
       // to this document).
-      allow update: if isOwner(uid)
+      allow update: if (isOwner(uid)
                     && (
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
                            && request.resource.data.lastPostAt == request.time
@@ -93,7 +93,8 @@ service cloud.firestore {
                          // structurally incapable of touching displayName/photoURL/
                          // role/status/postsCount/lastPostAt/lastCommentAt — those
                          // remain governed exclusively by the branch above (or, for
-                         // role/status, by console-only access).
+                         // role/status, by console-only access / the moderator branch
+                         // below).
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayNameNormalized'])
                            && request.resource.data.displayNameNormalized is string
                            && request.resource.data.displayNameNormalized.size() <= 200)
@@ -110,7 +111,24 @@ service cloud.firestore {
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastCommentAt'])
                            && request.resource.data.lastCommentAt == request.time
                            && (resource.data.lastCommentAt == null || request.time > resource.data.lastCommentAt + duration.value(5, 's')))
-                       );
+                       ))
+                    ||
+                    // Admin dashboard (Phase 2) — ban/unban. Deliberately
+                    // status-only: 'role' stays console-only forever via this
+                    // path (a compromised/malicious moderator account must
+                    // never be able to mint additional moderators — see the
+                    // design writeup). uid != request.auth.uid closes the
+                    // self-targeting edge case (a moderator cannot ban/unban
+                    // their own account through this branch — isOwner(uid)
+                    // above governs their own doc and grants no status path
+                    // either, so this is defense-in-depth, not the only
+                    // guard). hasOnly(['status']) makes this branch
+                    // structurally incapable of touching role or any other
+                    // field, even in the same write.
+                    (isModerator()
+                      && uid != request.auth.uid
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                      && request.resource.data.status in ['active', 'banned']);
 
       allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
 
@@ -638,11 +656,11 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      // No admin dashboard in V1 (D9) — reports are reviewed via the Firebase
-      // console using service-account access, which bypasses these rules
-      // entirely. Client-side read stays fully closed, including to the
-      // reporter themselves (D11 — "reporters cannot read others' reports").
-      allow read: if false;
+      // Admin dashboard (Phase 2) — reports are now reviewable by a
+      // moderator directly from the client, scoped to isModerator() only.
+      // The reporter themselves still cannot read reports (D11 —
+      // "reporters cannot read others' reports" — unchanged by this).
+      allow read: if isModerator();
 
       allow create: if isSignedIn()
                     && isActiveCaller()
@@ -664,7 +682,14 @@ service cloud.firestore {
                     && request.resource.data.resolved == false
                     && request.resource.data.createdAt == request.time;
 
-      allow update: if false; // 'resolved' flipped via console only
+      // Admin dashboard (Phase 2) — a moderator can flip 'resolved' to true,
+      // and ONLY that field. Every other field (reason/note/target*/
+      // reporterId/createdAt) stays permanently immutable — the report
+      // remains an untouchable audit trail even for the moderator who
+      // resolves it. There is no path back to resolved == false.
+      allow update: if isModerator()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])
+                    && request.resource.data.resolved == true;
       allow delete: if false;
     }
 

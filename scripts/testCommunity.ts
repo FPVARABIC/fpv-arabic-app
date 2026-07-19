@@ -68,6 +68,15 @@ const useNotificationsTs = readFileSync(join(ROOT, 'src/components/Community/hoo
 const useLessonReminderTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useLessonReminder.ts'), 'utf8');
 const notificationsScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Notifications/NotificationsScreen.tsx'), 'utf8');
 const storageKeysTs = readFileSync(join(ROOT, 'src/utils/storageKeys.ts'), 'utf8');
+const profileSheetTsx = readFileSync(join(ROOT, 'src/components/ProfileSheet.tsx'), 'utf8');
+const useIsModeratorTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useIsModerator.ts'), 'utf8');
+const useReportsQueueTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useReportsQueue.ts'), 'utf8');
+const useUserStatusTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useUserStatus.ts'), 'utf8');
+const useAnnouncementCreateTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useAnnouncementCreate.ts'), 'utf8');
+const adminDashboardTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/AdminDashboard.tsx'), 'utf8');
+const reportsReviewScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/ReportsReviewScreen.tsx'), 'utf8');
+const userManagementScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/UserManagementScreen.tsx'), 'utf8');
+const announcementComposerScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/AnnouncementComposerScreen.tsx'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -641,6 +650,69 @@ console.log('\n[27] Real-time feed + comments/likes (Phase 10)');
   ok('scripts/testCommunityRealtime.ts exists as a permanent live-browser regression suite for this feature', existsSync(join(ROOT, 'scripts/testCommunityRealtime.ts')));
 }
 
+console.log('\n[28] Admin dashboard (Phase 2) — reports review, user ban/unban, announcement creation');
+{
+  ok('types.ts declares ReportWithId', typesTs.includes('interface ReportWithId extends Report'));
+
+  ok('firestore.rules opens reports read to isModerator() only (no longer allow read: if false)',
+    /match \/reports\/\{reportId\} \{[\s\S]*?allow read: if isModerator\(\);/.test(rulesTxt));
+  ok('firestore.rules scopes the reports update to a resolved-only, true-only flip',
+    rulesTxt.includes("request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])") &&
+    rulesTxt.includes('request.resource.data.resolved == true'));
+  ok('firestore.rules adds a status-only isModerator() branch to users/{uid} update, excluding self-targeting and role',
+    rulesTxt.includes('isModerator()\n                      && uid != request.auth.uid') &&
+    rulesTxt.includes("request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])") &&
+    rulesTxt.includes("request.resource.data.status in ['active', 'banned']"));
+  ok('firestore.indexes.json adds the resolved+createdAt composite index for reports',
+    indexesJson.includes('"collectionGroup": "reports"') && indexesJson.includes('"fieldPath": "resolved"'));
+
+  ok('useIsModerator.ts reads the caller\'s OWN users/{uid} doc (no Rules change needed — already publicly readable)',
+    useIsModeratorTs.includes('userPath(currentUser.uid)'));
+  ok('useIsModerator.ts derives isModerator/loading by comparing fetched-for uid against the current identity — no synchronous setState-to-reset in its effect',
+    useIsModeratorTs.includes('state.uid === currentUid'));
+
+  ok('ProfileSheet.tsx renders the لوحة الإشراف row only when isModerator is true',
+    profileSheetTsx.includes('لوحة الإشراف') && /isModerator && onOpenAdmin/.test(profileSheetTsx));
+
+  ok('HomeView.tsx adds an \'admin\' screen to the Screen union', homeViewTsx.includes("{ name: 'admin' }"));
+  ok('HomeView.tsx wires a SEPARATE useIsModerator() instance for the ProfileSheet gate (AdminDashboard calls its own)',
+    homeViewTsx.includes('useIsModerator()'));
+  ok('AdminDashboard.tsx independently calls useIsModerator() itself rather than trusting a passed-down boolean',
+    adminDashboardTsx.includes('useIsModerator()') &&
+    adminDashboardTsx.includes('!loading && !isModerator'));
+
+  ok('useReportsQueue.ts queries reports where resolved==false ordered by createdAt asc, paginated like existing hooks',
+    useReportsQueueTs.includes("where('resolved', '==', false)") &&
+    useReportsQueueTs.includes("orderBy('createdAt', 'asc')") &&
+    useReportsQueueTs.includes('PAGE_SIZE'));
+  ok('useReportsQueue.ts marks resolved via the resolved-only Rules path, never any other field',
+    useReportsQueueTs.includes("updateDoc(doc(firestoreDb, REPORTS_COLLECTION, reportId), { resolved: true })"));
+  ok('useReportsQueue.ts hides the reported post OR comment depending on targetType, reusing the existing isModerator() hide paths',
+    useReportsQueueTs.includes("report.targetType === 'post'") &&
+    useReportsQueueTs.includes('commentPath(report.postId, report.targetId)') &&
+    useReportsQueueTs.includes("{ status: 'hidden' }"));
+  ok('ReportsReviewScreen.tsx opens every report (post or comment) via the existing PostDetail navigation — no standalone comment screen',
+    reportsReviewScreenTsx.includes('onOpenPost(report.postId)'));
+
+  ok('UserManagementScreen.tsx reuses useUserSearch.ts for search/list (imported, not reimplemented)',
+    userManagementScreenTsx.includes("from '../hooks/useUserSearch'") && userManagementScreenTsx.includes('useUserSearch()'));
+  ok('UserManagementScreen.tsx\'s detail view reuses the exact getDoc(userPath(uid)) pattern PublicProfile.tsx already uses',
+    userManagementScreenTsx.includes('getDoc(doc(firestoreDb, userPath(uid)))'));
+  ok('UserManagementScreen.tsx disables ban/unban for self and for another moderator, and shows promote-to-moderator as permanently disabled (console-only)',
+    userManagementScreenTsx.includes('isSelf') &&
+    userManagementScreenTsx.includes('isOtherModerator') &&
+    userManagementScreenTsx.includes('ترقية إلى مشرف') &&
+    /disabled\s*$/m.test(userManagementScreenTsx));
+  ok('useUserStatus.ts writes ONLY the status field — its updateDoc payload has no other key',
+    useUserStatusTs.includes('updateDoc(doc(firestoreDb, userPath(uid)), { status })'));
+
+  ok('useAnnouncementCreate.ts writes directly into the existing announcements collection, matching its Rules-validated shape exactly',
+    useAnnouncementCreateTs.includes('ANNOUNCEMENTS_COLLECTION') &&
+    useAnnouncementCreateTs.includes('title, body, ctaLink, createdAt: serverTimestamp()'));
+  ok('AnnouncementComposerScreen.tsx enforces the same 200/2000-char caps firestore.rules validates server-side',
+    announcementComposerScreenTsx.includes('TITLE_MAX = 200') && announcementComposerScreenTsx.includes('BODY_MAX = 2000'));
+}
+
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
 {
   const { execSync } = await import('node:child_process');
@@ -659,6 +731,7 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'src/views/HomeView.tsx' && // Phase 8: Home-screen-state reset on the bottom-nav Home press; Notifications Phase 1 wires the shared useNotifications() instance here too
     f !== 'src/components/BottomNavigation.tsx' && // Phase 8: centralized Home-reset navigation signal
     f !== 'src/utils/storageKeys.ts' && // Notifications Phase 1: LESSON_REMINDER_LAST_SHOWN throttle key
+    f !== 'src/components/ProfileSheet.tsx' && // Admin dashboard Phase 2: adds the moderator-only "لوحة الإشراف" entry point
     f !== 'package.json' &&
     !f.startsWith('functions/') &&
     !f.startsWith('scripts/testCommunity') &&
@@ -668,6 +741,7 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'scripts/testFeedRanking.ts' && // Phase 2: pure-Node unit tests for the feed ranking formula
     f !== 'scripts/testFeedDiversity.ts' && // Phase 2: pure-Node unit tests for the diversity/newest-post-guarantee page assembly
     f !== 'scripts/migrateFeedScoreBackfill.ts' && // Phase 2: one-time feedScore backfill, same emulator-only pattern as migrateDisplayNameNormalized.ts
+    f !== 'scripts/testAdminDashboardE2E.ts' && // Admin dashboard Phase 2: live-browser proof for the moderator-only entry point + all 3 screens
     f !== 'docs/KNOWN_ISSUES.md' && // Phase 2: documents the pagination-mutation limitation
     f !== 'docs/PRE_LAUNCH_CHECKLIST.md' && // Phase 2: defers the pagination-mutation E2E test with an explicit trigger condition
     f !== 'realtime-harness.html', // Phase 10: entry point for the test-only RealtimeHarness.tsx mount, never linked from the real app

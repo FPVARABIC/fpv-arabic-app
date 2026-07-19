@@ -12,6 +12,8 @@ import { SavedPostIdsProvider } from '../components/Community/hooks/useSavedPost
 import { useFeed } from '../components/Community/hooks/useFeed';
 import { useEnsureCommunityUser } from '../components/Community/hooks/useEnsureCommunityUser';
 import { useNotifications } from '../components/Community/hooks/useNotifications';
+import { useIsModerator } from '../components/Community/hooks/useIsModerator';
+import { AdminDashboard } from '../components/Community/Admin/AdminDashboard';
 import type { ChipValue } from '../components/Community/Feed/CategoryChips';
 import { useAuthContext } from '../contexts/AuthContext';
 import { HomeDashboardLegacy } from './HomeDashboardLegacy';
@@ -34,7 +36,8 @@ type Screen =
   | { name: 'saved' }
   | { name: 'compose' }
   | { name: 'notifications' }
-  | { name: 'profile'; authorId: string };
+  | { name: 'profile'; authorId: string }
+  | { name: 'admin' };
 
 const getScrollY = (): number => window.scrollY;
 
@@ -54,6 +57,10 @@ const CommunityHomeScreens: React.FC = () => {
   // looking at the feed.
   const feed = useFeed(category, screen.name === 'feed');
   const notifications = useNotifications();
+  // Gates the ProfileSheet entry point only (UX, not enforcement) — a
+  // SEPARATE useIsModerator() instance lives inside AdminDashboard itself
+  // and independently re-checks on that screen's own mount.
+  const { isModerator } = useIsModerator();
   const location = useLocation();
   const lastHomeResetRef = useRef<number | undefined>(undefined);
   // Single dedicated lifecycle owner for the Community user-document
@@ -216,10 +223,19 @@ const CommunityHomeScreens: React.FC = () => {
           onRetryBootstrap={communityBootstrap.retry}
         />
       )}
+      {screen.name === 'admin' && (
+        <AdminDashboard
+          onBack={() => setScreen({ name: 'feed' })}
+          onOpenPost={postId => setScreen({ name: 'post', postId, returnTo: { name: 'admin' } })}
+          onOpenAuthor={authorId => setScreen({ name: 'profile', authorId })}
+        />
+      )}
       <ProfileSheet
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         onOpenProfile={uid => setScreen({ name: 'profile', authorId: uid })}
+        isModerator={isModerator}
+        onOpenAdmin={() => goTo({ name: 'admin' })}
       />
     </>
   );
