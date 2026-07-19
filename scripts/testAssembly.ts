@@ -463,7 +463,7 @@ console.log('\n[15] GPS racing-gap research pass (Issue 3 follow-up) — 2 new r
   ok('long-range GPS coverage is unchanged at 1 option (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('long-range')).length === 1);
 }
 
-console.log('\n[16] Category icon system — CATEGORY_ICON_PATH map (PNG, user-uploaded), PartCard/PartCardsContainer wiring');
+console.log('\n[16] Category icon system — CATEGORY_ICON_PATH map (user-uploaded images), PartCard/PartCardsContainer wiring');
 {
   const partCategoryKeys = Object.keys(PART_CATEGORY_MAP);
   ok('PART_CATEGORY_MAP has exactly the 12 known categories', partCategoryKeys.length === 12);
@@ -471,12 +471,18 @@ console.log('\n[16] Category icon system — CATEGORY_ICON_PATH map (PNG, user-u
   const { CATEGORY_ICON_PATH } = await import('../src/data/assembly/categoryIcons');
   ok('CATEGORY_ICON_PATH has exactly one entry per PART_CATEGORY_MAP key, no more, no fewer', JSON.stringify(Object.keys(CATEGORY_ICON_PATH).sort()) === JSON.stringify(partCategoryKeys.sort()));
 
-  // The PNG files themselves are uploaded manually via the GitHub web UI,
+  // batteries/buzzers/capacitors/tools were uploaded as WebP-encoded bytes
+  // despite being asked for as .png, so those 4 entries use .webp — matching
+  // each file's real content rather than a mismatched extension. The other
+  // 8 uploads are genuine PNGs.
+  const WEBP_CATEGORIES = new Set(['batteries', 'buzzers', 'capacitors', 'tools']);
+  // The image files themselves are uploaded manually via the GitHub web UI,
   // outside any Claude Code session — this only checks the path convention
   // the code expects, not that a file actually exists yet at that path.
   for (const key of partCategoryKeys) {
     const relPath = CATEGORY_ICON_PATH[key];
-    ok(`${key}'s icon path starts with /assets/assembly/category-icons/ and matches its own key with a .png extension`, relPath === `/assets/assembly/category-icons/${key}.png`);
+    const ext = WEBP_CATEGORIES.has(key) ? 'webp' : 'png';
+    ok(`${key}'s icon path starts with /assets/assembly/category-icons/ and matches its own key with a .${ext} extension`, relPath === `/assets/assembly/category-icons/${key}.${ext}`);
   }
 
   const partCardTsx = readFileSync(join(ROOT, 'src/components/Assembly/PartCard.tsx'), 'utf8');
