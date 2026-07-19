@@ -416,7 +416,7 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('src/components/Assembly/') &&
     !f.startsWith('src/data/assembly/') &&
     !f.startsWith('scripts/testAssembly') &&
-    !f.startsWith('public/assets/assembly/') && // category-icon SVGs — new asset folder, still Assembly-scoped
+    !f.startsWith('public/assets/assembly/') && // category-icon PNGs (uploaded manually via GitHub web UI) — new asset folder, still Assembly-scoped
     f !== 'scripts/testFrameSizeMatch.ts' && // Phase 3: pure-Node unit tests for Stage 2 size <-> frame matching
     f !== 'src/assembly-preview.tsx' && // independent-audit correction: stale preset ids fixed, still Assembly-scoped
     f !== 'src/views/AssemblyView.tsx' && // Phase 2: persistence restore lives at the screen-state decision, still Assembly-scoped
@@ -463,7 +463,7 @@ console.log('\n[15] GPS racing-gap research pass (Issue 3 follow-up) — 2 new r
   ok('long-range GPS coverage is unchanged at 1 option (untouched by this pass)', gps.filter(g => g.compatibilityTags.droneTypes.includes('long-range')).length === 1);
 }
 
-console.log('\n[16] Category icon system — 12 SVGs, CATEGORY_ICON_PATH map, PartCard/PartCardsContainer wiring');
+console.log('\n[16] Category icon system — CATEGORY_ICON_PATH map (PNG, user-uploaded), PartCard/PartCardsContainer wiring');
 {
   const partCategoryKeys = Object.keys(PART_CATEGORY_MAP);
   ok('PART_CATEGORY_MAP has exactly the 12 known categories', partCategoryKeys.length === 12);
@@ -471,13 +471,12 @@ console.log('\n[16] Category icon system — 12 SVGs, CATEGORY_ICON_PATH map, Pa
   const { CATEGORY_ICON_PATH } = await import('../src/data/assembly/categoryIcons');
   ok('CATEGORY_ICON_PATH has exactly one entry per PART_CATEGORY_MAP key, no more, no fewer', JSON.stringify(Object.keys(CATEGORY_ICON_PATH).sort()) === JSON.stringify(partCategoryKeys.sort()));
 
+  // The PNG files themselves are uploaded manually via the GitHub web UI,
+  // outside any Claude Code session — this only checks the path convention
+  // the code expects, not that a file actually exists yet at that path.
   for (const key of partCategoryKeys) {
     const relPath = CATEGORY_ICON_PATH[key];
-    ok(`${key}'s icon path starts with /assets/assembly/category-icons/ and matches its own key`, relPath === `/assets/assembly/category-icons/${key}.svg`);
-    const diskPath = join(ROOT, 'public', relPath);
-    ok(`${key}.svg actually exists on disk at public${relPath}`, existsSync(diskPath));
-    const svgContent = readFileSync(diskPath, 'utf8');
-    ok(`${key}.svg declares viewBox="0 0 400 300" (4:3, matches the real PartCard image-frame aspect ratio)`, svgContent.includes('viewBox="0 0 400 300"'));
+    ok(`${key}'s icon path starts with /assets/assembly/category-icons/ and matches its own key with a .png extension`, relPath === `/assets/assembly/category-icons/${key}.png`);
   }
 
   const partCardTsx = readFileSync(join(ROOT, 'src/components/Assembly/PartCard.tsx'), 'utf8');
