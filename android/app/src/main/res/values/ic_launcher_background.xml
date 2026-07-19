@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sampled directly from public/logo.png's own background (a corner
+         pixel outside the glow/content area) so the adaptive icon's
+         background layer matches the logo artwork exactly, not
+         Capacitor's placeholder white. -->
+    <color name="ic_launcher_background">#313332</color>
+</resources>

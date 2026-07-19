@@ -1,0 +1,25 @@
+ext {
+    // Lowered from Capacitor's default (24) to 22 (Android 5.1) for broad
+    // real-world device compatibility — see the project's own notes on why
+    // this is the practical floor (going lower gains negligible reach while
+    // risking WebView/JS engine incompatibilities on genuinely ancient
+    // devices). compileSdkVersion/targetSdkVersion are left at Capacitor's
+    // own current default (36) — those govern the BUILD toolchain/API
+    // surface, not runtime device compatibility, so lowering them would
+    // gain nothing and would be actively wrong per Play Store's own target
+    // API level requirements for new app submissions.
+    minSdkVersion = 22
+    compileSdkVersion = 36
+    targetSdkVersion = 36
+    androidxActivityVersion = '1.11.0'
+    androidxAppCompatVersion = '1.7.1'
+    androidxCoordinatorLayoutVersion = '1.3.0'
+    androidxCoreVersion = '1.17.0'
+    androidxFragmentVersion = '1.8.9'
+    coreSplashScreenVersion = '1.2.0'
+    androidxWebkitVersion = '1.14.0'
+    junitVersion = '4.13.2'
+    androidxJunitVersion = '1.3.0'
+    androidxEspressoCoreVersion = '3.7.0'
+    cordovaAndroidVersion = '14.0.1'
+}
