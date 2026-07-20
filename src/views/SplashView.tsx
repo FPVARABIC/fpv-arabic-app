@@ -38,7 +38,18 @@ export const SplashView: React.FC = () => {
       navigate('/home', { replace: true });
     } catch (err) {
       console.error('[Auth] Google sign-in failed:', err);
-      setError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
+      // TEMPORARY DIAGNOSTIC — remove once native Google Sign-In is
+      // confirmed working, restoring the plain Arabic message below.
+      // Surfaces the real error code/message on screen so it can be
+      // screenshotted directly from the device, without Logcat/USB
+      // debugging. err may be a Capacitor plugin rejection (.code/.message)
+      // or a firebase/auth FirebaseError (.code/.message) — both shaped the
+      // same way, so this reads either without needing to know which step
+      // (native picker vs. the JS-SDK signInWithCredential bridge) failed.
+      const diagnostic = err as { code?: string; message?: string };
+      setError(`[DIAGNOSTIC] code=${diagnostic?.code ?? 'none'} — ${diagnostic?.message ?? String(err)}`);
+      // Original message, restore this and delete the block above:
+      // setError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
       setIsSigningIn(false);
     }
   };
