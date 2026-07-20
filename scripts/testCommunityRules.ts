@@ -1455,6 +1455,27 @@ async function main() {
       read: false, createdAt: serverTimestamp(),
     }));
 
+  // useAnnouncementMirror.ts's own idempotency safety net — a deterministic
+  // per-(uid, announcementId) doc id (`announcement-{announcementId}`) means
+  // a SECOND full-shape write to the same id, after the first one already
+  // landed, is evaluated as an UPDATE (the doc now exists), not a create —
+  // and the update rule above is scoped to hasOnly(['read']) only, so this
+  // must be denied even though every field's VALUE is identical to the
+  // still-current allow-case AN5/AN6/AN7 above.
+  await record('AN8a mirroring into a deterministic per-announcement id succeeds on first write', 'allow', () =>
+    setDoc(doc(asAnnouncementUser.firestore(), 'users/uidAnnouncementUser/notifications/announcement-announcement-real'), {
+      type: 'announcement', actorId: null, actorName: null, actorPhoto: null,
+      targetType: 'announcement', targetId: 'announcement-real', postId: null,
+      read: false, createdAt: serverTimestamp(),
+    }));
+
+  await record('AN8b a SECOND full-shape write to that SAME deterministic id is denied — evaluated as update once the doc exists, and update is scoped to hasOnly([\'read\']) only', 'deny', () =>
+    setDoc(doc(asAnnouncementUser.firestore(), 'users/uidAnnouncementUser/notifications/announcement-announcement-real'), {
+      type: 'announcement', actorId: null, actorName: null, actorPhoto: null,
+      targetType: 'announcement', targetId: 'announcement-real', postId: null,
+      read: false, createdAt: serverTimestamp(),
+    }));
+
   // ── 23h. Admin dashboard (Phase 2) — reports read/resolve, ban/unban ────
   console.log('\n=== Admin dashboard — reports read/resolve, user ban/unban ===');
 

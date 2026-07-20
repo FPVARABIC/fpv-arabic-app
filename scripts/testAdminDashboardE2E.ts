@@ -221,10 +221,12 @@ async function main() {
     await page.waitForFunction(() => (document.body.textContent ?? '').includes('تم نشر الإعلان'), undefined, { timeout: 10000 });
     record('announcement composer shows the success toast after publishing', true);
 
-    const createdAnnouncement = await withRulesDisabled(async db => {
+    const createdAnnouncementDoc = await withRulesDisabled(async db => {
       const snap = await getDocs(query(collection(db, 'announcements'), where('title', '==', announcementTitle)));
-      return snap.docs[0]?.data() ?? null;
+      return snap.docs[0] ?? null;
     });
+    const createdAnnouncement = createdAnnouncementDoc?.data() ?? null;
+    const createdAnnouncementId = createdAnnouncementDoc?.id ?? null;
     record('a REAL announcements/{id} doc was created with the submitted title/body',
       !!createdAnnouncement && createdAnnouncement.body === 'نص تجريبي لإعلان تم إنشاؤه أثناء التحقق الآلي.');
 
@@ -278,6 +280,70 @@ async function main() {
     await page.waitForFunction(() => (document.body.textContent ?? '').includes('حظر الحساب'), undefined, { timeout: 10000 });
     const unbannedDoc = await withRulesDisabled(db => getDoc(doc(db, 'users', 'e2e-admin-ban-target')));
     record('unban button actually wrote status=active again in Firestore', unbannedDoc.data()?.status === 'active');
+
+    // ── 6. Announcement mirror — a SEPARATE, second account (created AFTER
+    // the announcement already exists, proving this isn't limited to "only
+    // new since last check") must pick it up in its own notifications the
+    // very first time it enters Community, with no separate action needed —
+    // useNotifications.ts's own load() (fired on mount) is the trigger. ────
+    const context2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page2 = await context2.newPage();
+    page2.on('pageerror', e => console.log('  [pageerror:second-account]', String(e)));
+
+    await page2.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    const uid2: string = await page2.evaluate(async () => {
+      const mod = await import('/src/components/Community/testHelpers/e2eAuth.ts');
+      return mod.e2eSignIn({ displayName: 'Second Test Pilot', email: 'second-test@example.com' });
+    });
+    await page2.goto(`${BASE}/home`, { waitUntil: 'domcontentloaded' });
+    await page2.waitForSelector('button[aria-label="القائمة"]', { timeout: 10000 });
+
+    // Community bootstrap for the second account, same poll as the first.
+    const start2 = Date.now();
+    while (Date.now() - start2 < 10000) {
+      const snap = await withRulesDisabled(db => getDoc(doc(db, 'users', uid2)));
+      if (snap.exists()) break;
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    await page2.locator('button[aria-label="الإشعارات"]').click();
+    await page2.waitForFunction(
+      (title: string) => (document.body.textContent ?? '').includes(title),
+      announcementTitle,
+      { timeout: 10000 },
+    ).catch(() => {});
+    record('a SECOND, brand-new account (created after the announcement already existed) sees it in their own notifications on first load — no assumption that only "new since last check" is discoverable',
+      (await page2.evaluate((title: string) => document.body.textContent?.includes(title) ?? false, announcementTitle)));
+
+    const mirrorsAfterFirstLoad = await withRulesDisabled(async db => {
+      const snap = await getDocs(query(
+        collection(db, 'users', uid2, 'notifications'),
+        where('type', '==', 'announcement'),
+        where('targetId', '==', createdAnnouncementId as string),
+      ));
+      return snap.size;
+    });
+    record('exactly ONE mirror notification exists for this announcement after the first load (not zero, not duplicated already)', mirrorsAfterFirstLoad === 1);
+
+    // Second check — press the real bottom-nav Home button, which fires the
+    // app's own homeReset signal and re-runs notifications.refresh() (see
+    // HomeView.tsx) — the exact same load()/mirrorUnseenAnnouncements path,
+    // triggered a second time through real, ordinary in-app navigation
+    // rather than a raw page reload.
+    await page2.getByText('الرئيسية', { exact: true }).click();
+    await page2.waitForTimeout(1500); // allow the async refresh to complete
+
+    const mirrorsAfterSecondCheck = await withRulesDisabled(async db => {
+      const snap = await getDocs(query(
+        collection(db, 'users', uid2, 'notifications'),
+        where('type', '==', 'announcement'),
+        where('targetId', '==', createdAnnouncementId as string),
+      ));
+      return snap.size;
+    });
+    record('a SECOND check (Home button press → refresh) does NOT create a duplicate mirror — still exactly one', mirrorsAfterSecondCheck === 1);
+
+    await context2.close();
 
     console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
     await cleanupAll();

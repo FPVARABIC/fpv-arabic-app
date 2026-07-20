@@ -77,6 +77,7 @@ const adminDashboardTsx = readFileSync(join(ROOT, 'src/components/Community/Admi
 const reportsReviewScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/ReportsReviewScreen.tsx'), 'utf8');
 const userManagementScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/UserManagementScreen.tsx'), 'utf8');
 const announcementComposerScreenTsx = readFileSync(join(ROOT, 'src/components/Community/Admin/AnnouncementComposerScreen.tsx'), 'utf8');
+const useAnnouncementMirrorTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useAnnouncementMirror.ts'), 'utf8');
 
 console.log('\n[1] Types — new fields/interfaces exist; the now-obsolete CommentCooldown type is fully removed');
 {
@@ -711,6 +712,37 @@ console.log('\n[28] Admin dashboard (Phase 2) — reports review, user ban/unban
     useAnnouncementCreateTs.includes('title, body, ctaLink, createdAt: serverTimestamp()'));
   ok('AnnouncementComposerScreen.tsx enforces the same 200/2000-char caps firestore.rules validates server-side',
     announcementComposerScreenTsx.includes('TITLE_MAX = 200') && announcementComposerScreenTsx.includes('BODY_MAX = 2000'));
+}
+
+console.log('\n[29] Announcement mirror mechanism (fills the gap found: Rules supported it, nothing ever called it)');
+{
+  ok('useAnnouncementMirror.ts queries recent announcements ordered by createdAt desc, bounded by a limit',
+    useAnnouncementMirrorTs.includes("orderBy('createdAt', 'desc')") &&
+    useAnnouncementMirrorTs.includes('RECENT_ANNOUNCEMENTS_LIMIT'));
+  ok('useAnnouncementMirror.ts queries the CALLER\'S OWN existing announcement-type notifications (bare equality — no orderBy paired with it, so no new composite index is needed)',
+    useAnnouncementMirrorTs.includes("where('type', '==', 'announcement')") &&
+    useAnnouncementMirrorTs.includes('EXISTING_MIRRORS_SAFETY_LIMIT'));
+  ok('useAnnouncementMirror.ts only mirrors announcements NOT already present in that existing-mirrors set',
+    useAnnouncementMirrorTs.includes('alreadyMirroredIds') &&
+    useAnnouncementMirrorTs.includes('!alreadyMirroredIds.has(d.id)'));
+  ok('useAnnouncementMirror.ts writes the mirror at a DETERMINISTIC per-(uid, announcementId) doc id — a second write attempt to the same id is structurally blocked by the update rule\'s hasOnly([\'read\']) scope, not just by the pre-check',
+    useAnnouncementMirrorTs.includes("mirrorNotificationId = (announcementId: string): string => `announcement-${announcementId}`"));
+  ok('useAnnouncementMirror.ts writes the exact Rules-validated announcement-notification shape (type/actorId=null/targetType/targetId/postId=null/read=false/createdAt)',
+    useAnnouncementMirrorTs.includes("type: 'announcement'") &&
+    useAnnouncementMirrorTs.includes('actorId: null') &&
+    useAnnouncementMirrorTs.includes("targetType: 'announcement'") &&
+    useAnnouncementMirrorTs.includes('postId: null'));
+  ok('useAnnouncementMirror.ts is best-effort — every error is caught, never rethrown, so a mirror failure can never break notifications loading itself',
+    /catch \(err\) \{\s*console\.error\('\[mirrorUnseenAnnouncements\]'/.test(useAnnouncementMirrorTs));
+
+  ok('useNotifications.ts imports and calls mirrorUnseenAnnouncements inside its own load() — the existing single refresh point for both the header badge and the notifications screen',
+    useNotificationsTs.includes("import { mirrorUnseenAnnouncements } from './useAnnouncementMirror'") &&
+    useNotificationsTs.includes('await mirrorUnseenAnnouncements(currentUid)'));
+  ok('the mirror check runs BEFORE the list/unread queries in load(), so a newly-mirrored announcement is reflected in the SAME load that triggered it',
+    useNotificationsTs.indexOf('await mirrorUnseenAnnouncements(currentUid)') < useNotificationsTs.indexOf('const listQuery'));
+
+  ok('firestore.indexes.json required NO new entry for this fix — the announcement-mirror query is a bare single-field equality filter, the same automatic-single-field-index precedent already documented for useNotifications.ts\'s own unreadQuery',
+    !indexesJson.includes('"collectionGroup": "notifications"'));
 }
 
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');

@@ -5,6 +5,7 @@ import {
 import { firestoreDb } from '../../../lib/firebase';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { notificationsPath, notificationPath } from '../utils/firestorePaths';
+import { mirrorUnseenAnnouncements } from './useAnnouncementMirror';
 import type { CommunityNotification, CommunityNotificationWithId } from '../types';
 
 const PAGE_SIZE = 30;
@@ -51,6 +52,14 @@ export const useNotifications = (): UseNotificationsResult => {
     setLoading(true);
     setError(null);
     try {
+      // Reconciles any announcement published since this user's last check
+      // into their own inbox BEFORE the list/unread queries below run, so
+      // this same one-shot load() — already the sole refresh point for both
+      // the header badge and this screen — picks up a brand-new
+      // announcement without any separate trigger. See
+      // useAnnouncementMirror.ts for why this is the right lifecycle point.
+      await mirrorUnseenAnnouncements(currentUid);
+
       const listQuery = query(
         collection(firestoreDb, notificationsPath(currentUid)),
         orderBy('createdAt', 'desc'),
