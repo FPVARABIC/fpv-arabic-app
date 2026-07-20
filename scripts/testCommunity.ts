@@ -776,17 +776,32 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'scripts/testAdminDashboardE2E.ts' && // Admin dashboard Phase 2: live-browser proof for the moderator-only entry point + all 3 screens
     f !== 'docs/KNOWN_ISSUES.md' && // Phase 2: documents the pagination-mutation limitation
     f !== 'docs/PRE_LAUNCH_CHECKLIST.md' && // Phase 2: defers the pagination-mutation E2E test with an explicit trigger condition
-    f !== 'realtime-harness.html', // Phase 10: entry point for the test-only RealtimeHarness.tsx mount, never linked from the real app
+    f !== 'realtime-harness.html' && // Phase 10: entry point for the test-only RealtimeHarness.tsx mount, never linked from the real app
+    // "Four Safe Fixes" task — entirely unrelated to Community: Assembly's
+    // drone-size/type selectors reusing the frames category icon, plus
+    // three native Android/Capacitor fixes (splash-screen scaling,
+    // adaptive-icon background color, minSdkVersion). None touch Community.
+    !f.startsWith('android/') &&
+    !f.startsWith('src/components/Assembly/') &&
+    !f.startsWith('src/data/assembly/') &&
+    !f.startsWith('scripts/testAssembly') &&
+    f !== 'capacitor.config.ts' &&
+    f !== 'package-lock.json',
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('src/contexts/AuthContext.tsx itself was NOT modified (confirmed, not merely allow-listed above)', !allChanged.includes('src/contexts/AuthContext.tsx'));
-  ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Assembly/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
+  // Assembly is deliberately excluded from this specific check (unlike the
+  // others below) only for the "Four Safe Fixes" task, which legitimately
+  // touches src/data/assembly/ and src/components/Assembly/ alongside
+  // unrelated native Android work in the same commit-to-be — already
+  // accounted for, and independently verified, by testAssembly.ts's own
+  // scope check and its new [17] section above.
+  ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
     f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' ||
     f === 'src/views/ProgrammingView.tsx' || f.startsWith('src/views/ExpressLrs') || f.startsWith('src/data/expresslrs/') ||
     f.startsWith('src/views/BuildRoadmap') || f.startsWith('src/data/roadmap') || f.startsWith('src/data/lessonsData') ||
-    f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2') ||
-    f.startsWith('src/data/assembly/') || f.startsWith('src/components/Assembly/'),
+    f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2'),
   ));
   // Only ADDED lines matter here — the unified diff's unchanged CONTEXT
   // lines legitimately include the "dependencies": { header near the
@@ -794,8 +809,12 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
   // on that context line.
   const packageJsonAddedLines = execSync('git diff -- package.json', { cwd: ROOT }).toString()
     .split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
-  ok('package.json has no NEW dependency (only a new npm script entry) — no unrelated dependency was added',
-    packageJsonAddedLines.every(l => !/^[+]\s*"[^"]+":\s*"\^?\d/.test(l)));
+  // "Four Safe Fixes" task (unrelated to Community) adds exactly one real
+  // dependency — @capacitor/splash-screen, for the native splash-scaling
+  // fix — allow-listed here by exact line, same as every other cross-task
+  // exception in this file; any OTHER new dependency still fails this check.
+  ok('package.json has no unexpected NEW dependency (only a new npm script entry and the known @capacitor/splash-screen addition)',
+    packageJsonAddedLines.every(l => !/^[+]\s*"[^"]+":\s*"\^?\d/.test(l) || l.includes('"@capacitor/splash-screen"')));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

@@ -1,14 +1,19 @@
 ext {
-    // Lowered from Capacitor's default (24) to 22 (Android 5.1) for broad
-    // real-world device compatibility — see the project's own notes on why
-    // this is the practical floor (going lower gains negligible reach while
-    // risking WebView/JS engine incompatibilities on genuinely ancient
-    // devices). compileSdkVersion/targetSdkVersion are left at Capacitor's
-    // own current default (36) — those govern the BUILD toolchain/API
-    // surface, not runtime device compatibility, so lowering them would
-    // gain nothing and would be actively wrong per Play Store's own target
-    // API level requirements for new app submissions.
-    minSdkVersion = 22
+    // 24 (Android 7.0), Capacitor's own default — NOT lowered. An earlier
+    // version of this project tried lowering it to 22 for broader device
+    // reach, but that build actively fails: org.apache.cordova:framework's
+    // 14.0.1 AAR (see cordovaAndroidVersion below), a transitive dependency
+    // pulled in regardless of whether any Cordova plugin is actually used,
+    // itself declares minSdkVersion 24 — Gradle's manifest merger rejects
+    // any app minSdk lower than a dependency's own minSdk, so this floor
+    // isn't a device-compatibility choice this project gets to make; it's a
+    // hard constraint from a dependency already in the build graph.
+    // compileSdkVersion/targetSdkVersion are left at Capacitor's own current
+    // default (36) — those govern the BUILD toolchain/API surface, not
+    // runtime device compatibility, so lowering them would gain nothing and
+    // would be actively wrong per Play Store's own target API level
+    // requirements for new app submissions.
+    minSdkVersion = 24
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'

@@ -7,10 +7,10 @@ interface TypeImageProps {
   imagePath?: string;
 }
 
-// No drone-type PNG assets exist on disk yet, so the <img> load always fails
-// today — onError swaps to the emoji fallback rather than showing a broken
-// image icon. Once real assets land under /assets/assembly/drone-types/,
-// this same component picks them up with no further change.
+// Every drone type's imagePath now reuses the existing frames category icon
+// (droneTypes.ts) rather than a per-type asset that never existed — onError
+// still swaps to the emoji fallback for defense in depth (e.g. a future
+// per-type imagePath that fails to load), but is not expected to fire today.
 const TypeImage: React.FC<TypeImageProps> = ({ imagePath }) => {
   const [failed, setFailed] = useState(false);
   const showImage = !!imagePath && !failed;

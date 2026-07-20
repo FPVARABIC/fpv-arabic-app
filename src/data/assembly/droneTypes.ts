@@ -1,4 +1,12 @@
 import type { DroneType } from './types';
+import { CATEGORY_ICON_PATH } from './categoryIcons';
+
+// imagePath reuses the existing frames category icon (Assembly's own part
+// list already uses this exact file for the "frames" category) — no
+// per-type artwork was ever uploaded under /assets/assembly/drone-types/,
+// so every type's <img> silently fell back to the generic 🚁 emoji
+// (AssemblyHome.tsx's TypeImage). Pointing all five at the same real,
+// already-uploaded file gives every card a real image with no new asset.
 
 // TODO: Ahmed will review specs
 export const droneTypes: DroneType[] = [
@@ -9,7 +17,7 @@ export const droneTypes: DroneType[] = [
     frameSizeInch: 5,
     description: 'أشهر فئة بناء بين طياري الـFPV — توازن بين القوة والتحكم، مناسبة لـFreestyle والسباق الخفيف.',
     recommendedBatteryVoltages: [4, 6],
-    imagePath: '/assets/assembly/drone-types/freestyle.png',
+    imagePath: CATEGORY_ICON_PATH.frames,
   },
   {
     id: 'cinematic',
@@ -18,7 +26,7 @@ export const droneTypes: DroneType[] = [
     frameSizeInch: 5,
     description: 'بناء مخصص للتصوير الناعم، يركّز على الاستقرار وحمل كاميرا أثقل بدلاً من السرعة أو المناورات الحادة.',
     recommendedBatteryVoltages: [4, 6],
-    imagePath: '/assets/assembly/drone-types/cinematic.png',
+    imagePath: CATEGORY_ICON_PATH.frames,
   },
   {
     id: 'long-range',
@@ -27,7 +35,7 @@ export const droneTypes: DroneType[] = [
     frameSizeInch: 7,
     description: 'بناء موجّه للرحلات الطويلة والمسافات البعيدة، يعتمد على كفاءة الطاقة وأنظمة اتصال قوية بدلاً من الأداء الحاد.',
     recommendedBatteryVoltages: [6],
-    imagePath: '/assets/assembly/drone-types/long-range.png',
+    imagePath: CATEGORY_ICON_PATH.frames,
   },
   {
     id: 'cinewhoop',
@@ -36,7 +44,7 @@ export const droneTypes: DroneType[] = [
     frameSizeInch: 3,
     description: 'درون صغير محاط بحلقات حماية حول المراوح، مناسب للتصوير القريب في أماكن ضيقة أو حول أشخاص وأشياء بأمان أكبر.',
     recommendedBatteryVoltages: [2], // TODO: Ahmed will review
-    imagePath: '/assets/assembly/drone-types/cinewhoop.png',
+    imagePath: CATEGORY_ICON_PATH.frames,
   },
   {
     id: 'racing',
@@ -45,6 +53,6 @@ export const droneTypes: DroneType[] = [
     frameSizeInch: 5,
     description: 'بناء مخصص لسباقات الأداء العالي، يركّز على السرعة والاستجابة السريعة أكثر من حمل الكاميرا أو الاستقرار.',
     recommendedBatteryVoltages: [4, 6],
-    imagePath: '/assets/assembly/drone-types/racing.png',
+    imagePath: CATEGORY_ICON_PATH.frames,
   },
 ];

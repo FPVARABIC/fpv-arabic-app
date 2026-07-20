@@ -421,7 +421,23 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f !== 'src/assembly-preview.tsx' && // independent-audit correction: stale preset ids fixed, still Assembly-scoped
     f !== 'src/views/AssemblyView.tsx' && // Phase 2: persistence restore lives at the screen-state decision, still Assembly-scoped
     f !== 'docs/KNOWN_ISSUES.md' && // Phase 4: corrected the stale validateVideoSystemVideoUnit entry
-    f !== 'docs/EXPERT_RULES_UNMAPPED.md', // Phase 4: updated its own reference after compatibility/rules.ts was removed
+    f !== 'docs/EXPERT_RULES_UNMAPPED.md' && // Phase 4: updated its own reference after compatibility/rules.ts was removed
+    // "Four Safe Fixes" task — bundles one genuinely Assembly-scoped fix
+    // (reusing the frames category icon for size/type selectors, already
+    // covered by the Assembly-prefix rules above) together with three
+    // unrelated native Android/Capacitor fixes in the same commit-to-be:
+    // splash-screen scaling (@capacitor/splash-screen + its cap-sync-
+    // generated gradle wiring), the adaptive icon background color, and
+    // minSdkVersion. None of these touch Assembly business logic.
+    !f.startsWith('android/') &&
+    f !== 'capacitor.config.ts' &&
+    f !== 'package.json' &&
+    f !== 'package-lock.json' &&
+    // scripts/testCommunity.ts needed its own small scope-allow-list update
+    // for this same cross-cutting task (it has an equivalent "no unrelated
+    // area touched" check covering Community, which otherwise would flag
+    // this task's Assembly/Android files) — not itself an Assembly file.
+    f !== 'scripts/testCommunity.ts',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
@@ -497,6 +513,31 @@ console.log('\n[16] Category icon system — CATEGORY_ICON_PATH map (user-upload
 
   const buildFlowTsx = readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.tsx'), 'utf8');
   ok('BuildFlow.tsx passes its already-computed category variable into PartCardsContainer', /category=\{category \?\? ''\}/.test(buildFlowTsx));
+}
+
+console.log('\n[17] Drone-size and drone-type selectors reuse the existing frames category icon — no new image asset');
+{
+  const droneTypesTs = readFileSync(join(ROOT, 'src/data/assembly/droneTypes.ts'), 'utf8');
+  const droneSizeOptionsTs = readFileSync(join(ROOT, 'src/data/assembly/droneSizeOptions.ts'), 'utf8');
+  const categoryIconsTs = readFileSync(join(ROOT, 'src/data/assembly/categoryIcons.ts'), 'utf8');
+
+  ok('droneTypes.ts imports CATEGORY_ICON_PATH rather than hardcoding a duplicate literal path',
+    /import \{ CATEGORY_ICON_PATH \} from '\.\/categoryIcons';/.test(droneTypesTs));
+  ok('every droneTypes.ts entry\'s imagePath is CATEGORY_ICON_PATH.frames — no per-type asset path (which never existed on disk) remains',
+    !/imagePath: ['"]\/assets\/assembly\/drone-types\//.test(droneTypesTs) &&
+    (droneTypesTs.match(/imagePath: CATEGORY_ICON_PATH\.frames,/g) ?? []).length === 5);
+
+  ok('droneSizeOptions.ts imports CATEGORY_ICON_PATH rather than hardcoding a duplicate literal path',
+    /import \{ CATEGORY_ICON_PATH \} from '\.\/categoryIcons';/.test(droneSizeOptionsTs));
+  ok('both real, currently-offered size options (5", 7") now carry imagePath: CATEGORY_ICON_PATH.frames',
+    (droneSizeOptionsTs.match(/imagePath: CATEGORY_ICON_PATH\.frames/g) ?? []).length === 2);
+
+  ok('categoryIcons.ts\'s own frames path is untouched — this fix reuses the existing file, it does not add or rename one',
+    categoryIconsTs.includes("frames: '/assets/assembly/category-icons/frames.png',"));
+
+  const assemblyHomeTsxLocal = readFileSync(join(ROOT, 'src/components/Assembly/AssemblyHome.tsx'), 'utf8');
+  ok('AssemblyHome.tsx\'s stale "no drone-type PNG assets exist on disk yet" comment was corrected to match the new real imagePath',
+    !assemblyHomeTsxLocal.includes('No drone-type PNG assets exist on disk yet'));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

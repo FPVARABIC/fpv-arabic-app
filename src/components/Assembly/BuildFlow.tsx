@@ -45,9 +45,11 @@ interface OptionCardProps {
 // other not-yet-buildable option elsewhere in Assembly.
 // Exported (visibility change only, no behavior change) solely so
 // assembly-preview.tsx's dev-only QA harness can mount it directly with
-// controlled imagePath fixtures — no real size/voltage option has an
-// imagePath yet, so there is no other way to exercise its FallbackImage
-// wiring with a real success/failure image load in a real browser.
+// controlled imagePath fixtures — real size options now DO have an
+// imagePath (droneSizeOptions.ts reuses the frames category icon), but
+// voltage options still don't, so this harness remains the only way to
+// exercise the voltage card's FallbackImage wiring with a real
+// success/failure image load in a real browser.
 export const OptionCard: React.FC<OptionCardProps> = ({ label, selected, onClick, iconKind, imagePath, placeholderIcon, disabled, testId }) => (
   <button
     type="button"
