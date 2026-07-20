@@ -1,3 +1,4 @@
+/// <reference types="@capacitor-firebase/authentication" />
 import type { CapacitorConfig } from '@capacitor/cli';
 
 // This app deliberately does NOT ship a bundled offline copy of the web
@@ -45,6 +46,16 @@ const config: CapacitorConfig = {
       splashImmersive: true,
       backgroundColor: '#FFFFFF',
       showSpinner: false,
+    },
+    // Loads the native Google Sign-In provider (android/variables.gradle's
+    // rgcfaIncludeGoogle flag makes the actual native deps available; this
+    // just tells the plugin to register the provider at runtime).
+    // skipNativeAuth stays false (the default) — AuthContext.tsx bridges the
+    // resulting native session into the Firebase JS SDK itself, it doesn't
+    // need the plugin to skip native auth to do that.
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ['google.com'],
     },
   },
 };

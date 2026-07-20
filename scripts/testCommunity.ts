@@ -753,7 +753,7 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
   const allChanged = [...diffNames, ...untrackedNames];
   const outOfScope = allChanged.filter(f =>
     !f.startsWith('src/components/Community/') &&
-    !f.startsWith('src/contexts/AuthContext.tsx') && // read-only reference, expect untouched — verified below, not assumed
+    !f.startsWith('src/contexts/AuthContext.tsx') && // shared auth file; content verified below, not just allow-listed
     f !== 'src/lib/firebase.ts' &&
     f !== 'firestore.rules' &&
     f !== 'firestore.indexes.json' &&
@@ -796,7 +796,16 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
-  ok('src/contexts/AuthContext.tsx itself was NOT modified (confirmed, not merely allow-listed above)', !allChanged.includes('src/contexts/AuthContext.tsx'));
+  // AuthContext.tsx was untouched by every prior Community-scoped task (the
+  // assertion below used to require it stay that way entirely). The native
+  // Google Sign-In task is the first legitimate, deliberate change to this
+  // file — still unrelated to Community — so the check now confirms the
+  // change is exactly that: a native-only branch, with the web
+  // signInWithPopup path left completely alone, matching that task's own
+  // explicit requirement.
+  const authContextTsx = readFileSync(join(ROOT, 'src/contexts/AuthContext.tsx'), 'utf8');
+  ok('AuthContext.tsx\'s native Google Sign-In branch is gated on Capacitor.isNativePlatform()', authContextTsx.includes('Capacitor.isNativePlatform()'));
+  ok('AuthContext.tsx\'s web sign-in path still calls signInWithPopup unchanged', /await signInWithPopup\(firebaseAuth, provider\);/.test(authContextTsx));
   // Assembly is deliberately excluded from this specific check (unlike the
   // others below) only for the "Four Safe Fixes" task, which legitimately
   // touches src/data/assembly/ and src/components/Assembly/ alongside
@@ -817,10 +826,12 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     .split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
   // "Four Safe Fixes" task (unrelated to Community) adds exactly one real
   // dependency — @capacitor/splash-screen, for the native splash-scaling
-  // fix — allow-listed here by exact line, same as every other cross-task
-  // exception in this file; any OTHER new dependency still fails this check.
-  ok('package.json has no unexpected NEW dependency (only a new npm script entry and the known @capacitor/splash-screen addition)',
-    packageJsonAddedLines.every(l => !/^[+]\s*"[^"]+":\s*"\^?\d/.test(l) || l.includes('"@capacitor/splash-screen"')));
+  // fix. Native Google Sign-In (also unrelated to Community) adds
+  // @capacitor-firebase/authentication. Both allow-listed here by exact
+  // line, same as every other cross-task exception in this file; any OTHER
+  // new dependency still fails this check.
+  ok('package.json has no unexpected NEW dependency (only a new npm script entry and the known @capacitor/splash-screen + @capacitor-firebase/authentication additions)',
+    packageJsonAddedLines.every(l => !/^[+]\s*"[^"]+":\s*"\^?\d/.test(l) || l.includes('"@capacitor/splash-screen"') || l.includes('"@capacitor-firebase/authentication"')));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);
