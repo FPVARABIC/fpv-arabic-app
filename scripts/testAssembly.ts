@@ -440,7 +440,10 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f !== 'scripts/testCommunity.ts' &&
     // Login/guest button contrast fix — the auth/splash screen, entirely
     // unrelated to Assembly.
-    f !== 'src/views/SplashView.tsx',
+    f !== 'src/views/SplashView.tsx' &&
+    // Splash dead-space fix (.splash-frame class) — a global stylesheet
+    // edit needed for the same unrelated auth/splash screen.
+    f !== 'src/index.css',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

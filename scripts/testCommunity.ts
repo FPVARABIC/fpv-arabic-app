@@ -789,7 +789,10 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'package-lock.json' &&
     // Login/guest button contrast fix — the auth/splash screen, entirely
     // unrelated to Community.
-    f !== 'src/views/SplashView.tsx',
+    f !== 'src/views/SplashView.tsx' &&
+    // Splash dead-space fix (.splash-frame class) — a global stylesheet
+    // edit needed for the same unrelated auth/splash screen.
+    f !== 'src/index.css',
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

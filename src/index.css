@@ -96,6 +96,20 @@
     background-image: linear-gradient(rgba(24,230,230,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(24,230,230,0.02) 1px, transparent 1px);
     background-size: 44px 44px;
   }
+
+  /* Splash/login frame — fills the real, on-screen viewport height so the
+     full-bleed background image and its bottom scrim always reach the true
+     bottom of the screen, with no dead gap before system nav. 100vh is a
+     safe fallback (older WebViews); 100dvh accounts for a WebView's dynamic
+     toolbars, which 100vh does not. */
+  .splash-frame {
+    height: 100vh;
+  }
+  @supports (height: 100dvh) {
+    .splash-frame {
+      height: 100dvh;
+    }
+  }
   .text-gradient {
     background: linear-gradient(120deg, #5cf3f3 0%, #18E6E6 40%, #00B4FF 100%);
     -webkit-background-clip: text;

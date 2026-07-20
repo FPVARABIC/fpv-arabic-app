@@ -55,14 +55,17 @@ export const SplashView: React.FC = () => {
     <div
       style={{
         background: '#02080f',
-        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
       }}
     >
-      {/* Phone-frame column — matches AppShell frame */}
+      {/* Phone-frame column — matches AppShell frame. Height comes from the
+          .splash-frame class (real viewport height, not the wrapper above)
+          so it can never fall short of or exceed the actual screen — see
+          that class for why. */}
       <div
+        className="splash-frame"
         style={{
           width: '100%',
           maxWidth: '390px',
@@ -70,11 +73,28 @@ export const SplashView: React.FC = () => {
           boxShadow: '0 0 0 1px rgba(34,211,238,0.13), 0 0 70px rgba(24,230,230,0.08)',
         }}
       >
+        {/* Cover-fit, not width-100/height-auto: the old auto-height image
+            only rendered ~690px tall (its own aspect ratio at 390px width),
+            shorter than nearly every real device viewport, leaving the
+            remaining height below it as a plain dark gap — the frame's
+            bottom (where the gradient/buttons anchor) didn't line up with
+            the screen's actual bottom. Filling the frame and letting the
+            image cover + crop it (matching the native cold-start splash's
+            own CENTER_CROP behavior, see capacitor.config.ts) makes the
+            artwork always reach the true bottom, no gap, at any viewport
+            height. */}
         <img
           src="/assets/splash.png"
           alt=""
           aria-hidden
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
         />
 
         {/* Bottom gradient — contrast fix: the splash artwork's bottom third
