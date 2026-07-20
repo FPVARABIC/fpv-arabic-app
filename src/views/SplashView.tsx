@@ -77,15 +77,23 @@ export const SplashView: React.FC = () => {
           style={{ width: '100%', height: 'auto', display: 'block' }}
         />
 
-        {/* Bottom gradient */}
+        {/* Bottom gradient — contrast fix: the splash artwork's bottom third
+            (lantern/carpet/coffee pot) is bright and busy, and the button
+            stack below (bottom: 48, ~98px tall) used to extend above this
+            gradient's old 120px reach entirely, leaving the Google button's
+            upper portion with no scrim at all. Taller + darker at its base
+            (near-matching the page's own #02080f background, rgb(2,8,15),
+            so it reads as "fading into the app" rather than an arbitrary new
+            shade) so it now fully covers the whole button stack with margin
+            to spare. */}
         <div
           style={{
             position: 'absolute',
             bottom: 0,
             left: 0,
             right: 0,
-            height: '120px',
-            background: 'linear-gradient(to bottom, transparent, rgba(4,16,30,0.85))',
+            height: '260px',
+            background: 'linear-gradient(to bottom, transparent, rgba(2,8,15,0.92))',
             pointerEvents: 'none',
           }}
           aria-hidden
@@ -137,7 +145,13 @@ export const SplashView: React.FC = () => {
                 </p>
               )}
 
-              {/* Google Sign-In */}
+              {/* Google Sign-In — contrast fix: a real dark backdrop
+                  (rgba(8,15,26,...), independent of the bottom gradient
+                  above) so the button reads clearly even where the artwork
+                  behind it is brightest, not just where the gradient
+                  happens to be darkest. Border opacity raised slightly to
+                  stay visible against a dark backdrop rather than the raw
+                  photo. Text color unchanged — already high-contrast. */}
               <button
                 onClick={handleGoogleSignIn}
                 style={{
@@ -148,8 +162,8 @@ export const SplashView: React.FC = () => {
                   gap: 10,
                   padding: '13px 20px',
                   borderRadius: '14px',
-                  background: 'rgba(34,211,238,0.07)',
-                  border: '1px solid rgba(34,211,238,0.35)',
+                  background: 'rgba(8,15,26,0.55)',
+                  border: '1px solid rgba(34,211,238,0.45)',
                   color: '#e2e8f0',
                   fontSize: '15px',
                   fontWeight: 600,
@@ -161,16 +175,19 @@ export const SplashView: React.FC = () => {
                 تسجيل الدخول بـ Google
               </button>
 
-              {/* Guest */}
+              {/* Guest — same dark-backdrop treatment; text color brightened
+                  from #94a3b8 (too low-contrast even on a dark backdrop) to
+                  #cbd5e1, still visibly secondary to the Google button's
+                  brighter #e2e8f0 without being unreadable. */}
               <button
                 onClick={handleGuest}
                 style={{
                   width: '100%',
                   padding: '12px 20px',
                   borderRadius: '14px',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  color: '#94a3b8',
+                  background: 'rgba(8,15,26,0.45)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#cbd5e1',
                   fontSize: '14px',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
