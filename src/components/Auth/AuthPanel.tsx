@@ -220,6 +220,19 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
     boxSizing: 'border-box',
   };
 
+  // Defense-in-depth for the on-screen keyboard covering a focused field —
+  // the real fix is AndroidManifest.xml's windowSoftInputMode="adjustResize"
+  // (native-only, requires an APK rebuild), which makes the WebView's own
+  // viewport actually shrink so this panel's bottom anchoring in
+  // SplashView.tsx naturally rides above the keyboard. This handler is the
+  // web-layer backstop that also helps on a plain mobile browser (no
+  // manifest at all) and on any native build still running the old
+  // manifest: scrollIntoView with the focused input already visible is a
+  // cheap no-op, so it's safe to call unconditionally on every focus.
+  const scrollFieldIntoView: React.FocusEventHandler<HTMLInputElement> = e => {
+    e.currentTarget.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+
   const handleGoogleSignIn = async () => {
     if (isSigningIn) return;
     setError(null);
@@ -335,6 +348,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
                 placeholder="الاسم"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
+                onFocus={scrollFieldIntoView}
                 autoComplete="name"
                 style={inputStyle}
               />
@@ -347,6 +361,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
             placeholder="البريد الإلكتروني"
             value={email}
             onChange={e => setEmail(e.target.value)}
+            onFocus={scrollFieldIntoView}
             dir="ltr"
             autoComplete="email"
             style={inputStyle}
@@ -356,6 +371,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
             placeholder="كلمة المرور"
             value={password}
             onChange={e => setPassword(e.target.value)}
+            onFocus={scrollFieldIntoView}
             dir="ltr"
             autoComplete={formMode === 'signup' ? 'new-password' : 'current-password'}
             style={inputStyle}
