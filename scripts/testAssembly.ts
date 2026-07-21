@@ -454,7 +454,16 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f !== 'src/data/avatars.ts' &&
     f !== 'src/utils/authErrorMessages.ts' &&
     !f.startsWith('src/components/Auth/') &&
-    !f.startsWith('public/assets/avatars/'),
+    !f.startsWith('public/assets/avatars/') &&
+    // AuthPanel architectural consolidation — same unrelated auth scope as
+    // the entries directly above, plus this task's own structural test +
+    // emulator repro script.
+    f !== 'scripts/testAuthPanel.ts' &&
+    f !== 'scripts/reproduceSignupError.ts' &&
+    // User-requested standalone copy of firestore.rules for manual console
+    // publishing — deliberately left untracked/uncommitted per instruction,
+    // but still present in the working tree, so it needs to be excluded here.
+    f !== 'RULES_FOR_PUBLISH.md',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

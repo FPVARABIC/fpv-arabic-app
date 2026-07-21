@@ -16,6 +16,9 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/too-many-requests':    'محاولات كثيرة جداً. حاول مرة أخرى لاحقاً.',
   'auth/user-disabled':        'تم تعطيل هذا الحساب. تواصل مع الدعم.',
   'auth/network-request-failed': 'تعذّر الاتصال بالإنترنت. تحقق من اتصالك وحاول مرة أخرى.',
+  // sendPasswordResetEmail-specific — defensive; the reset form itself
+  // blocks an empty email client-side before ever calling Firebase.
+  'auth/missing-email':        'أدخل بريدك الإلكتروني أولاً.',
 };
 
 const FALLBACK_MESSAGE = 'حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.';

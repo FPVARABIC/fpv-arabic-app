@@ -802,7 +802,18 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'src/data/avatars.ts' &&
     f !== 'src/utils/authErrorMessages.ts' &&
     !f.startsWith('src/components/Auth/') &&
-    !f.startsWith('public/assets/avatars/'),
+    !f.startsWith('public/assets/avatars/') &&
+    // AuthPanel architectural consolidation — extracts the auth entry
+    // points found in SplashView.tsx/ProfileSheet.tsx (already allow-listed
+    // above) into one shared component, adds forgot-password, and adds this
+    // task's own structural test + emulator repro script. Auth-scoped,
+    // unrelated to Community.
+    f !== 'scripts/testAuthPanel.ts' &&
+    f !== 'scripts/reproduceSignupError.ts' &&
+    // User-requested standalone copy of firestore.rules for manual console
+    // publishing — deliberately left untracked/uncommitted per instruction,
+    // but still present in the working tree, so it needs to be excluded here.
+    f !== 'RULES_FOR_PUBLISH.md',
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

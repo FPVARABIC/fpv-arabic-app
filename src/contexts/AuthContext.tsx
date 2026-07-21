@@ -5,6 +5,7 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   updateProfile,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
@@ -18,6 +19,7 @@ interface AuthContextValue {
   signInWithGoogle: () => Promise<User>;
   signUpWithEmail:  (displayName: string, email: string, password: string, photoURL: string | null) => Promise<User>;
   signInWithEmail:  (email: string, password: string) => Promise<User>;
+  resetPassword:    (email: string) => Promise<void>;
   signOut:          () => Promise<void>;
 }
 
@@ -69,6 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result.user;
   };
 
+  const resetPassword = (email: string): Promise<void> => sendPasswordResetEmail(firebaseAuth, email);
+
   const signOut = (): Promise<void> => firebaseSignOut(firebaseAuth);
 
   const value: AuthContextValue = {
@@ -78,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signInWithGoogle,
     signUpWithEmail,
     signInWithEmail,
+    resetPassword,
     signOut,
   };
 

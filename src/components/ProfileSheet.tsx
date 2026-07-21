@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from '../utils/storageKeys';
 import { firestoreDb } from '../lib/firebase';
 import { userPath } from './Community/utils/firestorePaths';
 import { AvatarPicker } from './Auth/AvatarPicker';
+import { AuthPanel, GoogleIcon } from './Auth/AuthPanel';
 
 interface ProfileSheetProps {
   open: boolean;
@@ -36,16 +37,6 @@ const getFrameRect = (): DOMRect | null => {
 // signed-in-without-photo) — approved as one shared visual language rather
 // than each state having its own avatar size.
 const AVATAR_SIZE = 64;
-
-const GoogleIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-    <path fill="none" d="M0 0h48v48H0z"/>
-  </svg>
-);
 
 // Flex-centered wrapper — the actual fix for the previous positioning bug.
 // The old code used textAlign:'center' on a block-level parent, which only
@@ -157,7 +148,7 @@ const MENU_BTN: React.CSSProperties = {
 
 export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpenProfile, isModerator, onOpenAdmin }) => {
   const navigate = useNavigate();
-  const { currentUser, isGuest, signInWithGoogle, signOut } = useAuthContext();
+  const { currentUser, isGuest, signOut } = useAuthContext();
   const {
     completedLessons, totalLessons,
     completedRoadmapSteps, totalRoadmapSteps,
@@ -170,8 +161,6 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
   const [customName, setCustomName] = useLocalStorage<string>(STORAGE_KEYS.CUSTOM_DISPLAY_NAME, '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
-  const [signInError, setSignInError] = useState<string | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
   // Preset avatar change (Part C) — general profile feature, available to
@@ -244,20 +233,6 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
   const saveName = () => { setCustomName(nameInput.trim()); setIsEditingName(false); };
   const cancelEditName = () => setIsEditingName(false);
 
-  const handleGoogleSignIn = async () => {
-    setSignInError(null);
-    setIsSigningIn(true);
-    try {
-      const user = await signInWithGoogle();
-      await mergeGuestProgress(user.uid);
-      setIsSigningIn(false);
-    } catch (err) {
-      console.error('[ProfileSheet] Google sign-in failed:', err);
-      setSignInError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
-      setIsSigningIn(false);
-    }
-  };
-
   const handleSignOut = async () => {
     setSignOutError(null);
     try {
@@ -323,26 +298,13 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
               <GuestAvatar />
               <p style={{ fontSize: 17, fontWeight: 700, color: '#0f2543', margin: '10px 0 3px' }}>زائر</p>
               <p style={{ fontSize: 13, color: '#3b7dd8', margin: '0 0 14px', fontWeight: 500 }}>المتابعة كزائر</p>
-              {signInError && (
-                <p style={{ fontSize: 12, color: '#dc2626', margin: '0 0 8px' }}>{signInError}</p>
-              )}
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={isSigningIn}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  padding: '10px 20px', borderRadius: 11,
-                  background: '#fff', border: '1.5px solid #60a5fa',
-                  color: '#1d4ed8', fontSize: 13, fontWeight: 600,
-                  cursor: isSigningIn ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit', opacity: isSigningIn ? 0.6 : 1,
-                  direction: 'rtl',
-                  boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
-                }}
-              >
-                <GoogleIcon size={16} />
-                {isSigningIn ? '...' : 'سجّل الدخول لحفظ تقدّمك'}
-              </button>
+              <AuthPanel
+                mode="compact"
+                theme="light"
+                visible={open}
+                onSignedIn={async (user) => { await mergeGuestProgress(user.uid); }}
+                onGuestContinue={() => {}}
+              />
             </AvatarHeaderWrap>
           ) : (
             <AvatarHeaderWrap>
