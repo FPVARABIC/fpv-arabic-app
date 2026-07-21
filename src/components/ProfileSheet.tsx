@@ -162,6 +162,11 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  // Guest's AuthPanel expanded past the initial "سجّل الدخول للمتابعة"
+  // prompt into the actual form — while true, StatsCard/the settings menu
+  // below are hidden (see their own condition) so the unbounded-height
+  // guest sheet doesn't crowd them together with the sign-in/up form.
+  const [authExpanded, setAuthExpanded] = useState(false);
 
   // Preset avatar change (Part C) — general profile feature, available to
   // every signed-in user regardless of how they signed up (Google or
@@ -302,6 +307,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
                 mode="compact"
                 theme="light"
                 visible={open}
+                onExpandedChange={setAuthExpanded}
                 onSignedIn={async (user) => { await mergeGuestProgress(user.uid); }}
                 onGuestContinue={() => {}}
               />
@@ -378,7 +384,15 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
           )}
         </div>
 
-        {/* Unified stats card */}
+        {/* Unified stats card + menu — hidden while the guest's AuthPanel is
+            expanded into its actual form: the guest sheet has no max-height/
+            scroll boundary of its own (see the Sheet div's own style above),
+            so an expanded sign-in/sign-up form plus this content together
+            can exceed the viewport with nothing to separate them. Collapsed
+            state (the initial "سجّل الدخول للمتابعة" prompt) is unaffected —
+            authExpanded starts false and this renders exactly as before. */}
+        {!authExpanded && (
+        <>
         <div style={{ padding: '14px 16px 0' }}>
           <StatsCard
             build={`${completedRoadmapSteps.length}/${totalRoadmapSteps}`}
@@ -482,6 +496,8 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
             </>
           )}
         </div>
+        </>
+        )}
       </div>
     </>
   );

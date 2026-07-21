@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bookmark } from 'lucide-react';
 import type { PostWithId } from '../types';
@@ -30,6 +30,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
   const { isSaved, toggleSaved } = useSavedPostIds();
   const [toast, setToast] = useState<string | null>(null);
   const saved = isSaved(post.id);
+
+  // Feed-preview truncation (PostDetail.tsx's full single-post view is
+  // intentionally untouched — this is the list-view-only clamp).
+  const [textExpanded, setTextExpanded] = useState(false);
+  const [textClamped, setTextClamped] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    // Real measurement, not a character-count guess — line-clamp truncates
+    // by rendered LINE height, which varies with font size, card width, and
+    // RTL wrapping, so whether 5 lines actually cuts off any text can only
+    // be known after layout. scrollHeight (full content) vs clientHeight
+    // (the clamped, visible height) only reads correctly while still
+    // clamped, so this depends on post.text alone, never on textExpanded —
+    // re-running it after expanding would always read back "not clamped"
+    // and hide the toggle needed to collapse again.
+    setTextClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [post.text]);
+
+  const handleToggleTextExpanded = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTextExpanded(prev => !prev);
+  };
 
   const handleToggleSaved = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,9 +122,34 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
           a meaningless empty paragraph (extra vertical space, nothing to
           read). Only render it when there is real text to show. */}
       {post.text && (
-        <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-          {post.text}
-        </p>
+        <>
+          <p
+            ref={textRef}
+            style={{
+              fontSize: 14, color: '#1a2b3c', margin: textClamped ? '0 0 4px' : '0 0 10px',
+              lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+              ...(textExpanded ? {} : {
+                display: '-webkit-box',
+                WebkitLineClamp: 5,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }),
+            }}
+          >
+            {post.text}
+          </p>
+          {textClamped && (
+            <button
+              onClick={handleToggleTextExpanded}
+              style={{
+                display: 'block', background: 'none', border: 'none', padding: 0,
+                margin: '0 0 10px', color: '#0e7c86', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {textExpanded ? 'عرض أقل' : 'عرض المزيد'}
+            </button>
+          )}
+        </>
       )}
 
       {post.mediaType === 'image' && post.thumbnailURL && (

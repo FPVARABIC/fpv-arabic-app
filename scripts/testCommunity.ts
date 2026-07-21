@@ -766,12 +766,16 @@ console.log('\n[30] Line breaks preserved on display for post/comment/report-not
   ok('ReportsReviewScreen.tsx\'s report note preserves line breaks', /\{report\.note\}<\/p>/.test(reportsReviewScreenTsx) && /whiteSpace:\s*'pre-wrap'/.test(reportsReviewScreenTsx));
   ok('NotificationsScreen.tsx\'s announcement body preserves line breaks', /\{announcement\.body\}<\/p>/.test(notificationsScreenTsx) && /whiteSpace:\s*'pre-wrap'/.test(notificationsScreenTsx));
 
-  // No line-clamp/truncate CSS exists anywhere in the Community feature
-  // (confirmed via a repo-wide grep) — nothing for pre-wrap to conflict
-  // with today. Documented here so a FUTURE line-clamp addition on
-  // PostCard's preview is a deliberate, reviewed change, not a silent
-  // regression this test failed to catch.
-  ok('no line-clamp/truncate CSS exists in PostCard.tsx today (documents the current no-truncation baseline)', !/line-clamp|lineClamp|WebkitLineClamp/.test(postCardTsx));
+  // Bug-fix task (2026-07-21) — PostCard.tsx's feed preview now clamps long
+  // posts at 5 lines with a real "عرض المزيد" toggle. This REVERSES the
+  // previous "no line-clamp exists" baseline assertion this test used to
+  // lock in; PostDetail.tsx (the full single-post view) is deliberately
+  // untouched — it must keep rendering full, untruncated text.
+  ok('PostCard.tsx clamps feed-preview text at 5 lines via WebkitLineClamp, only while not expanded', /WebkitLineClamp:\s*5/.test(postCardTsx) && /textExpanded/.test(postCardTsx));
+  ok('PostCard.tsx measures actual overflow (scrollHeight vs clientHeight) rather than guessing from character count', /scrollHeight\s*>\s*el\.clientHeight/.test(postCardTsx));
+  ok('PostCard.tsx only shows the عرض المزيد/عرض أقل toggle when the text is actually clamped', /textClamped\s*&&/.test(postCardTsx) && /عرض المزيد/.test(postCardTsx) && /عرض أقل/.test(postCardTsx));
+  ok('the toggle button stops propagation so it never triggers the card\'s own onOpen navigation', /handleToggleTextExpanded[\s\S]{0,80}e\.stopPropagation\(\)/.test(postCardTsx));
+  ok('PostDetail.tsx (the full single-post view) has no line-clamp — full text remains untruncated there', !/WebkitLineClamp/.test(postDetailTsx));
 }
 
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');

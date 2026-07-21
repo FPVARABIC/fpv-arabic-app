@@ -17,8 +17,12 @@ interface PostComposerProps {
 // pipeline still require billing to be enabled). The underlying upload path
 // (MediaUploader, handleImagePick, the hidden file input, useComposer's
 // imageFile plumbing) is untouched below — flipping this back to `false`
-// restores the real button with no other changes needed.
-const IMAGE_UPLOAD_TEMPORARILY_DISABLED = true;
+// restores the real button with no other changes needed. Exported so
+// CommunityHome.tsx's own separate quick-prompt photo/video row (a second,
+// independent entry point into this same composer) can gate its own photo
+// button off the same single source of truth, instead of a second constant
+// silently drifting out of sync with this one.
+export const IMAGE_UPLOAD_TEMPORARILY_DISABLED = true;
 
 // Category picker uses VISIBLE_CATEGORY_IDS only (D7) — the same single
 // source of truth CategoryChips uses for the feed filter. No default

@@ -6,6 +6,7 @@ import { CategoryChips, type ChipValue } from './Feed/CategoryChips';
 import { FeedList } from './Feed/FeedList';
 import type { UseFeedResult } from './hooks/useFeed';
 import { Avatar } from './Avatar';
+import { IMAGE_UPLOAD_TEMPORARILY_DISABLED } from './Composer/PostComposer';
 
 interface CommunityHomeProps {
   category: ChipValue;
@@ -160,12 +161,28 @@ export const CommunityHome: React.FC<CommunityHomeProps> = ({
           </button>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={handleComposeEntry}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, border: '0.5px solid #e5eaf0', background: '#ffffff', color: '#5a6b7c', fontSize: 12, cursor: 'pointer' }}
-          >
-            <ImageIcon size={14} /> صورة
-          </button>
+          {IMAGE_UPLOAD_TEMPORARILY_DISABLED ? (
+            // Same قريباً disabled treatment as the video button below —
+            // this quick-prompt row is a separate entry point from
+            // PostComposer.tsx's own photo button (already gated), and was
+            // previously missed. Real onClick={handleComposeEntry} behavior
+            // is intentionally removed here to match the video button's
+            // existing disabled behavior.
+            <button
+              disabled
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, border: '0.5px solid #e5eaf0', background: '#f7f9fb', color: '#94a3b3', fontSize: 12, cursor: 'not-allowed', position: 'relative' }}
+            >
+              <ImageIcon size={14} /> صورة
+              <span style={{ position: 'absolute', top: -8, left: -6, fontSize: 9, fontWeight: 700, background: '#fbbf24', color: '#78350f', padding: '2px 6px', borderRadius: 999 }}>قريباً</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleComposeEntry}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, border: '0.5px solid #e5eaf0', background: '#ffffff', color: '#5a6b7c', fontSize: 12, cursor: 'pointer' }}
+            >
+              <ImageIcon size={14} /> صورة
+            </button>
+          )}
           <button
             disabled
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, border: '0.5px solid #e5eaf0', background: '#f7f9fb', color: '#94a3b3', fontSize: 12, cursor: 'not-allowed', position: 'relative' }}

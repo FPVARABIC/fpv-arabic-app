@@ -42,6 +42,15 @@ interface AuthPanelProps {
   // SplashView (full mode) is naturally remounted fresh by the router on
   // every visit, so it has no need to pass this.
   visible?: boolean;
+  // Optional signal for compact-mode hosts that render other content
+  // alongside this panel (ProfileSheet.tsx's own StatsCard/settings menu)
+  // and need to know when the guest has expanded past the initial "سجّل
+  // الدخول للمتابعة" prompt into the actual form, so they can get out of
+  // its way. Reuses this component's own existing compactExpanded state
+  // rather than introducing a second, parallel piece of state — full mode
+  // (SplashView) has no equivalent host-side content to hide, so it has no
+  // need to pass this.
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 type FormMode = 'signin' | 'signup';
@@ -137,12 +146,20 @@ const PALETTES: Record<AuthPanelTheme, Palette> = {
   },
 };
 
-export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSignedIn, onGuestContinue, visible }) => {
+export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSignedIn, onGuestContinue, visible, onExpandedChange }) => {
   const { currentUser, isAuthLoading, signInWithGoogle, signUpWithEmail, signInWithEmail, resetPassword } = useAuthContext();
   const p = PALETTES[theme];
   const isNative = Capacitor.isNativePlatform();
 
   const [compactExpanded, setCompactExpanded] = useState(false);
+  // Surfaces compactExpanded to the host (see onExpandedChange's own
+  // comment) — fires on every real transition, including the initial
+  // false on mount, so a host has an immediate, correct answer without
+  // waiting for the guest to interact.
+  React.useEffect(() => {
+    onExpandedChange?.(compactExpanded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compactExpanded]);
   const [formMode, setFormMode] = useState<FormMode>('signin');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -380,7 +397,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
           {formMode === 'signin' && (
             resetSent ? (
               <p style={{ margin: 0, fontSize: '12px', color: p.textSuccess, textAlign: 'center' }}>
-                تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني إن كان مرتبطاً بحساب.
+                تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني إن كان مرتبطاً بحساب. إذا لم تجده خلال دقائق، تحقق من مجلد الرسائل غير المرغوب فيها (Spam).
               </p>
             ) : (
               <button
