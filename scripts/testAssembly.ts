@@ -444,9 +444,17 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // Splash dead-space fix (.splash-frame class) — a global stylesheet
     // edit needed for the same unrelated auth/splash screen.
     f !== 'src/index.css' &&
-    // Native Google Sign-In: AuthContext.tsx branches signInWithGoogle on
-    // Capacitor.isNativePlatform(), entirely unrelated to Assembly.
-    f !== 'src/contexts/AuthContext.tsx',
+    // Clean removal of the abandoned native Google Sign-In attempt +
+    // email/password auth + preset avatar picker (Part A/B/C) — all
+    // auth/profile-scoped, entirely unrelated to Assembly.
+    f !== 'src/contexts/AuthContext.tsx' &&
+    f !== 'src/components/ProfileSheet.tsx' &&
+    f !== 'firestore.rules' &&
+    f !== 'scripts/testCommunityRules.ts' &&
+    f !== 'src/data/avatars.ts' &&
+    f !== 'src/utils/authErrorMessages.ts' &&
+    !f.startsWith('src/components/Auth/') &&
+    !f.startsWith('public/assets/avatars/'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

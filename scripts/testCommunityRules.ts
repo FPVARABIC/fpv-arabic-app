@@ -1028,6 +1028,34 @@ async function main() {
       privateSettings: { notificationsEnabled: true },
     }));
 
+  console.log('\n=== 19c. Preset avatar picker (Part C) — photoURL-only update, constrained to known preset paths ===');
+
+  const PRESET_AVATAR_A = '/assets/avatars/racing-quad.svg';
+  const PRESET_AVATAR_B = '/assets/avatars/satellite.svg';
+
+  await record('AV1 a photoURL-only update to a known preset-avatar path is allowed for the owner', 'allow', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { photoURL: PRESET_AVATAR_A }));
+
+  await record('AV2 a photoURL update to an arbitrary/non-preset string is denied', 'deny', () =>
+    updateDoc(doc(asB.firestore(), 'users/uidB'), { photoURL: 'https://forged.example.invalid/not-a-preset.png' }));
+
+  await record('AV3 bundling a preset photoURL change with a role change in the same update is denied', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { photoURL: PRESET_AVATAR_B, role: 'moderator' }));
+
+  await record('AV4 bundling a preset photoURL change with a status change in the same update is denied', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidA'), { photoURL: PRESET_AVATAR_B, status: 'banned' }));
+
+  // Rules never inspect the auth provider — a Google-signed-in user is
+  // indistinguishable at the Rules layer from an email/password user (both
+  // are just an authenticated uid with an existing users/{uid} doc). uidB
+  // stands in for that case explicitly here, proving this update path is
+  // provider-agnostic by construction, not merely by omission.
+  await record('AV5 a (Google-provider-standing-in) user can successfully change their own preset avatar via the same update path', 'allow', () =>
+    updateDoc(doc(asB.firestore(), 'users/uidB'), { photoURL: PRESET_AVATAR_B }));
+
+  await record('AV6 a non-owner cannot change another user\'s preset avatar', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'users/uidB'), { photoURL: PRESET_AVATAR_A }));
+
   console.log('\n=== 20. Post likes — TEMPORARY direct-client-write bridge (Blaze billing) ===');
   console.log('    (TEMPORARY — see docs/KNOWN_ISSUES.md\'s "Post/comment likes temporarily');
   console.log('    reverted..." entry. Same bridge and same reasoning as comment likes above.');

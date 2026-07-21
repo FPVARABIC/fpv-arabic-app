@@ -22,6 +22,26 @@ service cloud.firestore {
       return isSignedIn() && callerProfile().role == 'moderator';
     }
 
+    // Preset avatar picker (Part C) — the exact, hand-maintained mirror of
+    // src/data/avatars.ts's AVATAR_OPTIONS paths. Rules can't import a TS
+    // file, so this list must be kept in sync with that one by hand; a
+    // path missing from here simply can't be selected via the update
+    // branch below, it does not silently accept an unlisted value.
+    function isPresetAvatarPath(path) {
+      return path in [
+        '/assets/avatars/racing-quad.svg',
+        '/assets/avatars/fpv-eye.svg',
+        '/assets/avatars/cinewhoop.svg',
+        '/assets/avatars/lightning.svg',
+        '/assets/avatars/satellite.svg',
+        '/assets/avatars/controller.svg',
+        '/assets/avatars/shield.svg',
+        '/assets/avatars/night-flyer.svg',
+        '/assets/avatars/spark.svg',
+        '/assets/avatars/propeller-swirl.svg'
+      ];
+    }
+
     match /users/{uid} {
       // Public-profile fields (displayName, photoURL, joinedAt, postsCount) must
       // be readable by everyone, including logged-out visitors (D2). Rules apply
@@ -59,20 +79,23 @@ service cloud.firestore {
                     && request.resource.data.displayNameNormalized is string
                     && request.resource.data.displayNameNormalized.size() <= 200;
 
-      // Two client update shapes (Phase 8 adds the second): post creation's
-      // lastPostAt/postsCount bump, and a narrow displayNameNormalized-only
-      // backfill (see ensureCommunityUser.ts) for the signed-in user's own
-      // document when it already exists but predates that field or has
-      // gone stale relative to its own stored displayName. Comment creation
-      // moved entirely to the createComment Cloud Function (functions/src/
-      // index.ts), which uses the Admin SDK — the Admin SDK bypasses these
-      // Rules by design, so lastCommentAt is now written ONLY by that
-      // function (via a merge write) and has NO client-reachable update
-      // path here at all. role/status/displayName/photoURL can NEVER
-      // change via any client write path — role/status are console-only
-      // (D10); displayName/photoURL have no V1 edit feature (the
-      // ProfileSheet "edit name" feature writes to localStorage only, never
-      // to this document).
+      // Client update shapes: post creation's lastPostAt/postsCount bump, a
+      // narrow displayNameNormalized-only backfill (see
+      // ensureCommunityUser.ts) for the signed-in user's own document when
+      // it already exists but predates that field or has gone stale
+      // relative to its own stored displayName, and (Part C) a narrow
+      // photoURL-only preset-avatar change. Comment creation moved entirely
+      // to the createComment Cloud Function (functions/src/index.ts), which
+      // uses the Admin SDK — the Admin SDK bypasses these Rules by design,
+      // so lastCommentAt is now written ONLY by that function (via a merge
+      // write) and has NO client-reachable update path here at all.
+      // role/status/displayName can NEVER change via any client write
+      // path — role/status are console-only (D10); displayName has no V1
+      // edit feature (the ProfileSheet "edit name" feature writes to
+      // localStorage only, never to this document). photoURL is the one
+      // exception, and only through the narrow branch below — never
+      // bundled with any other field, and only to one of a fixed, known
+      // set of preset paths, never an arbitrary string/URL.
       allow update: if (isOwner(uid)
                     && (
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
@@ -98,6 +121,21 @@ service cloud.firestore {
                          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayNameNormalized'])
                            && request.resource.data.displayNameNormalized is string
                            && request.resource.data.displayNameNormalized.size() <= 200)
+                         ||
+                         // Preset avatar change (Part C) — a photoURL-only
+                         // diff, mirroring the displayNameNormalized-only
+                         // backfill branch's hasOnly() isolation immediately
+                         // above: structurally incapable of touching
+                         // displayName/role/status/postsCount/lastPostAt/
+                         // lastCommentAt/displayNameNormalized in the same
+                         // write. The value itself is constrained to the
+                         // known preset-path set (isPresetAvatarPath above),
+                         // never an arbitrary string/URL — available to
+                         // every signed-in owner regardless of how they
+                         // signed up (Google or email/password both reach
+                         // this same branch; Rules never inspect provider).
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL'])
+                           && isPresetAvatarPath(request.resource.data.photoURL))
                          ||
                          // TEMPORARY (bridge until Firebase Blaze billing is restored,
                          // see comments/{commentId} below) — comment creation is back to

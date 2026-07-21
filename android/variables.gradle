@@ -27,11 +27,4 @@ ext {
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
-    // @capacitor-firebase/authentication's Google Sign-In deps (play-services-auth,
-    // androidx.credentials, googleid) are compileOnly unless this flag is set —
-    // without it, signInWithGoogle() throws NoClassDefFoundError at runtime.
-    rgcfaIncludeGoogle = true
-    // Plugin's own default (1.2.0-rc01) is a release candidate; pinned to the
-    // first stable release per the plugin's Google Sign-In setup docs.
-    androidxCredentialsVersion = '1.3.0'
 }

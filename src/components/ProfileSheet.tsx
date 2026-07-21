@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Info, Shield, ShieldCheck, LogOut, Pencil, Check, X, ChevronLeft } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
+import { Settings, Info, Shield, ShieldCheck, LogOut, Pencil, Check, X, ChevronLeft, Image as ImageIcon } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { STORAGE_KEYS } from '../utils/storageKeys';
+import { firestoreDb } from '../lib/firebase';
+import { userPath } from './Community/utils/firestorePaths';
+import { AvatarPicker } from './Auth/AvatarPicker';
 
 interface ProfileSheetProps {
   open: boolean;
@@ -68,7 +73,11 @@ const GuestAvatar: React.FC = () => (
 // (expired Google CDN link, network hiccup) rendered a broken image icon
 // instead of falling back. imgFailed resets whenever photoURL itself
 // changes, so a since-fixed URL isn't permanently stuck on the fallback.
-const SignedInAvatar: React.FC<{ photoURL: string | null; letter: string }> = ({ photoURL, letter }) => {
+// showGoogleBadge — the badge/label used to be unconditional, assuming
+// every signed-in user came from Google. Email/password accounts (Part B)
+// made that false; the caller now passes whether this specific user's
+// first provider entry is actually 'google.com'.
+const SignedInAvatar: React.FC<{ photoURL: string | null; letter: string; showGoogleBadge: boolean }> = ({ photoURL, letter, showGoogleBadge }) => {
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => { setImgFailed(false); }, [photoURL]);
   const showImg = !!photoURL && !imgFailed;
@@ -92,16 +101,17 @@ const SignedInAvatar: React.FC<{ photoURL: string | null; letter: string }> = ({
           <span style={{ fontSize: 26, fontWeight: 700, color: '#ffffff' }}>{letter}</span>
         </div>
       )}
-      {/* Google badge — bottom-right of avatar */}
-      <div style={{
-        position: 'absolute', bottom: -2, right: -2,
-        width: 22, height: 22, borderRadius: '50%',
-        background: '#fff', border: '2px solid #dbeafe',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-      }}>
-        <GoogleIcon size={13} />
-      </div>
+      {showGoogleBadge && (
+        <div style={{
+          position: 'absolute', bottom: -2, right: -2,
+          width: 22, height: 22, borderRadius: '50%',
+          background: '#fff', border: '2px solid #dbeafe',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+        }}>
+          <GoogleIcon size={13} />
+        </div>
+      )}
     </div>
   );
 };
@@ -164,6 +174,21 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
+  // Preset avatar change (Part C) — general profile feature, available to
+  // every signed-in user regardless of how they signed up (Google or
+  // email/password both reach the exact same firestore.rules update
+  // branch; Rules never inspect provider). avatarOverride is a local,
+  // optimistic display override: updateProfile() mutates the SAME
+  // firebase/auth User object AuthContext's currentUser state already
+  // holds, but mutating an object in place doesn't itself trigger a React
+  // re-render, so this sheet's own header would otherwise keep showing the
+  // old photo until some unrelated re-render happened to occur.
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+
   const [frameBox, setFrameBox] = useState<{ left: number; width: number }>({ left: 0, width: 390 });
 
   useEffect(() => {
@@ -181,6 +206,36 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
   }, []);
 
   const displayName = customName || currentUser?.displayName || 'مستخدم';
+  const isGoogleUser = currentUser?.providerData?.[0]?.providerId === 'google.com';
+  const effectivePhotoURL = avatarOverride ?? currentUser?.photoURL ?? null;
+
+  const openAvatarPicker = () => {
+    setAvatarError(null);
+    setPendingAvatar(effectivePhotoURL);
+    setShowAvatarPicker(true);
+  };
+  const cancelAvatarPicker = () => setShowAvatarPicker(false);
+  const saveAvatar = async () => {
+    if (!currentUser || !pendingAvatar || avatarSaving) return;
+    setAvatarSaving(true);
+    setAvatarError(null);
+    try {
+      // Firestore first (the community-facing representation, gated by
+      // firestore.rules' photoURL-only update branch), then the local
+      // Firebase Auth profile (so this sheet's own header — and anywhere
+      // else already holding this same currentUser reference — reflects it
+      // without needing a full reload).
+      await updateDoc(doc(firestoreDb, userPath(currentUser.uid)), { photoURL: pendingAvatar });
+      await updateProfile(currentUser, { photoURL: pendingAvatar });
+      setAvatarOverride(pendingAvatar);
+      setShowAvatarPicker(false);
+    } catch (err) {
+      console.error('[ProfileSheet] Avatar update failed:', err);
+      setAvatarError('تعذّر تحديث الصورة. حاول مرة أخرى.');
+    } finally {
+      setAvatarSaving(false);
+    }
+  };
 
   const startEditName = () => {
     setNameInput(customName || currentUser?.displayName || '');
@@ -296,7 +351,7 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
                 aria-label="فتح ملفك الشخصي"
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}
               >
-                <SignedInAvatar photoURL={currentUser?.photoURL ?? null} letter={displayName[0]} />
+                <SignedInAvatar photoURL={effectivePhotoURL} letter={displayName[0]} showGoogleBadge={isGoogleUser} />
               </button>
 
               {/* Name + badge */}
@@ -345,7 +400,9 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
                     </button>
                   </div>
                 )}
-                <p style={{ fontSize: 12, color: '#2563eb', margin: '4px 0 3px', fontWeight: 500 }}>مسجّل بـ Google</p>
+                <p style={{ fontSize: 12, color: '#2563eb', margin: '4px 0 3px', fontWeight: 500 }}>
+                  {isGoogleUser ? 'مسجّل بـ Google' : 'مسجّل بالبريد الإلكتروني'}
+                </p>
                 {currentUser?.email && (
                   <p style={{
                     fontSize: 11, color: '#5a7fa6', margin: 0,
@@ -383,6 +440,52 @@ export const ProfileSheet: React.FC<ProfileSheetProps> = ({ open, onClose, onOpe
               <span style={{ flex: 1, fontSize: 14, color: '#0f2543', fontWeight: 600, textAlign: 'right' }}>لوحة الإشراف</span>
               <ChevronLeft size={15} color="#60a5fa" style={{ flexShrink: 0 }} />
             </button>
+          )}
+          {/* تغيير الصورة الشخصية (Part C) — general profile feature, every
+              signed-in user regardless of how they signed up. Guests have
+              no users/{uid} doc to update, so this is !isGuest-gated the
+              same way تسجيل الخروج below is. */}
+          {!isGuest && (
+            <>
+              <button onClick={() => (showAvatarPicker ? cancelAvatarPicker() : openAvatarPicker())} style={MENU_BTN}>
+                <div style={ICON_WRAP}><ImageIcon size={16} color="#3b7dd8" /></div>
+                <span style={{ flex: 1, fontSize: 14, color: '#0f2543', fontWeight: 600, textAlign: 'right' }}>تغيير الصورة الشخصية</span>
+                <ChevronLeft size={15} color="#60a5fa" style={{ flexShrink: 0, transform: showAvatarPicker ? 'rotate(-90deg)' : undefined }} />
+              </button>
+              {showAvatarPicker && (
+                <div style={{ padding: '4px 6px 12px' }}>
+                  {avatarError && (
+                    <p style={{ fontSize: 12, color: '#dc2626', textAlign: 'center', margin: '0 0 8px' }}>{avatarError}</p>
+                  )}
+                  <AvatarPicker selected={pendingAvatar} onSelect={setPendingAvatar} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button
+                      onClick={saveAvatar}
+                      disabled={avatarSaving || !pendingAvatar}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: 10,
+                        background: '#3b7dd8', border: 'none', color: '#fff',
+                        fontSize: 13, fontWeight: 600, cursor: avatarSaving ? 'default' : 'pointer',
+                        opacity: avatarSaving ? 0.6 : 1, fontFamily: 'inherit',
+                      }}
+                    >
+                      حفظ
+                    </button>
+                    <button
+                      onClick={cancelAvatarPicker}
+                      disabled={avatarSaving}
+                      style={{
+                        flex: 1, padding: '9px 0', borderRadius: 10,
+                        background: 'transparent', border: '1px solid #bfdbfe', color: '#64748b',
+                        fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <button onClick={() => navAndClose('/settings')} style={MENU_BTN}>
             <div style={ICON_WRAP}><Settings size={16} color="#3b7dd8" /></div>

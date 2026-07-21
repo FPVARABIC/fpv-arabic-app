@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { useAuthContext } from '../contexts/AuthContext';
+import { AvatarPicker } from '../components/Auth/AvatarPicker';
+import { AVATAR_OPTIONS } from '../data/avatars';
+import { authErrorMessage } from '../utils/authErrorMessages';
 
 const GoogleIcon: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
@@ -13,20 +17,60 @@ const GoogleIcon: React.FC = () => (
   </svg>
 );
 
+// Firebase's own actual enforced minimum (auth/weak-password) — checked
+// client-side too, in handleEmailSubmit, so this specific/common mistake
+// fails instantly instead of after a round trip to the server.
+const MIN_PASSWORD_LENGTH = 6;
+
+type AuthMode = 'signin' | 'signup';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '11px 14px',
+  borderRadius: '12px',
+  background: 'rgba(2,8,15,0.6)',
+  border: '1px solid rgba(148,163,184,0.25)',
+  color: '#e2e8f0',
+  fontSize: '14px',
+  fontFamily: 'inherit',
+  boxSizing: 'border-box',
+};
+
 export const SplashView: React.FC = () => {
   const navigate = useNavigate();
   const { setHasStarted, mergeGuestProgress } = useProgressContext();
-  const { currentUser, isAuthLoading, signInWithGoogle } = useAuthContext();
+  const { currentUser, isAuthLoading, signInWithGoogle, signUpWithEmail, signInWithEmail } = useAuthContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Returning signed-in user — skip the welcome screen
+  // Native-only email/password form state — never read or rendered on web.
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState<string>(AVATAR_OPTIONS[0].path);
+
+  const isNative = Capacitor.isNativePlatform();
+
+  // Returning signed-in user — skip the welcome screen. Guarded on
+  // !isSigningIn: without this, a sign-up's OWN onAuthStateChanged firing —
+  // which happens the instant createUserWithEmailAndPassword resolves,
+  // before AuthContext's signUpWithEmail has even reached its awaited
+  // updateProfile call — would race this effect's navigate() ahead of
+  // signUpWithEmail's own navigate(), landing on /home before
+  // displayName/photoURL are set. firestore.rules permanently locks
+  // displayName after creation (see its users/{uid} update rule), so a
+  // user's chosen name would be silently and irreversibly replaced by
+  // ensureCommunityUser.ts's generic 'مستخدم' fallback — not a cosmetic
+  // glitch, a permanent one. Google sign-in has no such race (Google
+  // always supplies a full profile upfront, nothing to update afterward),
+  // so this guard changes nothing for it.
   React.useEffect(() => {
-    if (!isAuthLoading && currentUser) {
+    if (!isAuthLoading && currentUser && !isSigningIn) {
       setHasStarted(true);
       navigate('/home', { replace: true });
     }
-  }, [isAuthLoading, currentUser]);
+  }, [isAuthLoading, currentUser, isSigningIn]);
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -38,18 +82,34 @@ export const SplashView: React.FC = () => {
       navigate('/home', { replace: true });
     } catch (err) {
       console.error('[Auth] Google sign-in failed:', err);
-      // TEMPORARY DIAGNOSTIC — remove once native Google Sign-In is
-      // confirmed working, restoring the plain Arabic message below.
-      // Surfaces the real error code/message on screen so it can be
-      // screenshotted directly from the device, without Logcat/USB
-      // debugging. err may be a Capacitor plugin rejection (.code/.message)
-      // or a firebase/auth FirebaseError (.code/.message) — both shaped the
-      // same way, so this reads either without needing to know which step
-      // (native picker vs. the JS-SDK signInWithCredential bridge) failed.
-      const diagnostic = err as { code?: string; message?: string };
-      setError(`[DIAGNOSTIC] code=${diagnostic?.code ?? 'none'} — ${diagnostic?.message ?? String(err)}`);
-      // Original message, restore this and delete the block above:
-      // setError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
+      setError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
+      setIsSigningIn(false);
+    }
+  };
+
+  const handleEmailSubmit = async () => {
+    // Duplicate-submission guard — same synchronous check-then-set pattern
+    // already established by usePostLike.ts/useCommentLike.ts's `toggling`,
+    // not a new one-off mechanism.
+    if (isSigningIn) return;
+    setError(null);
+
+    if (mode === 'signup' && password.length < MIN_PASSWORD_LENGTH) {
+      setError(`كلمة المرور يجب ألا تقل عن ${MIN_PASSWORD_LENGTH} أحرف.`);
+      return;
+    }
+
+    setIsSigningIn(true);
+    try {
+      const user = mode === 'signup'
+        ? await signUpWithEmail(displayName.trim() || 'مستخدم', email.trim(), password, selectedAvatar)
+        : await signInWithEmail(email.trim(), password);
+      await mergeGuestProgress(user.uid);
+      setHasStarted(true);
+      navigate('/home', { replace: true });
+    } catch (err) {
+      console.error('[Auth] Email auth failed:', err);
+      setError(authErrorMessage(err));
       setIsSigningIn(false);
     }
   };
@@ -130,13 +190,22 @@ export const SplashView: React.FC = () => {
           aria-hidden
         />
 
-        {/* Buttons / loading indicator */}
+        {/* Buttons / form / loading indicator. Native gets top:24 +
+            overflowY:'auto' — the email/password form (mode toggle, up to
+            4 fields, avatar grid, submit, guest) is much taller than a
+            single Google button and can exceed the 260px gradient's own
+            reach, so its own card background (below) carries its own
+            contrast independent of the artwork behind it, and this
+            container can scroll internally on a short viewport rather than
+            overflow off-screen. Web is untouched: no top/overflowY, exactly
+            as before. */}
         <div
           style={{
             position: 'absolute',
             bottom: 48,
             left: 24,
             right: 24,
+            ...(isNative ? { top: 24, overflowY: 'auto' as const } : {}),
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
@@ -159,6 +228,140 @@ export const SplashView: React.FC = () => {
                   }}
                 />
               ))}
+            </div>
+          ) : isNative ? (
+            // Native email/password + preset-avatar sign-up (Part B/C).
+            // signInWithPopup opens a real browser popup — inside the
+            // Android WebView there is no such thing, and Google actively
+            // blocks sign-in inside embedded/WebView browsers anyway, so
+            // Google Sign-In is web-only; native gets this form instead.
+            <div
+              style={{
+                background: 'rgba(8,15,26,0.88)',
+                border: '1px solid rgba(34,211,238,0.18)',
+                borderRadius: '18px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+              }}
+            >
+              {error && (
+                <p style={{ margin: 0, fontSize: '13px', color: '#f87171', textAlign: 'center', lineHeight: 1.5 }}>
+                  {error}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signin'); setError(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '9px 0',
+                    borderRadius: '10px',
+                    border: mode === 'signin' ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                    background: mode === 'signin' ? 'rgba(34,211,238,0.12)' : 'transparent',
+                    color: mode === 'signin' ? '#e2e8f0' : '#94a3b8',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  تسجيل الدخول
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup'); setError(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '9px 0',
+                    borderRadius: '10px',
+                    border: mode === 'signup' ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.12)',
+                    background: mode === 'signup' ? 'rgba(34,211,238,0.12)' : 'transparent',
+                    color: mode === 'signup' ? '#e2e8f0' : '#94a3b8',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  إنشاء حساب
+                </button>
+              </div>
+
+              {mode === 'signup' && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="الاسم"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <AvatarPicker selected={selectedAvatar} onSelect={setSelectedAvatar} />
+                </>
+              )}
+
+              <input
+                type="email"
+                placeholder="البريد الإلكتروني"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                dir="ltr"
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                placeholder="كلمة المرور"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                dir="ltr"
+                style={inputStyle}
+              />
+
+              <button
+                onClick={handleEmailSubmit}
+                disabled={isSigningIn}
+                style={{
+                  width: '100%',
+                  padding: '13px 20px',
+                  borderRadius: '14px',
+                  background: 'rgba(8,15,26,0.55)',
+                  border: '1px solid rgba(34,211,238,0.45)',
+                  color: '#e2e8f0',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: isSigningIn ? 'default' : 'pointer',
+                  opacity: isSigningIn ? 0.6 : 1,
+                  fontFamily: 'inherit',
+                }}
+              >
+                {mode === 'signup' ? 'إنشاء حساب' : 'تسجيل الدخول'}
+              </button>
+
+              {/* Guest — always rendered as the last item in this same
+                  scrollable card, never conditionally hidden by mode or
+                  form state, so it stays reachable regardless of how tall
+                  the sign-up fields above get. */}
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.1)' }} aria-hidden />
+              <button
+                onClick={handleGuest}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  borderRadius: '14px',
+                  background: 'rgba(8,15,26,0.45)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  color: '#cbd5e1',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                المتابعة كزائر
+              </button>
             </div>
           ) : (
             <>
