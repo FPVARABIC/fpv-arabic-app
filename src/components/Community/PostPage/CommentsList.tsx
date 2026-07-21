@@ -187,7 +187,7 @@ export const CommentsList: React.FC<CommentsListProps> = ({ postId, comments, on
                 )}
                 <ReportButton targetType="comment" targetId={comment.id} postId={postId} />
               </div>
-              <p style={{ fontSize: 13, color: '#1a2b3c', margin: '3px 0 0', lineHeight: 1.6, wordBreak: 'break-word' }}>
+              <p style={{ fontSize: 13, color: '#1a2b3c', margin: '3px 0 0', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
                 {comment.text}
               </p>
               <CommentLikeButton

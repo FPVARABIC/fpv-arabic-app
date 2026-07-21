@@ -97,7 +97,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onOpen, onOpenAuthor }
           a meaningless empty paragraph (extra vertical space, nothing to
           read). Only render it when there is real text to show. */}
       {post.text && (
-        <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word' }}>
+        <p style={{ fontSize: 14, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
           {post.text}
         </p>
       )}

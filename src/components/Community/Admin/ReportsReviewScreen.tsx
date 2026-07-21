@@ -77,7 +77,7 @@ export const ReportsReviewScreen: React.FC<ReportsReviewScreenProps> = ({ onOpen
               </div>
 
               {report.note && (
-                <p style={{ fontSize: 13, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6 }}>{report.note}</p>
+                <p style={{ fontSize: 13, color: '#1a2b3c', margin: '0 0 10px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{report.note}</p>
               )}
 
               {state?.error && (

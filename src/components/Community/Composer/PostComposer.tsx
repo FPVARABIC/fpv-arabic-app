@@ -12,6 +12,14 @@ interface PostComposerProps {
   onCancel: () => void;
 }
 
+// Temporarily disabled — same Firebase Blaze billing blocker documented in
+// docs/KNOWN_ISSUES.md's Blaze-billing-bridge entries (Storage rules/upload
+// pipeline still require billing to be enabled). The underlying upload path
+// (MediaUploader, handleImagePick, the hidden file input, useComposer's
+// imageFile plumbing) is untouched below — flipping this back to `false`
+// restores the real button with no other changes needed.
+const IMAGE_UPLOAD_TEMPORARILY_DISABLED = true;
+
 // Category picker uses VISIBLE_CATEGORY_IDS only (D7) — the same single
 // source of truth CategoryChips uses for the feed filter. No default
 // selection: the نشر button stays disabled until the user explicitly picks
@@ -197,27 +205,52 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted, onCancel }
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ALLOWED_IMAGE_MIME_TYPES.join(',')}
-          onChange={handleImagePick}
-          style={{ display: 'none' }}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={validatingImage || submitting}
-          aria-label={imageFile ? 'استبدال الصورة' : 'إضافة صورة'}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
-            border: imageFile ? '1px solid #0e7c86' : '0.5px solid #e5eaf0',
-            background: imageFile ? '#e6f4f3' : '#ffffff',
-            color: imageFile ? '#0e7c86' : '#5a6b7c', fontSize: 13,
-            cursor: (validatingImage || submitting) ? 'not-allowed' : 'pointer', opacity: (validatingImage || submitting) ? 0.7 : 1,
-          }}
-        >
-          <ImageIcon size={16} /> {imageFile ? 'استبدال الصورة' : 'صورة'}
-        </button>
+        {IMAGE_UPLOAD_TEMPORARILY_DISABLED ? (
+          // Same قريباً disabled treatment as the video slot below, not a
+          // new pattern. The real button + hidden file input are still
+          // defined further down (unreached while this constant is true) —
+          // see IMAGE_UPLOAD_TEMPORARILY_DISABLED's own comment above.
+          <button
+            disabled
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
+              border: '0.5px solid #e5eaf0', background: '#f7f9fb', color: '#94a3b3', fontSize: 13,
+              cursor: 'not-allowed', position: 'relative',
+            }}
+          >
+            <ImageIcon size={16} /> صورة
+            <span style={{
+              position: 'absolute', top: -8, left: -6, fontSize: 9, fontWeight: 700,
+              background: '#fbbf24', color: '#78350f', padding: '2px 6px', borderRadius: 999,
+            }}>
+              قريباً
+            </span>
+          </button>
+        ) : (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ALLOWED_IMAGE_MIME_TYPES.join(',')}
+              onChange={handleImagePick}
+              style={{ display: 'none' }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={validatingImage || submitting}
+              aria-label={imageFile ? 'استبدال الصورة' : 'إضافة صورة'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10,
+                border: imageFile ? '1px solid #0e7c86' : '0.5px solid #e5eaf0',
+                background: imageFile ? '#e6f4f3' : '#ffffff',
+                color: imageFile ? '#0e7c86' : '#5a6b7c', fontSize: 13,
+                cursor: (validatingImage || submitting) ? 'not-allowed' : 'pointer', opacity: (validatingImage || submitting) ? 0.7 : 1,
+              }}
+            >
+              <ImageIcon size={16} /> {imageFile ? 'استبدال الصورة' : 'صورة'}
+            </button>
+          </>
+        )}
 
         {/* D4: reserved layout slot, disabled, never removed */}
         <button

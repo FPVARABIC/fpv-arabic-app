@@ -59,7 +59,7 @@ const AnnouncementRow: React.FC<{ announcementId: string; onOpen: () => void }> 
           {announcement === undefined ? 'جارٍ التحميل...' : announcement?.title ?? 'إعلان لم يعد متاحاً'}
         </p>
         {announcement?.body && (
-          <p style={{ fontSize: 12, color: '#5a6b7c', margin: '2px 0 0', lineHeight: 1.5 }}>{announcement.body}</p>
+          <p style={{ fontSize: 12, color: '#5a6b7c', margin: '2px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{announcement.body}</p>
         )}
       </div>
     </button>

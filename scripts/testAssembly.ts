@@ -463,7 +463,13 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // User-requested standalone copy of firestore.rules for manual console
     // publishing — deliberately left untracked/uncommitted per instruction,
     // but still present in the working tree, so it needs to be excluded here.
-    f !== 'RULES_FOR_PUBLISH.md',
+    f !== 'RULES_FOR_PUBLISH.md' &&
+    // Line-break display fix (post/comment/report-note/announcement-body
+    // white-space: pre-wrap) + composer image-upload قريباً gate — Community-
+    // scoped, entirely unrelated to Assembly. scripts/testCommunity.ts's own
+    // equivalent scope check (already allow-listed above) covers this
+    // directory's own "no unrelated area touched" concern.
+    !f.startsWith('src/components/Community/'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

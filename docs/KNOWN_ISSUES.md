@@ -182,3 +182,25 @@ added `likesCount` branches from the `posts/{postId}` and `comments/{commentId}`
 rules, and reverting `usePostLike.ts`/`useCommentLike.ts` to call their respective
 callables (reference implementations: commits `82b79ce` and `b60405d`) — once Firebase
 Blaze billing is restored and Functions are deployable again.
+
+---
+
+## Composer image upload temporarily disabled (Blaze billing blocker)
+
+**Found during:** Bug-fix task (2026-07-21), same Firebase Blaze plan billing issue as
+the comment-creation and likes bridges above — Storage's billing-gated features block
+the upload pipeline from being reliably usable right now.
+
+**What changed:** `PostComposer.tsx`'s "صورة" (image) button now renders the same
+disabled, badged "قريباً" treatment already used for the reserved video-upload slot,
+gated behind a single named constant, `IMAGE_UPLOAD_TEMPORARILY_DISABLED` (top of
+`PostComposer.tsx`). No upload code was removed: `MediaUploader.tsx`, `handleImagePick`,
+the hidden file input, and `useComposer.ts`'s `imageFile`/`uploadMedia` plumbing are all
+untouched and still fully wired — the constant just prevents the button from ever being
+reached. Already-published posts with images are unaffected (`PostCard.tsx`/
+`PostDetail.tsx`'s `post.mediaType === 'image' && post.thumbnailURL` rendering path is
+separate from the composer and was not touched).
+
+**Status:** TEMPORARY. Flip `IMAGE_UPLOAD_TEMPORARILY_DISABLED` to `false` in
+`PostComposer.tsx` to restore the real upload button — once Firebase Blaze billing is
+restored, with no other code changes needed.

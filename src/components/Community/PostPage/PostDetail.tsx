@@ -108,7 +108,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({ postId, onBack, onOpenAu
               render a meaningless empty paragraph. Only render it when
               there is real text to show. */}
           {post.text && (
-            <p style={{ fontSize: 15, color: '#1a2b3c', lineHeight: 1.7, marginBottom: 12, wordBreak: 'break-word' }}>
+            <p style={{ fontSize: 15, color: '#1a2b3c', lineHeight: 1.7, marginBottom: 12, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
               {post.text}
             </p>
           )}

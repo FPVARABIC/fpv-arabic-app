@@ -463,12 +463,20 @@ console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
   ok('the retry loop is bounded by a fixed DELETE_MAX_RETRIES constant, never an unbounded/while(true) loop', /export const DELETE_MAX_RETRIES = 2;/.test(mediaDeleteRetryTs) && /for \(let attempt = 0; attempt <= DELETE_MAX_RETRIES; attempt\+\+\)/.test(mediaDeleteRetryTs));
   ok('deriveMediaDeleteResult never reports fullySucceeded=true when either object failed — failedCount drives all three flags from one source of truth', /const failedCount = \[full, thumbnail\]\.filter\(outcome => outcome === 'failed'\)\.length;/.test(mediaDeleteRetryTs));
 
-  ok('PostComposer.tsx\'s image file input is no longer disabled', !/type="file"[\s\S]{0,200}disabled/.test(postComposerTsx));
-  ok('PostComposer.tsx\'s "uploads disabled" messaging has been removed now that uploads are enabled', !/رفع الصور غير متاح حالياً/.test(postComposerTsx));
+  // TEMPORARY (bridge until Firebase Blaze billing is restored — see
+  // docs/KNOWN_ISSUES.md's "Composer image upload temporarily disabled"
+  // entry) — this pair previously asserted the button was NOT disabled, the
+  // opposite of the current state. The real upload pipeline below (MIME/
+  // size/decode validation, replace-image affordance) is untouched and
+  // still fully wired; only the button's reachability is gated. REVERT
+  // these two assertions back to their pre-bridge form (see git history)
+  // once IMAGE_UPLOAD_TEMPORARILY_DISABLED is flipped back to false.
+  ok('PostComposer.tsx gates image upload behind a single named constant, not a scattered/inline condition', /const IMAGE_UPLOAD_TEMPORARILY_DISABLED = true;/.test(postComposerTsx));
+  ok('PostComposer.tsx\'s image button shows the same قريباً badge treatment as the video button when disabled', /IMAGE_UPLOAD_TEMPORARILY_DISABLED \? \([\s\S]{0,400}قريباً/.test(postComposerTsx));
   ok('PostComposer.tsx validates MIME type before accepting a picked file', /isAllowedImageMimeType\(file\.type\)/.test(postComposerTsx));
   ok('PostComposer.tsx validates raw file size before accepting a picked file', /file\.size > MAX_RAW_INPUT_BYTES/.test(postComposerTsx));
   ok('PostComposer.tsx decode-verifies the file before accepting it (rejects a renamed non-image)', /verifyImageDecodable\(file\)/.test(postComposerTsx));
-  ok('PostComposer.tsx offers a "replace image" affordance, not merely add/remove', /استبدال الصورة/.test(postComposerTsx));
+  ok('PostComposer.tsx offers a "replace image" affordance, not merely add/remove — still present in the untouched real-upload branch', /استبدال الصورة/.test(postComposerTsx));
   ok('the video button remains disabled and untouched (D4, out of scope for this phase)', /<Video size=\{16\} \/> فيديو/.test(postComposerTsx) && /قريباً/.test(postComposerTsx));
 
   ok('ImageLightbox.tsx exists and is portaled to document.body (escapes AppShell\'s stacking context, same convention as ReportButton/ProfileSheet)', /createPortal\(/.test(imageLightboxTsx) && /document\.body/.test(imageLightboxTsx));
@@ -743,6 +751,27 @@ console.log('\n[29] Announcement mirror mechanism (fills the gap found: Rules su
 
   ok('firestore.indexes.json required NO new entry for this fix — the announcement-mirror query is a bare single-field equality filter, the same automatic-single-field-index precedent already documented for useNotifications.ts\'s own unreadQuery',
     !indexesJson.includes('"collectionGroup": "notifications"'));
+}
+
+console.log('\n[30] Line breaks preserved on display for post/comment/report-note/announcement-body text');
+{
+  // Root cause (verified via a real Firestore-emulator round-trip, not
+  // assumed): \n is stored and read back byte-for-byte — the bug is purely
+  // the browser's default `white-space: normal` on a <p>, which collapses
+  // \n into a space. Zero data migration needed; every already-published
+  // \n-containing document renders correctly the moment this ships.
+  ok('PostCard.tsx\'s feed-preview post text preserves line breaks (white-space: pre-wrap)', /post\.text\}\s*<\/p>/.test(postCardTsx) && /whiteSpace:\s*'pre-wrap'/.test(postCardTsx));
+  ok('PostDetail.tsx\'s full post text preserves line breaks', /post\.text\}\s*<\/p>/.test(postDetailTsx) && /whiteSpace:\s*'pre-wrap'/.test(postDetailTsx));
+  ok('CommentsList.tsx\'s comment text preserves line breaks', /comment\.text\}\s*<\/p>/.test(commentsListTsx) && /whiteSpace:\s*'pre-wrap'/.test(commentsListTsx));
+  ok('ReportsReviewScreen.tsx\'s report note preserves line breaks', /\{report\.note\}<\/p>/.test(reportsReviewScreenTsx) && /whiteSpace:\s*'pre-wrap'/.test(reportsReviewScreenTsx));
+  ok('NotificationsScreen.tsx\'s announcement body preserves line breaks', /\{announcement\.body\}<\/p>/.test(notificationsScreenTsx) && /whiteSpace:\s*'pre-wrap'/.test(notificationsScreenTsx));
+
+  // No line-clamp/truncate CSS exists anywhere in the Community feature
+  // (confirmed via a repo-wide grep) — nothing for pre-wrap to conflict
+  // with today. Documented here so a FUTURE line-clamp addition on
+  // PostCard's preview is a deliberate, reviewed change, not a silent
+  // regression this test failed to catch.
+  ok('no line-clamp/truncate CSS exists in PostCard.tsx today (documents the current no-truncation baseline)', !/line-clamp|lineClamp|WebkitLineClamp/.test(postCardTsx));
 }
 
 console.log('\n[16] Scope — only the expected Community/rules/index/migration/test files are dirty');
