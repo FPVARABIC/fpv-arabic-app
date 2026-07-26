@@ -1,0 +1,761 @@
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function callerProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveCaller() {
+      return isSignedIn() && callerProfile().status == 'active';
+    }
+
+    function isModerator() {
+      return isSignedIn() && callerProfile().role == 'moderator';
+    }
+
+    // Preset avatar picker (Part C) — the exact, hand-maintained mirror of
+    // src/data/avatars.ts's AVATAR_OPTIONS paths. Rules can't import a TS
+    // file, so this list must be kept in sync with that one by hand; a
+    // path missing from here simply can't be selected via the update
+    // branch below, it does not silently accept an unlisted value.
+    function isPresetAvatarPath(path) {
+      return path in [
+        '/assets/avatars/racing-quad.svg',
+        '/assets/avatars/fpv-eye.svg',
+        '/assets/avatars/cinewhoop.svg',
+        '/assets/avatars/lightning.svg',
+        '/assets/avatars/satellite.svg',
+        '/assets/avatars/controller.svg',
+        '/assets/avatars/shield.svg',
+        '/assets/avatars/night-flyer.svg',
+        '/assets/avatars/spark.svg',
+        '/assets/avatars/propeller-swirl.svg'
+      ];
+    }
+
+    match /users/{uid} {
+      // Public-profile fields (displayName, photoURL, joinedAt, postsCount) must
+      // be readable by everyone, including logged-out visitors (D2). Rules apply
+      // at document granularity, not field granularity, so this also exposes
+      // role/status/lastPostAt/lastCommentAt on read — none of those are
+      // sensitive (no email/phone ever stored in this doc), so full-document
+      // public read is the accepted trade-off for V1.
+      allow read: if true;
+
+      // Bootstrap: a user's own doc is created lazily on their first
+      // post/comment/report action. Only the owner can create it, and only
+      // with safe defaults — role/status can't be self-elevated at creation.
+      //
+      // displayNameNormalized (Phase 6, user search) is client-computed —
+      // Rules validate shape/type only, the exact same trust model already
+      // accepted for Post.searchTokens below. It is never re-derived from
+      // displayName here (Firestore Rules has no Arabic-normalization
+      // primitive to do so); a client sending a normalization that doesn't
+      // actually match its own displayName degrades only that one user's own
+      // search discoverability, never another user's data or privacy.
+      allow create: if isOwner(uid)
+                    && request.resource.data.keys().hasOnly([
+                         'displayName', 'photoURL', 'joinedAt', 'postsCount',
+                         'role', 'status', 'lastPostAt', 'lastCommentAt',
+                         'displayNameNormalized'
+                       ])
+                    && request.resource.data.displayName is string
+                    && (request.resource.data.photoURL == null || request.resource.data.photoURL is string)
+                    && request.resource.data.joinedAt == request.time
+                    && request.resource.data.postsCount == 0
+                    && request.resource.data.role == 'user'
+                    && request.resource.data.status == 'active'
+                    && request.resource.data.lastPostAt == null
+                    && request.resource.data.lastCommentAt == null
+                    && request.resource.data.displayNameNormalized is string
+                    && request.resource.data.displayNameNormalized.size() <= 200;
+
+      // Client update shapes: post creation's lastPostAt/postsCount bump, a
+      // narrow displayNameNormalized-only backfill (see
+      // ensureCommunityUser.ts) for the signed-in user's own document when
+      // it already exists but predates that field or has gone stale
+      // relative to its own stored displayName, and (Part C) a narrow
+      // photoURL-only preset-avatar change. Comment creation moved entirely
+      // to the createComment Cloud Function (functions/src/index.ts), which
+      // uses the Admin SDK — the Admin SDK bypasses these Rules by design,
+      // so lastCommentAt is now written ONLY by that function (via a merge
+      // write) and has NO client-reachable update path here at all.
+      // role/status/displayName can NEVER change via any client write
+      // path — role/status are console-only (D10); displayName has no V1
+      // edit feature (the ProfileSheet "edit name" feature writes to
+      // localStorage only, never to this document). photoURL is the one
+      // exception, and only through the narrow branch below — never
+      // bundled with any other field, and only to one of a fixed, known
+      // set of preset paths, never an arbitrary string/URL.
+      allow update: if (isOwner(uid)
+                    && (
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastPostAt', 'postsCount'])
+                           && request.resource.data.lastPostAt == request.time
+                           && request.resource.data.postsCount == resource.data.postsCount + 1
+                           && (resource.data.lastPostAt == null || request.time > resource.data.lastPostAt + duration.value(60, 's'))
+                           && request.resource.data.role == resource.data.role
+                           && request.resource.data.status == resource.data.status
+                           && request.resource.data.displayName == resource.data.displayName
+                           && request.resource.data.photoURL == resource.data.photoURL
+                           && request.resource.data.displayNameNormalized == resource.data.displayNameNormalized)
+                         ||
+                         // displayNameNormalized backfill (Phase 8) — client-computed,
+                         // same trust model already accepted for its own value at
+                         // creation above and for Post.searchTokens (Rules validate
+                         // shape/type only, never re-derive the normalization itself).
+                         // hasOnly(['displayNameNormalized']) makes this branch
+                         // structurally incapable of touching displayName/photoURL/
+                         // role/status/postsCount/lastPostAt/lastCommentAt — those
+                         // remain governed exclusively by the branch above (or, for
+                         // role/status, by console-only access / the moderator branch
+                         // below).
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayNameNormalized'])
+                           && request.resource.data.displayNameNormalized is string
+                           && request.resource.data.displayNameNormalized.size() <= 200)
+                         ||
+                         // Preset avatar change (Part C) — a photoURL-only
+                         // diff, mirroring the displayNameNormalized-only
+                         // backfill branch's hasOnly() isolation immediately
+                         // above: structurally incapable of touching
+                         // displayName/role/status/postsCount/lastPostAt/
+                         // lastCommentAt/displayNameNormalized in the same
+                         // write. The value itself is constrained to the
+                         // known preset-path set (isPresetAvatarPath above),
+                         // never an arbitrary string/URL — available to
+                         // every signed-in owner regardless of how they
+                         // signed up (Google or email/password both reach
+                         // this same branch; Rules never inspect provider).
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL'])
+                           && isPresetAvatarPath(request.resource.data.photoURL))
+                         ||
+                         // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                         // see comments/{commentId} below) — comment creation is back to
+                         // a direct client write, so lastCommentAt needs a client-
+                         // reachable update path again, same pattern as the lastPostAt
+                         // branch above. hasOnly(['lastCommentAt']) alone already makes
+                         // this branch structurally incapable of touching any other
+                         // field. Re-migrate back to createComment's Admin-SDK merge
+                         // write (functions/src/index.ts) and DELETE this branch once
+                         // Functions are billable again.
+                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastCommentAt'])
+                           && request.resource.data.lastCommentAt == request.time
+                           && (resource.data.lastCommentAt == null || request.time > resource.data.lastCommentAt + duration.value(5, 's')))
+                       ))
+                    ||
+                    // Admin dashboard (Phase 2) — ban/unban. Deliberately
+                    // status-only: 'role' stays console-only forever via this
+                    // path (a compromised/malicious moderator account must
+                    // never be able to mint additional moderators — see the
+                    // design writeup). uid != request.auth.uid closes the
+                    // self-targeting edge case (a moderator cannot ban/unban
+                    // their own account through this branch — isOwner(uid)
+                    // above governs their own doc and grants no status path
+                    // either, so this is defense-in-depth, not the only
+                    // guard). hasOnly(['status']) makes this branch
+                    // structurally incapable of touching role or any other
+                    // field, even in the same write.
+                    (isModerator()
+                      && uid != request.auth.uid
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                      && request.resource.data.status in ['active', 'banned']);
+
+      allow delete: if false; // no user self-deletion in V1 (GDPR erasure is V1.5)
+
+      // Per-user comment rate-limit/idempotency bookkeeping (Phase 6
+      // correction) — written and read EXCLUSIVELY by createComment's Admin
+      // SDK transaction (functions/src/index.ts). Explicitly closed to every
+      // client operation, on every path under this subcollection, as
+      // defense-in-depth documentation of the trust boundary (the Admin SDK
+      // bypasses this regardless of what it says, but an explicit `if false`
+      // makes the intended boundary unambiguous to a future reader, and
+      // fails safe if this collection is ever accidentally reached by a
+      // future client code path).
+      match /rateLimits/{document=**} {
+        allow read, write: if false;
+      }
+
+      // Saved Posts — private bookmarking, amendment to D2. Nested under
+      // users/{uid} so it is governed entirely by this match block, not by
+      // the parent doc's public-read rule above.
+      match /savedPosts/{postId} {
+        allow read:   if isOwner(uid);
+        allow create: if isOwner(uid)
+                      && request.resource.data.keys().hasOnly(['postId', 'savedAt'])
+                      && request.resource.data.postId == postId
+                      && request.resource.data.savedAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
+      // Follow system (Phase 5) — one canonical relation document per pair,
+      // nested under the follower's own user document. The document ID is
+      // exactly the followed user's uid — a single path segment, never a
+      // delimited concatenation of two uids. The follower's identity comes
+      // entirely from the parent path (uid, above) and request.auth.uid —
+      // never from the document ID or its content.
+      //
+      // Both the follower's own account AND the followed account must exist
+      // and be active. A Firestore subcollection document can exist even if
+      // its parent document does not (Firestore does not enforce parent
+      // existence for subcollections), so the follower's own existence is
+      // checked explicitly here — it is never assumed merely because this
+      // rule is reached via a path nested under users/{uid}.
+      //
+      // Privacy (Option B, approved by Ahmed — final for Phase 5): follow
+      // relationships and counts are authenticated-only. Guests can read
+      // public profile documents and active public posts, but never a
+      // follow relation, and never a follower/following count — both this
+      // block's direct-read rule and the recursive collection-group rule
+      // below require isSignedIn(), not public (`if true`) read access.
+      match /following/{followedUid} {
+        allow read: if isSignedIn();
+
+        allow create: if isOwner(uid)
+                      && uid != followedUid
+                      && exists(/databases/$(database)/documents/users/$(uid))
+                      && get(/databases/$(database)/documents/users/$(uid)).data.status == 'active'
+                      && exists(/databases/$(database)/documents/users/$(followedUid))
+                      && get(/databases/$(database)/documents/users/$(followedUid)).data.status == 'active'
+                      && request.resource.data.keys().hasOnly(['followedId', 'createdAt'])
+                      && request.resource.data.followedId == followedUid
+                      && request.resource.data.createdAt == request.time;
+
+        // Immutable — a relation is created or deleted, never edited.
+        allow update: if false;
+
+        // Only the follower who created the relation may remove it. No
+        // existence/status re-check on delete: removing a relation must
+        // always remain possible (e.g. unfollowing a user who was later
+        // banned), and idempotent delete-of-nonexistent must stay safe.
+        allow delete: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      // Notifications (Phase 1, in-app only — push send is blocked until
+      // Firebase Blaze billing is restored, see docs/KNOWN_ISSUES.md).
+      // Private per-recipient inbox, nested under the recipient's own doc —
+      // same "private data -> owner-scoped subcollection" precedent as
+      // savedPosts above (never a top-level collection filtered by a
+      // recipientId field; path-scoping makes "can only read your own"
+      // structural, not query-dependent).
+      //
+      // Anti-forgery design: every create branch below requires proof, via
+      // exists()/get() against an ALREADY-COMMITTED document written by the
+      // same caller, that the real action (follow/like/comment) genuinely
+      // happened — not merely that the written shape looks right. This is
+      // why every notification write in the client code is issued as a
+      // SEPARATE write AFTER the primary batch/transaction commits, never
+      // inside it: Firestore Rules cannot see sibling writes still pending
+      // within the same batch/transaction, only already-committed state, so
+      // a same-batch existence check would pass regardless of whether the
+      // paired write actually succeeded.
+      match /notifications/{notificationId} {
+        allow read: if isOwner(uid);
+
+        allow create: if isSignedIn()
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly([
+                           'type', 'actorId', 'actorName', 'actorPhoto',
+                           'targetType', 'targetId', 'postId', 'read', 'createdAt'
+                         ])
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                      && (
+                           (request.resource.data.type == 'follow'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'profile'
+                             && request.resource.data.targetId == uid
+                             && request.resource.data.postId == null
+                             // Real proof: the actor's own following relation
+                             // to this recipient must already be committed.
+                             && exists(/databases/$(database)/documents/users/$(request.auth.uid)/following/$(uid)))
+                           ||
+                           (request.resource.data.type == 'like_post'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'post'
+                             && request.resource.data.postId == request.resource.data.targetId
+                             // Real proof: the actor's own like on this post
+                             // must already be committed, AND the recipient
+                             // really is that post's own author.
+                             && exists(/databases/$(database)/documents/posts/$(request.resource.data.targetId)/likes/$(request.auth.uid))
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.targetId)).data.authorId == uid)
+                           ||
+                           (request.resource.data.type == 'like_comment'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'comment'
+                             && request.resource.data.postId is string
+                             // Real proof: the actor's own like on this
+                             // comment must already be committed, AND the
+                             // recipient really is that comment's own author.
+                             && exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)/likes/$(request.auth.uid))
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)).data.authorId == uid)
+                           ||
+                           (request.resource.data.type == 'comment'
+                             && request.auth.uid != uid
+                             && request.resource.data.actorId == request.auth.uid
+                             && request.resource.data.actorName == callerProfile().displayName
+                             && request.resource.data.actorPhoto == callerProfile().photoURL
+                             && request.resource.data.targetType == 'comment'
+                             && request.resource.data.postId is string
+                             // Real proof: the actor really authored this
+                             // exact comment, AND the recipient really is
+                             // the PARENT POST's author (not the comment's).
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.targetId)).data.authorId == request.auth.uid
+                             && get(/databases/$(database)/documents/posts/$(request.resource.data.postId)).data.authorId == uid)
+                           ||
+                           // Announcement mirror — self-write only (the
+                           // client fetches announcements/ and mirrors any
+                           // new one into its OWN inbox the first time it's
+                           // seen; there is no "actor" pushing this to
+                           // someone else, unlike the four branches above).
+                           (request.resource.data.type == 'announcement'
+                             && request.auth.uid == uid
+                             && request.resource.data.actorId == null
+                             && request.resource.data.actorName == null
+                             && request.resource.data.actorPhoto == null
+                             && request.resource.data.targetType == 'announcement'
+                             && request.resource.data.postId == null
+                             // Real proof: the announcement being mirrored
+                             // genuinely exists.
+                             && exists(/databases/$(database)/documents/announcements/$(request.resource.data.targetId)))
+                         );
+
+        // Read-state only — structurally incapable of touching actorId/
+        // actorName/actorPhoto/type/targetType/targetId/postId, the same
+        // hasOnly()-as-total-boundary pattern used everywhere else in this
+        // file (e.g. the displayNameNormalized backfill branch above).
+        allow update: if isOwner(uid)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+                      && request.resource.data.read is bool;
+
+        allow delete: if false; // no user-initiated deletion in V1, matching posts/comments precedent
+      }
+
+      // Push device tokens (Phase 1 infra-only — sending is blocked until
+      // Firebase Blaze billing is restored, see docs/KNOWN_ISSUES.md).
+      // Unlike almost every other document in this app, tokens are NEVER
+      // publicly readable — not even the owner's own doc's public fields
+      // leak here; this subcollection is fully private, read and written
+      // only by its own owner.
+      match /deviceTokens/{tokenId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+                      && request.resource.data.keys().hasOnly(['token', 'platform', 'userAgent', 'createdAt'])
+                      && request.resource.data.token is string
+                      && request.resource.data.token.size() > 0
+                      && request.resource.data.platform == 'web'
+                      && (request.resource.data.userAgent == null || request.resource.data.userAgent is string)
+                      && request.resource.data.createdAt == request.time;
+        allow update: if false; // replace via delete+recreate, never patched
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    // Authenticated-only collection-group rule (Phase 5, Option B) —
+    // required specifically to permit a collectionGroup('following')
+    // aggregation query (used to compute a profile's authenticated-only
+    // follower count). Proven empirically: the specific nested match above
+    // does NOT, by itself, authorize a collection-group query — only an
+    // explicit match using the {path=**} recursive-wildcard form does.
+    // This block grants read only, and only to signed-in users; it cannot
+    // widen create/update/delete, which remain governed exclusively by the
+    // specific match above.
+    match /{path=**}/following/{followedUid} {
+      allow read: if isSignedIn();
+    }
+
+    match /posts/{postId} {
+      allow read: if resource.data.status == 'active';
+
+      allow create: if isSignedIn()
+                    && isActiveCaller()
+                    && request.resource.data.keys().hasOnly([
+                         'authorId', 'authorName', 'authorPhoto', 'text', 'category',
+                         'mediaType', 'mediaURL', 'thumbnailURL', 'mediaSize', 'mediaDuration', 'mediaPath',
+                         'mediaWidth', 'mediaHeight',
+                         'commentsCount', 'createdAt', 'status', 'searchTokens', 'likesCount',
+                         'feedScore', 'feedScoreComputedAt', 'feedScoreFrozen'
+                       ])
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.authorName == callerProfile().displayName
+                    && request.resource.data.authorPhoto == callerProfile().photoURL
+                    && request.resource.data.status == 'active'
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() <= 2000
+                    // Correction pass: an image post's text is optional —
+                    // the image itself is valid content on its own — but a
+                    // text-only post (mediaType == 'none') still requires
+                    // MEANINGFUL, non-whitespace-only text. matches('^\\s*$')
+                    // tests "the entire string is whitespace or empty";
+                    // negated, this demands at least one non-whitespace
+                    // character whenever there is no image to fall back on.
+                    // Mirrors PostComposer.tsx's own client-side
+                    // hasValidText || hasValidImage gate exactly, so a post
+                    // that the UI would allow is never denied here, and a
+                    // post the UI would block (a raw client bypass sending
+                    // whitespace-only text with no image) is still denied.
+                    && (
+                         request.resource.data.mediaType == 'image'
+                         || !request.resource.data.text.matches('^\\s*$')
+                       )
+                    && (
+                         !('category' in request.resource.data)
+                         ||
+                         request.resource.data.category in [
+                           'questions', 'parts', 'projects', 'flights',
+                           'betaflight', 'electronics', 'long-range', 'cinematic', 'freestyle'
+                         ]
+                       )
+                    && request.resource.data.commentsCount == 0
+                    // likesCount (Phase 7) — written 0 by the client at creation,
+                    // same as commentsCount above, since post creation itself
+                    // remains a direct client write (unlike comment creation,
+                    // which moved to the Admin-SDK createComment Function). Never
+                    // client-writable again after creation — see the update rule
+                    // below, whose diff().affectedKeys() allowlist has no branch
+                    // that includes 'likesCount', and togglePostLike
+                    // (functions/src/index.ts) is the only path that ever changes
+                    // it post-creation, via the Admin SDK, which bypasses these
+                    // Rules by design.
+                    && request.resource.data.likesCount == 0
+                    // Feed ranking (Phase 2) — feedScore starts at a fixed,
+                    // Rules-validated constant (the freshness(0) value from
+                    // the approved ranking formula), never a client-computed
+                    // engagement value: this is shape-trust, not
+                    // derivation-trust, the same model already used for
+                    // searchTokens/likesCount above. feedScoreComputedAt and
+                    // feedScoreFrozen have no legitimate value at creation
+                    // time (the scheduled recomputeFeedScores Function hasn't
+                    // run yet) — a client is allowed to omit them entirely,
+                    // but if either is present at all, it must be exactly the
+                    // "not yet computed" default, never a forged non-null
+                    // timestamp or a forged true.
+                    && request.resource.data.feedScore == 100
+                    && (
+                         !('feedScoreComputedAt' in request.resource.data)
+                         || request.resource.data.feedScoreComputedAt == null
+                       )
+                    && (
+                         !('feedScoreFrozen' in request.resource.data)
+                         || request.resource.data.feedScoreFrozen == false
+                       )
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.searchTokens is list
+                    && request.resource.data.searchTokens.size() <= 30
+                    // V1 accepts images only. 'video' is rejected at write time even
+                    // though the schema supports it (D4) — enabling it later is a
+                    // one-line rules change, not a redesign.
+                    && request.resource.data.mediaType in ['none', 'image']
+                    && (
+                         (request.resource.data.mediaType == 'none'
+                           && request.resource.data.mediaURL == null
+                           && request.resource.data.thumbnailURL == null
+                           && request.resource.data.mediaSize == null
+                           && request.resource.data.mediaPath == null
+                           && request.resource.data.mediaDuration == null
+                           && request.resource.data.mediaWidth == null
+                           && request.resource.data.mediaHeight == null)
+                         ||
+                         (request.resource.data.mediaType == 'image'
+                           && request.resource.data.mediaURL is string
+                           && request.resource.data.thumbnailURL is string
+                           // Self-reported metadata, capped at the honest ceiling for
+                           // D5's ≤300KB compression target — NOT the real size
+                           // enforcement. Storage Rules' 2MB cap on the actual
+                           // uploaded bytes is the real physical backstop.
+                           && request.resource.data.mediaSize is number
+                           && request.resource.data.mediaSize > 0
+                           && request.resource.data.mediaSize <= 500 * 1024
+                           // Phase 9: uid-scoped path — matches storage.rules'
+                           // per-user write scoping exactly (see storage.rules
+                           // and firestorePaths.ts's mediaFolderPath comment).
+                           && request.resource.data.mediaPath == 'community/posts/' + request.auth.uid + '/' + postId
+                           && request.resource.data.mediaDuration == null
+                           // Real decoded pixel dimensions (Phase 9) — bounded
+                           // generously (no legitimate photo exceeds this) purely
+                           // to reject a nonsensical/forged value, not to encode
+                           // any real product constraint.
+                           && request.resource.data.mediaWidth is number
+                           && request.resource.data.mediaWidth > 0
+                           && request.resource.data.mediaWidth <= 10000
+                           && request.resource.data.mediaHeight is number
+                           && request.resource.data.mediaHeight > 0
+                           && request.resource.data.mediaHeight <= 10000)
+                       )
+                    // rate limit: 1 post / 60s (D11). First-ever post has no
+                    // lastPostAt yet, so it's allowed through.
+                    && (
+                         callerProfile().lastPostAt == null ||
+                         request.time > callerProfile().lastPostAt + duration.value(60, 's')
+                       );
+
+      // feedScore / feedScoreComputedAt / feedScoreFrozen (Phase 2) have NO
+      // client-writable update path at all — every branch below is an
+      // explicit hasOnly() allow-list, none of which include any of the
+      // three, so a diff touching them is denied by construction, exactly
+      // like likesCount above. The scheduled recomputeFeedScores Cloud
+      // Function is the only thing that ever changes them post-creation,
+      // via the Admin SDK, which bypasses these Rules entirely by design —
+      // the same trust boundary already established for likesCount.
+      allow update: if isSignedIn()
+                    && (
+                         // owner soft-deletes their own post — status only, and only to 'deleted'
+                         (resource.data.authorId == request.auth.uid
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                           && request.resource.data.status == 'deleted')
+                         ||
+                         // moderator hides a post — status only, and only to 'hidden'
+                         (isModerator()
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                           && request.resource.data.status == 'hidden')
+                         ||
+                         // commentsCount increment, paired client-side with a comment
+                         // write. Shape-validated (exact +1, active user, post still
+                         // active) but not cryptographically bound to a real paired
+                         // comment doc — see accepted risks (no Cloud Functions in V1).
+                         (isActiveCaller()
+                           && resource.data.status == 'active'
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentsCount'])
+                           && request.resource.data.commentsCount == resource.data.commentsCount + 1)
+                         ||
+                         // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                         // see docs/KNOWN_ISSUES.md) — likesCount ±1, paired client-side
+                         // with a posts/{postId}/likes/{likerUid} create-or-delete write
+                         // in the SAME batch (usePostLike.ts). Exactly the same accepted-
+                         // risk shape as commentsCount above, not a new one: shape-
+                         // validated (exact ±1, active user, post still active, never
+                         // negative) but NOT cryptographically bound to a real paired
+                         // like-doc write — Rules cannot see across documents/batches to
+                         // confirm one happened. Re-migrate back to togglePostLike's
+                         // Admin-SDK transaction (functions/src/index.ts) and DELETE this
+                         // branch once Functions are billable again.
+                         (isActiveCaller()
+                           && resource.data.status == 'active'
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+                           && (request.resource.data.likesCount == resource.data.likesCount + 1
+                               || request.resource.data.likesCount == resource.data.likesCount - 1)
+                           && request.resource.data.likesCount >= 0)
+                       );
+
+      allow delete: if false; // soft delete only, ever (D10)
+
+      // One like document per (post, liker) — deterministic key, same model
+      // as comments/{commentId}/likes/{likerUid} below.
+      //
+      // TEMPORARY REVERT (bridge until Firebase Blaze billing is restored,
+      // see docs/KNOWN_ISSUES.md) — create/delete are direct client writes
+      // again, paired client-side with the likesCount ±1 update above
+      // (usePostLike.ts). togglePostLike (functions/src/index.ts) is left in
+      // place, unchanged, just unreachable from the client while this path
+      // is live — restore `allow create, update, delete: if false;` here
+      // (and re-wire usePostLike.ts back to the callable) the moment
+      // Functions are billable again.
+      //
+      // Double-toggle/re-entrancy guard: `allow update: if false` below is
+      // the guard, not a separate check — Firestore classifies a write to
+      // an EXISTING document as an update regardless of which client SDK
+      // method was called, so a second "like" attempt on an already-liked
+      // post is denied outright (not a silent idempotent no-op the way the
+      // Cloud Function's transaction made it — see docs/KNOWN_ISSUES.md for
+      // this disclosed behavior difference). Because `allow update: if
+      // false` denies the like-doc half of that same batch, and a
+      // writeBatch().commit() is all-or-nothing, the paired likesCount
+      // increment in the SAME batch is denied too — it can never land
+      // without its paired like-doc write actually succeeding.
+      match /likes/{likerUid} {
+        allow read: if true;
+        allow create: if isOwner(likerUid)
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly(['createdAt'])
+                      && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if isOwner(likerUid);
+      }
+
+      match /comments/{commentId} {
+        allow read: if resource.data.status == 'active';
+
+        // TEMPORARY REVERT (bridge until Firebase Blaze billing is restored)
+        // — comment creation is back to a direct, Rules-validated client
+        // write. createComment (functions/src/index.ts) is left in place,
+        // unchanged, just unreachable from the client while this path is
+        // live — restore `allow create: if false;` here (and re-wire
+        // useCommentComposer.ts back to the callable) the moment Functions
+        // are billable again.
+        //
+        // Rate limit: the pre-Phase-6 design this reverts to used a single
+        // 15s cooldown keyed on this same callerProfile().lastCommentAt
+        // field — and it was GLOBAL PER USER, not per-post (a prior version
+        // of this comment mischaracterized it as "a 3s global guard + a 15s
+        // per-post cooldown"; no such 3s guard exists anywhere in this
+        // project's history — checked via `git log -p`). Being global, it
+        // blocked a normal user's second, DISTINCT comment on ANY post for
+        // 15 real seconds, which was the actual disclosed defect. This
+        // revert keeps the same global-per-user shape but shortens the
+        // window to 5s (see rateLimit.ts) so it still stops obvious rapid
+        // double-submits without meaningfully blocking a real second
+        // comment in practice.
+        //
+        // Duplicate-content collapse (functions/src/index.ts's fingerprint-
+        // based retry-collapse) has NO equivalent here — Rules cannot read
+        // prior comments to detect a duplicate, and no partial Rules-only
+        // approximation is attempted. This is a disclosed, accepted gap for
+        // the duration of this bridge.
+        allow create: if isSignedIn()
+                      && isActiveCaller()
+                      && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt', 'status', 'likesCount'])
+                      && request.resource.data.authorId == request.auth.uid
+                      && request.resource.data.authorName == callerProfile().displayName
+                      && request.resource.data.authorPhoto == callerProfile().photoURL
+                      && request.resource.data.status == 'active'
+                      && request.resource.data.likesCount == 0
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 500
+                      && request.resource.data.createdAt == request.time
+                      // TEMPORARY rate limit — see comment above this rule.
+                      && (
+                           callerProfile().lastCommentAt == null ||
+                           request.time > callerProfile().lastCommentAt + duration.value(5, 's')
+                         );
+
+        allow update: if isSignedIn()
+                      && (
+                           (resource.data.authorId == request.auth.uid
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                             && request.resource.data.status == 'deleted')
+                           ||
+                           (isModerator()
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                             && request.resource.data.status == 'hidden')
+                           ||
+                           // TEMPORARY (bridge until Firebase Blaze billing is restored,
+                           // see docs/KNOWN_ISSUES.md) — likesCount ±1, paired
+                           // client-side with a likes/{likerUid} create-or-delete write
+                           // in the SAME batch (useCommentLike.ts). Same accepted-risk
+                           // shape as posts/{postId}'s own likesCount branch: shape-
+                           // validated, not cryptographically bound to a real paired
+                           // like-doc write. Re-migrate back to toggleCommentLike's
+                           // Admin-SDK transaction and DELETE this branch once Functions
+                           // are billable again.
+                           (isActiveCaller()
+                             && resource.data.status == 'active'
+                             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+                             && (request.resource.data.likesCount == resource.data.likesCount + 1
+                                 || request.resource.data.likesCount == resource.data.likesCount - 1)
+                             && request.resource.data.likesCount >= 0)
+                         );
+
+        allow delete: if false;
+
+        // One like document per (comment, liker) — deterministic key.
+        //
+        // TEMPORARY REVERT (bridge until Firebase Blaze billing is
+        // restored, see docs/KNOWN_ISSUES.md) — create/delete are direct
+        // client writes again, paired client-side with the likesCount ±1
+        // update above (useCommentLike.ts). toggleCommentLike (functions/
+        // src/index.ts) is left in place, unchanged, just unreachable from
+        // the client while this path is live — restore `allow create,
+        // update, delete: if false;` here (and re-wire useCommentLike.ts
+        // back to the callable) the moment Functions are billable again.
+        // Same double-toggle guard as posts/{postId}/likes above: `allow
+        // update: if false` denies a second "like" on an already-liked
+        // comment outright (not a silent idempotent no-op — see
+        // docs/KNOWN_ISSUES.md), and batch atomicity means the paired
+        // likesCount increment in that same batch is denied right along
+        // with it.
+        match /likes/{likerUid} {
+          allow read: if true;
+          allow create: if isOwner(likerUid)
+                        && isActiveCaller()
+                        && request.resource.data.keys().hasOnly(['createdAt'])
+                        && request.resource.data.createdAt == request.time;
+          allow update: if false;
+          allow delete: if isOwner(likerUid);
+        }
+      }
+    }
+
+    match /reports/{reportId} {
+      // Admin dashboard (Phase 2) — reports are now reviewable by a
+      // moderator directly from the client, scoped to isModerator() only.
+      // The reporter themselves still cannot read reports (D11 —
+      // "reporters cannot read others' reports" — unchanged by this).
+      allow read: if isModerator();
+
+      allow create: if isSignedIn()
+                    && isActiveCaller()
+                    && request.resource.data.keys().hasOnly(['targetType', 'targetId', 'postId', 'reporterId', 'reason', 'note', 'createdAt', 'resolved'])
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.targetType in ['post', 'comment']
+                    && request.resource.data.targetId is string
+                    && request.resource.data.postId is string
+                    // 'dangerous' ("معلومات خطيرة") added — Phase 2 amendment to D9/D11's
+                    // originally locked three-value reason enum.
+                    && request.resource.data.reason in ['spam', 'abuse', 'dangerous', 'other']
+                    && (
+                         (request.resource.data.reason == 'other'
+                           && (request.resource.data.note == null
+                               || (request.resource.data.note is string && request.resource.data.note.size() <= 200)))
+                         ||
+                         (request.resource.data.reason != 'other' && request.resource.data.note == null)
+                       )
+                    && request.resource.data.resolved == false
+                    && request.resource.data.createdAt == request.time;
+
+      // Admin dashboard (Phase 2) — a moderator can flip 'resolved' to true,
+      // and ONLY that field. Every other field (reason/note/target*/
+      // reporterId/createdAt) stays permanently immutable — the report
+      // remains an untouchable audit trail even for the moderator who
+      // resolves it. There is no path back to resolved == false.
+      allow update: if isModerator()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])
+                    && request.resource.data.resolved == true;
+      allow delete: if false;
+    }
+
+    // Announcements (Notifications Phase 1) — simple admin/broadcast
+    // mechanism, deliberately not a Cloud Function: created only by a
+    // moderator (reuses the existing isModerator() function, no new auth
+    // infrastructure), readable by every signed-in user. A client mirrors a
+    // newly-seen announcement into its own notifications inbox — see that
+    // block's 'announcement' create branch — rather than this collection
+    // tracking any per-user read state itself.
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+
+      allow create: if isModerator()
+                    && request.resource.data.keys().hasOnly(['title', 'body', 'createdAt', 'ctaLink'])
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.title.size() <= 200
+                    && request.resource.data.body is string
+                    && request.resource.data.body.size() > 0
+                    && request.resource.data.body.size() <= 2000
+                    && (request.resource.data.ctaLink == null || request.resource.data.ctaLink is string)
+                    && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
+```
