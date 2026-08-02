@@ -507,7 +507,11 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // gained those directories.
     f !== '.gitignore' &&
     // The product-vision document records what this spine actually delivered.
-    !f.startsWith('docs/platform/'),
+    !f.startsWith('docs/platform/') &&
+    // Linkage: the encyclopedia article page reads the project so it can show
+    // the reader their own parts. Knowledge-base surface, no Assembly logic.
+    f !== 'src/components/kb/ProjectContextCard.tsx' &&
+    f !== 'src/views/KbArticleView.tsx',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

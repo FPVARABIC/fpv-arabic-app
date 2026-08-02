@@ -20,7 +20,10 @@ import { computeFindings, parseStackSizes, countFindings, sortFindings } from '.
 import { computeNextStep } from '../src/data/project/nextStep';
 import { buildCompatibilityReport } from '../src/components/Assembly/utils/buildReport';
 import { SEVERITY_ORDER, type ProjectSnapshot, type Finding } from '../src/data/project/types';
-import { resolveLinkRoute } from '../src/data/kb/registry';
+import {
+  MODULE_PART_SLOTS, projectPartsForModule, findingsForArticle, hasProjectContext,
+} from '../src/data/project/context';
+import { resolveLinkRoute, allKbModules, allKbArticles, getArticle } from '../src/data/kb/registry';
 import { buildStages } from '../src/data/assembly/buildStages';
 import { motors } from '../src/data/assembly/parts/motors';
 import { escs } from '../src/data/assembly/parts/escs';
@@ -242,6 +245,64 @@ console.log('\n[8] One engine — the assembly report and the workspace cannot d
   ok('a failing item carries the engine\'s reasoning, not just a label',
     report.items.filter(i => !i.isCompatible).every(i => (i.reasonAr?.length ?? 0) > 40));
   ok('a passing item adds no noise', report.items.filter(i => i.isCompatible).every(i => i.reasonAr === undefined));
+}
+
+console.log('\n[9] The article knows the reader\'s parts — without inventing a relationship');
+{
+  // Every mapped module must be a real module, or the panel silently never
+  // renders on a page the mapping claims to cover.
+  const moduleIds = new Set(allKbModules.map(m => m.id));
+  ok('every module in the mapping is a real module',
+    Object.keys(MODULE_PART_SLOTS).every(id => moduleIds.has(id)));
+  ok('every authored module is mapped, so no article page is left generic',
+    allKbModules.every(m => MODULE_PART_SLOTS[m.id]?.length));
+
+  const full = snap({
+    frame: frames[0], motor: motors[0], esc: escs[0], battery: batteries[0],
+    propeller: propellers[0], flightController: flightControllers[0],
+    receiver: receivers[0], gps: gps[0],
+  });
+
+  ok('an ESC article shows the ESC, the motors it drives and the battery it switches',
+    projectPartsForModule(full, 'esc').map(r => r.labelAr).join() === 'الـESC,المحركات,البطارية');
+  ok('no module dumps the entire parts list onto the page',
+    allKbModules.every(m => projectPartsForModule(full, m.id).length <= 4));
+  ok('a module nobody mapped produces nothing rather than a guess',
+    projectPartsForModule(full, 'not-a-module').length === 0);
+  ok('a project that does not exist produces no parts anywhere',
+    allKbModules.every(m => projectPartsForModule(EMPTY, m.id).length === 0));
+  ok('a slot the user has not filled is skipped, not shown empty',
+    projectPartsForModule(snap({ esc: escs[0] }), 'esc').length === 1);
+
+  // The article↔finding relationship must come from the engine's own links.
+  const findings = computeFindings(full);
+  const linkedIds = new Set(
+    findings.flatMap(f => f.links).filter(l => l.kind === 'article').map(l => l.targetId));
+  ok('the engine genuinely links its findings to articles', linkedIds.size > 0);
+
+  for (const id of linkedIds) {
+    const hits = findingsForArticle(findings, id);
+    assert.ok(hits.length > 0, `expected ${id} to surface its findings`);
+    assert.ok(
+      hits.every(f => f.links.some(l => l.kind === 'article' && l.targetId === id)),
+      `a finding surfaced on ${id} without linking to it`,
+    );
+  }
+  ok(`every linked article surfaces exactly the findings that named it (${linkedIds.size} articles)`, true);
+
+  const unlinked = allKbArticles().filter(a => !linkedIds.has(a.id));
+  ok('an article no finding points at surfaces none',
+    unlinked.every(a => findingsForArticle(findings, a.id).length === 0));
+  ok('every article a finding links to is a real article',
+    [...linkedIds].every(id => !!getArticle(id)));
+
+  ok('with no project there is nothing to show on any article',
+    allKbArticles().every(a => findingsForArticle(computeFindings(EMPTY), a.id).length === 0));
+
+  // The panel must not render as an empty promise.
+  ok('the panel is suppressed when there is nothing true to say',
+    !hasProjectContext(projectPartsForModule(EMPTY, 'esc'), findingsForArticle(computeFindings(EMPTY), 'esc-ratings')));
+  ok('…and shown when there is', hasProjectContext(projectPartsForModule(full, 'esc'), []));
 }
 
 console.log(`\n✅ testProject: ${passed} assertions passed\n`);

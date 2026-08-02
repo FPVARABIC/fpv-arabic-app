@@ -11,6 +11,7 @@ import { getTerm } from '../data/kb/glossary/terms';
 import { useKbProgress } from '../hooks/useKbProgress';
 import { BlockList } from '../components/kb/BlockRenderer';
 import { RichText } from '../components/kb/Term';
+import { ProjectContextCard } from '../components/kb/ProjectContextCard';
 import {
   KB_LAYER_LABEL_AR, KB_LAYER_ORDER, KB_LEVEL_LABEL_AR, KB_KIND_LABEL_AR,
   type KbLayerId,
@@ -156,6 +157,10 @@ export const KbArticleView: React.FC = () => {
               <RichText text={article.summaryAr} idKey="sum" />
             </div>
           </div>
+
+          {/* The same article, against the reader's own parts. Renders nothing
+              when there is no project or nothing relevant in it. */}
+          <ProjectContextCard moduleId={mod.id} articleId={article.id} />
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

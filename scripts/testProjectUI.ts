@@ -20,6 +20,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 import { buildStages } from '../src/data/assembly/buildStages';
 import { computeFindings } from '../src/data/project/verdicts';
+import { moduleArticles } from '../src/data/kb/registry';
 import type { ProjectSnapshot } from '../src/data/project/types';
 import { motors } from '../src/data/assembly/parts/motors';
 import { batteries } from '../src/data/assembly/parts/batteries';
@@ -83,6 +84,18 @@ assert.ok(AGREEING_BATTERY, 'expected a battery the same motor does accept');
 
 const FINAL_REPORT_INDEX = buildStages.findIndex(s => s.id === 'stage-16');
 assert.ok(FINAL_REPORT_INDEX > 0, 'expected a final-report stage');
+
+// The article to open is taken from the engine's own link, not hardcoded: the
+// point being proved is that the finding reaches the page it points at.
+const ESC_ARTICLE_ID = (() => {
+  const f = computeFindings({
+    exists: true, stageIndex: 0, totalStages: buildStages.length, parts: {},
+    motor: motors[0], esc: escs[0],
+  }).find(x => x.id === 'current-headroom');
+  const link = f?.links.find(l => l.kind === 'article' && moduleArticles('esc').some(a => a.id === l.targetId));
+  assert.ok(link, 'expected the current-headroom finding to link to an ESC article');
+  return link.targetId;
+})();
 
 interface Saved {
   stageIndex: number;
@@ -271,7 +284,49 @@ async function main() {
       await page.close();
     }
 
-    console.log('\n[5] The tab reaches it from anywhere');
+    console.log('\n[5] The encyclopedia stops being generic once a project exists');
+    {
+      const page = await newPage(browser, consoleErrors);
+
+      // First without a project: the panel must not exist at all, rather than
+      // render a heading over nothing.
+      await seed(page, null);
+      await page.goto(`${BASE}/kb/esc/${ESC_ARTICLE_ID}`, { waitUntil: 'networkidle' });
+      await page.locator('[data-testid="kb-article-summary"]').waitFor({ timeout: 10000 });
+      ok('a reader with no project sees no personalisation panel at all',
+        await page.locator('[data-testid="kb-project-context"]').count() === 0);
+
+      await seed(page, {
+        stageIndex: FINAL_REPORT_INDEX,
+        partIds: {
+          motors: CONFLICT.motor.id, batteries: AGREEING_BATTERY!.id, escs: escs[0].id,
+          frames: frames[0].id, propellers: propellers[0].id, flightControllers: flightControllers[0].id,
+        },
+      });
+      await page.goto(`${BASE}/kb/esc/${ESC_ARTICLE_ID}`, { waitUntil: 'networkidle' });
+      const panel = page.locator('[data-testid="kb-project-context"]');
+      await panel.waitFor({ timeout: 10000 });
+
+      const text = (await panel.textContent() ?? '').replace(/\s+/gu, ' ');
+      ok('the same article now names the reader\'s own ESC', text.includes(escs[0].nameAr));
+      ok('…and the motors it drives, because the article\'s subject spans both', text.includes(CONFLICT.motor.nameAr));
+      ok('the open question about this build appears on the page that explains it',
+        await panel.locator('[data-testid="kb-context-finding-current-headroom"]').count() === 1);
+
+      await panel.locator('[data-testid="kb-context-finding-current-headroom"]').click();
+      await page.waitForURL('**/project', { timeout: 10000 });
+      await page.locator('[data-testid="project-next-step"]').waitFor({ timeout: 10000 });
+      ok('…and tapping it lands on the finding in the workspace', page.url().endsWith('/project'));
+
+      // A page whose subject the project says nothing about must stay clean.
+      await page.goto(`${BASE}/kb/esc/${ESC_ARTICLE_ID}`, { waitUntil: 'networkidle' });
+      await panel.waitFor({ timeout: 10000 });
+      ok('the panel does not repeat the whole parts list — only what this module is about',
+        (await panel.locator('[data-testid^="kb-context-part-"]').count()) <= 4);
+      await page.close();
+    }
+
+    console.log('\n[6] The tab reaches it from anywhere');
     {
       const page = await newPage(browser, consoleErrors);
       await page.goto(`${BASE}/lessons`, { waitUntil: 'networkidle' });
