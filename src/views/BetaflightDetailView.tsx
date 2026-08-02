@@ -8,6 +8,7 @@ import { bfPageRegistry } from '../data/betaflight/pageRegistry';
 import { BF_VERSION_CONTEXT } from '../data/betaflight/sourceHelpers';
 import { BetaflightPageRenderer } from '../components/betaflight/BetaflightPageRenderer';
 import { BetaflightNotStartedPage } from '../components/betaflight/BetaflightNotStartedPage';
+import { KbBacklinksLazy } from '../components/kb/KbBacklinksLazy';
 
 export const BetaflightDetailView: React.FC = () => {
   const { sectionId } = useParams<{ sectionId: string }>();
@@ -20,6 +21,12 @@ export const BetaflightDetailView: React.FC = () => {
     return (
       <AppShell tint="purple">
         <BetaflightPageRenderer page={registryEntry.page} backTo="/betaflight" />
+        {/* Reverse links into the encyclopedia — a settings page can now reach
+            the article explaining the hardware the setting actually controls.
+            Renders nothing when no KB content references this page. */}
+        <div style={{ padding: '0 16px 20px' }}>
+          <KbBacklinksLazy kind="betaflight" targetId={registryEntry.id} tone="dark" />
+        </div>
       </AppShell>
     );
   }

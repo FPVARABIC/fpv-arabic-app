@@ -1,11 +1,18 @@
 import React, { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { House, Wrench, BookOpen, CircuitBoard, Package } from 'lucide-react';
+import { House, Wrench, BookOpen, CircuitBoard, Package, Library } from 'lucide-react';
 
+// The five original tabs are unchanged — same order, same routes, same labels.
+// "الموسوعة" is appended as a sixth tab and is the single entry point for the
+// encyclopedia, global search, the glossary and symptom-based diagnostics, all
+// of which had no navigation entry before (search did not exist at all, and
+// /troubleshooting and /checklists were only reachable from a home dashboard
+// that no longer renders — see docs/platform/00-AUDIT.md items A1/A2/C1).
 const mainNav: { icon: typeof House; label: string; path: string; activeMatchPrefixes?: string[] }[] = [
   { icon: House,        label: 'الرئيسية', path: '/home' },
   { icon: Wrench,       label: 'البناء',   path: '/roadmap' },
   { icon: BookOpen,     label: 'الدروس',   path: '/lessons' },
+  { icon: Library,      label: 'الموسوعة', path: '/kb', activeMatchPrefixes: ['/kb', '/search', '/glossary', '/diagnose', '/troubleshooting', '/checklists'] },
   { icon: CircuitBoard, label: 'البرمجة',  path: '/programming', activeMatchPrefixes: ['/programming', '/betaflight'] },
   { icon: Package,      label: 'التجميع',  path: '/assembly' },
 ];
@@ -66,14 +73,17 @@ export const BottomNavigation: React.FC = () => {
             borderTop: '1px solid rgba(103,232,249,0.2)',
           }}
         >
-          <div className="flex items-center justify-around px-1 pt-3 pb-3" style={{ minHeight: 64 }}>
+          {/* px-0.5 + tighter per-item padding: six tabs have to fit the fixed
+              390px column without the labels wrapping or clipping. */}
+          <div className="flex items-center justify-around px-0.5 pt-3 pb-3" style={{ minHeight: 64 }}>
             {mainNav.map(item => {
               const active = isActive(item);
               return (
                 <button
                   key={item.path}
                   onClick={() => handleNavClick(item)}
-                  className={`relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
+                  data-testid={`nav-${item.path.replace('/', '')}`}
+                  className={`relative flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
                   style={active ? { background: 'rgba(103,232,249,0.3)', boxShadow: '0 0 14px -4px rgba(103,232,249,0.7)' } : undefined}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center">
@@ -90,7 +100,7 @@ export const BottomNavigation: React.FC = () => {
                     )}
                     <item.icon size={20} style={{ position: 'relative', zIndex: 1 }}/>
                   </div>
-                  <span className={`text-xs ${active ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                  <span className={`text-[10.5px] whitespace-nowrap ${active ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
                 </button>
               );
             })}

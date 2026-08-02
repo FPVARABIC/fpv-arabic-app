@@ -7,6 +7,7 @@ import { InteractiveLessonJourney } from '../components/lessons/InteractiveLesso
 import { getLessonJourneyDefinition } from '../data/lessons/journeyRegistry';
 import { lessonsData } from '../data/lessonsData';
 import { useProgressContext } from '../contexts/ProgressContext';
+import { KbBacklinksLazy } from '../components/kb/KbBacklinksLazy';
 import { CheckCircle2, ArrowRight, AlertCircle, Star, BookOpen, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const LessonDetailView: React.FC = () => {
@@ -57,6 +58,10 @@ export const LessonDetailView: React.FC = () => {
           </div>
           <div className="px-4 py-4">
             <InteractiveLessonJourney key={lesson.id} definition={journeyDefinition} lesson={lesson} nextLesson={nextLesson} />
+            {/* All 16 lessons have a journey definition, so this branch — not
+                the legacy one below — is the branch users actually reach.
+                Renders nothing when no KB content references this lesson. */}
+            <KbBacklinksLazy kind="lesson" targetId={lesson.id} tone="dark"/>
           </div>
         </div>
       </AppShell>
@@ -195,6 +200,10 @@ export const LessonDetailView: React.FC = () => {
               <BookOpen size={16}/> لم أفهم جيدًا
             </button>
             <button className="w-full text-slate-400 text-sm py-2 hover:text-white transition-colors" onClick={() => navigate('/lessons')}>العودة إلى الدروس</button>
+            {/* Closes the loop the audit flagged: a lesson had no route to the
+                encyclopedia article or diagnostic tree that covers it in depth.
+                Renders nothing when no KB content references this lesson. */}
+            <KbBacklinksLazy kind="lesson" targetId={lesson.id} tone="dark"/>
           </div>
         </div>
       </div>

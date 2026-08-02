@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { useProgressContext } from '../contexts/ProgressContext';
-import { AlertTriangle, CheckCircle2, Info, RotateCcw, Shield } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, RotateCcw, Shield, Mail } from 'lucide-react';
 
 interface ConfirmState { action: string; label: string; description: string; fn: () => void; }
 
@@ -24,7 +24,11 @@ export const SettingsView: React.FC = () => {
     { label: 'إعادة ضبط تقدم الدروس', description: 'يحذف قائمة الدروس المكتملة.', fn: resetLessons, danger: false },
     { label: 'إعادة ضبط مراحل البناء', description: 'يحذف مراحل البناء المكتملة.', fn: resetRoadmap, danger: false },
     { label: 'إعادة ضبط Checklists', description: 'يحذف جميع عناصر Checklist المحددة.', fn: resetChecklists, danger: false },
-    { label: 'عرض تحذير السلامة مرة أخرى', description: 'يعيد ضبط حالة تحذير السلامة.', fn: () => { setSafetySeen(false); navigate('/safety'); }, danger: false },
+    // Previously this also called navigate('/safety'). That route is commented
+    // out in App.tsx, so the button reliably dropped the user on the 404 view
+    // (docs/platform/00-AUDIT.md item A3). Resetting the flag is the actual
+    // intent and works on its own — the gate re-appears wherever it is wired.
+    { label: 'عرض تحذير السلامة مرة أخرى', description: 'يعيد ضبط حالة تحذير السلامة ليظهر مجدداً.', fn: () => { setSafetySeen(false); }, danger: false },
     {
       label: 'حذف سجل التواصل',
       description: 'يحذف الرسائل المحفوظة محليًا بما فيها الاسم والبريد الإلكتروني دون التأثير على تقدمك.',
@@ -69,6 +73,13 @@ export const SettingsView: React.FC = () => {
         <button className="glass-card p-4 w-full text-right flex items-center gap-3 hover:border-cyan-400/30 transition-all" onClick={() => navigate('/privacy')}>
           <Shield size={18} className="text-cyan-400"/>
           <span className="text-sm text-slate-300">سياسة الخصوصية</span>
+        </button>
+
+        {/* /contact was a registered route with no link anywhere in the app
+            (docs/platform/00-AUDIT.md item A4). */}
+        <button className="glass-card p-4 w-full text-right flex items-center gap-3 hover:border-cyan-400/30 transition-all" onClick={() => navigate('/contact')} data-testid="settings-contact">
+          <Mail size={18} className="text-cyan-400"/>
+          <span className="text-sm text-slate-300">تواصل معنا</span>
         </button>
 
         {confirm && (

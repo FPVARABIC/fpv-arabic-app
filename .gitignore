@@ -26,3 +26,6 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# UI-test build output (scripts/testKbUI.ts, scripts/testNavigationRegression.ts)
+dist-uitest

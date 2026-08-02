@@ -204,3 +204,62 @@ separate from the composer and was not touched).
 **Status:** TEMPORARY. Flip `IMAGE_UPLOAD_TEMPORARILY_DISABLED` to `false` in
 `PostComposer.tsx` to restore the real upload button — once Firebase Blaze billing is
 restored, with no other code changes needed.
+
+---
+
+## Four navigation/reachability defects found by the 2026-08-02 platform audit — three fixed, all documented
+
+**Found during:** the full-application audit that opened the platform rebuild
+(`docs/platform/00-AUDIT.md`, items A1–A4). All four were verified by reading
+the code, not inferred.
+
+**A1 — `/troubleshooting` was unreachable.** The only link to it lives in
+`HomeDashboardLegacy.tsx:16`, and that component never renders because
+`RENDER_COMMUNITY = true` in `HomeView.tsx:23,245` short-circuits to the
+Community feed. Six authored troubleshooting entries were invisible to every
+user. **Fixed:** re-linked from `/diagnose` (`dx-legacy-link`), and every entry
+is now in the global search index.
+
+**A2 — `/checklists` was unreachable.** Same root cause
+(`HomeDashboardLegacy.tsx:15`). **Fixed:** re-linked from the encyclopedia hub
+(`kb-tool-checklists`) and indexed for search.
+
+**A3 — a Settings button navigated to a 404.** `SettingsView.tsx:27` called
+`navigate('/safety')`, but that route is commented out in `App.tsx:34`, so the
+click reliably landed on `NotFoundView`. **Fixed:** the button now resets the
+`safetySeen` flag without navigating, which was the actual intent. Proven by
+`scripts/testNavigationRegression.ts`.
+
+**A4 — `/progress` and `/contact` were orphaned routes.** Both were registered
+in `App.tsx` and rendered correctly, but no component in the app linked to
+either. **Fixed:** `/progress` from the encyclopedia hub, `/contact` from
+Settings.
+
+**Still open — not fixed here:** `HomeDashboardLegacy.tsx` remains in the tree
+as dead code behind `RENDER_COMMUNITY`. It is deliberately kept (it is the
+rollback path for the Community home) but it is now the ONLY reference to
+several routes, which is what made A1/A2 possible in the first place. If that
+flag is ever deleted, whoever removes it must re-check every route the legacy
+dashboard is the last linker for.
+
+---
+
+## KB module coverage of 28/28 means "every required axis has real content", not "the topic is exhausted"
+
+**Found during:** authoring the flight-controller module (2026-08-02).
+
+The coverage matrix at `/kb/flight-controller` reports 28/28, and
+`scripts/testKbModel.ts` enforces that every claimed axis is backed by an
+article that passes the substance floor. That is a real guarantee, but it is a
+guarantee about *categories of coverage*, not about topical exhaustiveness — a
+module can legitimately report 28/28 while a specific sub-topic (CAN bus depth,
+per-board comparisons, servo output detail) is still shallow.
+
+**Why this matters:** a future reader could take 100% as "nothing left to
+write" and skip the module during expansion. It is not that. The number answers
+"does this module leave a whole dimension untouched?", and the honest answer for
+flight controllers today is no.
+
+**Status:** documented, not a defect. If a finer-grained completeness signal is
+ever needed, it belongs as a separate per-article depth rating, not as a change
+to the axis matrix.
