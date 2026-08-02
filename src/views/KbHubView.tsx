@@ -4,17 +4,18 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import {
   Search, BookOpen, Stethoscope, Library, Cpu, ChevronLeft, Bookmark, CircleCheck, ScrollText,
-  ListChecks, TrendingUp, Grid3x3, Fan,
+  ListChecks, TrendingUp, Grid3x3, Fan, Wind,
 } from 'lucide-react';
 import { allKbModules } from '../data/kb/registry';
 import { computeModuleCoverage } from '../data/kb/coverage';
 import { allDxTrees } from '../data/kb/diagnostics/trees';
 import { kbTerms } from '../data/kb/glossary/terms';
+import { domainElements } from '../data/kb/domainMatrix';
 import { useKbProgress } from '../hooks/useKbProgress';
 import { KB_LEVEL_LABEL_AR } from '../data/kb/types';
 import { getArticle } from '../data/kb/registry';
 
-const MODULE_ICONS: Record<string, typeof Cpu> = { Cpu, Fan };
+const MODULE_ICONS: Record<string, typeof Cpu> = { Cpu, Fan, Wind };
 
 /**
  * Encyclopedia hub — the entry point for BOTH modes the spec requires:
@@ -28,6 +29,16 @@ export const KbHubView: React.FC = () => {
   const totalArticles = allKbModules.reduce((n, m) => n + m.articles.length, 0);
   const readCount = progress.readCountIn(allKbModules.flatMap(m => m.articles.map(a => a.id)));
   const lastArticle = progress.lastArticleId ? getArticle(progress.lastArticleId) : undefined;
+
+  // The scope notice is DERIVED, never written by hand. An earlier version
+  // named the authored and unwritten modules in prose, and every new module
+  // made it quietly false — exactly the kind of stale claim the honesty rule
+  // exists to prevent. Both lists now come from live data.
+  const authoredTitles = allKbModules.map(m => m.titleAr);
+  const unwrittenTitles = domainElements
+    .filter(e => !e.moduleId && e.priority <= 2)
+    .sort((a, b) => a.priority - b.priority)
+    .map(e => e.titleAr);
 
   // `checklists` and `progress` are re-linked here on purpose: both routes
   // existed and worked but had no reachable entry point anywhere in the app
@@ -180,9 +191,9 @@ export const KbHubView: React.FC = () => {
             <strong style={{ fontSize: 12.5, color: '#b45309' }}>نطاق الموسوعة حالياً</strong>
           </div>
           <p style={{ fontSize: 12, lineHeight: 1.8, color: '#78350f', margin: 0 }}>
-            الوحدة المكتملة اليوم هي متحكم الطيران. الوحدات التالية على الخطة — المحركات، المراوح،
-            ESC، البطاريات، أنظمة التحكم، أنظمة الفيديو، GPS — لم تُكتب بعد ولا تظهر هنا كبطاقات فارغة.
-            ما لم يُكتب يُعلَن، ولا يُعرض كأنه موجود.
+            الوحدات المكتوبة حتى الآن: {authoredTitles.join(' · ')}. وما زال على الخطة ولم يُكتب بعد:{' '}
+            {unwrittenTitles.join(' · ')}. ما لم يُكتب يُعلَن هنا بالاسم ولا يظهر كبطاقة فارغة،
+            ولوحة التغطية الكاملة في «مصفوفة التغطية».
           </p>
         </div>
       </div>

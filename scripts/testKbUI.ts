@@ -21,6 +21,9 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Page, type Browser } from 'playwright';
 
+import { domainElements } from '../src/data/kb/domainMatrix';
+import { allKbModules } from '../src/data/kb/registry';
+
 const PORT = 4381;
 const BASE = `http://localhost:${PORT}`;
 const OUT_DIR = 'dist-uitest';
@@ -142,22 +145,32 @@ async function main() {
       const total = Number((await page.locator('[data-testid="matrix-total"]').textContent())?.replace(/\D/g, ''));
       ok(`the inventory lists the whole domain (${total} elements)`, total >= 25);
 
+      // Both sides of this check are DERIVED from live data rather than named
+      // literally. An earlier version hard-coded «propellers» as the unauthored
+      // example; authoring that module made the assertion silently wrong about
+      // what it was proving. Deriving them means the check keeps testing the
+      // property — covered corners are real, gaps are shown — as modules land.
+      const authored = domainElements.find(e =>
+        e.area === 'propulsion' && !!e.moduleId
+        && (allKbModules.find(m => m.id === e.moduleId)?.articles.length ?? 0) > 0);
+      const unauthored = domainElements.find(e => e.area === 'propulsion' && !e.moduleId);
+      assert.ok(authored, 'expected at least one authored propulsion element');
+      assert.ok(unauthored, 'expected at least one unauthored propulsion element');
+
       await page.locator('[data-testid="matrix-area-propulsion"]').click();
-      await page.waitForSelector('[data-testid="matrix-row-motors"]', { timeout: 10000 });
+      await page.waitForSelector(`[data-testid="matrix-row-${authored.id}"]`, { timeout: 10000 });
 
-      // Motors is authored: its module/diagnostics/glossary corners must be on.
-      ok('an authored element reports its module corner as covered',
-        await page.locator('[data-testid="matrix-motors-hasModule"]').getAttribute('data-on') === 'true');
+      ok(`an authored element (${authored.id}) reports its module corner as covered`,
+        await page.locator(`[data-testid="matrix-${authored.id}-hasModule"]`).getAttribute('data-on') === 'true');
       ok('…and its diagnostics corner',
-        await page.locator('[data-testid="matrix-motors-hasDiagnostics"]').getAttribute('data-on') === 'true');
+        await page.locator(`[data-testid="matrix-${authored.id}-hasDiagnostics"]`).getAttribute('data-on') === 'true');
 
-      // Propellers is NOT authored yet: the gap must be visible, not rounded away.
-      ok('an unauthored element shows its gap openly',
-        await page.locator('[data-testid="matrix-propellers-hasModule"]').getAttribute('data-on') === 'false');
+      ok(`an unauthored element (${unauthored.id}) shows its gap openly`,
+        await page.locator(`[data-testid="matrix-${unauthored.id}-hasModule"]`).getAttribute('data-on') === 'false');
 
-      await page.locator('[data-testid="matrix-open-motors"]').click();
-      await page.waitForURL('**/kb/motors', { timeout: 10000 });
-      ok('the matrix opens the authored module', page.url().includes('/kb/motors'));
+      await page.locator(`[data-testid="matrix-open-${authored.id}"]`).click();
+      await page.waitForURL(`**/kb/${authored.moduleId}`, { timeout: 10000 });
+      ok('the matrix opens the authored module', page.url().includes(`/kb/${authored.moduleId}`));
       await page.close();
     }
 
@@ -180,6 +193,44 @@ async function main() {
       await page.locator('[data-testid="kb-exit-path"]').click();
       await page.waitForTimeout(400);
       ok('leaving the path drops the path context', await page.locator('[data-testid="kb-path-context"]').count() === 0);
+      await page.close();
+    }
+
+    // ── B4. Propellers module is fully wired, not just registered ───────────
+    {
+      const page = await newPage(browser, consoleErrors);
+      await page.goto(`${BASE}/kb/propellers`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-testid="kb-module-tab-paths"]', { timeout: 10000 });
+
+      ok('the propellers module renders its learning paths',
+        await page.locator('[data-testid^="kb-path-prop-path-"]').count() === 4);
+      ok('its diagnostic trees are surfaced on the module page',
+        await page.locator('[data-testid^="kb-module-dx-"]').count() === 2);
+
+      await page.locator('[data-testid="kb-module-tab-articles"]').click();
+      await page.waitForSelector('[data-testid="kb-article-link-prop-what-is"]');
+      const propArticles = await page.locator('[data-testid^="kb-article-link-"]').count();
+      ok(`every propellers article is listed (${propArticles})`, propArticles === 10);
+
+      await page.locator('[data-testid="kb-module-tab-coverage"]').click();
+      await page.waitForSelector('[data-testid="kb-coverage-matrix"]');
+      const propAxes = await page.locator('[data-testid^="kb-axis-"]').count();
+      ok(`the module declares only the axes that apply to it (${propAxes})`, propAxes === 25);
+      ok('and every declared axis is genuinely covered',
+        await page.locator('[data-testid^="kb-axis-"][data-covered="false"]').count() === 0);
+      ok('no horizontal overflow on the propellers module page', await noHorizontalOverflow(page));
+
+      // The safety-critical tree must open on a VISUAL check, with props-off
+      // and battery-disconnected posture stated before the first step.
+      await page.goto(`${BASE}/diagnose/dx-prop-thrown`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-testid="dx-safety"]', { timeout: 10000 });
+      const propSafety = (await page.locator('[data-testid="dx-safety"]').textContent()) ?? '';
+      ok('the prop-loss tree declares its safety posture before any step',
+        propSafety.includes('البطارية') && propSafety.includes('المراوح'));
+      await page.locator('[data-testid="dx-start"]').click();
+      await page.waitForSelector('[data-testid="dx-node-t1"]', { timeout: 10000 });
+      ok('it opens on the least dangerous check available',
+        await page.locator('[data-testid="dx-node-t1"]').count() === 1);
       await page.close();
     }
 

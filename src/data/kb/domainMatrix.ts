@@ -99,7 +99,7 @@ export const domainElements: DomainElement[] = [
 
   // ── Propulsion ────────────────────────────────────────────────────────────
   { id: 'motors', area: 'propulsion', kind: 'component', titleAr: 'المحركات', titleEn: 'Motors', whyAr: 'مصدر الدفع كله، ويحدد أداء الطائرة وحرارتها واستهلاكها.', moduleId: 'motors', assemblyCategory: 'motors', glossaryDomain: 'motors', betaflightPageIds: ['motors'], priority: 1 },
-  { id: 'propellers', area: 'propulsion', kind: 'component', titleAr: 'المراوح', titleEn: 'Propellers', whyAr: 'القطعة التي تحوّل دوران المحرك إلى دفع فعلي، وأكثر القطع تأثيراً في كل شيء.', assemblyCategory: 'propellers', glossaryDomain: 'propellers', priority: 1 },
+  { id: 'propellers', area: 'propulsion', kind: 'component', titleAr: 'المراوح', titleEn: 'Propellers', whyAr: 'القطعة التي تحوّل دوران المحرك إلى دفع فعلي، وأكثر القطع تأثيراً في كل شيء.', moduleId: 'propellers', assemblyCategory: 'propellers', glossaryDomain: 'propellers', betaflightPageIds: ['motors', 'configuration'], priority: 1 },
   { id: 'esc', area: 'propulsion', kind: 'component', titleAr: 'منظّم السرعة (ESC)', titleEn: 'Electronic Speed Controller', whyAr: 'الجسر بين أمر متحكم الطيران وتيار المحرك الحقيقي.', assemblyCategory: 'escs', glossaryDomain: 'esc', betaflightPageIds: ['motors', 'configuration'], priority: 1 },
 
   // ── Electrical & power ────────────────────────────────────────────────────

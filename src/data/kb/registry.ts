@@ -9,10 +9,12 @@
 import type { KbArticle, KbLink, KbModule } from './types';
 import { flightControllerModule } from './modules/flightController/module';
 import { motorsModule } from './modules/motors/module';
+import { propellersModule } from './modules/propellers/module';
 
 export const allKbModules: KbModule[] = [
   flightControllerModule,
   motorsModule,
+  propellersModule,
 ];
 
 const moduleById = new Map<string, KbModule>(allKbModules.map(m => [m.id, m]));

@@ -7,6 +7,7 @@ import {
   dxFcGyroNoise,
 } from './flightController';
 import { dxMotorHot, dxMotorWrongDirection } from './motors';
+import { dxPropVibration, dxPropThrown } from './propellers';
 
 export const allDxTrees: DxTree[] = [
   dxFcNoUsb,
@@ -16,6 +17,8 @@ export const allDxTrees: DxTree[] = [
   dxFcGyroNoise,
   dxMotorHot,
   dxMotorWrongDirection,
+  dxPropVibration,
+  dxPropThrown,
 ];
 
 const byId = new Map(allDxTrees.map(t => [t.id, t]));
