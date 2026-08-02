@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import {
   ArrowRight, Bookmark, BookmarkCheck, CircleCheck, Circle, ChevronLeft, ChevronRight,
   Link2, BookOpenCheck, FileText, NotebookPen, AlertTriangle,
 } from 'lucide-react';
-import { getArticle, getModule, articleNeighbours, resolveLinkRoute } from '../data/kb/registry';
+import { getArticle, getModule, articleNeighbours, resolveLinkRoute, pathPosition } from '../data/kb/registry';
 import { getTerm } from '../data/kb/glossary/terms';
 import { useKbProgress } from '../hooks/useKbProgress';
 import { BlockList } from '../components/kb/BlockRenderer';
@@ -27,8 +27,10 @@ import {
  */
 export const KbArticleView: React.FC = () => {
   const { moduleId, articleId } = useParams<{ moduleId: string; articleId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const progress = useKbProgress();
+  const activePathId = searchParams.get('path');
 
   const article = articleId ? getArticle(articleId) : undefined;
   const mod = moduleId ? getModule(moduleId) : undefined;
@@ -81,6 +83,23 @@ export const KbArticleView: React.FC = () => {
   }
 
   const { prev, next } = articleNeighbours(article.id);
+
+  // Path context. When the reader arrived from a learning path, "next" must mean
+  // the next step IN THAT PATH — which is usually NOT the next article by
+  // authoring order, because a path deliberately skips around the module.
+  const activePath = activePathId ? mod.paths.find(p => p.id === activePathId) : undefined;
+  const posInPath = activePath ? pathPosition(mod.id, activePath.id, article.id) : null;
+  const nextInPath = posInPath && posInPath.index < posInPath.total - 1
+    ? getArticle(activePath!.articleIds[posInPath.index + 1])
+    : undefined;
+  const prevInPath = posInPath && posInPath.index > 0
+    ? getArticle(activePath!.articleIds[posInPath.index - 1])
+    : undefined;
+
+  const goPrev = prevInPath ?? prev;
+  const goNext = nextInPath ?? next;
+  const pathSuffix = activePath ? `?path=${encodeURIComponent(activePath.id)}` : '';
+
   const blocks = layer ? article.layers[layer] ?? [] : [];
   const isRead = progress.isRead(article.id);
   const isBookmarked = progress.isBookmarked(article.id);
@@ -464,25 +483,60 @@ export const KbArticleView: React.FC = () => {
         </div>
 
         {/* ── Prev / next ─────────────────────────────────────────── */}
+        {activePath && posInPath && (
+          <div style={{ padding: '18px 16px 0' }} data-testid="kb-path-context">
+            <div
+              style={{
+                background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.28)',
+                borderRadius: 13, padding: '10px 12px',
+              }}
+            >
+              <div style={{ fontSize: 11.5, color: '#0369a1', fontWeight: 800 }}>
+                ضمن مسار «{activePath.titleAr}» — الخطوة {posInPath.index + 1} من {posInPath.total}
+              </div>
+              <div style={{ height: 5, borderRadius: 999, background: 'rgba(148,163,184,0.25)', marginTop: 7 }}>
+                <div
+                  style={{
+                    height: '100%', borderRadius: 999,
+                    width: `${((posInPath.index + 1) / posInPath.total) * 100}%`,
+                    background: 'linear-gradient(90deg,#0ea5e9,#38bdf8)',
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                data-testid="kb-exit-path"
+                onClick={() => navigate(`/kb/${mod.id}/${article.id}`)}
+                style={{
+                  marginTop: 8, background: 'none', border: 'none', padding: 0,
+                  color: '#0369a1', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                اخرج من المسار واقرأ المقال وحده
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8, padding: '18px 16px 0' }}>
           <button
             type="button"
             data-testid="kb-prev"
-            disabled={!prev}
-            onClick={() => prev && navigate(`/kb/${prev.moduleId}/${prev.id}`)}
-            style={{ ...NAV_BTN, opacity: prev ? 1 : 0.4, cursor: prev ? 'pointer' : 'default' }}
+            disabled={!goPrev}
+            onClick={() => goPrev && navigate(`/kb/${goPrev.moduleId}/${goPrev.id}${pathSuffix}`)}
+            style={{ ...NAV_BTN, opacity: goPrev ? 1 : 0.4, cursor: goPrev ? 'pointer' : 'default' }}
           >
             <ChevronRight size={15} aria-hidden />
-            <span style={{ flex: 1, textAlign: 'right' }}>{prev ? prev.titleAr : 'لا يوجد سابق'}</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>{goPrev ? goPrev.titleAr : 'لا يوجد سابق'}</span>
           </button>
           <button
             type="button"
             data-testid="kb-next"
-            disabled={!next}
-            onClick={() => next && navigate(`/kb/${next.moduleId}/${next.id}`)}
-            style={{ ...NAV_BTN, opacity: next ? 1 : 0.4, cursor: next ? 'pointer' : 'default' }}
+            disabled={!goNext}
+            onClick={() => goNext && navigate(`/kb/${goNext.moduleId}/${goNext.id}${pathSuffix}`)}
+            style={{ ...NAV_BTN, opacity: goNext ? 1 : 0.4, cursor: goNext ? 'pointer' : 'default' }}
           >
-            <span style={{ flex: 1, textAlign: 'right' }}>{next ? next.titleAr : 'لا يوجد تالٍ'}</span>
+            <span style={{ flex: 1, textAlign: 'right' }}>{goNext ? goNext.titleAr : 'لا يوجد تالٍ'}</span>
             <ChevronLeft size={15} aria-hidden />
           </button>
         </div>

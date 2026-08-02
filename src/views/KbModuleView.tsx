@@ -8,7 +8,7 @@ import { computeModuleCoverage } from '../data/kb/coverage';
 import { dxTreesForModule } from '../data/kb/diagnostics/trees';
 import { useKbProgress } from '../hooks/useKbProgress';
 import {
-  KB_COVERAGE_LABEL_AR, KB_KIND_LABEL_AR, KB_LEVEL_LABEL_AR,
+  KB_COVERAGE_LABEL_AR, KB_KIND_LABEL_AR, KB_LEVEL_LABEL_AR, KB_LEVEL_ORDER,
 } from '../data/kb/types';
 
 type Tab = 'paths' | 'articles' | 'coverage';
@@ -149,7 +149,11 @@ export const KbModuleView: React.FC = () => {
                             <button
                               type="button"
                               data-testid={`kb-path-step-${aid}`}
-                              onClick={() => navigate(`/kb/${mod.id}/${a.id}`)}
+                              // Carry the path through so the article can show
+                              // "step N of M" and offer the next step IN THIS
+                              // PATH, which is rarely the next article in
+                              // authoring order.
+                              onClick={() => navigate(`/kb/${mod.id}/${a.id}?path=${encodeURIComponent(p.id)}`)}
                               style={{
                                 width: '100%', textAlign: 'right', display: 'flex', alignItems: 'center', gap: 9,
                                 background: 'rgba(148,163,184,0.07)', border: 'none', borderRadius: 10,
@@ -242,9 +246,12 @@ export const KbModuleView: React.FC = () => {
                       <div style={{ fontSize: 12, lineHeight: 1.7, color: '#64748b', marginTop: 3 }}>{a.summaryAr}</div>
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 7 }}>
                         <span style={CHIP}>{KB_KIND_LABEL_AR[a.kind]}</span>
-                        {a.levels.slice(0, 2).map(l => (
-                          <span key={l} style={CHIP}>{KB_LEVEL_LABEL_AR[l]}</span>
-                        ))}
+                        {/* Sorted by real difficulty, not authoring order, so a
+                            "متقدم · مبتدئ" chip pair can never appear. */}
+                        {[...a.levels]
+                          .sort((x, y) => KB_LEVEL_ORDER.indexOf(x) - KB_LEVEL_ORDER.indexOf(y))
+                          .slice(0, 2)
+                          .map(l => <span key={l} style={CHIP}>{KB_LEVEL_LABEL_AR[l]}</span>)}
                         {a.safetyLevel === 'critical' && (
                           <span style={{ ...CHIP, background: 'rgba(239,68,68,0.12)', color: '#b91c1c' }}>سلامة حرجة</span>
                         )}

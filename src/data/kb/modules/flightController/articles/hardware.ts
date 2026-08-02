@@ -57,7 +57,7 @@ export const fcMcu: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['types', 'comparison', 'compatibility', 'performance', 'protocols', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['mcu', 'uart', 'dma', 'target'],
+  glossaryIds: ['mcu', 'uart', 'dma', 'target', 'sbus'],
   relatedArticleIds: ['fc-ports', 'fc-firmware-targets', 'fc-selection'],
   links: [
     { kind: 'article', targetId: 'fc-ports', label: 'المنافذ: UART وI2C وSPI', reason: 'عدد المنافذ هو الأثر العملي الأكبر لاختيار المعالج' },
@@ -224,7 +224,7 @@ export const fcSensors: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['components', 'types', 'principle', 'testing', 'failures', 'diagnostics', 'maintenance', 'beginner', 'intermediate', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['gyro', 'accelerometer', 'barometer', 'magnetometer', 'imu'],
+  glossaryIds: ['gyro', 'accelerometer', 'barometer', 'magnetometer', 'imu', 'i2c'],
   relatedArticleIds: ['fc-control-loop', 'fc-mounting', 'fc-testing'],
   links: [
     { kind: 'betaflight', targetId: 'sensors', label: 'Betaflight — الحساسات', reason: 'مشاهدة خرج كل حساس حياً' },
@@ -299,7 +299,7 @@ export const fcSensors: KbArticle = {
         columns: ['السبب الأشيع', 'العرَض', 'هل يُصلَح؟'],
         rows: [
           { label: 'الجيروسكوب', cells: ['صدمة قوية من ارتطام، أو حرارة لحام زائدة', 'قراءات مجنونة، أو الحساس لا يُكتشف أصلاً', 'لا — الشريحة ملحومة على اللوحة'] },
-          { label: 'المسرّع', cells: ['نفس أسباب الجيروسكوب (الشريحة واحدة)', 'وضع Angle مائل رغم المعايرة', 'المعايرة تصلح الانحراف؛ التلف الفيزيائي لا'] },
+          { label: 'المسرّع', cells: ['الأسباب نفسها (الشريحة واحدة)', 'وضع Angle مائل رغم المعايرة', 'المعايرة تصلح الانحراف؛ التلف الفيزيائي لا'] },
           { label: 'البارومتر', cells: ['انسداد الفتحة، أو ماء، أو تدفق هواء مباشر', 'ارتفاع متذبذب أو ثابت لا يتغير', 'نعم إن كان السبب التغطية أو التدفق'] },
           { label: 'المغناطيسي', cells: ['قرب أسلاك الطاقة أو المحركات', 'اتجاه خاطئ، فشل العودة التلقائية', 'نعم — بإبعاده ثم إعادة المعايرة'] },
         ],
@@ -314,7 +314,7 @@ export const fcSensors: KbArticle = {
           { text: 'افتح Betaflight وانتقل إلى تبويب الإعداد الأولي (Setup).' },
           { text: 'حرّك الطائرة يميناً وشمالاً وراقب النموذج ثلاثي الأبعاد: يجب أن يتحرك في الاتجاه نفسه تماماً.', note: 'حركة معاكسة أو محور مبدَّل تعني خطأ في محاذاة اللوحة، لا عطلاً في الحساس.' },
           { text: 'ضع الطائرة على سطح مستوٍ تماماً ونفّذ معايرة المسرّع.' },
-          { text: 'انتقل إلى تبويب الحساسات وراقب منحنى الجيروسكوب وهي ساكنة: يجب أن يكون خطاً شبه مستقيم قرب الصفر.' },
+          { text: 'انتقل إلى تبويب الحساسات وراقب منحنى الجيروسكوب والطائرة ساكنة: يجب أن يكون خطاً شبه مستقيم قرب الصفر.' },
           { text: 'إن كان في اللوحة بارومتر، ارفع الطائرة نصف متر وراقب تغيّر قراءة الارتفاع.' },
         ],
       },
@@ -330,7 +330,7 @@ export const fcSensors: KbArticle = {
         title: 'علامات أن الحساسات سليمة',
         items: [
           'الجيروسكوب والمسرّع يظهران كمُكتشَفين في البرنامج',
-          'النموذج ثلاثي الأبعاد يتحرك في نفس اتجاه حركتك بلا انعكاس',
+          'النموذج ثلاثي الأبعاد يتحرك في اتجاه حركتك نفسه بلا انعكاس',
           'منحنى الجيروسكوب شبه مسطح والطائرة ساكنة',
           'وضع Angle يعيد الطائرة أفقية بعد معايرة صحيحة',
           'قراءة الارتفاع تتغير عند رفع الطائرة (إن وُجد بارومتر)',
@@ -344,7 +344,7 @@ export const fcSensors: KbArticle = {
         headers: ['العرَض', 'الأسباب المحتملة', 'الفحص الأول'],
         rows: [
           ['الجيروسكوب غير مُكتشف', 'تلف الشريحة، لحام تالف، هدف Firmware خاطئ', 'تأكد أن الهدف المُحمَّل هو هدف لوحتك فعلاً قبل افتراض التلف'],
-          ['منحنى الجيروسكوب مليء بالضجيج والطائرة ساكنة', 'تلف الحساس أو تداخل كهربائي', 'جرّب على USB فقط بلا بطارية — لو نظف المنحنى فالمشكلة كهربائية لا في الحساس'],
+          ['منحنى الجيروسكوب مليء بالضجيج والطائرة ساكنة', 'تلف الحساس أو تداخل كهربائي', 'جرّب على USB فقط بلا بطارية — إن أصبح المنحنى نظيفاً فالمشكلة كهربائية لا في الحساس'],
           ['ضجيج يظهر فقط مع دوران المحركات', 'اهتزاز ميكانيكي', 'افحص المراوح والمحامل وعزل اللوحة — ليست مشكلة حساس'],
           ['الطائرة تنجرف في Angle', 'معايرة مسرّع خاطئة أو سطح غير مستوٍ', 'أعد المعايرة على سطح مستوٍ مؤكد'],
           ['ارتفاع OSD يقفز عشوائياً', 'تدفق هواء على البارومتر', 'غطِّ الحساس بإسفنج وأعد الاختبار'],
@@ -429,7 +429,7 @@ export const fcPorts: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is', 'fc-mcu'],
   coverage: ['protocols', 'components', 'wiring', 'configuration', 'compatibility', 'testing', 'diagnostics', 'intermediate', 'advanced', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['uart', 'i2c', 'spi', 'crsf', 'sbus', 'baud-rate', 'softserial'],
+  glossaryIds: ['uart', 'i2c', 'spi', 'crsf', 'sbus', 'baud-rate', 'softserial', 'esc', 'dshot'],
   relatedArticleIds: ['fc-mcu', 'fc-pinout', 'fc-first-setup'],
   links: [
     { kind: 'betaflight', targetId: 'ports', label: 'Betaflight — المنافذ', reason: 'هنا تُحدَّد وظيفة كل منفذ' },

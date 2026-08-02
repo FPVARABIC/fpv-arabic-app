@@ -31,6 +31,7 @@ import { BotV2AssistantView } from './views/BotV2AssistantView';
 const KbHubView = lazy(() => import('./views/KbHubView').then(m => ({ default: m.KbHubView })));
 const KbModuleView = lazy(() => import('./views/KbModuleView').then(m => ({ default: m.KbModuleView })));
 const KbArticleView = lazy(() => import('./views/KbArticleView').then(m => ({ default: m.KbArticleView })));
+const KbMatrixView = lazy(() => import('./views/KbMatrixView').then(m => ({ default: m.KbMatrixView })));
 const SearchView = lazy(() => import('./views/SearchView').then(m => ({ default: m.SearchView })));
 const GlossaryView = lazy(() => import('./views/GlossaryView').then(m => ({ default: m.GlossaryView })));
 const DiagnoseView = lazy(() => import('./views/DiagnoseView').then(m => ({ default: m.DiagnoseView })));
@@ -81,6 +82,7 @@ export const App: React.FC = () => (
 
     {/* Encyclopedia + reference mode */}
     <Route path="/kb" element={<KbHubView/>}/>
+    <Route path="/kb/matrix" element={<KbMatrixView/>}/>
     <Route path="/kb/:moduleId" element={<KbModuleView/>}/>
     <Route path="/kb/:moduleId/:articleId" element={<KbArticleView/>}/>
     <Route path="/search" element={<SearchView/>}/>

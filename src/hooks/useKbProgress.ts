@@ -98,5 +98,3 @@ export function useKbProgress() {
     setNote, setLastArticle, answerQuiz, getQuizAnswer, readCountIn,
   };
 }
-
-export const KB_PROGRESS_STORAGE_KEY = KEY;

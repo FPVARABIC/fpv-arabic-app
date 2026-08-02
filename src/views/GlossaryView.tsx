@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { ArrowRight, Search as SearchIcon, X, ChevronLeft, AlertCircle } from 'lucide-react';
-import { kbTerms, getTerm } from '../data/kb/glossary/terms';
+import { kbTerms, getTerm, glossaryDomains } from '../data/kb/glossary/terms';
 import { getArticle } from '../data/kb/registry';
 import { normalizeText } from '../data/kb/search/normalize';
 import { search } from '../data/kb/search/query';
@@ -40,14 +40,15 @@ export const GlossaryView: React.FC = () => {
       .sort((a, b) => (order.get(a.id)! - order.get(b.id)!));
   }, [query]);
 
+  // Domains are ordered by the canonical domain list, not by how many terms
+  // each happens to contain: a size-based order would visibly reshuffle the
+  // whole page as the user types, which reads as instability rather than as a
+  // narrowing result set.
   const grouped = useMemo(() => {
-    const m = new Map<string, typeof kbTerms>();
-    for (const t of filtered) {
-      const list = m.get(t.domain) ?? [];
-      list.push(t);
-      m.set(t.domain, list);
-    }
-    return Array.from(m.entries()).sort((a, b) => b[1].length - a[1].length);
+    const present = new Set(filtered.map(t => t.domain));
+    return glossaryDomains()
+      .filter(d => present.has(d))
+      .map(d => [d, filtered.filter(t => t.domain === d)] as const);
   }, [filtered]);
 
   if (selected) {

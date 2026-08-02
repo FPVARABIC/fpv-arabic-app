@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 import { normalizeText, tokenize, editDistance, fuzzyEquals } from '../src/data/kb/search/normalize';
 import { expandQueryTokens } from '../src/data/kb/search/synonyms';
-import { getSearchIndex, indexSystems } from '../src/data/kb/search/buildIndex';
+import { getSearchIndex, indexSystems, resetSearchIndexCache } from '../src/data/kb/search/buildIndex';
 import { search, countsByType } from '../src/data/kb/search/query';
 import { allKbArticles } from '../src/data/kb/registry';
 import { kbTerms } from '../src/data/kb/glossary/terms';
@@ -145,6 +145,17 @@ console.log('\n[7] Index coverage — nothing is unreachable');
   ok('every lesson is reachable by its own title', unreachableLessons.length === 0);
 
   ok('index exposes systems for filtering', indexSystems().length > 3);
+
+  // The index claims to be built once and cached. That claim is load-bearing —
+  // it is why search is fast enough to run on every keystroke — so it is proven
+  // rather than assumed.
+  const first = getSearchIndex();
+  ok('repeat calls return the SAME cached array, not a rebuild', getSearchIndex() === first);
+  resetSearchIndexCache();
+  const rebuilt = getSearchIndex();
+  ok('after a reset the index is a new array', rebuilt !== first);
+  ok('…with identical content', rebuilt.length === first.length
+    && rebuilt.every((d, i) => d.key === first[i].key));
 }
 
 console.log('\n[8] Filters');

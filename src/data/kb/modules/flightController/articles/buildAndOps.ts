@@ -246,7 +246,7 @@ export const fcSelection: KbArticle = {
   ],
   prerequisiteIds: ['fc-mcu', 'fc-ports', 'fc-form-factors'],
   coverage: ['compatibility', 'comparison', 'types', 'power', 'protocols', 'applications', 'beginner', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['uart', 'aio', 'mcu', 'bec'],
+  glossaryIds: ['uart', 'aio', 'mcu', 'bec', 'esc', 'stack'],
   relatedArticleIds: ['fc-mcu', 'fc-ports', 'fc-form-factors', 'fc-power'],
   links: [
     { kind: 'assembly', targetId: 'stage-8', label: 'التجميع — اختر متحكم طيران حقيقي', reason: 'قطع موثّقة بمواصفات ومستوى ثقة معلن' },

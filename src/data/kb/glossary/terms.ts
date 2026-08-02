@@ -756,6 +756,28 @@ export function getTerm(id: string): KbTerm | undefined {
   return byId.get(id);
 }
 
-export function termsByDomain(domain: string): KbTerm[] {
-  return kbTerms.filter(t => t.domain === domain);
+/**
+ * Domains in a stable, meaningful order — roughly the order a builder meets
+ * them, not alphabetical and not by term count. The glossary view groups by
+ * this so the page keeps its shape while the user filters.
+ */
+const DOMAIN_ORDER: string[] = [
+  'flight-controller',
+  'esc',
+  'electrical',
+  'power-battery',
+  'radio-control',
+  'video',
+  'navigation-sensors',
+  'tuning',
+  'safety',
+];
+
+export function glossaryDomains(): string[] {
+  const present = Array.from(new Set(kbTerms.map(t => t.domain)));
+  const known = DOMAIN_ORDER.filter(d => present.includes(d));
+  // Anything not yet in DOMAIN_ORDER still shows, appended — a new domain must
+  // never silently disappear from the glossary just because this list is stale.
+  const rest = present.filter(d => !DOMAIN_ORDER.includes(d)).sort();
+  return [...known, ...rest];
 }

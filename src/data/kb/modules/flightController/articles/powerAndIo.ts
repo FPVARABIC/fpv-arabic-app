@@ -42,7 +42,7 @@ export const fcPower: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['power', 'components', 'wiring', 'compatibility', 'installation', 'testing', 'safety', 'failures', 'diagnostics', 'configuration', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['vbat', 'bec', 'current-sensor', 'adc', 'capacitor', 'voltage-sag'],
+  glossaryIds: ['vbat', 'bec', 'current-sensor', 'adc', 'capacitor', 'voltage-sag', 'smoke-stopper'],
   relatedArticleIds: ['fc-outputs', 'fc-failures', 'fc-first-setup'],
   links: [
     { kind: 'betaflight', targetId: 'power', label: 'Betaflight — الطاقة والبطارية', reason: 'معايرة قراءتي الجهد والتيار' },
@@ -286,7 +286,7 @@ export const fcOutputs: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is', 'fc-mcu'],
   coverage: ['components', 'wiring', 'configuration', 'testing', 'compatibility', 'safety', 'diagnostics', 'failures', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['dshot', 'motor-order', 'resource-remap', 'bidirectional-dshot'],
+  glossaryIds: ['dshot', 'motor-order', 'resource-remap', 'bidirectional-dshot', 'esc', 'firmware', 'dma'],
   relatedArticleIds: ['fc-control-loop', 'fc-power', 'fc-testing'],
   links: [
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات', reason: 'الترتيب والاتجاه والاختبار' },
@@ -438,7 +438,7 @@ export const fcOutputs: KbArticle = {
       id: 'q2',
       question: 'ما الفرق بين خطأ ترتيب المحركات وخطأ اتجاه الدوران؟',
       options: [
-        { id: 'a', text: 'لا فرق، كلاهما نفس الشيء', correct: false, feedback: 'مختلفان تماماً في السبب والعلاج، حتى لو تشابه العرَض.' },
+        { id: 'a', text: 'لا فرق، كلاهما الشيء نفسه', correct: false, feedback: 'مختلفان تماماً في السبب والعلاج، حتى لو تشابه العرَض.' },
         { id: 'b', text: 'الترتيب هو أي مخرج يذهب لأي محرك؛ الاتجاه هو جهة دوران المحرك نفسه', correct: true, feedback: 'صحيح. الترتيب يُصحَّح بإعادة التعيين، والاتجاه يُصحَّح ببرنامج الـESC أو بتبديل سلكين. لهذا يجب فحصهما منفصلين.' },
         { id: 'c', text: 'الترتيب برمجي والاتجاه لا يمكن تغييره', correct: false, feedback: 'الاتجاه قابل للتغيير بطريقتين، إحداهما برمجية.' },
         { id: 'd', text: 'الاتجاه يخص السيرفو فقط', correct: false, feedback: 'الاتجاه يخص المحركات بشكل أساسي.' },

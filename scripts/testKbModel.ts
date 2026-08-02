@@ -15,10 +15,15 @@
 import assert from 'node:assert/strict';
 
 import { allKbModules, getArticle, getModule, resolveLinkRoute, allKbArticles } from '../src/data/kb/registry';
-import { computeModuleCoverage, checkArticleIntegrity, articleBlockCount, MIN_BLOCKS_PER_ARTICLE } from '../src/data/kb/coverage';
+import {
+  computeModuleCoverage, checkArticleIntegrity, articleBlockCount, MIN_BLOCKS_PER_ARTICLE,
+  findPlaceholderFields, articleTextStrings,
+} from '../src/data/kb/coverage';
 import { kbTerms, getTerm } from '../src/data/kb/glossary/terms';
 import { allDxTrees, getDxTree } from '../src/data/kb/diagnostics/trees';
-import { getBacklinks } from '../src/data/kb/backlinks';
+import { getBacklinks, resetBacklinkCache } from '../src/data/kb/backlinks';
+import { domainMatrixStatus, summarizeDomainMatrix, domainElements, MATRIX_CORNERS } from '../src/data/kb/domainMatrix';
+import { getSearchIndex } from '../src/data/kb/search/buildIndex';
 import { lessonsData } from '../src/data/lessonsData';
 import { bfPageRegistry } from '../src/data/betaflight/pageRegistry';
 import { roadmapData } from '../src/data/roadmapData';
@@ -85,6 +90,38 @@ console.log('\n[2] Article substance — no title-without-content');
   const thin = articles.filter(a => JSON.stringify(a.layers).length < 2500);
   if (thin.length) console.error('  thin articles:', thin.map(a => `${a.id} (${JSON.stringify(a.layers).length} chars)`));
   ok('every article carries substantial body text', thin.length === 0);
+}
+
+console.log('\n[2b] The placeholder detector itself is correct');
+{
+  // This detector had a real bug: matching «قريباً» as a substring flagged
+  // correct technical Arabic — «قراءة قريبة جداً من 5 فولت» means "close to",
+  // not "coming soon". A detector that cries wolf gets ignored, so its own
+  // behaviour is pinned here in both directions.
+  const sample = articles[0];
+  const fake = {
+    ...sample,
+    layers: { quick: [{ type: 'para' as const, text: 'قريباً' }] },
+    summaryAr: 'x',
+  };
+  ok('a field that is ONLY a placeholder is caught', findPlaceholderFields(fake).length > 0);
+
+  const legit = {
+    ...sample,
+    layers: {
+      quick: [
+        { type: 'para' as const, text: 'يجب أن تكون القراءة قريبة جداً من 5 فولت تحت الحمل.' },
+        { type: 'para' as const, text: 'ضع المكثف قريباً من نقاط البطارية بأقصر أسلاك ممكنة.' },
+      ],
+    },
+  };
+  ok('ordinary Arabic meaning "close to" is NOT flagged', findPlaceholderFields(legit).length === 0);
+
+  ok('lorem ipsum is caught anywhere in a field',
+    findPlaceholderFields({ ...sample, layers: { quick: [{ type: 'para', text: 'نص Lorem ipsum dolor هنا' }] } }).length > 0);
+
+  ok('every real article extracts a non-trivial amount of text',
+    articles.every(a => articleTextStrings(a).join(' ').length > 1500));
 }
 
 console.log('\n[3] Coverage matrix is honest');
@@ -256,6 +293,61 @@ console.log('\n[8] Backlinks — existing sections can reach the encyclopedia');
   const dxBacklinked = lessonsData.some(l => getBacklinks('lesson', l.id).trees.length > 0)
     || bfPageRegistry.some(e => getBacklinks('betaflight', e.id).trees.length > 0);
   ok('diagnostic trees surface on at least one existing section', dxBacklinked);
+
+  // The reverse index is cached; a stale cache would silently hide newly added
+  // cross-links from every lesson page, so its rebuild path is exercised.
+  const before = getBacklinks('lesson', 'lesson-tx-rx').articles.map(a => a.id);
+  resetBacklinkCache();
+  const after = getBacklinks('lesson', 'lesson-tx-rx').articles.map(a => a.id);
+  ok('backlinks survive a cache reset unchanged', JSON.stringify(before) === JSON.stringify(after));
+  ok('a target with no inbound links returns an empty result, not undefined',
+    getBacklinks('lesson', 'no-such-lesson').articles.length === 0);
+}
+
+console.log('\n[9] Domain matrix — status is derived, never claimed');
+{
+  const systems = new Set(getSearchIndex().map(d => d.system).filter((s): s is string => !!s));
+  for (const d of getSearchIndex()) if (d.software) systems.add(d.software);
+  const rows = domainMatrixStatus(systems);
+
+  ok(`the inventory covers the whole domain (${rows.length} elements)`, rows.length >= 25);
+  const ids = domainElements.map(e => e.id);
+  ok('no duplicate element ids', new Set(ids).size === ids.length);
+  ok('every element states why it is in scope', domainElements.every(e => e.whyAr.trim().length > 25));
+  ok('every element declares an area and a kind', domainElements.every(e => !!e.area && !!e.kind));
+
+  // The load-bearing property: a row can only report a corner as covered if the
+  // underlying data really provides it. Verified by cross-checking against the
+  // sources independently of domainMatrixStatus' own logic.
+  for (const r of rows) {
+    if (r.hasModule) {
+      ok(`${r.element.id}: hasModule is backed by a real module with articles`,
+        !!r.element.moduleId && !!getModule(r.element.moduleId) && r.articleCount > 0);
+    }
+    if (r.hasDiagnostics) {
+      ok(`${r.element.id}: hasDiagnostics is backed by real trees`,
+        allDxTrees.some(t => t.moduleId === r.element.moduleId));
+    }
+    if (r.hasGlossary) {
+      ok(`${r.element.id}: hasGlossary is backed by real terms`,
+        kbTerms.some(t => t.domain === r.element.glossaryDomain));
+    }
+  }
+
+  // And the inverse: an element with nothing authored must report zero, so the
+  // gap is visible rather than rounded away.
+  const untouched = rows.filter(r => !r.hasModule && !r.hasBuild && !r.hasSoftware);
+  for (const r of untouched) {
+    ok(`${r.element.id}: an unauthored element reports its gap honestly`, r.coveredCorners < MATRIX_CORNERS);
+  }
+
+  const summary = summarizeDomainMatrix(rows);
+  ok('summary counts add up to the total',
+    summary.complete + summary.partial + summary.notStarted === summary.totalElements);
+  ok('per-area totals add up to the overall total',
+    summary.byArea.reduce((n, a) => n + a.total, 0) === summary.totalElements);
+
+  console.log(`  → inventory: ${summary.complete} complete, ${summary.partial} partial, ${summary.notStarted} not started, of ${summary.totalElements}`);
 }
 
 console.log(`\n✅ testKbModel: ${passed} assertions passed\n`);

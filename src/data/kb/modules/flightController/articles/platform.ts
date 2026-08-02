@@ -200,7 +200,7 @@ export const fcUsbBootloader: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['diagnostics', 'failures', 'maintenance', 'configuration', 'testing', 'safety', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['bootloader', 'dfu', 'usb-driver'],
+  glossaryIds: ['bootloader', 'dfu', 'usb-driver', 'firmware'],
   relatedArticleIds: ['fc-firmware-targets', 'fc-failures'],
   links: [
     { kind: 'betaflight', targetId: 'firmware-flasher', label: 'Betaflight — محدّث الفيرموير', reason: 'الاستعادة تتم من هنا' },
@@ -380,7 +380,7 @@ export const fcFormFactors: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['types', 'comparison', 'compatibility', 'installation', 'maintenance', 'applications', 'beginner', 'intermediate', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['aio', 'stack', 'pdb'],
+  glossaryIds: ['aio', 'stack', 'pdb', 'esc'],
   relatedArticleIds: ['fc-selection', 'fc-mounting'],
   links: [
     { kind: 'assembly', targetId: 'stage-8', label: 'التجميع — مرحلة اختيار متحكم الطيران', reason: 'اختيار قطعة حقيقية بمواصفات موثّقة' },
@@ -533,7 +533,7 @@ export const fcPinout: KbArticle = {
   ],
   prerequisiteIds: ['fc-ports', 'fc-power'],
   coverage: ['wiring', 'installation', 'compatibility', 'protocols', 'power', 'testing', 'safety', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['pinout', 'uart', 'vbat', 'bec'],
+  glossaryIds: ['pinout', 'uart', 'vbat', 'bec', 'sbus'],
   relatedArticleIds: ['fc-ports', 'fc-power', 'fc-outputs'],
   links: [
     { kind: 'article', targetId: 'fc-ports', label: 'المنافذ ونواقل البيانات' },

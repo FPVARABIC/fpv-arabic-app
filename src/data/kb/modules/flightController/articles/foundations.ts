@@ -34,7 +34,7 @@ export const fcWhatIs: KbArticle = {
   ],
   prerequisiteIds: [],
   coverage: ['definition', 'principle', 'components', 'applications', 'beginner', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['fc', 'gyro', 'pid', 'mixer', 'esc'],
+  glossaryIds: ['fc', 'gyro', 'pid', 'mixer', 'esc', 'uart'],
   relatedArticleIds: ['fc-control-loop', 'fc-form-factors', 'fc-sensors'],
   links: [
     { kind: 'lesson', targetId: 'lesson-quadcopter-how-it-works', label: 'درس: كيف يعمل الكوادكابتر؟', reason: 'يشرح مسار الإشارة كاملاً من الجهاز إلى المحركات' },
@@ -170,12 +170,12 @@ export const fcWhatIs: KbArticle = {
     reference: [
       {
         type: 'keyvalue',
-        caption: 'الأسماء التي تقابل نفس القطعة',
+        caption: 'الأسماء التي تدل على القطعة نفسها',
         pairs: [
           { k: 'Flight Controller', v: 'الاسم الرسمي الكامل' },
           { k: 'FC', v: 'الاختصار الشائع في كل الوثائق والبرامج' },
           { k: 'متحكم الطيران', v: 'الترجمة العربية الدقيقة المستخدمة في هذا التطبيق' },
-          { k: 'فلايت كنترولر', v: 'النقحرة الشائعة في المجتمع العربي' },
+          { k: '«فلايت كنترولر»', v: 'النقحرة الشائعة في المجتمع العربي — يفهمها البحث في هذا التطبيق، لكن الشرح يستخدم الترجمة العربية' },
           { k: 'AIO', v: 'ليست اسماً بديلاً — بل لوحة تجمع FC وESC معاً (انظر مقال الأنواع)' },
           { k: 'PDB', v: 'ليست متحكم طيران — بل لوحة توزيع طاقة فقط، بلا معالج ولا حساسات' },
         ],
@@ -245,7 +245,7 @@ export const fcControlLoop: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['principle', 'components', 'performance', 'protocols', 'diagnostics', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['gyro', 'pid', 'mixer', 'dshot', 'loop-rate', 'rpm-filter'],
+  glossaryIds: ['gyro', 'pid', 'mixer', 'dshot', 'loop-rate', 'rpm-filter', 'esc'],
   relatedArticleIds: ['fc-what-is', 'fc-sensors', 'fc-mcu', 'fc-outputs'],
   links: [
     { kind: 'betaflight', targetId: 'pid-tuning', label: 'Betaflight — ضبط PID', reason: 'المرحلة الرابعة في الحلقة تُضبط هنا' },

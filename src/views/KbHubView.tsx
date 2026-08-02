@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import {
   Search, BookOpen, Stethoscope, Library, Cpu, ChevronLeft, Bookmark, CircleCheck, ScrollText,
-  ListChecks, TrendingUp,
+  ListChecks, TrendingUp, Grid3x3,
 } from 'lucide-react';
 import { allKbModules } from '../data/kb/registry';
 import { computeModuleCoverage } from '../data/kb/coverage';
@@ -40,6 +40,7 @@ export const KbHubView: React.FC = () => {
     { id: 'lessons', label: 'مسار المبتدئ', desc: '16 درساً تفاعلياً من الصفر حتى أول طيران', Icon: BookOpen, route: '/lessons' },
     { id: 'checklists', label: 'قوائم الفحص', desc: 'قبل الشراء وقبل الطيران', Icon: ListChecks, route: '/checklists' },
     { id: 'progress', label: 'تقدّمي', desc: 'ما أنجزته عبر كل أقسام التطبيق', Icon: TrendingUp, route: '/progress' },
+    { id: 'matrix', label: 'مصفوفة التغطية', desc: 'جرد كامل للمجال وما غُطّي منه فعلاً', Icon: Grid3x3, route: '/kb/matrix' },
   ];
 
   return (

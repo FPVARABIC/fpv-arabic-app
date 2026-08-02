@@ -117,7 +117,7 @@ const RAW_GROUPS: string[][] = [
   ['filter', 'filters', 'فلتر', 'فلاتر', 'مرشح'],
 ];
 
-export interface SynonymTable {
+interface SynonymTable {
   /** normalized token/phrase → canonical group id (index into `groups`). */
   lookup: Map<string, number>;
   /** group id → all normalized members. */
@@ -141,17 +141,7 @@ function buildTable(): SynonymTable {
   return { lookup, groups };
 }
 
-export const synonymTable: SynonymTable = buildTable();
-
-/**
- * Expands one normalized token (or multi-word phrase) into its full synonym
- * group. Returns `[token]` unchanged when the token is not in any group.
- */
-export function expandToken(normalizedToken: string): string[] {
-  const gid = synonymTable.lookup.get(normalizedToken);
-  if (gid === undefined) return [normalizedToken];
-  return synonymTable.groups[gid];
-}
+const synonymTable: SynonymTable = buildTable();
 
 /**
  * Expands a whole normalized query. Multi-word synonym phrases are detected
