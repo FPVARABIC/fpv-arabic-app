@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 
 import { computeFindings, parseStackSizes, countFindings, sortFindings } from '../src/data/project/verdicts';
 import { computeNextStep } from '../src/data/project/nextStep';
+import type { RcSetup } from '../src/data/project/rcSetup';
 import { buildCompatibilityReport } from '../src/components/Assembly/utils/buildReport';
 import { SEVERITY_ORDER, type ProjectSnapshot, type Finding } from '../src/data/project/types';
 import {
@@ -303,6 +304,135 @@ console.log('\n[9] The article knows the reader\'s parts — without inventing a
   ok('the panel is suppressed when there is nothing true to say',
     !hasProjectContext(projectPartsForModule(EMPTY, 'esc'), findingsForArticle(computeFindings(EMPTY), 'esc-ratings')));
   ok('…and shown when there is', hasProjectContext(projectPartsForModule(full, 'esc'), []));
+}
+
+console.log('\n[10] The control link — verdicts about facts no catalogue holds');
+{
+  const base = (rc: Partial<RcSetup>) => snap({ rcSetup: rc as RcSetup });
+
+  // Nothing recorded → nothing invented.
+  ok('an empty control-link setup produces no control-link findings',
+    computeFindings(snap({})).every(f => !f.id.startsWith('rc-')));
+
+  // Band mismatch is the one that can never be worked around.
+  const bandClash = computeFindings(base({ txBand: 'sub-ghz', rxBand: '2.4ghz' }));
+  const band = bandClash.find(f => f.id === 'rc-band-match');
+  assert.ok(band, 'expected a band finding');
+  ok('two different bands is a blocker, not a warning', band.severity === 'blocker');
+  ok('…and it says plainly that no setting can fix it', band.whyAr.includes('لن يحدث ربط'));
+  ok('…and its first action is to stop wasting time on binding', band.actionsAr[0].includes('أوقف'));
+
+  ok('matching bands are reported as verified rather than left silent',
+    computeFindings(base({ txBand: '2.4ghz', rxBand: '2.4ghz' }))
+      .find(f => f.id === 'rc-band-match')?.severity === 'ok');
+
+  // Same band, different system — the confusion this rule exists for.
+  const sysClash = computeFindings(base({ txBand: '2.4ghz', rxBand: '2.4ghz', txSystem: 'elrs', rxSystem: 'tracer' }));
+  const sys = sysClash.find(f => f.id === 'rc-system-match');
+  assert.ok(sys, 'expected a system finding');
+  ok('the same band with different systems is still a blocker', sys.severity === 'blocker');
+  ok('…and the reasoning names the exact confusion it resolves', sys.whyAr.includes('كلاهما 2.4'));
+
+  // A system on a band it is not known to support.
+  const oddBand = computeFindings(base({ txSystem: 'crossfire', txBand: '2.4ghz' }));
+  ok('a system recorded on a band we do not know it supports is flagged',
+    oddBand.some(f => f.id === 'rc-system-band-tx' && f.severity === 'warning'));
+  ok('…but it allows for a product we do not know, rather than calling the user wrong',
+    oddBand.find(f => f.id === 'rc-system-band-tx')?.missingAr.length === 1);
+
+  // Battery voltage straight to a receiver.
+  const vbat = computeFindings(base({ rxVoltage: 'fc-vbat' }));
+  const power = vbat.find(f => f.id === 'rc-rx-power');
+  assert.ok(power, 'expected a receiver power finding');
+  ok('feeding a receiver from battery voltage is a blocker', power.severity === 'blocker');
+  ok('…and the first action is to cut power, not to keep testing', power.actionsAr[0].includes('افصل'));
+  ok('…and it still points at the manual rather than asserting a limit', !!power.manualCheckAr);
+
+  ok('an unrecorded supply is reported as undecidable, not as fine',
+    computeFindings(base({ rxVoltage: 'unknown' })).find(f => f.id === 'rc-rx-power')?.severity === 'unknown');
+
+  // Hold-last failsafe — the flyaway.
+  const hold = computeFindings(base({ failsafeStrategy: 'hold-last' }));
+  const fs = hold.find(f => f.id === 'rc-failsafe-strategy');
+  assert.ok(fs, 'expected a failsafe finding');
+  ok('holding last values is a blocker', fs.severity === 'blocker');
+  ok('…and the reasoning explains the flyaway mechanism', fs.whyAr.includes('تختفي في الأفق'));
+  ok('…and it forbids flying before the behaviour is seen', fs.actionsAr.some(a => a.includes('لا تطر')));
+
+  ok('a disarm failsafe that was actually tested is reported as verified',
+    computeFindings(base({ failsafeStrategy: 'drop-disarm', failsafeTestedOn: '2026-08-01' }))
+      .find(f => f.id === 'rc-failsafe-strategy')?.severity === 'ok');
+  ok('an untested disarm failsafe still asks for the missing test',
+    (computeFindings(base({ failsafeStrategy: 'drop-disarm' }))
+      .find(f => f.id === 'rc-failsafe-strategy')?.missingAr.length ?? 0) > 0);
+
+  // Two devices on one port.
+  const clash = computeFindings(base({ uartIndex: 2, gpsUartIndex: 2 }));
+  const uart = clash.find(f => f.id === 'rc-uart-conflict');
+  assert.ok(uart, 'expected a UART finding');
+  ok('two devices on one UART is a blocker', uart.severity === 'blocker');
+  ok('…and the evidence names both claimants on that port',
+    uart.evidenceAr.some(e => e.includes('المستقبل') && e.includes('GPS')));
+  ok('distinct ports are reported as verified',
+    computeFindings(base({ uartIndex: 2, gpsUartIndex: 3 }))
+      .find(f => f.id === 'rc-uart-conflict')?.severity === 'ok');
+
+  // A port number the board does not have.
+  const tooHigh = computeFindings(snap({
+    flightController: flightControllers[0],
+    rcSetup: { uartIndex: 11 } as RcSetup,
+  }));
+  ok('a UART number beyond the board\'s port count is a blocker',
+    tooHigh.find(f => f.id === 'rc-uart-exists')?.severity === 'blocker');
+
+  // Inversion is never asserted from a port number.
+  const sbus = computeFindings(base({ serialProtocol: 'sbus', uartIndex: 3 }));
+  const inv = sbus.find(f => f.id === 'rc-inversion-support');
+  assert.ok(inv, 'expected an inversion finding');
+  ok('inversion support is declared undecidable, never assumed', inv.severity === 'unknown');
+  ok('…and it is marked as needing the board schematic', inv.confidence === 'manual-required');
+
+  ok('a legacy protocol is flagged without being forbidden',
+    computeFindings(base({ serialProtocol: 'ppm' })).find(f => f.id === 'rc-protocol-choice')?.severity === 'warning');
+  ok('a modern protocol is reported as suitable',
+    computeFindings(base({ serialProtocol: 'crsf' })).find(f => f.id === 'rc-protocol-choice')?.severity === 'ok');
+
+  // Antenna placement.
+  ok('an antenna inside the frame is flagged',
+    computeFindings(base({ antennaPlacement: 'inside-frame' }))
+      .find(f => f.id === 'rc-antenna-placement')?.severity === 'warning');
+  ok('the best placement is reported as verified',
+    computeFindings(base({ antennaPlacement: 'outside-perpendicular' }))
+      .find(f => f.id === 'rc-antenna-placement')?.severity === 'ok');
+
+  // The engine-wide invariants must hold for the control-link rules too.
+  const every = [
+    ...computeFindings(base({ txBand: 'sub-ghz', rxBand: '2.4ghz', txSystem: 'elrs', rxSystem: 'crossfire' })),
+    ...computeFindings(base({
+      rxVoltage: 'fc-vbat', failsafeStrategy: 'hold-last', antennaPlacement: 'inside-frame',
+      serialProtocol: 'sbus', uartIndex: 2, gpsUartIndex: 2, modelMatch: false,
+      txFirmware: '3.4.3', rxFirmware: '3.3.0',
+      txRegulatoryDomain: 'FCC', rxRegulatoryDomain: 'EU CE',
+      moduleKind: 'external',
+    })),
+  ].filter(f => f.id.startsWith('rc-'));
+  ok(`the control-link rules produce a real body of findings (${every.length})`, every.length > 12);
+  ok('every control-link finding states reasoning distinct from its claim',
+    every.every(f => f.whyAr.length > 60 && f.whyAr !== f.claimAr));
+  ok('every control-link blocker carries an action', every.filter(f => f.severity === 'blocker').every(f => f.actionsAr.length > 0));
+  ok('every control-link unknown names its missing data', every.filter(f => f.severity === 'unknown').every(f => f.missingAr.length > 0));
+  ok('no verified control-link finding creates busywork', every.filter(f => f.severity === 'ok').every(f => f.actionsAr.length === 0));
+  ok('every control-link finding rests on stated evidence', every.every(f => f.evidenceAr.length > 0));
+
+  const brokenRc = every.flatMap(f => f.links)
+    .filter(l => !resolveLinkRoute({ kind: l.kind, targetId: l.targetId, label: l.label }));
+  if (brokenRc.length) console.error('  broken rc links:', brokenRc.map(l => `${l.kind}:${l.targetId}`));
+  ok('every link on every control-link finding resolves', brokenRc.length === 0);
+
+  // Blockers must still win the next step, whatever produced them.
+  const midBuild = snap({ stageIndex: 3, rcSetup: { failsafeStrategy: 'hold-last' } as RcSetup });
+  ok('a control-link blocker stops the build just as a part blocker does',
+    computeNextStep(midBuild, computeFindings(midBuild)).isBlocked === true);
 }
 
 console.log(`\n✅ testProject: ${passed} assertions passed\n`);

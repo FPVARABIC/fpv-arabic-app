@@ -38,6 +38,7 @@ import {
   validateEscBattery,
   validateFramePropeller,
 } from '../assembly/compatibility/validators';
+import { computeRcFindings } from './rcVerdicts';
 import type { ProjectSnapshot, Finding } from './types';
 import { SEVERITY_ORDER } from './types';
 
@@ -405,6 +406,12 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
       });
     }
   }
+
+  // The control-link rules live in their own file because they reason about
+  // per-build CONFIGURATION rather than about catalogue specs — but they are
+  // the same engine, sorted into the same single ordering, so a screen can
+  // never show one set without the other.
+  f.push(...computeRcFindings(p));
 
   return sortFindings(f);
 }

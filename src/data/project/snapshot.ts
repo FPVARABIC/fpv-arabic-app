@@ -54,6 +54,7 @@ export function readProjectSnapshot(): ProjectSnapshot {
     receiver: pick<Receiver>(parts, 'receivers'),
     videoUnit: pick<VideoUnit>(parts, 'videoUnits'),
     gps: pick<Gps>(parts, 'gps'),
+    rcSetup: restored.rcSetup,
     parts,
   };
 }

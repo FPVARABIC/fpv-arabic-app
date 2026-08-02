@@ -326,7 +326,64 @@ async function main() {
       await page.close();
     }
 
-    console.log('\n[6] The tab reaches it from anywhere');
+    console.log('\n[6] The control-link setup is recorded, and it changes the verdicts');
+    {
+      const page = await newPage(browser, consoleErrors);
+      await seed(page, {
+        stageIndex: FINAL_REPORT_INDEX,
+        partIds: {
+          motors: CONFLICT.motor.id, batteries: AGREEING_BATTERY!.id, escs: escs[0].id,
+          frames: frames[0].id, propellers: propellers[0].id, flightControllers: flightControllers[0].id,
+        },
+      });
+      await page.goto(`${BASE}/project`, { waitUntil: 'networkidle' });
+      await page.locator('[data-testid="rc-setup-card"]').waitFor({ timeout: 10000 });
+
+      ok('the workspace offers a place to record the control link',
+        await page.locator('[data-testid="rc-setup-card"]').count() === 1);
+      ok('nothing is judged about a link the user has not described yet',
+        await page.locator('[data-testid="project-finding-rc-band-match"]').count() === 0);
+
+      // Record a genuinely impossible link: two different bands.
+      await page.locator('[data-testid="rc-tx-band"]').selectOption('sub-ghz');
+      await page.locator('[data-testid="rc-rx-band"]').selectOption('2.4ghz');
+      await page.locator('[data-testid="rc-failsafe"]').selectOption('hold-last');
+      await page.locator('[data-testid="rc-setup-save"]').click();
+
+      const band = page.locator('[data-testid="project-finding-rc-band-match"]');
+      await band.waitFor({ timeout: 10000 });
+      ok('saving the setup immediately produces a verdict about it',
+        await band.getAttribute('data-severity') === 'blocker');
+      ok('…and the flyaway failsafe is caught in the same pass',
+        await page.locator('[data-testid="project-finding-rc-failsafe-strategy"]')
+          .getAttribute('data-severity') === 'blocker');
+      ok('…and the next step now stops the user',
+        await page.locator('[data-testid="project-next-step"]').getAttribute('data-blocked') === 'true');
+
+      const expected = expectedFindings({
+        rcSetup: { txBand: 'sub-ghz', rxBand: '2.4ghz', failsafeStrategy: 'hold-last' },
+      }).find(f => f.id === 'rc-band-match')!;
+      await openFinding(band);
+      const shown = (await band.textContent() ?? '').replace(/\s+/gu, ' ');
+      ok('the rendered reasoning is the engine\'s, not a screen\'s copy of it',
+        shown.includes(expected.whyAr.replace(/\s+/gu, ' ')));
+
+      // It must survive a reload — this is stored, not screen state.
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('[data-testid="rc-setup-card"]').waitFor({ timeout: 10000 });
+      ok('the recorded setup survives a reload',
+        await page.locator('[data-testid="project-finding-rc-band-match"]').count() === 1);
+
+      const stored = await page.evaluate(k => localStorage.getItem(k), STORAGE_KEY);
+      const parsedStore = JSON.parse(stored ?? '{}');
+      ok('…because it was written into the one project store, not a second one',
+        parsedStore?.v === 2 && parsedStore?.data?.rcSetup?.txBand === 'sub-ghz');
+      ok('…and the parts the build flow chose are still there beside it',
+        parsedStore?.data?.partIds?.motors === CONFLICT.motor.id);
+      await page.close();
+    }
+
+    console.log('\n[7] The tab reaches it from anywhere');
     {
       const page = await newPage(browser, consoleErrors);
       await page.goto(`${BASE}/lessons`, { waitUntil: 'networkidle' });

@@ -538,7 +538,11 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('src/platform/') &&
     !f.startsWith('scripts/testPlatformCore') &&
     f !== 'scripts/testAssemblyPersistence.ts' &&
-    f !== 'scripts/testFrameSizeMatch.ts',
+    f !== 'scripts/testFrameSizeMatch.ts' &&
+    // The control-link system: per-build radio configuration recorded in the
+    // project (schema 2), its verdict rules, and the workspace editor for it.
+    // No Assembly business logic — the build flow still owns part selection.
+    !f.startsWith('src/components/project/'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

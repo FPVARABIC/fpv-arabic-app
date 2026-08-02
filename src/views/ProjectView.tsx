@@ -15,6 +15,7 @@ import {
 } from '../data/project/types';
 import { resolveLinkRoute } from '../data/kb/registry';
 import { RichText } from '../components/kb/Term';
+import { RcSetupCard } from '../components/project/RcSetupCard';
 
 const SEV: Record<FindingSeverity, { bg: string; fg: string; border: string; Icon: typeof CircleAlert }> = {
   blocker: { bg: 'rgba(239,68,68,0.10)', fg: '#b91c1c', border: 'rgba(239,68,68,0.30)', Icon: CircleAlert },
@@ -38,7 +39,11 @@ export const ProjectView: React.FC = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState<string | null>(null);
 
-  const project = useMemo(() => readProjectSnapshot(), []);
+  // Held in state rather than memoised on mount: saving the control-link setup
+  // changes the store underneath us, and the verdicts have to be recomputed
+  // from what was actually written, not from what was read when the screen
+  // opened.
+  const [project, setProject] = useState(readProjectSnapshot);
   const findings = useMemo(() => computeFindings(project), [project]);
   const counts = useMemo(() => countFindings(findings), [findings]);
   const next = useMemo(() => computeNextStep(project, findings), [project, findings]);
@@ -128,6 +133,9 @@ export const ProjectView: React.FC = () => {
                 </div>
               ))}
             </Section>
+
+            {/* ── The facts no catalogue holds ───────────────────────────── */}
+            <RcSetupCard initial={project.rcSetup} onSaved={() => setProject(readProjectSnapshot())} />
 
             {/* ── The verdicts ────────────────────────────────────────────── */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, marginBottom: 12 }}>

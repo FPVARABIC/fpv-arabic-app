@@ -45,6 +45,7 @@ import { batteries } from '../assembly/parts/batteries';
 import { tools } from '../assembly/parts/tools';
 import type { BasePart, Frame } from '../assembly/types';
 import { frameMatchesSize, getAvailableSizeOptions } from '../assembly/frameSizeMatch';
+import { validateRcSetup, type RcSetup } from './rcSetup';
 import {
   load as loadStore, save as saveStore, clear as clearStore,
   exportStore, importStore,
@@ -61,7 +62,7 @@ export const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
 };
 
 export const ASSEMBLY_STORAGE_KEY = 'fpv-assembly-project-v1';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 interface PersistedAssemblyProject {
   version: number;
@@ -70,6 +71,12 @@ interface PersistedAssemblyProject {
   sizeInch?: number;
   batteryVoltage?: number;
   partIds: Record<string, string>;
+  /**
+   * Per-build radio configuration (schema 2). Optional because a project
+   * created before the control-link system existed simply has none, and
+   * because a half-filled setup is more useful than a forced one.
+   */
+  rcSetup?: RcSetup;
 }
 
 export interface RestoredAssemblyProject {
@@ -78,6 +85,7 @@ export interface RestoredAssemblyProject {
   sizeInch?: number;
   batteryVoltage?: number;
   parts: Record<string, BasePart>;
+  rcSetup?: RcSetup;
 }
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -97,8 +105,20 @@ const PROJECT_STORE: StoreDefinition<PersistedAssemblyProject> = {
     // was saved bare, with its version field inside it rather than in an
     // envelope. The shape is otherwise identical, so it carries forward as-is
     // and the validator below is what decides whether it is actually usable.
-    if (fromVersion === 0) return data;
-    return null;
+    if (typeof data !== 'object' || data === null) return null;
+
+    // Version 0 means the value predates the storage envelope, so its real
+    // schema number is the `version` field INSIDE the payload. Reading it
+    // rather than overwriting it matters: a payload claiming an unknown future
+    // version must still be refused, not silently relabelled as current.
+    const declared = fromVersion === 0
+      ? (data as Record<string, unknown>).version
+      : fromVersion;
+    if (declared !== 1 && declared !== SCHEMA_VERSION) return null;
+
+    // Schema 2 only ADDED an optional rcSetup section, so a version-1 project
+    // is already valid — it simply has no control-link configuration yet.
+    return { ...(data as Record<string, unknown>), version: SCHEMA_VERSION };
   },
 };
 
@@ -111,6 +131,7 @@ export function saveAssemblyProject(project: {
   sizeInch?: number;
   batteryVoltage?: number;
   parts: Record<string, BasePart>;
+  rcSetup?: RcSetup;
 }): void {
   const payload: PersistedAssemblyProject = {
     version: SCHEMA_VERSION,
@@ -124,6 +145,7 @@ export function saveAssemblyProject(project: {
     partIds: Object.fromEntries(
       Object.entries(project.parts).map(([category, part]) => [category, part.id]),
     ),
+    ...(project.rcSetup ? { rcSetup: project.rcSetup } : {}),
   };
   saveStore(PROJECT_STORE, payload);
 }
@@ -189,6 +211,8 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
     if (!part) return null; // stale/unknown part id — the catalog no longer contains it
   }
 
+  const rcSetup = validateRcSetup(raw.rcSetup);
+
   return {
     version: SCHEMA_VERSION,
     droneTypeId,
@@ -196,6 +220,7 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
     sizeInch,
     batteryVoltage,
     partIds: partIds as Record<string, string>,
+    ...(rcSetup ? { rcSetup } : {}),
   };
 }
 
@@ -204,7 +229,7 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
  * single-field invalidations that mirror the build flow's own live behaviour.
  */
 function rehydrateProject(p: PersistedAssemblyProject): RestoredAssemblyProject {
-  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds } = p;
+  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds, rcSetup } = p;
 
   const parts: Record<string, BasePart> = {};
   for (const [category, id] of Object.entries(partIds)) {
@@ -241,5 +266,23 @@ function rehydrateProject(p: PersistedAssemblyProject): RestoredAssemblyProject 
     ? sizeInch
     : undefined;
 
-  return { droneTypeId, stageIndex, sizeInch: validSizeInch, batteryVoltage, parts };
+  return { droneTypeId, stageIndex, sizeInch: validSizeInch, batteryVoltage, parts, rcSetup };
+}
+
+/**
+ * Records the control-link configuration without touching the rest of the
+ * project.
+ *
+ * A separate entry point rather than a field on `saveAssemblyProject`, because
+ * the two are edited from different places at different times: the build flow
+ * owns part selection, and the workspace owns the setup the user discovers
+ * while wiring and flashing. Merging them into one writer would mean the
+ * workspace had to know the whole build to save one field.
+ */
+export function saveRcSetup(rcSetup: RcSetup): RestoredAssemblyProject | null {
+  const current = loadStore(PROJECT_STORE);
+  if (!current) return null;
+  saveStore(PROJECT_STORE, { ...current, rcSetup });
+  const reloaded = loadStore(PROJECT_STORE);
+  return reloaded ? rehydrateProject(reloaded) : null;
 }

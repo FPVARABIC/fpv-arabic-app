@@ -28,6 +28,7 @@
  * must be consulted instead of us.
  */
 
+import type { RcSetup } from './rcSetup';
 import type {
   BasePart, Frame, Motor, Esc, Battery, Propeller,
   FlightController, Receiver, VideoUnit, Gps,
@@ -58,6 +59,11 @@ export interface ProjectSnapshot {
   gps?: Gps;
   /** Everything selected, including categories without a dedicated field. */
   parts: Record<string, BasePart>;
+  /**
+   * Per-build control-link configuration. Not derivable from the catalogue —
+   * band, firmware, wiring and failsafe posture are facts about THIS build.
+   */
+  rcSetup?: RcSetup;
 }
 
 /**
