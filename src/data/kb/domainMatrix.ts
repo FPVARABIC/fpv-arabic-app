@@ -104,7 +104,7 @@ export const domainElements: DomainElement[] = [
 
   // ── Electrical & power ────────────────────────────────────────────────────
   { id: 'flight-controller', area: 'electrical', kind: 'system', titleAr: 'متحكم الطيران', titleEn: 'Flight Controller', whyAr: 'المنظومة التي تربط كل شيء وتنفّذ حلقة التحكم.', moduleId: 'flight-controller', assemblyCategory: 'flightControllers', glossaryDomain: 'flight-controller', betaflightPageIds: ['setup', 'ports', 'configuration', 'sensors'], priority: 1 },
-  { id: 'power-battery', area: 'electrical', kind: 'system', titleAr: 'البطاريات وأنظمة الطاقة', titleEn: 'Batteries and power systems', whyAr: 'مصدر الطاقة، وأكثر مصادر الخطر والفشل شيوعاً.', assemblyCategory: 'batteries', glossaryDomain: 'power-battery', betaflightPageIds: ['power'], priority: 1 },
+  { id: 'power-battery', area: 'electrical', kind: 'system', titleAr: 'البطاريات وأنظمة الطاقة', titleEn: 'Batteries and power systems', whyAr: 'مصدر الطاقة، وأكثر مصادر الخطر والفشل شيوعاً.', moduleId: 'power-battery', assemblyCategory: 'batteries', glossaryDomain: 'power-battery', betaflightPageIds: ['power'], priority: 1 },
   { id: 'electrical-basics', area: 'electrical', kind: 'discipline', titleAr: 'الكهرباء والإلكترونيات', titleEn: 'Electricity and electronics', whyAr: 'الجهد والتيار والأرضي والقصر — أساس كل توصيل وكل عطل كهربائي.', glossaryDomain: 'electrical', priority: 2 },
   { id: 'power-distribution', area: 'electrical', kind: 'component', titleAr: 'توزيع الطاقة والمكثفات والمنظّمات', titleEn: 'Power distribution, capacitors, regulators', whyAr: 'ما يحمي الإلكترونيات من ضجيج التيار العالي وقفزات الجهد.', assemblyCategory: 'capacitors', priority: 2 },
 

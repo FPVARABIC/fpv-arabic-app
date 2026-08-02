@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import {
   Search, BookOpen, Stethoscope, Library, Cpu, ChevronLeft, Bookmark, CircleCheck, ScrollText,
-  ListChecks, TrendingUp, Grid3x3, Fan, Wind, CircuitBoard,
+  ListChecks, TrendingUp, Grid3x3, Fan, Wind, CircuitBoard, BatteryCharging,
 } from 'lucide-react';
 import { allKbModules } from '../data/kb/registry';
 import { computeModuleCoverage } from '../data/kb/coverage';
@@ -15,7 +15,7 @@ import { useKbProgress } from '../hooks/useKbProgress';
 import { KB_LEVEL_LABEL_AR } from '../data/kb/types';
 import { getArticle } from '../data/kb/registry';
 
-const MODULE_ICONS: Record<string, typeof Cpu> = { Cpu, Fan, Wind, CircuitBoard };
+const MODULE_ICONS: Record<string, typeof Cpu> = { Cpu, Fan, Wind, CircuitBoard, BatteryCharging };
 
 /**
  * Encyclopedia hub — the entry point for BOTH modes the spec requires:

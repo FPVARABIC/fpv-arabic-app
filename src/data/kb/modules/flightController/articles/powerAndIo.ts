@@ -42,7 +42,7 @@ export const fcPower: KbArticle = {
   ],
   prerequisiteIds: ['fc-what-is'],
   coverage: ['power', 'components', 'wiring', 'compatibility', 'installation', 'testing', 'safety', 'failures', 'diagnostics', 'configuration', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['vbat', 'bec', 'current-sensor', 'adc', 'capacitor', 'voltage-sag', 'smoke-stopper'],
+  glossaryIds: ['vbat', 'bec', 'current-sensor', 'adc', 'capacitor', 'voltage-sag', 'smoke-stopper', 'lipo'],
   relatedArticleIds: ['fc-outputs', 'fc-failures', 'fc-first-setup'],
   links: [
     { kind: 'betaflight', targetId: 'power', label: 'Betaflight — الطاقة والبطارية', reason: 'معايرة قراءتي الجهد والتيار' },
