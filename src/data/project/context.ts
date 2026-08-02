@@ -23,6 +23,11 @@
  */
 
 import type { BasePart } from '../assembly/types';
+import {
+  RC_BAND_LABEL_AR, RC_SYSTEM_LABEL_AR, RC_PROTOCOL_LABEL_AR, RC_POWER_LABEL_AR,
+  RC_ANTENNA_LABEL_AR, RC_FAILSAFE_LABEL_AR, RC_MODULE_LABEL_AR,
+  type RcSetup,
+} from './rcSetup';
 import type { Finding, ProjectSnapshot } from './types';
 
 /** A part slot on the snapshot, with the label the user sees for it. */
@@ -99,4 +104,136 @@ export function findingsForArticle(findings: Finding[], articleId: string): Find
 /** True when there is genuinely something project-specific to show. */
 export function hasProjectContext(parts: ProjectPartRef[], findings: Finding[]): boolean {
   return parts.length > 0 || findings.length > 0;
+}
+
+// ── The software centre, applied to the reader's own build ───────────────────
+
+/**
+ * Which recorded control-link facts each Betaflight page is actually about.
+ *
+ * A page a user opens while configuring their aircraft should show what THEY
+ * recorded, not a generic description. The mapping is declared rather than
+ * inferred because "which settings does this screen own" is an editorial
+ * judgement — and a wrong inference here would show someone their GPS port on
+ * the failsafe page, which is worse than showing nothing.
+ *
+ * Pages absent from this map show no panel at all. That is deliberate: the PID
+ * tuning screen has nothing to say about a receiver, and a panel that appears
+ * everywhere stops being read anywhere.
+ */
+export const BF_PAGE_RC_FIELDS: Record<string, (keyof RcSetup)[]> = {
+  ports: ['uartIndex', 'gpsUartIndex', 'videoUartIndex', 'serialProtocol'],
+  receiver: ['serialProtocol', 'rxModel', 'rxSystem', 'txSystem', 'modelMatch', 'packetRateHz'],
+  failsafe: ['failsafeStrategy', 'failsafeTestedOn'],
+  gps: ['gpsUartIndex'],
+  vtx: ['videoUartIndex'],
+};
+
+/** Human labels for the recorded values, so a page can render them directly. */
+export interface RcFactRef {
+  field: keyof RcSetup;
+  labelAr: string;
+  valueAr: string;
+}
+
+const RC_FIELD_LABEL_AR: Partial<Record<keyof RcSetup, string>> = {
+  radioModel: 'جهاز التحكم',
+  moduleKind: 'نوع الوحدة',
+  txSystem: 'النظام على جهة الإرسال',
+  txBand: 'النطاق على جهة الإرسال',
+  txFirmware: 'إصدار وحدة الإرسال',
+  txRegulatoryDomain: 'النطاق التنظيمي للإرسال',
+  rxModel: 'المستقبل',
+  rxSystem: 'النظام على المستقبل',
+  rxBand: 'النطاق على المستقبل',
+  rxFirmware: 'إصدار المستقبل',
+  rxTarget: 'الـTarget',
+  rxRegulatoryDomain: 'النطاق التنظيمي للمستقبل',
+  rxVoltage: 'تغذية المستقبل',
+  antennaCount: 'عدد الهوائيات',
+  antennaPlacement: 'وضع الهوائي',
+  trueDiversity: 'تنويع حقيقي',
+  serialProtocol: 'البروتوكول التسلسلي',
+  uartIndex: 'منفذ المستقبل',
+  gpsUartIndex: 'منفذ الـGPS',
+  videoUartIndex: 'منفذ الفيديو',
+  packetRateHz: 'معدل الرزم',
+  telemetryRatio: 'نسبة التليمتري',
+  dynamicPower: 'قدرة ديناميكية',
+  modelMatch: 'مطابقة النموذج',
+  failsafeStrategy: 'سلوك فقد الإشارة',
+  failsafeTestedOn: 'آخر اختبار لفقد الإشارة',
+  rangeTestedOn: 'آخر اختبار مدى',
+};
+
+/** Renders one recorded value into Arabic, using the closed-set labels. */
+function rcValueAr(field: keyof RcSetup, rc: RcSetup): string | undefined {
+  const v = rc[field];
+  if (v === undefined || v === '') return undefined;
+  switch (field) {
+    case 'txBand': case 'rxBand': return RC_BAND_LABEL_AR[v as keyof typeof RC_BAND_LABEL_AR];
+    case 'txSystem': case 'rxSystem': return RC_SYSTEM_LABEL_AR[v as keyof typeof RC_SYSTEM_LABEL_AR];
+    case 'moduleKind': return RC_MODULE_LABEL_AR[v as keyof typeof RC_MODULE_LABEL_AR];
+    case 'serialProtocol': return RC_PROTOCOL_LABEL_AR[v as keyof typeof RC_PROTOCOL_LABEL_AR];
+    case 'rxVoltage': return RC_POWER_LABEL_AR[v as keyof typeof RC_POWER_LABEL_AR];
+    case 'antennaPlacement': return RC_ANTENNA_LABEL_AR[v as keyof typeof RC_ANTENNA_LABEL_AR];
+    case 'failsafeStrategy': return RC_FAILSAFE_LABEL_AR[v as keyof typeof RC_FAILSAFE_LABEL_AR];
+    case 'uartIndex': case 'gpsUartIndex': case 'videoUartIndex': return `UART ${v}`;
+    case 'trueDiversity': case 'dynamicPower': case 'modelMatch': return v ? 'نعم' : 'لا';
+    default: return String(v);
+  }
+}
+
+/**
+ * The recorded facts relevant to a given set of fields, skipping anything the
+ * user has not filled in. An absent value produces no row rather than an empty
+ * one — a list of blanks teaches nothing and reads as a broken screen.
+ */
+export function rcFactsFor(p: ProjectSnapshot, fields: (keyof RcSetup)[]): RcFactRef[] {
+  const rc = p.rcSetup;
+  if (!p.exists || !rc) return [];
+  const out: RcFactRef[] = [];
+  for (const field of fields) {
+    const valueAr = rcValueAr(field, rc);
+    const labelAr = RC_FIELD_LABEL_AR[field];
+    if (valueAr && labelAr) out.push({ field, labelAr, valueAr });
+  }
+  return out;
+}
+
+/** The recorded facts a specific Betaflight page is about. */
+export function rcFactsForBetaflightPage(p: ProjectSnapshot, pageId: string): RcFactRef[] {
+  return rcFactsFor(p, BF_PAGE_RC_FIELDS[pageId] ?? []);
+}
+
+/**
+ * The findings that named this Betaflight page as where to act.
+ *
+ * The mirror of `findingsForArticle`: the relationship is asserted by the
+ * verdict engine's own links, so a page can never claim a finding that did not
+ * point at it.
+ */
+export function findingsForBetaflightPage(findings: Finding[], pageId: string): Finding[] {
+  return findings.filter(f =>
+    f.links.some(l => l.kind === 'betaflight' && l.targetId === pageId));
+}
+
+/**
+ * The control-link facts worth showing beside a knowledge-base article.
+ *
+ * Keyed by module rather than by article: every article in the control-link
+ * module benefits from knowing the reader's band, system and protocol, and
+ * keying it per-article would mean a new mapping entry for every article
+ * written — exactly the manual upkeep this design exists to avoid.
+ */
+export const MODULE_RC_FIELDS: Record<string, (keyof RcSetup)[]> = {
+  'rc-link': [
+    'txSystem', 'txBand', 'rxSystem', 'rxBand', 'rxTarget',
+    'txFirmware', 'rxFirmware', 'serialProtocol', 'uartIndex',
+    'antennaPlacement', 'failsafeStrategy',
+  ],
+};
+
+export function rcFactsForModule(p: ProjectSnapshot, moduleId: string): RcFactRef[] {
+  return rcFactsFor(p, MODULE_RC_FIELDS[moduleId] ?? []);
 }

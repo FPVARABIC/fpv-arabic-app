@@ -15,7 +15,7 @@
  * re-linked into navigation; these trees are the deeper layer on top.
  */
 
-import type { KbLink, KbSource } from '../types';
+import type { KbBotMeta, KbLink, KbSource } from '../types';
 
 export type DxRisk = 'low' | 'medium' | 'high' | 'critical';
 
@@ -96,4 +96,10 @@ export interface DxTree {
   links: KbLink[];
   sources: KbSource[];
   lastReviewed: string;
+  /**
+   * Retrieval metadata. A diagnostic tree is the entry a symptom-shaped question
+   * should reach, so its `symptomsAr` are the phrasings people actually type —
+   * «الدرون ينقلب», «ما في اتصال» — not a restatement of the title.
+   */
+  bot?: KbBotMeta;
 }

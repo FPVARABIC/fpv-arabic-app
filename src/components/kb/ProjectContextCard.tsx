@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Wrench, ChevronLeft } from 'lucide-react';
 import { readProjectSnapshot } from '../../data/project/snapshot';
 import { computeFindings } from '../../data/project/verdicts';
-import { projectPartsForModule, findingsForArticle, hasProjectContext } from '../../data/project/context';
+import {
+  projectPartsForModule, findingsForArticle, hasProjectContext, rcFactsForModule,
+} from '../../data/project/context';
 import { SEVERITY_LABEL_AR, type FindingSeverity } from '../../data/project/types';
 import { RichText } from './Term';
 
@@ -33,8 +35,13 @@ export const ProjectContextCard: React.FC<{ moduleId: string; articleId: string 
     () => findingsForArticle(computeFindings(project), articleId),
     [project, articleId],
   );
+  // Facts the reader recorded about this system that no catalogue holds — the
+  // band they actually run, the firmware they actually flashed. Shown here so
+  // an article about ExpressLRS settings is read against the reader's own
+  // settings rather than against an imagined default.
+  const facts = useMemo(() => rcFactsForModule(project, moduleId), [project, moduleId]);
 
-  if (!hasProjectContext(parts, findings)) return null;
+  if (!hasProjectContext(parts, findings) && facts.length === 0) return null;
 
   return (
     <div
@@ -50,7 +57,7 @@ export const ProjectContextCard: React.FC<{ moduleId: string; articleId: string 
       </div>
 
       {parts.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: findings.length ? 10 : 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: (findings.length || facts.length) ? 10 : 0 }}>
           {parts.map(r => (
             <div
               key={r.part.id}
@@ -61,6 +68,29 @@ export const ProjectContextCard: React.FC<{ moduleId: string; articleId: string 
               <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', flex: 1 }}>
                 {r.part.nameAr}
               </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {facts.length > 0 && (
+        <div
+          data-testid="kb-context-rc-facts"
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 5,
+            marginBottom: findings.length ? 10 : 0,
+            paddingTop: parts.length ? 8 : 0,
+            borderTop: parts.length ? '1px solid rgba(15,23,42,0.06)' : undefined,
+          }}
+        >
+          {facts.map(f => (
+            <div
+              key={f.field}
+              data-testid={`kb-context-rc-${f.field}`}
+              style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}
+            >
+              <span style={{ fontSize: 11, color: '#64748b', minWidth: 108 }}>{f.labelAr}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a', flex: 1 }}>{f.valueAr}</span>
             </div>
           ))}
         </div>

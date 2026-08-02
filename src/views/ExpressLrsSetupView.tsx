@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check, RotateCcw, Settings2 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
@@ -10,11 +10,29 @@ import { setupSteps, TOTAL_SETUP_STEPS } from '../data/expresslrs/setupSteps';
 
 export const ExpressLrsSetupView: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const progress = useExpressLrsSetupProgress();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const stepTopRef = useRef<HTMLDivElement>(null);
 
   const currentIndex = Math.max(0, setupSteps.findIndex(s => s.id === progress.currentStepId));
+
+  // Deep link: `?step=<id>` opens that exact step — the same reason the
+  // troubleshooting screen accepts `?issue=`. A destination that can only say
+  // "open the setup guide" is not an answer when the user asked how to flash a
+  // receiver. An unknown id is ignored so a stale shared link still lands
+  // somewhere usable.
+  const requestedStep = searchParams.get('step');
+  useEffect(() => {
+    if (!requestedStep) return;
+    if (setupSteps.some(s => s.id === requestedStep)) {
+      if (progress.currentStepId !== requestedStep) progress.goToStep(requestedStep);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('step');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedStep]);
   const currentStep = setupSteps[currentIndex] ?? setupSteps[0];
   const prevStep = currentIndex > 0 ? setupSteps[currentIndex - 1] : null;
   const nextStep = currentIndex < setupSteps.length - 1 ? setupSteps[currentIndex + 1] : null;

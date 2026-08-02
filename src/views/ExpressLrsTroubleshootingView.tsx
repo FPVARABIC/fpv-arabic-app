@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, RotateCcw } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
@@ -11,6 +11,7 @@ const APPLICABILITY_LABEL: Record<string, string> = { uart: 'UART', spi: 'SPI' }
 
 export const ExpressLrsTroubleshootingView: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const progress = useExpressLrsTroubleshootingProgress();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const issueTopRef = useRef<HTMLDivElement>(null);
@@ -18,6 +19,28 @@ export const ExpressLrsTroubleshootingView: React.FC = () => {
   const currentIssue = progress.currentIssueId
     ? troubleshootingIssues.find(i => i.id === progress.currentIssueId) ?? null
     : null;
+
+  // Deep link: `?issue=<id>` opens that exact issue.
+  //
+  // Without this, every link into this screen — from search, from a diagnostic
+  // tree, from an article, and later from the bot — could only say "open the
+  // troubleshooting page", leaving the user to find their own symptom among 33.
+  // An unknown id is ignored rather than erroring: a stale shared link should
+  // land on the list, not on a broken screen. The parameter is consumed once so
+  // that navigating away from the issue afterwards is not undone by a reload.
+  const requestedIssue = searchParams.get('issue');
+  useEffect(() => {
+    if (!requestedIssue) return;
+    if (troubleshootingIssues.some(i => i.id === requestedIssue)) {
+      if (progress.currentIssueId !== requestedIssue) progress.goToIssue(requestedIssue);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('issue');
+    setSearchParams(next, { replace: true });
+    // `progress` is recreated each render by its hook; depending on it here
+    // would re-run this effect forever. The requested id is the only real input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedIssue]);
 
   // Keyed only to the active issue's identity — switching issues always
   // opens the new one at its own top. Changing a check's outcome inside the

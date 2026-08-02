@@ -268,6 +268,95 @@ export interface KbQuizItem {
   options: KbQuizOption[];
 }
 
+
+// ── Retrieval metadata (for the future bot, and for search today) ─────────────
+
+/**
+ * What a user is actually trying to do — not what they typed.
+ *
+ * The distinction that matters most here is `explain` versus `diagnose`: the
+ * first opens a text, the second starts a procedure that carries a mandatory
+ * safety ordering. An answering layer that confuses them will hand someone
+ * prose when they have a spinning motor in front of them, or start a bench
+ * procedure when they only asked what a word means.
+ */
+export type KbIntent =
+  | 'explain'
+  | 'navigate'
+  | 'diagnose'
+  | 'project_check'
+  | 'software_setup'
+  | 'compare'
+  | 'learn_next'
+  | 'add_part'
+  | 'missing_data'
+  | 'safety_warning';
+
+export const KB_INTENT_LABEL_AR: Record<KbIntent, string> = {
+  explain: 'شرح',
+  navigate: 'تنقّل',
+  diagnose: 'تشخيص',
+  project_check: 'فحص المشروع',
+  software_setup: 'إعداد برنامج',
+  compare: 'مقارنة',
+  learn_next: 'متابعة تعلّم',
+  add_part: 'إضافة قطعة',
+  missing_data: 'بيانات ناقصة',
+  safety_warning: 'تحذير سلامة',
+};
+
+/**
+ * The metadata a retrieval layer needs in order to find this entry and to know
+ * what it may do with it.
+ *
+ * WHY IT LIVES ON THE CONTENT, NOT IN A BOT FILE
+ * ----------------------------------------------
+ * The requirement is that adding an article makes it reachable WITHOUT editing
+ * anything else. That is only possible if the article carries its own retrieval
+ * metadata. A separate mapping file would have to be edited on every addition,
+ * which is exactly the maintenance burden this design exists to remove — and it
+ * would drift the moment someone forgot.
+ *
+ * EVERY FIELD IS OPTIONAL AND THE WHOLE BLOCK IS OPTIONAL
+ * -------------------------------------------------------
+ * Sixty-odd articles were written before this contract existed. Making it
+ * required would either invalidate them or force hurried, low-quality metadata
+ * onto them. The standard rises for what is written from now on; nothing
+ * already written breaks.
+ */
+export interface KbBotMeta {
+  /** Intents this entry can actually serve. */
+  intents: KbIntent[];
+  /**
+   * Symptoms in the user's own words, including the phrasings people really
+   * type. Not a restatement of the title.
+   */
+  symptomsAr?: string[];
+  /** Common misspellings and transliterations, so a typo still finds this. */
+  misspellingsAr?: string[];
+  /**
+   * Things a reader can DO from here, each pointing at a real destination.
+   * Reuses `KbLink` so every action resolves through the one route resolver and
+   * a dead action is a test failure rather than a dead end.
+   */
+  actions?: KbLink[];
+  /** Systems this entry belongs to, e.g. 'rc-link', 'esc'. */
+  systems?: string[];
+  /** Software this entry is about, e.g. 'expresslrs', 'betaflight', 'edgetx'. */
+  software?: string[];
+  /** Part categories this entry concerns, e.g. 'receivers', 'flightControllers'. */
+  parts?: string[];
+  /**
+   * Facts that must be known before any judgement is offered about this topic.
+   * An answering layer that lacks them must ask, not guess — this is the field
+   * that makes "I need your board model first" a designed behaviour rather than
+   * a hoped-for one.
+   */
+  requiresBeforeVerdict?: string[];
+  /** Safety preconditions that must be stated before any step is suggested. */
+  safetyPrerequisitesAr?: string[];
+}
+
 // ── Article ───────────────────────────────────────────────────────────────────
 
 export interface KbArticle {
@@ -296,6 +385,11 @@ export interface KbArticle {
   keywordsAr: string[];
   keywordsEn: string[];
   safetyLevel: KbSafetyLevel;
+  /**
+   * Retrieval metadata. Optional so the articles written before this contract
+   * existed stay valid; required by test for anything authored from now on.
+   */
+  bot?: KbBotMeta;
 }
 
 // ── Learning path ─────────────────────────────────────────────────────────────

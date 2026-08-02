@@ -9,6 +9,7 @@ import { BF_VERSION_CONTEXT } from '../data/betaflight/sourceHelpers';
 import { BetaflightPageRenderer } from '../components/betaflight/BetaflightPageRenderer';
 import { BetaflightNotStartedPage } from '../components/betaflight/BetaflightNotStartedPage';
 import { KbBacklinksLazy } from '../components/kb/KbBacklinksLazy';
+import { BetaflightProjectContext } from '../components/betaflight/BetaflightProjectContext';
 
 export const BetaflightDetailView: React.FC = () => {
   const { sectionId } = useParams<{ sectionId: string }>();
@@ -24,7 +25,11 @@ export const BetaflightDetailView: React.FC = () => {
         {/* Reverse links into the encyclopedia — a settings page can now reach
             the article explaining the hardware the setting actually controls.
             Renders nothing when no KB content references this page. */}
-        <div style={{ padding: '0 16px 20px' }}>
+        <div style={{ padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* The reader's own recorded control-link facts and the open verdicts
+              that named THIS page as where to act. Renders nothing when the
+              page has no declared fields or the project has none filled. */}
+          <BetaflightProjectContext pageId={registryEntry.id} />
           <KbBacklinksLazy kind="betaflight" targetId={registryEntry.id} tone="dark" />
         </div>
       </AppShell>
@@ -44,6 +49,11 @@ export const BetaflightDetailView: React.FC = () => {
     return (
       <AppShell tint="purple">
         <BetaflightNotStartedPage entry={registryEntry} versionContext={BF_VERSION_CONTEXT} backTo="/betaflight" />
+        {/* A page we have not written yet can still be the right place to show
+            what the user recorded — and a finding may already point at it. */}
+        <div style={{ padding: '0 16px 20px' }}>
+          <BetaflightProjectContext pageId={registryEntry.id} />
+        </div>
       </AppShell>
     );
   }

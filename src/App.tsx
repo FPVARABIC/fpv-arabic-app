@@ -12,8 +12,6 @@ import { ProgrammingView } from './views/ProgrammingView';
 import { ExpressLrsView } from './views/ExpressLrsView';
 import { ExpressLrsSetupView } from './views/ExpressLrsSetupView';
 import { ExpressLrsTroubleshootingView } from './views/ExpressLrsTroubleshootingView';
-import { BetaflightView } from './views/BetaflightView';
-import { BetaflightDetailView } from './views/BetaflightDetailView';
 import { TroubleshootingView } from './views/TroubleshootingView';
 import { ProgressView } from './views/ProgressView';
 import { SettingsView } from './views/SettingsView';
@@ -31,6 +29,14 @@ const KbHubView = lazy(() => import('./views/KbHubView').then(m => ({ default: m
 const KbModuleView = lazy(() => import('./views/KbModuleView').then(m => ({ default: m.KbModuleView })));
 const KbArticleView = lazy(() => import('./views/KbArticleView').then(m => ({ default: m.KbArticleView })));
 const KbMatrixView = lazy(() => import('./views/KbMatrixView').then(m => ({ default: m.KbMatrixView })));
+// The Betaflight software centre followed Assembly for the same reason: once
+// its pages started reading the user's recorded control-link setup, the eager
+// bundle inherited the whole parts catalogue through the project store. It also
+// carries ~10k lines of page content that a user who never opens it should not
+// download.
+const BetaflightView = lazy(() => import('./views/BetaflightView').then(m => ({ default: m.BetaflightView })));
+const BetaflightDetailView = lazy(() => import('./views/BetaflightDetailView').then(m => ({ default: m.BetaflightDetailView })));
+
 // Assembly moved from an eager import to a lazy one when its final report
 // started using the platform's verdict engine: the section carries the whole
 // part catalogue, and there is no reason for a user who opens the app to the

@@ -30,6 +30,7 @@ import { roadmapData } from '../../roadmapData';
 import { checklistsData } from '../../checklistsData';
 import { setupSteps } from '../../expresslrs/setupSteps';
 import { troubleshootingIssues } from '../../expresslrs/troubleshootingIssues';
+import { resolveDestination } from '../../../platform/destinations';
 import { troubleshootingData } from '../../troubleshootingData';
 
 import { frames } from '../../assembly/parts/frames';
@@ -356,7 +357,9 @@ function buildDocs(): SearchDoc[] {
       sourceId: s.id,
       titleAr: s.title,
       subtitle: `ExpressLRS · خطوة ${s.order}`,
-      route: '/programming/expresslrs/setup',
+      // The exact step, not the guide: a search result that lands on step 1 of 25
+      // when the reader asked about flashing is a result they have to search again.
+      route: resolveDestination({ kind: 'elrs-setup', id: s.id }) ?? '/programming/expresslrs/setup',
       contentClass: 'learning',
       software: 'expresslrs',
       system: 'radio-control',
@@ -374,7 +377,8 @@ function buildDocs(): SearchDoc[] {
       sourceId: i.id,
       titleAr: i.title,
       subtitle: i.symptom,
-      route: '/programming/expresslrs/troubleshooting',
+      // The exact issue, not the list of 33.
+      route: resolveDestination({ kind: 'elrs-issue', id: i.id }) ?? '/programming/expresslrs/troubleshooting',
       contentClass: 'diagnostic',
       software: 'expresslrs',
       system: 'radio-control',

@@ -542,15 +542,31 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // The control-link system: per-build radio configuration recorded in the
     // project (schema 2), its verdict rules, and the workspace editor for it.
     // No Assembly business logic — the build flow still owns part selection.
-    !f.startsWith('src/components/project/'),
+    !f.startsWith('src/components/project/') &&
+    // Closing the control-link system vertically: the software centre now reads
+    // the user's recorded setup. Betaflight/ExpressLRS/EdgeTX data and their
+    // screens, plus the destination deep links that let one page be opened
+    // precisely. No Assembly business logic in any of them.
+    !f.startsWith('src/data/edgetx/') &&
+    !f.startsWith('src/data/expresslrs/') &&
+    !f.startsWith('src/components/betaflight/') &&
+    !f.startsWith('src/components/expresslrs/') &&
+    !f.startsWith('src/views/Betaflight') &&
+    !f.startsWith('src/views/ExpressLrs') &&
+    !f.startsWith('src/views/EdgeTx') &&
+    !f.startsWith('src/views/ProgrammingView'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
-  ok('no Betaflight/Programming/ExpressLRS/Build Roadmap/Lessons/Bot V2 file appears in the diff', !allChanged.some(f =>
-    f.startsWith('src/data/betaflight/') || f.startsWith('src/components/betaflight/') || f === 'src/views/BetaflightView.tsx' ||
-    f === 'src/views/ProgrammingView.tsx' || f.startsWith('src/views/ExpressLrs') || f.startsWith('src/data/expresslrs/') ||
+  // Originally a blanket "no software-centre file may appear". The software
+  // centre is now deliberately in scope — the control-link system is being
+  // closed vertically, so its Betaflight/ExpressLRS/EdgeTX surfaces read the
+  // user's recorded setup, and the allow-list above names each one with its
+  // reason. What this line still protects, unchanged, is that this line of work
+  // does NOT drift into the sections it has no business touching.
+  ok('no Build Roadmap, Lessons or Bot file appears in the diff', !allChanged.some(f =>
     f.startsWith('src/views/BuildRoadmap') || f.startsWith('src/data/roadmap') || f.startsWith('src/data/lessonsData') ||
-    f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2'),
+    f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2') || f.startsWith('src/data/knowledge/botV2/'),
   ));
   // App.tsx was originally asserted to be untouched, on the grounds that that
   // task needed no new route. The platform spine does need one (/project), so

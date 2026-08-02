@@ -30,6 +30,9 @@ export type Destination =
   | { kind: 'dx'; id: string }
   | { kind: 'lesson'; id: string }
   | { kind: 'betaflight'; id: string }
+  | { kind: 'elrs-setup'; id?: string }
+  | { kind: 'elrs-issue'; id?: string }
+  | { kind: 'edgetx'; id?: string }
   | { kind: 'roadmap'; id: string }
   | { kind: 'project' }
   | { kind: 'assembly' }
@@ -91,6 +94,20 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
       return d.id ? `/lessons/${d.id}` : null;
     case 'betaflight':
       return d.id ? `/betaflight/${d.id}` : null;
+    // The software-centre pages are single screens that select an entry from a
+    // query parameter, so an id is optional: without one the destination is the
+    // page, with one it is the exact step or issue. That difference is the whole
+    // point — «افتح قسم البرامج» is not an answer, «افتح مشكلة الربط» is.
+    case 'elrs-setup':
+      return d.id
+        ? `/programming/expresslrs/setup?step=${encodeURIComponent(d.id)}`
+        : '/programming/expresslrs/setup';
+    case 'elrs-issue':
+      return d.id
+        ? `/programming/expresslrs/troubleshooting?issue=${encodeURIComponent(d.id)}`
+        : '/programming/expresslrs/troubleshooting';
+    case 'edgetx':
+      return d.id ? `/programming/edgetx/${d.id}` : '/programming/edgetx';
     case 'roadmap':
       return d.id ? `/roadmap/${d.id}` : null;
     case 'project':
@@ -131,6 +148,10 @@ export function destinationKey(d: Destination): string {
     case 'coverage':
     case 'diagnose':
       return d.kind;
+    case 'elrs-setup':
+    case 'elrs-issue':
+    case 'edgetx':
+      return d.id ? `${d.kind}:${d.id}` : d.kind;
     default:
       return `${d.kind}:${d.id}`;
   }
@@ -142,6 +163,7 @@ export function parseDestinationKey(key: string): Destination | null {
   if (i === -1) {
     return key === 'project' || key === 'assembly' || key === 'checklist'
       || key === 'coverage' || key === 'diagnose'
+      || key === 'elrs-setup' || key === 'elrs-issue' || key === 'edgetx'
       ? ({ kind: key } as Destination)
       : null;
   }
@@ -151,6 +173,7 @@ export function parseDestinationKey(key: string): Destination | null {
   switch (kind) {
     case 'article': case 'module': case 'glossary': case 'dx':
     case 'lesson': case 'betaflight': case 'roadmap':
+    case 'elrs-setup': case 'elrs-issue': case 'edgetx':
       return { kind, id: rest } as Destination;
     case 'search':
       return { kind: 'search', query: rest };

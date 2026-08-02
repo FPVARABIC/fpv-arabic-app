@@ -23,7 +23,10 @@ import { buildCompatibilityReport } from '../src/components/Assembly/utils/build
 import { SEVERITY_ORDER, type ProjectSnapshot, type Finding } from '../src/data/project/types';
 import {
   MODULE_PART_SLOTS, projectPartsForModule, findingsForArticle, hasProjectContext,
+  BF_PAGE_RC_FIELDS, MODULE_RC_FIELDS, findingsForBetaflightPage,
+  rcFactsForBetaflightPage, rcFactsForModule,
 } from '../src/data/project/context';
+import { bfPageRegistry } from '../src/data/betaflight/pageRegistry';
 import { resolveLinkRoute, allKbModules, allKbArticles, getArticle } from '../src/data/kb/registry';
 import { buildStages } from '../src/data/assembly/buildStages';
 import { motors } from '../src/data/assembly/parts/motors';
@@ -433,6 +436,73 @@ console.log('\n[10] The control link — verdicts about facts no catalogue holds
   const midBuild = snap({ stageIndex: 3, rcSetup: { failsafeStrategy: 'hold-last' } as RcSetup });
   ok('a control-link blocker stops the build just as a part blocker does',
     computeNextStep(midBuild, computeFindings(midBuild)).isBlocked === true);
+}
+
+console.log('\n[11] The software centre reads the user\'s own setup');
+{
+  const FULL: RcSetup = {
+    txSystem: 'elrs', txBand: '2.4ghz', rxSystem: 'elrs', rxBand: '2.4ghz',
+    rxTarget: 'RadioMaster RP1 2400 RX', txFirmware: '3.4.3', rxFirmware: '3.4.3',
+    serialProtocol: 'crsf', uartIndex: 2, gpsUartIndex: 4, videoUartIndex: 6,
+    antennaPlacement: 'outside-perpendicular', failsafeStrategy: 'drop-disarm',
+    failsafeTestedOn: '2026-08-01', modelMatch: true, packetRateHz: 250,
+    rxModel: 'RadioMaster RP1',
+  };
+  const withRc = snap({ rcSetup: FULL, flightController: flightControllers[0] });
+
+  // The mapping must point at real pages, or the panel silently never renders.
+  const bfIds = new Set(bfPageRegistry.map(e => e.id));
+  ok('every mapped Betaflight page id is a real registry page',
+    Object.keys(BF_PAGE_RC_FIELDS).every(id => bfIds.has(id)));
+  ok('every mapped KB module id is a real module',
+    Object.keys(MODULE_RC_FIELDS).every(id => allKbModules.some(m => m.id === id)));
+
+  ok('the ports page shows the ports the user recorded',
+    rcFactsForBetaflightPage(withRc, 'ports').map(f => f.field).join() === 'uartIndex,gpsUartIndex,videoUartIndex,serialProtocol');
+  ok('…rendered as readable values, not raw keys',
+    rcFactsForBetaflightPage(withRc, 'ports').every(f => f.valueAr.length > 0 && !f.valueAr.includes('undefined')));
+  ok('the failsafe page shows the recorded strategy and whether it was tested',
+    rcFactsForBetaflightPage(withRc, 'failsafe').length === 2);
+
+  ok('a page with nothing to say about the control link shows nothing',
+    rcFactsForBetaflightPage(withRc, 'pid-tuning').length === 0);
+  ok('a project with no control-link setup produces no facts anywhere',
+    Object.keys(BF_PAGE_RC_FIELDS).every(id => rcFactsForBetaflightPage(snap({}), id).length === 0));
+  ok('an unfilled field produces no row rather than an empty one',
+    rcFactsForBetaflightPage(snap({ rcSetup: { uartIndex: 3 } as RcSetup }), 'ports').length === 1);
+
+  // The reverse index must be asserted by the engine, never guessed.
+  const rcFindings = computeFindings(snap({
+    rcSetup: { failsafeStrategy: 'hold-last', uartIndex: 2, gpsUartIndex: 2 } as RcSetup,
+  }));
+  ok('a finding that named the failsafe page is found from that page',
+    findingsForBetaflightPage(rcFindings, 'failsafe').some(f => f.id === 'rc-failsafe-strategy'));
+  ok('a page no finding named surfaces none',
+    findingsForBetaflightPage(rcFindings, 'pid-tuning').length === 0);
+  ok('every finding surfaced on a page genuinely links to that page',
+    Object.keys(BF_PAGE_RC_FIELDS).every(id =>
+      findingsForBetaflightPage(rcFindings, id)
+        .every(f => f.links.some(l => l.kind === 'betaflight' && l.targetId === id))));
+
+  // The article side of the same data.
+  ok('a control-link article shows the reader\'s recorded system and band',
+    rcFactsForModule(withRc, 'rc-link').some(f => f.field === 'txBand')
+    && rcFactsForModule(withRc, 'rc-link').some(f => f.field === 'rxSystem'));
+  ok('an unrelated module shows no control-link facts',
+    rcFactsForModule(withRc, 'esc').length === 0);
+  ok('…and no project means no facts at all', rcFactsForModule(EMPTY, 'rc-link').length === 0);
+
+  // Every betaflight link any finding can emit must be a real page.
+  const allBfTargets = new Set(
+    [...computeFindings(snap({
+      motor: motors[0], battery: batteries[0], esc: escs[0], frame: frames[0],
+      flightController: flightControllers[0], propeller: propellers[0],
+      receiver: receivers[0], gps: gps[0], rcSetup: FULL,
+    })), ...rcFindings]
+      .flatMap(f => f.links).filter(l => l.kind === 'betaflight').map(l => l.targetId),
+  );
+  ok(`findings link to real Betaflight pages (${allBfTargets.size})`,
+    allBfTargets.size > 0 && [...allBfTargets].every(id => bfIds.has(id)));
 }
 
 console.log(`\n✅ testProject: ${passed} assertions passed\n`);
