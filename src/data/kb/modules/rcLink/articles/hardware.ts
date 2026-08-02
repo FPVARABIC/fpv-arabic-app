@@ -198,6 +198,21 @@ export const rcReceivers: KbArticle = {
   keywordsAr: ['المستقبل', 'الهوائي', 'التنويع', 'الجهد', 'التركيب'],
   keywordsEn: ['receiver', 'antenna', 'diversity', 'voltage', 'mounting'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['explain', 'compare', 'add_part', 'diagnose'],
+    symptomsAr: ['الريسيفر لا يشتغل', 'أي مستقبل أشتري', 'المستقبل يعيد التشغيل'],
+    misspellingsAr: ['ريسيفر', 'الريسيفر', 'receiver', 'rx', 'مستقبل'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-no-link', label: 'ابدأ تشخيص انعدام الاتصال' },
+      { kind: 'betaflight', targetId: 'receiver', label: 'افتح صفحة Receiver' },
+      { kind: 'project', targetId: 'rxModel', label: 'سجّل طراز مستقبلك' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['طراز المستقبل', 'نظامه ونطاقه'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -382,6 +397,21 @@ export const rcAntennas: KbArticle = {
   keywordsAr: ['هوائي', 'استقطاب', 'مدى', 'منطقة صمت', 'كسب'],
   keywordsEn: ['antenna', 'polarisation', 'null', 'gain', 'range'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'range_test', 'diagnose', 'project_check'],
+    symptomsAr: ['المدى ضعيف', 'LQ منخفضة', 'الإشارة تنقطع عند الابتعاد'],
+    misspellingsAr: ['انتينا', 'هوائي', 'antenna', 'دايفرستي', 'diversity'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-range', label: 'ابدأ تشخيص المدى' },
+      { kind: 'elrs-issue', targetId: 'unstable-short-range', label: 'افتح مشكلة المدى القصير' },
+      { kind: 'project', targetId: 'antennaPlacement', label: 'سجّل وضع هوائيك' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['عدد الهوائيات', 'وضعها على الطائرة'],
+    safetyPrerequisitesAr: ['لا تشغّل وحدة إرسال بلا هوائي مركّب', 'أجرِ اختبار المدى بلا مراوح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -553,4 +583,19 @@ export const rcLinkQuality: KbArticle = {
   keywordsAr: ['جودة الرابط', 'قوة الإشارة', 'الضجيج', 'المدى', 'الإنذار'],
   keywordsEn: ['LQ', 'RSSI', 'SNR', 'link quality', 'range'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['explain', 'range_test', 'diagnose', 'project_check'],
+    symptomsAr: ['LQ منخفضة', 'المدى ضعيف', 'ما معنى RSSI'],
+    misspellingsAr: ['ال كيو', 'lq', 'rssi', 'ار اس اس اي', 'سنر', 'snr'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-range', label: 'ابدأ تشخيص المدى' },
+      { kind: 'elrs-issue', targetId: 'low-rssi-lq', label: 'افتح مشكلة انخفاض جودة الرابط' },
+      { kind: 'project', targetId: 'rangeTestedOn', label: 'سجّل تاريخ اختبار المدى' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs', 'betaflight'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['معدل الرزم', 'قيم الجودة التي تراها'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };

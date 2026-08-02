@@ -9,9 +9,6 @@ import { LessonsView } from './views/LessonsView';
 import { LessonDetailView } from './views/LessonDetailView';
 import { ChecklistView } from './views/ChecklistView';
 import { ProgrammingView } from './views/ProgrammingView';
-import { ExpressLrsView } from './views/ExpressLrsView';
-import { ExpressLrsSetupView } from './views/ExpressLrsSetupView';
-import { ExpressLrsTroubleshootingView } from './views/ExpressLrsTroubleshootingView';
 import { TroubleshootingView } from './views/TroubleshootingView';
 import { ProgressView } from './views/ProgressView';
 import { SettingsView } from './views/SettingsView';
@@ -36,6 +33,20 @@ const KbMatrixView = lazy(() => import('./views/KbMatrixView').then(m => ({ defa
 // download.
 const BetaflightView = lazy(() => import('./views/BetaflightView').then(m => ({ default: m.BetaflightView })));
 const BetaflightDetailView = lazy(() => import('./views/BetaflightDetailView').then(m => ({ default: m.BetaflightDetailView })));
+// The ExpressLRS centre followed Betaflight for the same measured reason: once
+// its screens started reading the user's recorded setup and resolving links
+// through the KB registry, keeping them eager pulled the parts catalogue AND
+// the whole encyclopedia into the first load — 1,833 kB became 3,097 kB.
+// Splitting them put it back.
+const ExpressLrsView = lazy(() => import('./views/ExpressLrsView').then(m => ({ default: m.ExpressLrsView })));
+const ExpressLrsSetupView = lazy(() => import('./views/ExpressLrsSetupView').then(m => ({ default: m.ExpressLrsSetupView })));
+const ExpressLrsTroubleshootingView = lazy(() => import('./views/ExpressLrsTroubleshootingView').then(m => ({ default: m.ExpressLrsTroubleshootingView })));
+
+// The EdgeTX centre carries thirty topics of authored content plus the project
+// store it reads from. Same rule as Betaflight: a user who never opens the
+// radio's software centre should not download it.
+const EdgeTxView = lazy(() => import('./views/EdgeTxView').then(m => ({ default: m.EdgeTxView })));
+const EdgeTxPageView = lazy(() => import('./views/EdgeTxPageView').then(m => ({ default: m.EdgeTxPageView })));
 
 // Assembly moved from an eager import to a lazy one when its final report
 // started using the platform's verdict engine: the section carries the whole
@@ -81,6 +92,8 @@ export const App: React.FC = () => (
     <Route path="/programming/expresslrs" element={<ExpressLrsView/>}/>
     <Route path="/programming/expresslrs/setup" element={<ExpressLrsSetupView/>}/>
     <Route path="/programming/expresslrs/troubleshooting" element={<ExpressLrsTroubleshootingView/>}/>
+    <Route path="/programming/edgetx" element={<EdgeTxView/>}/>
+    <Route path="/programming/edgetx/:pageId" element={<EdgeTxPageView/>}/>
     <Route path="/betaflight" element={<BetaflightView/>}/>
     <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
     <Route path="/troubleshooting" element={<TroubleshootingView/>}/>

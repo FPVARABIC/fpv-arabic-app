@@ -180,6 +180,21 @@ export const rcTesting: KbArticle = {
   keywordsAr: ['اختبار', 'المدى', 'فحص القنوات', 'قبل الطيران', 'تسجيل'],
   keywordsEn: ['range test', 'bench test', 'preflight', 'channels'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['range_test', 'failsafe_setup', 'project_check', 'safety_warning'],
+    symptomsAr: ['المدى ضعيف', 'كيف أختبر الرابط', 'LQ منخفضة'],
+    misspellingsAr: ['رينج تست', 'range test', 'اختبار مدى', 'بنش تست'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-range', label: 'ابدأ تشخيص المدى' },
+      { kind: 'project', targetId: 'rangeTestedOn', label: 'سجّل تاريخ اختبار المدى' },
+      { kind: 'project', targetId: 'findings', label: 'افتح تقرير التعارض' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs', 'betaflight'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['معدل الرزم', 'قيم الجودة عند أول انخفاض'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار مدى أو اختبار طاولة'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -362,4 +377,19 @@ export const rcFailures: KbArticle = {
   keywordsAr: ['أعطال', 'تشخيص', 'تقطع', 'تشويش', 'لا يربط'],
   keywordsEn: ['failure', 'troubleshooting', 'interference', 'dropout'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['diagnose', 'recover_device', 'safety_warning', 'missing_data'],
+    symptomsAr: ['المستقبل يعيد التشغيل', 'متصل لكن القنوات لا تتحرك', 'الإشارة تنقطع فجأة'],
+    misspellingsAr: ['اعطال', 'أعطال', 'failure', 'مشاكل الرابط'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-no-link', label: 'ابدأ تشخيص انعدام الاتصال' },
+      { kind: 'elrs-issue', targetId: 'connects-then-disconnects', label: 'افتح مشكلة الانقطاع المتكرر' },
+      { kind: 'project', targetId: 'findings', label: 'افتح تقرير التعارض' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'expresslrs'],
+    parts: ['receivers', 'flightControllers'],
+    requiresBeforeVerdict: ['متى يحدث العطل', 'هل يتكرر في الأرض أم في الجو'],
+    safetyPrerequisitesAr: ['لا تطر بإعداد غير مستقر', 'انزع المراوح قبل أي فحص'],
+  },
 };

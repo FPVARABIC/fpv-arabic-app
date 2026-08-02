@@ -295,3 +295,47 @@ export function validateRcSetup(raw: unknown): RcSetup | undefined {
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
+
+/**
+ * Which input on the control-link form edits which field.
+ *
+ * This exists so that «طلب Target» can be an ACTION rather than a sentence: a
+ * link carrying `field: 'rxTarget'` resolves to `/project?view=rc&field=rxTarget`,
+ * and the form uses this map to open itself at that exact input. Keeping the
+ * map in the data layer rather than inside the component means the destination
+ * resolver, the tests and any future web editor all agree on the same ids
+ * without importing React.
+ *
+ * A field absent from this map simply does not get focused — the form still
+ * opens, which is the right degradation for a link written before a field
+ * existed.
+ */
+export const RC_FIELD_INPUT_ID: Partial<Record<keyof RcSetup, string>> = {
+  radioModel: 'rc-radio-model',
+  moduleKind: 'rc-module-kind',
+  txSystem: 'rc-tx-system',
+  txBand: 'rc-tx-band',
+  txFirmware: 'rc-tx-firmware',
+  txRegulatoryDomain: 'rc-tx-domain',
+  rxModel: 'rc-rx-model',
+  rxSystem: 'rc-rx-system',
+  rxBand: 'rc-rx-band',
+  rxFirmware: 'rc-rx-firmware',
+  rxTarget: 'rc-rx-target',
+  rxRegulatoryDomain: 'rc-rx-domain',
+  rxVoltage: 'rc-rx-voltage',
+  antennaCount: 'rc-antenna-count',
+  antennaPlacement: 'rc-antenna-placement',
+  trueDiversity: 'rc-true-diversity',
+  serialProtocol: 'rc-protocol',
+  uartIndex: 'rc-uart',
+  gpsUartIndex: 'rc-gps-uart',
+  videoUartIndex: 'rc-video-uart',
+  packetRateHz: 'rc-packet-rate',
+  telemetryRatio: 'rc-telemetry-ratio',
+  dynamicPower: 'rc-dynamic-power',
+  modelMatch: 'rc-model-match',
+  failsafeStrategy: 'rc-failsafe',
+  failsafeTestedOn: 'rc-failsafe-tested',
+  rangeTestedOn: 'rc-range-tested',
+};

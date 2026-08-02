@@ -98,6 +98,17 @@ export function kbLinkToDestination(link: KbLink): Destination | null {
     case 'glossary': return { kind: 'glossary', id: link.targetId };
     case 'assembly': return { kind: 'assembly' };
     case 'checklist': return { kind: 'checklist' };
+    // Screens that select their entry from a query parameter: an empty id is a
+    // legitimate "open the centre", a present id is "open this exact entry".
+    case 'elrs-setup': return link.targetId ? { kind: 'elrs-setup', id: link.targetId } : { kind: 'elrs-setup' };
+    case 'elrs-issue': return link.targetId ? { kind: 'elrs-issue', id: link.targetId } : { kind: 'elrs-issue' };
+    case 'edgetx': return link.targetId ? { kind: 'edgetx', id: link.targetId } : { kind: 'edgetx' };
+    // «افتح مشروعي» / «افتح تقرير التعارض» / «سجّل الـTarget» — three different
+    // destinations, one link kind, distinguished by what the id names.
+    case 'project':
+      if (!link.targetId) return { kind: 'project' };
+      if (link.targetId === 'findings') return { kind: 'project', view: 'findings' };
+      return { kind: 'project', view: 'rc', field: link.targetId };
     case 'external': return link.url ? { kind: 'external', url: link.url } : null;
     default: return null;
   }

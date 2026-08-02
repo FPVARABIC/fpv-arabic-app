@@ -38,7 +38,13 @@ const progressContextTsx = readFileSync(join(ROOT, 'src/contexts/ProgressContext
 
 console.log('\n[1] Route wiring');
 {
-  ok('App.tsx imports ExpressLrsSetupView', /import\s*\{\s*ExpressLrsSetupView\s*\}\s*from\s*'\.\/views\/ExpressLrsSetupView';/.test(appTsx));
+  // Moved from an eager `import` to `lazy(() => import(...))` when this screen
+  // began reading the user's project and resolving links through the KB
+  // registry: eager, it dragged the parts catalogue and the encyclopedia into
+  // the first load. The route it serves is unchanged, so the assertion follows
+  // the module, not the keyword.
+  ok('App.tsx loads ExpressLrsSetupView from its own module', /import\('\.\/views\/ExpressLrsSetupView'\)/.test(appTsx));
+  ok('…and it is code-split rather than eagerly bundled', /const ExpressLrsSetupView = lazy\(/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs/setup', /<Route path="\/programming\/expresslrs\/setup" element=\{<ExpressLrsSetupView\/>\}\/>/.test(appTsx));
 }
 
@@ -50,21 +56,29 @@ console.log('\n[2] Isolated storage key');
   ok('the hook does not touch ProgressContext.tsx', !progressContextTsx.includes('EXPRESSLRS'));
 }
 
-console.log('\n[3] Exactly the 10 approved steps, in the approved order');
+// The curriculum grew from 10 to 12 when the two confirmed Configurator gaps
+// were closed: Device Category and Build Options are the two decisions a reader
+// makes between installing the tool and flashing anything, and neither had a
+// step of its own. They sit immediately after `configurator-target` because
+// that is where a reader actually meets them.
+console.log('\n[3] Exactly the 12 approved steps, in the approved order');
 {
-  ok('exactly 10 steps are defined', setupSteps.length === 10 && TOTAL_SETUP_STEPS === 10);
+  ok('exactly 12 steps are defined', setupSteps.length === 12 && TOTAL_SETUP_STEPS === 12);
   const ids = setupSteps.map(s => s.id);
   ok('step id order matches the approved curriculum exactly', JSON.stringify(ids) === JSON.stringify([
-    'identify-hardware', 'prepare-radio', 'configurator-target', 'update-tx', 'update-rx',
+    'identify-hardware', 'prepare-radio', 'configurator-target', 'device-category', 'build-options',
+    'update-tx', 'update-rx',
     'binding', 'receiver-wiring', 'configure-betaflight', 'lua-webui', 'final-verification',
   ]));
   const orders = setupSteps.map(s => s.order);
-  ok('step `order` fields are 1..10 in sequence', JSON.stringify(orders) === JSON.stringify([1,2,3,4,5,6,7,8,9,10]));
+  ok('step `order` fields are 1..12 in sequence', JSON.stringify(orders) === JSON.stringify([1,2,3,4,5,6,7,8,9,10,11,12]));
 
   const expectedTitles: Record<string, string> = {
     'identify-hardware': 'تحديد نوع النظام والأجهزة',
     'prepare-radio': 'تجهيز الراديو ووحدة الإرسال',
     'configurator-target': 'تثبيت Configurator واختيار Target',
+    'device-category': 'فئة الجهاز (Device Category)',
+    'build-options': 'خيارات البناء (Build Options)',
     'update-tx': 'تحديث TX Module',
     'update-rx': 'تحديث Receiver',
     'binding': 'اختيار وتنفيذ Binding',

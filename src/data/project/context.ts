@@ -237,3 +237,127 @@ export const MODULE_RC_FIELDS: Record<string, (keyof RcSetup)[]> = {
 export function rcFactsForModule(p: ProjectSnapshot, moduleId: string): RcFactRef[] {
   return rcFactsFor(p, MODULE_RC_FIELDS[moduleId] ?? []);
 }
+
+// ── EdgeTX, applied to the reader's own radio ────────────────────────────────
+
+/**
+ * Which recorded facts each EdgeTX topic is actually about.
+ *
+ * Same rule as the Betaflight map, and the same reason for it: a panel that
+ * appears on every page stops being read on any page. Most EdgeTX topics are
+ * absent from this map on purpose — the mixer screen has nothing to say about
+ * which UART carries the receiver, and a panel there would be noise dressed as
+ * personalisation.
+ *
+ * The pages that ARE here are the ones where the reader's own recorded setup
+ * changes what the page means: the module they own, the system and band they
+ * run, whether Model Match is on, what failsafe strategy they chose.
+ */
+export const EDGETX_PAGE_RC_FIELDS: Record<string, (keyof RcSetup)[]> = {
+  'model-setup': ['radioModel', 'moduleKind', 'txSystem', 'txBand'],
+  'internal-module': ['radioModel', 'moduleKind', 'txSystem', 'txBand', 'txFirmware'],
+  'external-module': ['radioModel', 'moduleKind', 'txSystem', 'txBand', 'txFirmware'],
+  'rf-system': ['txSystem', 'txBand', 'rxSystem', 'rxBand', 'rxModel'],
+  crsf: ['serialProtocol', 'uartIndex', 'packetRateHz'],
+  'channel-range': ['packetRateHz', 'serialProtocol'],
+  'telemetry-sensors': ['telemetryRatio', 'serialProtocol', 'rxModel'],
+  'discover-sensors': ['telemetryRatio', 'rxModel'],
+  'lua-scripts': ['txFirmware', 'rxFirmware', 'moduleKind'],
+  'model-match': ['modelMatch', 'rxModel', 'rxSystem'],
+  failsafe: ['failsafeStrategy', 'failsafeTestedOn', 'rxModel'],
+  'firmware-update': ['radioModel', 'txFirmware'],
+  'problem-module-missing': ['radioModel', 'moduleKind', 'txSystem'],
+  'problem-lua': ['txFirmware', 'rxFirmware'],
+  'problem-telemetry': ['telemetryRatio', 'serialProtocol', 'uartIndex'],
+  'problem-model-match': ['modelMatch', 'rxModel'],
+  'problem-firmware-files': ['radioModel', 'txFirmware'],
+};
+
+/**
+ * What the EdgeTX hub shows about the reader's radio before they pick a topic.
+ *
+ * Deliberately the six facts that decide which topics are even relevant: the
+ * radio, the module, the system, the band, Model Match and telemetry. Not the
+ * whole record — the hub is a place to choose from, not a place to read from.
+ */
+export const EDGETX_HUB_RC_FIELDS: (keyof RcSetup)[] = [
+  'radioModel', 'moduleKind', 'txSystem', 'txBand', 'rxModel', 'modelMatch', 'telemetryRatio',
+];
+
+export function rcFactsForEdgeTxHub(p: ProjectSnapshot): RcFactRef[] {
+  return rcFactsFor(p, EDGETX_HUB_RC_FIELDS);
+}
+
+/** The recorded facts a specific EdgeTX topic is about. */
+export function rcFactsForEdgeTxPage(p: ProjectSnapshot, pageId: string): RcFactRef[] {
+  return rcFactsFor(p, EDGETX_PAGE_RC_FIELDS[pageId] ?? []);
+}
+
+/**
+ * The findings that named this EdgeTX topic as where to act.
+ *
+ * The third mirror of the same rule: the verdict engine's own links decide, so
+ * a topic can never claim a finding that did not point at it.
+ */
+export function findingsForEdgeTxPage(findings: Finding[], pageId: string): Finding[] {
+  return findings.filter(f =>
+    f.links.some(l => l.kind === 'edgetx' && l.targetId === pageId));
+}
+
+// ── ExpressLRS, applied to the reader's own hardware ─────────────────────────
+
+/**
+ * Which recorded facts each ExpressLRS step and issue is about.
+ *
+ * The fourth application of the same rule. Note what is deliberately absent:
+ * the LED-behaviour issues, the safety closer, the packet-rate explainer. None
+ * of them changes meaning based on the reader's recorded Target, so none of
+ * them gets a panel — and that is what keeps the panel worth reading on the
+ * pages that do have one.
+ */
+export const ELRS_ENTRY_RC_FIELDS: Record<string, (keyof RcSetup)[]> = {
+  // Setup steps.
+  'identify-hardware': ['rxModel', 'rxSystem', 'rxBand', 'moduleKind'],
+  'prepare-radio': ['radioModel', 'moduleKind', 'txSystem'],
+  'configurator-target': ['rxModel', 'rxTarget', 'rxBand', 'rxRegulatoryDomain'],
+  'device-category': ['rxModel', 'rxTarget', 'rxBand'],
+  'build-options': ['rxTarget', 'txRegulatoryDomain', 'rxRegulatoryDomain', 'modelMatch'],
+  'update-tx': ['txFirmware', 'txSystem', 'moduleKind'],
+  'update-rx': ['rxFirmware', 'rxTarget', 'rxModel'],
+  binding: ['txSystem', 'rxSystem', 'txFirmware', 'rxFirmware', 'modelMatch'],
+  'receiver-wiring': ['uartIndex', 'serialProtocol', 'rxVoltage'],
+  'configure-betaflight': ['serialProtocol', 'uartIndex'],
+  'lua-webui': ['txFirmware', 'packetRateHz', 'telemetryRatio', 'dynamicPower'],
+  'final-verification': ['failsafeStrategy', 'failsafeTestedOn', 'rangeTestedOn'],
+
+  // Troubleshooting issues.
+  'tx-not-detected': ['radioModel', 'moduleKind', 'txSystem'],
+  'no-bind': ['txSystem', 'rxSystem', 'txBand', 'rxBand', 'txFirmware', 'rxFirmware'],
+  'binding-phrase-mismatch': ['txFirmware', 'rxFirmware', 'modelMatch'],
+  'firmware-incompatibility': ['txFirmware', 'rxFirmware'],
+  'wrong-regulatory-domain': ['txRegulatoryDomain', 'rxRegulatoryDomain', 'txBand', 'rxBand'],
+  'model-match-blocks': ['modelMatch', 'rxModel'],
+  'low-rssi-lq': ['antennaPlacement', 'packetRateHz', 'rangeTestedOn'],
+  'unstable-short-range': ['antennaPlacement', 'trueDiversity', 'rangeTestedOn'],
+  'wrong-uart': ['uartIndex', 'serialProtocol'],
+  'uart-conflict': ['uartIndex', 'gpsUartIndex', 'videoUartIndex', 'serialProtocol'],
+  'serial-rx-not-enabled': ['uartIndex', 'serialProtocol'],
+  'telemetry-missing': ['telemetryRatio', 'serialProtocol'],
+  'failsafe-incorrect': ['failsafeStrategy', 'failsafeTestedOn'],
+  'build-failure': ['rxTarget', 'rxFirmware'],
+  'passthrough-failure': ['uartIndex', 'serialProtocol', 'rxTarget'],
+  'wifi-upload-interrupted': ['rxFirmware', 'rxModel'],
+  'wrong-target-selected': ['rxTarget', 'rxModel'],
+  'recovery-after-bad-flash': ['rxTarget', 'rxFirmware'],
+};
+
+/** The recorded facts a specific ExpressLRS step or issue is about. */
+export function rcFactsForElrsEntry(p: ProjectSnapshot, entryId: string): RcFactRef[] {
+  return rcFactsFor(p, ELRS_ENTRY_RC_FIELDS[entryId] ?? []);
+}
+
+/** The findings that named this ExpressLRS step or issue as where to act. */
+export function findingsForElrsEntry(findings: Finding[], entryId: string): Finding[] {
+  return findings.filter(f => f.links.some(
+    l => (l.kind === 'elrs-setup' || l.kind === 'elrs-issue') && l.targetId === entryId));
+}

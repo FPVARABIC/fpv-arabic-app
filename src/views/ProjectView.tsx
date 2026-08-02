@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import {
@@ -16,6 +16,7 @@ import {
 import { resolveLinkRoute } from '../data/kb/registry';
 import { RichText } from '../components/kb/Term';
 import { RcSetupCard } from '../components/project/RcSetupCard';
+import { RC_FIELD_INPUT_ID, type RcSetup } from '../data/project/rcSetup';
 
 const SEV: Record<FindingSeverity, { bg: string; fg: string; border: string; Icon: typeof CircleAlert }> = {
   blocker: { bg: 'rgba(239,68,68,0.10)', fg: '#b91c1c', border: 'rgba(239,68,68,0.30)', Icon: CircleAlert },
@@ -37,7 +38,24 @@ const SEV: Record<FindingSeverity, { bg: string; fg: string; border: string; Ico
  */
 export const ProjectView: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [open, setOpen] = useState<string | null>(null);
+  const findingsRef = useRef<HTMLDivElement>(null);
+
+  // Aimed entry: `?view=findings` opens the conflict report, `?view=rc&field=X`
+  // opens the control-link form at field X. This is what turns «افتح تقرير
+  // التعارض» and «طلب Target» into executable actions instead of instructions —
+  // an answer that can only say "go to your project" is not an answer.
+  const view = searchParams.get('view');
+  const requestedField = searchParams.get('field') ?? undefined;
+  const focusField = requestedField && requestedField in RC_FIELD_INPUT_ID
+    ? (requestedField as keyof RcSetup)
+    : undefined;
+
+  useEffect(() => {
+    if (view !== 'findings') return;
+    findingsRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }, [view]);
 
   // Held in state rather than memoised on mount: saving the control-link setup
   // changes the store underneath us, and the verdicts have to be recomputed
@@ -135,10 +153,14 @@ export const ProjectView: React.FC = () => {
             </Section>
 
             {/* ── The facts no catalogue holds ───────────────────────────── */}
-            <RcSetupCard initial={project.rcSetup} onSaved={() => setProject(readProjectSnapshot())} />
+            <RcSetupCard
+              initial={project.rcSetup}
+              onSaved={() => setProject(readProjectSnapshot())}
+              focusField={focusField}
+            />
 
             {/* ── The verdicts ────────────────────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, marginBottom: 12 }}>
+            <div ref={findingsRef} data-testid="project-verdicts" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 7, marginBottom: 12 }}>
               <Tile n={counts.blocker} labelAr="مانع" sev="blocker" testid="project-count-blocker" />
               <Tile n={counts.warning} labelAr="تحذير" sev="warning" testid="project-count-warning" />
               <Tile n={counts.unknown} labelAr="ناقص" sev="unknown" testid="project-count-unknown" />

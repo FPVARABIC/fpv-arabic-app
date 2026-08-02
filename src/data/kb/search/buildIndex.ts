@@ -29,6 +29,7 @@ import { buildStages } from '../../assembly/buildStages';
 import { roadmapData } from '../../roadmapData';
 import { checklistsData } from '../../checklistsData';
 import { setupSteps } from '../../expresslrs/setupSteps';
+import { allEdgeTxPages } from '../../edgetx/registry';
 import { troubleshootingIssues } from '../../expresslrs/troubleshootingIssues';
 import { resolveDestination } from '../../../platform/destinations';
 import { troubleshootingData } from '../../troubleshootingData';
@@ -60,6 +61,8 @@ export type SearchDocType =
   | 'checklist'
   | 'elrs-step'
   | 'elrs-issue'
+  | 'edgetx-topic'
+  | 'edgetx-setting'
   | 'troubleshooting';
 
 export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
@@ -75,6 +78,8 @@ export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   checklist: 'قائمة فحص',
   'elrs-step': 'ExpressLRS — خطوة',
   'elrs-issue': 'ExpressLRS — مشكلة',
+  'edgetx-topic': 'EdgeTX — موضوع',
+  'edgetx-setting': 'EdgeTX — إعداد',
   troubleshooting: 'مشكلة وحل',
 };
 
@@ -386,6 +391,56 @@ function buildDocs(): SearchDoc[] {
       keywordTokens: toks(i.category, 'expresslrs', 'elrs'),
       bodyTokens: bodyToks(...i.likelyCauses, i.resolvedWhen, i.nextIfUnresolved),
     });
+  }
+
+  // EdgeTX — topics, and every individual setting by its real English label.
+  // The settings are indexed separately for the same reason Betaflight's fields
+  // are: someone searching «Subtrim» wants the row, and landing them on a screen
+  // of fourteen rows makes them search again.
+  for (const p of allEdgeTxPages) {
+    docs.push({
+      key: `edgetx-topic:${p.id}`,
+      type: 'edgetx-topic',
+      sourceId: p.id,
+      titleAr: p.titleAr,
+      titleEn: p.titleEn,
+      subtitle: p.summaryAr,
+      route: resolveDestination({ kind: 'edgetx', id: p.id }) ?? '/programming/edgetx',
+      contentClass: p.kind === 'problem' ? 'diagnostic' : 'reference',
+      software: 'edgetx',
+      system: 'radio-control',
+      version: p.sources[0]?.version,
+      titleTokens: toks(p.titleAr, p.titleEn),
+      keywordTokens: toks(
+        'edgetx', 'ايدجtx',
+        ...(p.bot?.symptomsAr ?? []), ...(p.bot?.misspellingsAr ?? []),
+      ),
+      bodyTokens: bodyToks(
+        p.summaryAr, p.whenNeededAr, p.whereAr,
+        ...p.relationAr, ...p.commonMistakesAr, ...p.verifyAr, p.revertAr,
+        ...p.manualRequiredAr, ...p.stepsAr.map(x => x.textAr),
+      ),
+    });
+
+    for (const g of p.groups) {
+      for (const st of g.settings) {
+        docs.push({
+          key: `edgetx-setting:${p.id}.${st.id}`,
+          type: 'edgetx-setting',
+          sourceId: `${p.id}.${st.id}`,
+          titleAr: st.labelAr,
+          titleEn: st.labelEn,
+          subtitle: `${p.titleAr} › ${g.titleAr}`,
+          route: `${resolveDestination({ kind: 'edgetx', id: p.id }) ?? '/programming/edgetx'}?topic=${encodeURIComponent(st.id)}`,
+          contentClass: 'reference',
+          software: 'edgetx',
+          system: 'radio-control',
+          titleTokens: toks(st.labelAr, st.labelEn),
+          keywordTokens: toks('edgetx', p.titleAr, p.titleEn, g.titleAr),
+          bodyTokens: bodyToks(st.whatAr, st.effectAr, st.whenAr, st.riskAr, st.verifyAr, st.revertAr),
+        });
+      }
+    }
   }
 
   // Legacy troubleshooting list — kept alive and now reachable via search.

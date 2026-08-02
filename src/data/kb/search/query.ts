@@ -56,12 +56,17 @@ const TYPE_BIAS: Record<SearchDocType, number> = {
   'bf-page': 5,
   troubleshooting: 4,
   'elrs-issue': 4,
+  'edgetx-topic': 4,
   'elrs-step': 3,
   'assembly-stage': 2,
   roadmap: 2,
   part: 2,
   checklist: 1,
+  // The two field-level types sit at the bottom for the same reason: a single
+  // setting row is the right answer only when the query names it, and when it
+  // does the title weights carry it there without any bias.
   'bf-field': 0,
+  'edgetx-setting': 0,
 };
 
 function fuzzyBest(token: string, pool: Set<string>): number {

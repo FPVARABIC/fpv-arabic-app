@@ -17,6 +17,9 @@ import { allKbModules } from '../src/data/kb/registry';
 import { articleTextStrings } from '../src/data/kb/coverage';
 import { kbTerms } from '../src/data/kb/glossary/terms';
 import { allDxTrees } from '../src/data/kb/diagnostics/trees';
+import { allEdgeTxPages } from '../src/data/edgetx/registry';
+import { setupSteps } from '../src/data/expresslrs/setupSteps';
+import { troubleshootingIssues } from '../src/data/expresslrs/troubleshootingIssues';
 import { canonicalTerms, styleRules, TERM_EXPLANATION_EXEMPT, KEEP_IN_LATIN } from '../src/data/kb/style/terminology';
 import { normalizeText } from '../src/data/kb/search/normalize';
 
@@ -83,6 +86,93 @@ for (const tree of allDxTrees) {
       for (const act of o.actions ?? []) corpus.push({ origin: `dx:${tree.id}/${n.id}/${o.id}/action`, text: act });
     }
   }
+}
+
+/**
+ * The EdgeTX centre joins the corpus.
+ *
+ * WHAT IS DELIBERATELY EXCLUDED
+ * -----------------------------
+ * `bot.symptomsAr` and `bot.misspellingsAr` are NOT authored prose — they are
+ * retrieval inputs written in the user's own words, and their whole job is to
+ * contain the spellings this file forbids in prose («الريسيفر», «موديول»). They
+ * belong with search/synonyms.ts, not with the writing standard, and checking
+ * them here would force the two policies into direct contradiction.
+ */
+for (const p of allEdgeTxPages) {
+  corpus.push({ origin: `edgetx:${p.id}/title`, text: p.titleAr });
+  corpus.push({ origin: `edgetx:${p.id}/summary`, text: p.summaryAr });
+  corpus.push({ origin: `edgetx:${p.id}/when`, text: p.whenNeededAr });
+  corpus.push({ origin: `edgetx:${p.id}/where`, text: p.whereAr });
+  corpus.push({ origin: `edgetx:${p.id}/revert`, text: p.revertAr });
+  for (const t of p.prerequisitesAr) corpus.push({ origin: `edgetx:${p.id}/prereq`, text: t });
+  for (const t of p.relationAr) corpus.push({ origin: `edgetx:${p.id}/relation`, text: t });
+  for (const t of p.commonMistakesAr) corpus.push({ origin: `edgetx:${p.id}/mistake`, text: t });
+  for (const t of p.verifyAr) corpus.push({ origin: `edgetx:${p.id}/verify`, text: t });
+  for (const t of p.versionNotesAr) corpus.push({ origin: `edgetx:${p.id}/version`, text: t });
+  for (const t of p.manualRequiredAr) corpus.push({ origin: `edgetx:${p.id}/manual`, text: t });
+  for (const st of p.stepsAr) {
+    corpus.push({ origin: `edgetx:${p.id}/step`, text: st.textAr });
+    if (st.noteAr) corpus.push({ origin: `edgetx:${p.id}/step-note`, text: st.noteAr });
+  }
+  for (const t of p.troubleshootingAr ?? []) {
+    corpus.push({ origin: `edgetx:${p.id}/symptom`, text: t.symptomAr });
+    corpus.push({ origin: `edgetx:${p.id}/check`, text: t.checkAr });
+  }
+  if (p.ownsDiagnosis) corpus.push({ origin: `edgetx:${p.id}/owns`, text: p.ownsDiagnosis.reasonAr });
+  if (p.canonicalDiagnosis?.reason) corpus.push({ origin: `edgetx:${p.id}/canonical`, text: p.canonicalDiagnosis.reason });
+  for (const l of p.links) corpus.push({ origin: `edgetx:${p.id}/link`, text: l.label });
+  for (const g of p.groups) {
+    corpus.push({ origin: `edgetx:${p.id}/${g.id}/title`, text: g.titleAr });
+    if (g.introAr) corpus.push({ origin: `edgetx:${p.id}/${g.id}/intro`, text: g.introAr });
+    for (const st of g.settings) {
+      corpus.push({ origin: `edgetx:${p.id}/${st.id}/label`, text: st.labelAr });
+      corpus.push({ origin: `edgetx:${p.id}/${st.id}/what`, text: st.whatAr });
+      corpus.push({ origin: `edgetx:${p.id}/${st.id}/effect`, text: st.effectAr });
+      corpus.push({ origin: `edgetx:${p.id}/${st.id}/when`, text: st.whenAr });
+      for (const [k, v] of [['risk', st.riskAr], ['verify', st.verifyAr], ['revert', st.revertAr],
+        ['version', st.versionNoteAr], ['manual', st.manualCheckAr]] as const) {
+        if (v) corpus.push({ origin: `edgetx:${p.id}/${st.id}/${k}`, text: v });
+      }
+    }
+  }
+}
+
+// The ExpressLRS centre. Its prose was written before this checker existed and
+// is now held to the same standard as everything else — the six entries added
+// while closing the confirmed gaps had to pass it to be written at all.
+for (const st of setupSteps) {
+  corpus.push({ origin: `elrs-step:${st.id}/title`, text: st.title });
+  corpus.push({ origin: `elrs-step:${st.id}/summary`, text: st.summary });
+  corpus.push({ origin: `elrs-step:${st.id}/goal`, text: st.goal });
+  for (const t of st.prerequisites) corpus.push({ origin: `elrs-step:${st.id}/prereq`, text: t });
+  for (const t of st.actions) corpus.push({ origin: `elrs-step:${st.id}/action`, text: t });
+  for (const t of st.expectedResult) corpus.push({ origin: `elrs-step:${st.id}/expected`, text: t });
+  for (const t of st.ifNotSeen) corpus.push({ origin: `elrs-step:${st.id}/ifNotSeen`, text: t });
+  for (const t of st.commonMistakes) corpus.push({ origin: `elrs-step:${st.id}/mistake`, text: t });
+  for (const w of st.warnings) corpus.push({ origin: `elrs-step:${st.id}/warning`, text: w.message });
+  for (const c of st.checklist) corpus.push({ origin: `elrs-step:${st.id}/checklist`, text: c.label });
+  for (const t of st.versionNotes) corpus.push({ origin: `elrs-step:${st.id}/version`, text: t });
+  for (const d of st.advancedDisclosures) {
+    corpus.push({ origin: `elrs-step:${st.id}/disclosure`, text: d.title });
+    for (const b of d.body) corpus.push({ origin: `elrs-step:${st.id}/disclosure-body`, text: b });
+  }
+  for (const tm of st.terminology) corpus.push({ origin: `elrs-step:${st.id}/term`, text: tm.definition });
+}
+
+for (const i of troubleshootingIssues) {
+  corpus.push({ origin: `elrs-issue:${i.id}/title`, text: i.title });
+  corpus.push({ origin: `elrs-issue:${i.id}/symptom`, text: i.symptom });
+  corpus.push({ origin: `elrs-issue:${i.id}/resolved`, text: i.resolvedWhen });
+  corpus.push({ origin: `elrs-issue:${i.id}/next`, text: i.nextIfUnresolved });
+  if (i.safetyWarning) corpus.push({ origin: `elrs-issue:${i.id}/safety`, text: i.safetyWarning.message });
+  for (const t of i.likelyCauses) corpus.push({ origin: `elrs-issue:${i.id}/cause`, text: t });
+  for (const c of i.checks) {
+    corpus.push({ origin: `elrs-issue:${i.id}/${c.id}/instruction`, text: c.instruction });
+    corpus.push({ origin: `elrs-issue:${i.id}/${c.id}/expected`, text: c.expectedResult });
+    corpus.push({ origin: `elrs-issue:${i.id}/${c.id}/ifFailed`, text: c.ifFailed });
+  }
+  for (const l of i.links ?? []) corpus.push({ origin: `elrs-issue:${i.id}/link`, text: l.label });
 }
 
 console.log(`\n[0] Corpus: ${corpus.length} authored strings collected`);

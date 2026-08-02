@@ -5,6 +5,8 @@
  * touching component code.
  */
 
+import type { KbBotMeta, KbLink } from '../kb/types';
+
 export type ReceiverArchitecture = 'uart' | 'spi' | 'unknown';
 export type TxModuleLocation = 'internal' | 'external' | 'unknown';
 export type FrequencyBand = '2.4' | '900' | 'unknown';
@@ -70,6 +72,14 @@ export interface SetupStepContent {
   versionNotes: string[];
   troubleshootingLinks: string[];
   advancedDisclosures: AdvancedDisclosure[];
+  /**
+   * Retrieval metadata, shared with the encyclopedia rather than reinvented.
+   *
+   * Importing `KbBotMeta` here rather than declaring a parallel shape is the
+   * point: the answering layer must be able to rank an ExpressLRS step against
+   * a KB article without knowing they came from different modules.
+   */
+  bot?: KbBotMeta;
 }
 
 export const RECEIVER_ARCHITECTURE_LABELS: Record<ReceiverArchitecture, string> = {
@@ -140,4 +150,12 @@ export interface TroubleshootingIssue {
   nextIfUnresolved: string;
   sources: SourceRef[];
   reviewedAt: string;
+  /**
+   * Destinations this issue can hand the reader off to, resolved through the
+   * platform's one route resolver. `sources` are where the FACTS came from;
+   * these are where the reader GOES — the Ports page, their own project, the
+   * EdgeTX topic that owns the radio side.
+   */
+  links?: KbLink[];
+  bot?: KbBotMeta;
 }

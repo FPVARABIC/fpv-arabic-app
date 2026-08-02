@@ -32,9 +32,19 @@ const betaflightDataTs = readFileSync(join(ROOT, 'src/data/betaflightData.ts'), 
 
 console.log('\n[1] /programming/expresslrs route exists; both /setup and /troubleshooting child routes now exist');
 {
-  ok('App.tsx imports ExpressLrsView', /import\s*\{\s*ExpressLrsView\s*\}\s*from\s*'\.\/views\/ExpressLrsView';/.test(appTsx));
-  ok('App.tsx imports ExpressLrsSetupView', /import\s*\{\s*ExpressLrsSetupView\s*\}\s*from\s*'\.\/views\/ExpressLrsSetupView';/.test(appTsx));
-  ok('App.tsx imports ExpressLrsTroubleshootingView', /import\s*\{\s*ExpressLrsTroubleshootingView\s*\}\s*from\s*'\.\/views\/ExpressLrsTroubleshootingView';/.test(appTsx));
+  // The three screens moved from eager `import` to `lazy(() => import(...))`
+  // when they began reading the user's project and resolving links through the
+  // KB registry: keeping them eager pulled the parts catalogue and the whole
+  // encyclopedia into the first load. What matters to this test is unchanged —
+  // App.tsx still brings each of them in from its own module file — so the
+  // assertion follows the import, not the keyword.
+  ok('App.tsx loads ExpressLrsView from its module', /import\('\.\/views\/ExpressLrsView'\)/.test(appTsx));
+  ok('App.tsx loads ExpressLrsSetupView from its module', /import\('\.\/views\/ExpressLrsSetupView'\)/.test(appTsx));
+  ok('App.tsx loads ExpressLrsTroubleshootingView from its module', /import\('\.\/views\/ExpressLrsTroubleshootingView'\)/.test(appTsx));
+  ok('…and each is code-split rather than eagerly bundled',
+    /const ExpressLrsView = lazy\(/.test(appTsx)
+    && /const ExpressLrsSetupView = lazy\(/.test(appTsx)
+    && /const ExpressLrsTroubleshootingView = lazy\(/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs rendering ExpressLrsView', /<Route path="\/programming\/expresslrs" element=\{<ExpressLrsView\/>\}\/>/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs/setup rendering ExpressLrsSetupView', /<Route path="\/programming\/expresslrs\/setup" element=\{<ExpressLrsSetupView\/>\}\/>/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs/troubleshooting rendering ExpressLrsTroubleshootingView', /<Route path="\/programming\/expresslrs\/troubleshooting" element=\{<ExpressLrsTroubleshootingView\/>\}\/>/.test(appTsx));

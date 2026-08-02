@@ -183,6 +183,8 @@ export function computeRcFindings(p: ProjectSnapshot): Finding[] {
       links: [
         { kind: 'dx', targetId: 'dx-rc-bind-fail', label: 'تشخيص: الربط لا يتم' },
         { kind: 'article', targetId: 'rc-elrs', label: 'مقال: تحديث النظام بأمان' },
+        { kind: 'elrs-setup', targetId: 'update-tx', label: 'ExpressLRS — تحديث وحدة الإرسال' },
+        { kind: 'elrs-setup', targetId: 'update-rx', label: 'ExpressLRS — تحديث المستقبل' },
       ],
     });
   }
@@ -275,6 +277,8 @@ export function computeRcFindings(p: ProjectSnapshot): Finding[] {
         links: [
           { kind: 'betaflight', targetId: 'ports', label: 'Betaflight — صفحة المنافذ' },
           { kind: 'article', targetId: 'fc-ports', label: 'مقال: المنافذ ونواقل البيانات' },
+          { kind: 'elrs-issue', targetId: 'uart-conflict', label: 'ExpressLRS — المنفذ مستخدم من طرف آخر' },
+          { kind: 'project', targetId: 'findings', label: 'افتح تقرير التعارض' },
         ],
       });
     }
@@ -398,6 +402,7 @@ export function computeRcFindings(p: ProjectSnapshot): Finding[] {
         { kind: 'article', targetId: 'rc-failsafe', label: 'مقال: الـFailsafe' },
         { kind: 'betaflight', targetId: 'failsafe', label: 'Betaflight — صفحة الـFailsafe' },
         { kind: 'dx', targetId: 'dx-rc-failsafe', label: 'تشخيص: سلوك غير متوقع عند فقد الإشارة' },
+        { kind: 'edgetx', targetId: 'failsafe', label: 'EdgeTX — سلوك فقد الإشارة على الجهاز' },
       ],
     });
   }
@@ -496,6 +501,8 @@ export function computeRcFindings(p: ProjectSnapshot): Finding[] {
       links: [
         { kind: 'glossary', targetId: 'model-match', label: 'مصطلح: مطابقة النموذج' },
         { kind: 'article', targetId: 'rc-elrs', label: 'مقال: إعدادات النظام' },
+        { kind: 'edgetx', targetId: 'model-match', label: 'EdgeTX — مطابقة النموذج' },
+        { kind: 'elrs-issue', targetId: 'model-match-blocks', label: 'ExpressLRS — المطابقة تمنع الاتصال' },
       ],
     });
   }
@@ -541,7 +548,11 @@ export function computeRcFindings(p: ProjectSnapshot): Finding[] {
       actionsAr: ['سجّل طراز جهاز الإرسال وإصدار نظام تشغيله'],
       missingAr: ['طراز جهاز الإرسال', 'إصدار نظام تشغيل الجهاز'],
       manualCheckAr: 'دليل جهازك يذكر نوع الفتحة والقدرة التي تستطيع تغذيتها للوحدة الخارجية.',
-      links: [{ kind: 'article', targetId: 'rc-tx-modules', label: 'مقال: وحدات الإرسال' }],
+      links: [
+        { kind: 'article', targetId: 'rc-tx-modules', label: 'مقال: وحدات الإرسال' },
+        { kind: 'edgetx', targetId: 'external-module', label: 'EdgeTX — إعداد الوحدة الخارجية' },
+        { kind: 'project', targetId: 'radioModel', label: 'سجّل طراز جهاز الإرسال' },
+      ],
     });
   }
 

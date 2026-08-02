@@ -28,6 +28,7 @@
  * must be consulted instead of us.
  */
 
+import type { KbLinkKind } from '../kb/types';
 import type { RcSetup } from './rcSetup';
 import type {
   BasePart, Frame, Motor, Esc, Battery, Propeller,
@@ -114,8 +115,18 @@ export interface Finding {
   missingAr: string[];
   /** Set when the honest answer is "read your manufacturer's manual". */
   manualCheckAr?: string;
-  /** Where to learn more — resolved through the KB registry, never a literal path. */
-  links: { kind: 'article' | 'dx' | 'betaflight' | 'glossary'; targetId: string; label: string }[];
+  /**
+   * Where to learn more, or where to act — resolved through the one destination
+   * resolver, never a literal path.
+   *
+   * `KbLinkKind` is imported as a TYPE only. That costs nothing at runtime and
+   * keeps this layer free of any dependency on the encyclopedia, while removing
+   * the hand-maintained copy of the kind list that used to live here — and that
+   * had already fallen behind: a finding could not point at an ExpressLRS issue
+   * or at the reader's own project, which are exactly the two most useful places
+   * to send someone holding a conflict report.
+   */
+  links: { kind: KbLinkKind; targetId: string; label: string }[];
 }
 
 /** A single, unambiguous "do this now". */

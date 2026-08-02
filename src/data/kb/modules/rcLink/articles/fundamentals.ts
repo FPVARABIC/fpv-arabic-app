@@ -261,6 +261,21 @@ export const rcWhatIs: KbArticle = {
   keywordsAr: ['رابط التحكم', 'الاتصال', 'المستقبل', 'جهاز الإرسال', 'انقطاع الإشارة', 'المدى'],
   keywordsEn: ['rc link', 'control link', 'receiver', 'transmitter', 'range', 'failsafe'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['explain', 'learn_next', 'navigate'],
+    symptomsAr: ['ما هو رابط التحكم', 'كيف يوصل الريموت بالطائرة', 'الراديو لا يرى المستقبل'],
+    misspellingsAr: ['رابط تحكم', 'rc link', 'ار سي', 'لينك'],
+    actions: [
+      { kind: 'article', targetId: 'rc-radio', label: 'اقرأ عن جهاز الإرسال' },
+      { kind: 'article', targetId: 'rc-receivers', label: 'اقرأ عن المستقبل' },
+      { kind: 'edgetx', targetId: '', label: 'افتح EdgeTX' },
+    ],
+    systems: ['rc-link'],
+    software: ['edgetx', 'expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['نظام التحكم المستخدم', 'طراز المستقبل'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -438,6 +453,21 @@ export const rcRadio: KbArticle = {
   keywordsAr: ['جهاز الإرسال', 'أذرع التحكم', 'نظام التشغيل', 'النماذج', 'التسليح'],
   keywordsEn: ['transmitter', 'radio', 'gimbal', 'EdgeTX', 'model match'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'compare', 'add_part', 'navigate'],
+    symptomsAr: ['أي ريموت أشتري', 'الريموت لا يشتغل', 'الراديو لا يرى المستقبل'],
+    misspellingsAr: ['ريموت', 'الريموت', 'remote', 'راديو', 'tx'],
+    actions: [
+      { kind: 'edgetx', targetId: 'model-setup', label: 'افتح إنشاء النموذج' },
+      { kind: 'article', targetId: 'rc-tx-modules', label: 'اقرأ عن الوحدات' },
+      { kind: 'assembly', targetId: '', label: 'افتح اختيار القطع' },
+    ],
+    systems: ['rc-link'],
+    software: ['edgetx'],
+    parts: [],
+    requiresBeforeVerdict: ['طراز جهاز الإرسال', 'إصدار نظام تشغيله'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -628,4 +658,19 @@ export const rcTxModules: KbArticle = {
   keywordsAr: ['وحدة الإرسال', 'الفتحة', 'قدرة البثّ', 'النطاق التنظيمي', 'التبريد'],
   keywordsEn: ['tx module', 'external module', 'power', 'regulatory domain'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'compare', 'software_setup', 'diagnose'],
+    symptomsAr: ['الوحدة لا تظهر', 'داخلية أم خارجية', 'الراديو لا يرى الوحدة'],
+    misspellingsAr: ['موديول', 'مديول', 'module', 'انترنال', 'اكسترنال'],
+    actions: [
+      { kind: 'edgetx', targetId: 'external-module', label: 'افتح إعداد الوحدة الخارجية' },
+      { kind: 'elrs-issue', targetId: 'tx-not-detected', label: 'افتح مشكلة عدم اكتشاف الوحدة' },
+      { kind: 'project', targetId: 'moduleKind', label: 'سجّل نوع وحدتك' },
+    ],
+    systems: ['rc-link'],
+    software: ['edgetx', 'expresslrs'],
+    parts: [],
+    requiresBeforeVerdict: ['نوع الوحدة', 'طراز جهاز الإرسال'],
+    safetyPrerequisitesAr: ['لا تشغّل وحدة إرسال بلا هوائي مركّب'],
+  },
 };

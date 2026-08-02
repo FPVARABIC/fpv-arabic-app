@@ -223,10 +223,29 @@ export type KbLinkKind =
   | 'dx'
   | 'glossary'
   | 'checklist'
+  // The software centres and the workspace. Added when the retrieval metadata
+  // began carrying ACTIONS: «افتح خطوة كذا» and «سجّل الـTarget في مشروعك» are
+  // the two most useful things an answer can offer, and neither was expressible
+  // as a link before — which would have forced prose instructions ("go to the
+  // programming section") exactly where a real destination is required.
+  | 'elrs-setup'
+  | 'elrs-issue'
+  | 'edgetx'
+  | 'project'
   | 'external';
 
 export interface KbLink {
   kind: KbLinkKind;
+  /**
+   * The target's id. Empty is legal ONLY for kinds whose destination is a whole
+   * screen (`elrs-setup`, `elrs-issue`, `edgetx`, `project`, `assembly`,
+   * `checklist`); for every other kind an empty id resolves to null and the
+   * link renders as unavailable rather than as a guess.
+   *
+   * For `project` the id names the field the reader is being asked for
+   * (`rxTarget`, `rxFirmware`, …) or the literal `findings`, so «طلب Target»
+   * lands on the field itself instead of on a form of twenty.
+   */
   targetId: string;
   label: string;
   /** Only for kind === 'external'. */
@@ -286,6 +305,11 @@ export type KbIntent =
   | 'diagnose'
   | 'project_check'
   | 'software_setup'
+  | 'bind_device'
+  | 'range_test'
+  | 'failsafe_setup'
+  | 'update_firmware'
+  | 'recover_device'
   | 'compare'
   | 'learn_next'
   | 'add_part'
@@ -293,15 +317,20 @@ export type KbIntent =
   | 'safety_warning';
 
 export const KB_INTENT_LABEL_AR: Record<KbIntent, string> = {
-  explain: 'شرح',
-  navigate: 'تنقّل',
-  diagnose: 'تشخيص',
+  explain: 'شرح مفهوم',
+  navigate: 'فتح صفحة',
+  diagnose: 'تشخيص عطل',
   project_check: 'فحص المشروع',
-  software_setup: 'إعداد برنامج',
-  compare: 'مقارنة',
+  software_setup: 'إعداد نظام',
+  bind_device: 'ربط جهاز',
+  range_test: 'اختبار مدى',
+  failsafe_setup: 'إعداد Failsafe',
+  update_firmware: 'تحديث Firmware',
+  recover_device: 'استعادة جهاز',
+  compare: 'مقارنة نظامين',
   learn_next: 'متابعة تعلّم',
   add_part: 'إضافة قطعة',
-  missing_data: 'بيانات ناقصة',
+  missing_data: 'معرفة البيانات الناقصة',
   safety_warning: 'تحذير سلامة',
 };
 

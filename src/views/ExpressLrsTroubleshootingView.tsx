@@ -1,11 +1,16 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowRight, RotateCcw, ChevronLeft } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { ExpressLrsTroubleshootingIssueCard } from '../components/expresslrs/ExpressLrsTroubleshootingIssueCard';
 import { useExpressLrsTroubleshootingProgress } from '../hooks/useExpressLrsTroubleshootingProgress';
 import { troubleshootingIssues, TROUBLESHOOTING_CATEGORIES } from '../data/expresslrs/troubleshootingIssues';
+import { readProjectSnapshot } from '../data/project/snapshot';
+import { computeFindings } from '../data/project/verdicts';
+import { findingsForElrsEntry, rcFactsForElrsEntry } from '../data/project/context';
+import { RcContextPanel } from '../components/project/RcContextPanel';
+import { resolveLinkRoute } from '../data/kb/registry';
 
 const APPLICABILITY_LABEL: Record<string, string> = { uart: 'UART', spi: 'SPI' };
 
@@ -49,6 +54,19 @@ export const ExpressLrsTroubleshootingView: React.FC = () => {
   useLayoutEffect(() => {
     issueTopRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
   }, [currentIssue?.id]);
+
+  // The reader's own recorded setup, narrowed to what THIS issue is about.
+  // Nothing renders when the issue has no declared fields or the project has no
+  // values for them — see RcContextPanel for why that matters.
+  const project = useMemo(() => readProjectSnapshot(), []);
+  const facts = useMemo(
+    () => (currentIssue ? rcFactsForElrsEntry(project, currentIssue.id) : []),
+    [project, currentIssue],
+  );
+  const projectFindings = useMemo(
+    () => (currentIssue ? findingsForElrsEntry(computeFindings(project), currentIssue.id) : []),
+    [project, currentIssue],
+  );
 
   const exit = () => navigate('/programming/expresslrs');
 
@@ -111,13 +129,49 @@ export const ExpressLrsTroubleshootingView: React.FC = () => {
           </nav>
 
           {currentIssue && (
-            <div ref={issueTopRef} className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
-              <ExpressLrsTroubleshootingIssueCard
-                issue={currentIssue}
-                getCheckOutcome={progress.getCheckOutcome}
-                onSetCheckOutcome={progress.setCheckOutcome}
-                onResetIssue={() => progress.resetIssue(currentIssue.checks.map(c => c.id))}
+            <div ref={issueTopRef} className="space-y-3">
+              <RcContextPanel
+                testIdPrefix="elrs"
+                entryId={currentIssue.id}
+                facts={facts}
+                findings={projectFindings}
               />
+
+              <div className="p-4 rounded-2xl shadow-sm" style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                <ExpressLrsTroubleshootingIssueCard
+                  issue={currentIssue}
+                  getCheckOutcome={progress.getCheckOutcome}
+                  onSetCheckOutcome={progress.setCheckOutcome}
+                  onResetIssue={() => progress.resetIssue(currentIssue.checks.map(c => c.id))}
+                />
+              </div>
+
+              {currentIssue.links && currentIssue.links.length > 0 && (
+                <div
+                  data-testid="elrs-issue-links"
+                  className="p-3 rounded-2xl space-y-1.5"
+                  style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}
+                >
+                  <p className="text-xs font-bold" style={{ color: '#0f172a' }}>من هنا إلى</p>
+                  {currentIssue.links.map((l, i) => {
+                    const route = resolveLinkRoute(l);
+                    if (!route) return null;
+                    return (
+                      <button
+                        key={`${l.kind}-${l.targetId}-${i}`}
+                        type="button"
+                        data-testid={`elrs-issue-link-${l.kind}-${l.targetId || 'root'}`}
+                        onClick={() => navigate(route)}
+                        className="w-full text-right px-3 py-2.5 rounded-xl flex items-center gap-2 press"
+                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+                      >
+                        <span className="flex-1 text-[12.5px] font-semibold" style={{ color: '#334155' }}>{l.label}</span>
+                        <ChevronLeft size={15} style={{ color: '#94a3b8' }} aria-hidden/>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

@@ -186,6 +186,21 @@ export const rcBinding: KbArticle = {
   keywordsAr: ['ربط', 'بايند', 'عبارة الربط', 'مطابقة النموذج', 'إعادة الربط'],
   keywordsEn: ['binding', 'bind', 'binding phrase', 'model match', 'UID'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['bind_device', 'software_setup', 'diagnose', 'navigate'],
+    symptomsAr: ['لا يدخل Bind', 'البايند لا يعمل', 'ما يبند', 'الراديو لا يرى المستقبل'],
+    misspellingsAr: ['بايند', 'باند', 'bind', 'binding', 'ربط'],
+    actions: [
+      { kind: 'dx', targetId: 'dx-rc-bind-fail', label: 'ابدأ تشخيص الربط' },
+      { kind: 'elrs-issue', targetId: 'no-bind', label: 'افتح مشكلة عدم الربط' },
+      { kind: 'edgetx', targetId: 'model-match', label: 'افتح مطابقة النموذج' },
+    ],
+    systems: ['rc-link'],
+    software: ['edgetx', 'expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['نظام الطرفين', 'إصدار الطرفين', 'هل المطابقة مفعّلة'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي محاولة ربط'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,4 +379,19 @@ export const rcFailsafe: KbArticle = {
   keywordsAr: ['فقد الإشارة', 'نزع التسليح', 'الطيران بعيداً', 'العودة التلقائية', 'الأمان'],
   keywordsEn: ['failsafe', 'disarm', 'flyaway', 'RTH', 'safety'],
   safetyLevel: 'critical',
+  bot: {
+    intents: ['failsafe_setup', 'safety_warning', 'diagnose', 'project_check'],
+    symptomsAr: ['الطائرة لا تهبط عند فقد الإشارة', 'ما أعرف أضبط Failsafe', 'المستقبل يعيد التشغيل'],
+    misspellingsAr: ['فيل سيف', 'failsafe', 'فيلسيف', 'فقدان اشاره'],
+    actions: [
+      { kind: 'betaflight', targetId: 'failsafe', label: 'افتح Failsafe' },
+      { kind: 'edgetx', targetId: 'failsafe', label: 'افتح سلوك فقد الإشارة في EdgeTX' },
+      { kind: 'project', targetId: 'failsafeStrategy', label: 'سجّل استراتيجيتك' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'edgetx', 'expresslrs'],
+    parts: ['receivers', 'flightControllers'],
+    requiresBeforeVerdict: ['سلوك المستقبل', 'سياسة متحكم الطيران', 'هل اختبرت فعلياً'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار لفقد الإشارة', 'الإعداد ليس بديلاً عن الاختبار'],
+  },
 };

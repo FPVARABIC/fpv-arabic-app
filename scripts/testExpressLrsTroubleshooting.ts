@@ -37,7 +37,13 @@ const setupViewTsx = readFileSync(join(ROOT, 'src/views/ExpressLrsSetupView.tsx'
 
 console.log('\n[1] Route wiring');
 {
-  ok('App.tsx imports ExpressLrsTroubleshootingView', /import\s*\{\s*ExpressLrsTroubleshootingView\s*\}\s*from\s*'\.\/views\/ExpressLrsTroubleshootingView';/.test(appTsx));
+  // Moved from an eager `import` to `lazy(() => import(...))` when this screen
+  // began reading the user's project and resolving links through the KB
+  // registry: eager, it dragged the parts catalogue and the encyclopedia into
+  // the first load. The route it serves is unchanged, so the assertion follows
+  // the module, not the keyword.
+  ok('App.tsx loads ExpressLrsTroubleshootingView from its own module', /import\('\.\/views\/ExpressLrsTroubleshootingView'\)/.test(appTsx));
+  ok('…and it is code-split rather than eagerly bundled', /const ExpressLrsTroubleshootingView = lazy\(/.test(appTsx));
   ok('App.tsx registers /programming/expresslrs/troubleshooting', /<Route path="\/programming\/expresslrs\/troubleshooting" element=\{<ExpressLrsTroubleshootingView\/>\}\/>/.test(appTsx));
 }
 
@@ -49,29 +55,34 @@ console.log('\n[2] Isolated storage key, fully separate from the setup guide\'s 
   ok('the troubleshooting hook never reads or writes the setup storage key', !hookTs.includes('STORAGE_KEYS.EXPRESSLRS_SETUP_PROGRESS'));
   ok('the setup progress hook was not modified to know about troubleshooting', !setupProgressHookTs.includes('Troubleshooting'));
   ok('the setup view was not modified to know about troubleshooting', !setupViewTsx.includes('Troubleshooting'));
-  ok('setupSteps.ts data is untouched (still exactly 10 steps)', setupSteps.length === 10);
+  ok('setupSteps.ts still carries the full curriculum (12 steps after the two Configurator gaps were closed)', setupSteps.length === 12);
 }
 
-console.log('\n[3] Exactly the 36 approved categories exist, each with a unique id');
+// 36 grew to 40 when the four confirmed diagnostic gaps were closed. Each new
+// issue sits inside the category it belongs to rather than at the end, so the
+// safety closer stays last and the update category still reads as a sequence.
+console.log('\n[3] Exactly the 40 approved categories exist, each with a unique id');
 {
-  ok('exactly 36 issues are defined', troubleshootingIssues.length === 36 && TOTAL_TROUBLESHOOTING_ISSUES === 36);
+  ok('exactly 40 issues are defined', troubleshootingIssues.length === 40 && TOTAL_TROUBLESHOOTING_ISSUES === 40);
   const ids = troubleshootingIssues.map(i => i.id);
-  ok('all issue ids are unique', new Set(ids).size === 36);
+  ok('all issue ids are unique', new Set(ids).size === 40);
   const orders = troubleshootingIssues.slice().sort((a, b) => a.order - b.order).map(i => i.order);
-  ok('order fields are 1..36 in sequence', JSON.stringify(orders) === JSON.stringify(Array.from({ length: 36 }, (_, i) => i + 1)));
+  ok('order fields are 1..40 in sequence', JSON.stringify(orders) === JSON.stringify(Array.from({ length: 40 }, (_, i) => i + 1)));
 
   const expectedIds = [
     'no-power', 'led-off', 'led-unclear', 'tx-not-detected', 'lua-not-loading', 'lua-stuck-loading',
     'cannot-enter-wifi', 'webui-not-opening', 'no-bind', 'binding-phrase-mismatch', 'firmware-incompatibility',
     'wrong-regulatory-domain', 'model-match-blocks', 'connects-then-disconnects', 'unstable-short-range',
-    'low-rssi-lq', 'bound-no-channel-movement', 'wrong-uart', 'serial-rx-not-enabled', 'wrong-mode-provider',
+    'low-rssi-lq', 'bound-no-channel-movement', 'wrong-uart', 'uart-conflict', 'serial-rx-not-enabled',
+    'wrong-mode-provider',
     'wiring-reversed', 'wrong-pad', 'serialrx-flags-wrong', 'spi-config-problems', 'telemetry-missing',
     'telemetry-ratio-issue', 'dynamic-power-issue', 'packet-rate-mismatch', 'arming-blocked', 'failsafe-incorrect',
-    'bench-ok-fails-after-takeoff', 'repeated-bootloader-wifi', 'flashing-fails', 'wrong-target-selected',
-    'recovery-after-bad-flash', 'when-to-stop',
+    'bench-ok-fails-after-takeoff', 'repeated-bootloader-wifi', 'build-failure', 'flashing-fails',
+    'wrong-target-selected', 'recovery-after-bad-flash', 'passthrough-failure', 'wifi-upload-interrupted',
+    'when-to-stop',
   ];
   const idsInOrder = troubleshootingIssues.slice().sort((a, b) => a.order - b.order).map(i => i.id);
-  ok('the 36 category ids match the approved list exactly, in the approved order', JSON.stringify(idsInOrder) === JSON.stringify(expectedIds));
+  ok('the 40 category ids match the approved list exactly, in the approved order', JSON.stringify(idsInOrder) === JSON.stringify(expectedIds));
 }
 
 console.log('\n[4] Every issue carries the full required content shape');

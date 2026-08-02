@@ -228,6 +228,24 @@ export const dxRcNoLink: DxTree = {
   ],
   sources: [PRINCIPLE, ELRS_DOCS, RX_VENDOR],
   lastReviewed: '2026-08',
+  bot: {
+    intents: ['diagnose', 'navigate', 'project_check', 'missing_data'],
+    symptomsAr: [
+      'الراديو لا يرى المستقبل', 'متصل لكن القنوات لا تتحرك', 'الريسيفر لا يشتغل',
+      'Serial RX لا يعمل'
+    ],
+    misspellingsAr: ['لا يوجد اتصال', 'no link', 'مافي اتصال', 'ما يتصل'],
+    actions: [
+      { kind: 'betaflight', targetId: 'ports', label: 'افتح Ports' },
+      { kind: 'betaflight', targetId: 'receiver', label: 'افتح Receiver' },
+      { kind: 'elrs-issue', targetId: 'bound-no-channel-movement', label: 'افتح مشكلة القنوات الساكنة' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'expresslrs', 'edgetx'],
+    parts: ['receivers', 'flightControllers'],
+    requiresBeforeVerdict: ['رقم المنفذ', 'البروتوكول', 'هل يوجد ربط أصلاً'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -388,6 +406,21 @@ export const dxRcBindFail: DxTree = {
   ],
   sources: [ELRS_DOCS, RX_VENDOR, PRINCIPLE],
   lastReviewed: '2026-08',
+  bot: {
+    intents: ['diagnose', 'bind_device', 'navigate', 'missing_data'],
+    symptomsAr: ['لا يدخل Bind', 'البايند لا يعمل', 'ما يبند', 'الوحدة لا تظهر'],
+    misspellingsAr: ['بايند', 'bind fail', 'ما يبند', 'لا يربط'],
+    actions: [
+      { kind: 'elrs-issue', targetId: 'no-bind', label: 'افتح مشكلة عدم الربط' },
+      { kind: 'edgetx', targetId: 'model-match', label: 'افتح مطابقة النموذج' },
+      { kind: 'project', targetId: 'rxFirmware', label: 'سجّل إصدار المستقبل' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs', 'edgetx'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['نظام الطرفين ونطاقهما', 'إصدار الطرفين', 'هل المطابقة مفعّلة'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي محاولة ربط'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -537,6 +570,21 @@ export const dxRcRange: DxTree = {
   ],
   sources: [PRINCIPLE, ELRS_DOCS, BF_DOCS],
   lastReviewed: '2026-08',
+  bot: {
+    intents: ['diagnose', 'range_test', 'project_check', 'navigate'],
+    symptomsAr: ['المدى ضعيف', 'LQ منخفضة', 'الإشارة تنقطع عند الابتعاد'],
+    misspellingsAr: ['مدى', 'range', 'رينج', 'ضعف الاشاره'],
+    actions: [
+      { kind: 'elrs-issue', targetId: 'low-rssi-lq', label: 'افتح مشكلة انخفاض الجودة' },
+      { kind: 'article', targetId: 'rc-antennas', label: 'اقرأ عن الهوائيات' },
+      { kind: 'project', targetId: 'antennaPlacement', label: 'سجّل وضع هوائيك' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['وضع الهوائي', 'معدل الرزم', 'مكان الاختبار'],
+    safetyPrerequisitesAr: ['أجرِ اختبار المدى بلا مراوح وفي مكان مفتوح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -673,4 +721,19 @@ export const dxRcFailsafe: DxTree = {
   ],
   sources: [BF_DOCS, ELRS_DOCS, PRINCIPLE],
   lastReviewed: '2026-08',
+  bot: {
+    intents: ['diagnose', 'failsafe_setup', 'safety_warning', 'project_check'],
+    symptomsAr: ['الطائرة لا تهبط عند فقد الإشارة', 'المستقبل يعيد التشغيل', 'ما أعرف أضبط Failsafe'],
+    misspellingsAr: ['فيل سيف', 'failsafe', 'فقدان اشاره', 'ما يهبط'],
+    actions: [
+      { kind: 'betaflight', targetId: 'failsafe', label: 'افتح Failsafe' },
+      { kind: 'edgetx', targetId: 'failsafe', label: 'افتح سلوك فقد الإشارة' },
+      { kind: 'project', targetId: 'failsafeStrategy', label: 'سجّل استراتيجيتك' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'edgetx', 'expresslrs'],
+    parts: ['receivers', 'flightControllers'],
+    requiresBeforeVerdict: ['سلوك المستقبل', 'سياسة متحكم الطيران', 'تاريخ آخر اختبار'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل اختبار فقد الإشارة'],
+  },
 };

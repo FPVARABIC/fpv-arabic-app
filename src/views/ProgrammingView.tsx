@@ -1,14 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
-import { Cpu, Radio, Link2, Navigation, ChevronLeft } from 'lucide-react';
+import { Cpu, Radio, Link2, Navigation, ChevronLeft, Sliders } from 'lucide-react';
 
 interface ProgrammingCard {
   id: string;
   title: string;
   description: string;
   icon: React.FC<{ size?: number; className?: string }>;
-  accentKey: 'betaflight' | 'expresslrs' | 'binding' | 'inav';
+  accentKey: 'betaflight' | 'expresslrs' | 'binding' | 'inav' | 'edgetx';
   available: boolean;
   route?: string;
 }
@@ -31,6 +31,15 @@ const cards: ProgrammingCard[] = [
     accentKey: 'expresslrs',
     available: true,
     route: '/programming/expresslrs',
+  },
+  {
+    id: 'edgetx',
+    title: 'EdgeTX',
+    description: 'نظام تشغيل جهاز الإرسال: النموذج، الوحدة، المزج، التليمتري، والصيانة.',
+    icon: Sliders,
+    accentKey: 'edgetx',
+    available: true,
+    route: '/programming/edgetx',
   },
   {
     id: 'binding',

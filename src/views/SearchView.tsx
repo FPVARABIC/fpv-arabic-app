@@ -22,6 +22,8 @@ const TYPE_COLOR: Partial<Record<SearchDocType, string>> = {
   lesson: '#b45309',
   'bf-page': '#4338ca',
   'bf-field': '#4338ca',
+  'edgetx-topic': '#0e7490',
+  'edgetx-setting': '#0e7490',
 };
 
 /**

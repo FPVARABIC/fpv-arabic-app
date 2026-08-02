@@ -181,6 +181,21 @@ export const rcProtocols: KbArticle = {
   keywordsAr: ['نظام راديوي', 'تردد', 'معدل الرزم', 'النطاق التنظيمي', 'التوافق'],
   keywordsEn: ['radio system', 'frequency', 'packet rate', 'regulatory domain'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'compare', 'add_part', 'navigate'],
+    symptomsAr: ['أي نظام أختار', 'ما الفرق بين الأنظمة', 'ما يبند'],
+    misspellingsAr: ['بروتوكول', 'بروتكول', 'protocol', 'كروس فاير', 'تريسر'],
+    actions: [
+      { kind: 'article', targetId: 'rc-elrs', label: 'اقرأ عن ExpressLRS' },
+      { kind: 'edgetx', targetId: 'rf-system', label: 'افتح اختيار النظام الراديوي' },
+      { kind: 'project', targetId: 'rxSystem', label: 'سجّل نظام مستقبلك' },
+    ],
+    systems: ['rc-link'],
+    software: ['edgetx', 'expresslrs'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['نظام الوحدة', 'نظام المستقبل', 'النطاق'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -371,6 +386,21 @@ export const rcSerialProtocols: KbArticle = {
   keywordsAr: ['بروتوكول تسلسلي', 'المنافذ', 'التقاطع', 'الإشارة المعكوسة', 'التليمتري'],
   keywordsEn: ['CRSF', 'SBUS', 'UART', 'serial rx', 'inverted'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'software_setup', 'diagnose', 'navigate'],
+    symptomsAr: ['Serial RX لا يعمل', 'اخترت UART ولا يوجد رد', 'متصل لكن القنوات لا تتحرك'],
+    misspellingsAr: ['سيريال', 'serial rx', 'سي ار اس اف', 'سباص', 'sbus', 'ibus'],
+    actions: [
+      { kind: 'betaflight', targetId: 'ports', label: 'افتح Ports' },
+      { kind: 'betaflight', targetId: 'receiver', label: 'افتح Receiver' },
+      { kind: 'elrs-issue', targetId: 'serial-rx-not-enabled', label: 'افتح مشكلة Serial RX' },
+    ],
+    systems: ['rc-link'],
+    software: ['betaflight', 'edgetx'],
+    parts: ['receivers', 'flightControllers'],
+    requiresBeforeVerdict: ['البروتوكول المستخدم', 'رقم المنفذ'],
+    safetyPrerequisitesAr: ['انزع المراوح قبل أي اختبار قنوات أو تسليح'],
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -570,4 +600,19 @@ export const rcElrs: KbArticle = {
   keywordsAr: ['إكسبريس', 'معدل الرزم', 'التليمتري', 'القدرة الديناميكية', 'مطابقة النموذج'],
   keywordsEn: ['ExpressLRS', 'packet rate', 'telemetry ratio', 'dynamic power', 'model match'],
   safetyLevel: 'warning',
+  bot: {
+    intents: ['explain', 'software_setup', 'update_firmware', 'bind_device'],
+    symptomsAr: ['كيف أحدّث ExpressLRS', 'لا يدخل Bind', 'التحديث توقف'],
+    misspellingsAr: ['اكسبريس', 'expresslrs', 'elrs', 'اي ال ار اس'],
+    actions: [
+      { kind: 'elrs-setup', targetId: 'configurator-target', label: 'افتح ExpressLRS Configurator' },
+      { kind: 'elrs-setup', targetId: 'build-options', label: 'افتح خيارات البناء' },
+      { kind: 'project', targetId: 'rxFirmware', label: 'سجّل إصدار المستقبل' },
+    ],
+    systems: ['rc-link'],
+    software: ['expresslrs', 'edgetx'],
+    parts: ['receivers'],
+    requiresBeforeVerdict: ['إصدار الطرفين', 'الـTarget', 'النطاق التنظيمي'],
+    safetyPrerequisitesAr: ['لا تفصل الطاقة أثناء تحديث جارٍ'],
+  },
 };

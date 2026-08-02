@@ -34,7 +34,11 @@ export type Destination =
   | { kind: 'elrs-issue'; id?: string }
   | { kind: 'edgetx'; id?: string }
   | { kind: 'roadmap'; id: string }
-  | { kind: 'project' }
+  // The workspace, optionally aimed at one part of it. `view` selects a section
+  // ('rc' — the control-link form, 'findings' — the conflict report) and `field`
+  // names the single input the reader is being asked to fill. That is what makes
+  // «طلب Target» an action rather than a sentence: it opens the exact field.
+  | { kind: 'project'; view?: 'rc' | 'findings'; field?: string }
   | { kind: 'assembly' }
   | { kind: 'checklist' }
   | { kind: 'coverage' }
@@ -110,8 +114,13 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
       return d.id ? `/programming/edgetx/${d.id}` : '/programming/edgetx';
     case 'roadmap':
       return d.id ? `/roadmap/${d.id}` : null;
-    case 'project':
-      return '/project';
+    case 'project': {
+      const q = new URLSearchParams();
+      if (d.view) q.set('view', d.view);
+      if (d.field) q.set('field', d.field);
+      const s = q.toString();
+      return s ? `/project?${s}` : '/project';
+    }
     case 'assembly':
       return '/assembly';
     case 'checklist':
@@ -143,6 +152,10 @@ export function destinationKey(d: Destination): string {
     case 'external':
       return `external:${d.url}`;
     case 'project':
+      // `project`, `project:rc`, `project:rc.rxTarget`, `project:findings` — the
+      // aimed forms have to survive the round trip or a shared "fill in your
+      // Target" link degrades silently into "open your project".
+      return d.view ? (d.field ? `project:${d.view}.${d.field}` : `project:${d.view}`) : 'project';
     case 'assembly':
     case 'checklist':
     case 'coverage':
@@ -175,6 +188,13 @@ export function parseDestinationKey(key: string): Destination | null {
     case 'lesson': case 'betaflight': case 'roadmap':
     case 'elrs-setup': case 'elrs-issue': case 'edgetx':
       return { kind, id: rest } as Destination;
+    case 'project': {
+      const dot = rest.indexOf('.');
+      const view = dot === -1 ? rest : rest.slice(0, dot);
+      if (view !== 'rc' && view !== 'findings') return null;
+      const field = dot === -1 ? undefined : rest.slice(dot + 1);
+      return field ? { kind: 'project', view, field } : { kind: 'project', view };
+    }
     case 'search':
       return { kind: 'search', query: rest };
     case 'external':

@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, ChevronDown, Check } from 'lucide-react';
 import {
   RC_BAND_LABEL_AR, RC_SYSTEM_LABEL_AR, RC_MODULE_LABEL_AR, RC_PROTOCOL_LABEL_AR,
   RC_POWER_LABEL_AR, RC_ANTENNA_LABEL_AR, RC_FAILSAFE_LABEL_AR,
-  rcSetupCompleteness, hasRcSetup, type RcSetup,
+  rcSetupCompleteness, hasRcSetup, RC_FIELD_INPUT_ID, type RcSetup,
 } from '../../data/project/rcSetup';
 import { saveRcSetup } from '../../data/project/store';
 
@@ -138,8 +138,15 @@ export const RcSetupCard: React.FC<{
   initial: RcSetup | undefined;
   /** Called after a successful save so the workspace can recompute its verdicts. */
   onSaved: () => void;
-}> = ({ initial, onSaved }) => {
-  const [open, setOpen] = useState(() => !hasRcSetup(initial));
+  /**
+   * A field the reader was sent here to fill in — «سجّل الـTarget في مشروعك».
+   * Opens the form and focuses that input, so an action that asks for data
+   * lands on the data, not on a form of twenty-seven fields.
+   */
+  focusField?: keyof RcSetup;
+}> = ({ initial, onSaved, focusField }) => {
+  const [open, setOpen] = useState(() => !hasRcSetup(initial) || !!focusField);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState<RcSetup>(initial ?? {});
   const [saved, setSaved] = useState(false);
 
@@ -149,6 +156,19 @@ export const RcSetupCard: React.FC<{
     setSaved(false);
   };
 
+  // Focus the requested input once the form is open. Runs after paint so the
+  // element exists; an unknown field is silently ignored, which is the right
+  // behaviour for a link written before that field existed.
+  useEffect(() => {
+    if (!focusField || !open) return;
+    const id = RC_FIELD_INPUT_ID[focusField];
+    if (!id) return;
+    const el = rootRef.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'auto' });
+    el.focus({ preventScroll: true });
+  }, [focusField, open]);
+
   const handleSave = () => {
     saveRcSetup(draft);
     setSaved(true);
@@ -157,7 +177,9 @@ export const RcSetupCard: React.FC<{
 
   return (
     <div
+      ref={rootRef}
       data-testid="rc-setup-card"
+      data-focus-field={focusField ?? ''}
       style={{
         background: '#fff', border: '1px solid rgba(15,23,42,0.09)', borderRadius: 15,
         padding: '13px 14px', marginBottom: 12,
