@@ -246,8 +246,10 @@ export const fcControlLoop: KbArticle = {
   prerequisiteIds: ['fc-what-is'],
   coverage: ['principle', 'components', 'performance', 'protocols', 'diagnostics', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['gyro', 'pid', 'mixer', 'dshot', 'loop-rate', 'rpm-filter', 'esc'],
-  relatedArticleIds: ['fc-what-is', 'fc-sensors', 'fc-mcu', 'fc-outputs'],
+  relatedArticleIds: ['fc-what-is', 'fc-sensors', 'fc-mcu', 'fc-outputs', 'esc-what-is', 'motor-esc-relation'],
   links: [
+    { kind: 'article', targetId: 'esc-what-is', label: 'مقال: ما هو الـESC', reason: 'الحلقة تنتهي عند رقم يُسلَّم للـESC — وهناك تبدأ قصة أخرى' },
+    { kind: 'article', targetId: 'motor-esc-relation', label: 'مقال: المحرك والـESC والمروحة كمنظومة' },
     { kind: 'betaflight', targetId: 'pid-tuning', label: 'Betaflight — ضبط PID', reason: 'المرحلة الرابعة في الحلقة تُضبط هنا' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات', reason: 'المرحلة السادسة: بروتوكول المحرك والاتجاه' },
     { kind: 'betaflight', targetId: 'sensors', label: 'Betaflight — الحساسات', reason: 'المرحلة الأولى: مشاهدة خرج الجيروسكوب حياً' },

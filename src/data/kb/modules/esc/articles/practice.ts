@@ -248,8 +248,10 @@ export const escInstallation: KbArticle = {
   prerequisiteIds: ['esc-what-is'],
   coverage: ['installation', 'wiring', 'safety', 'testing', 'maintenance', 'beginner', 'intermediate', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['esc', 'capacitor', 'polarity', 'short-circuit', 'smoke-stopper', 'esc-telemetry', 'motor-order'],
-  relatedArticleIds: ['esc-testing', 'esc-failures', 'motor-installation'],
+  relatedArticleIds: ['esc-testing', 'esc-failures', 'motor-installation', 'power-protection', 'battery-connectors'],
   links: [
+    { kind: 'article', targetId: 'power-protection', label: 'مقال: الحماية والقطبية والقصر' },
+    { kind: 'article', targetId: 'battery-connectors', label: 'مقال: الموصلات والأسلاك' },
     { kind: 'article', targetId: 'esc-testing', label: 'الاختبار الآمن بعد التركيب' },
     { kind: 'article', targetId: 'motor-installation', label: 'مقال: تركيب المحرك واتجاه الدوران' },
     { kind: 'article', targetId: 'fc-power', label: 'مقال: نظام الطاقة على متحكم الطيران' },

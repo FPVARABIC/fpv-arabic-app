@@ -182,7 +182,7 @@ export const dxMotorHot: DxTree = {
     'الـESC ساخن جداً خلال ثوانٍ من التشغيل → افصل فوراً؛ هناك قصر أو حمل خارج النطاق.',
     'تكرار تلف محرك في الموضع نفسه بعد الاستبدال → السبب في الموضع لا في المحرك، توقف عن الاستبدال وابحث في الـESC والذراع.',
   ],
-  relatedArticleIds: ['motor-failures', 'motor-testing', 'motor-esc-relation', 'motor-maintenance'],
+  relatedArticleIds: ['motor-failures', 'motor-testing', 'motor-esc-relation', 'motor-maintenance', 'esc-failures', 'prop-pitch'],
   links: [
     { kind: 'article', targetId: 'motor-failures', label: 'مقال: أعطال المحركات' },
     { kind: 'article', targetId: 'motor-esc-relation', label: 'مقال: المحرك والـESC والمروحة كمنظومة' },
@@ -333,7 +333,7 @@ export const dxMotorWrongDirection: DxTree = {
     'إن انقلبت الطائرة رغم صحة المحاذاة والترتيب والاتجاه والمراوح، توقف عن التجربة الميدانية وعُد إلى فحص الطاولة.',
     'أي محرك لا يستجيب إطلاقاً أثناء الفحص → عالجه أولاً؛ الانقلاب قد يكون بسببه لا بسبب الاتجاه، وقد يكون المحرك أو قناة الـESC تالفاً فعلاً وليست المشكلة في الإعداد.',
   ],
-  relatedArticleIds: ['motor-installation', 'motor-testing'],
+  relatedArticleIds: ['motor-installation', 'motor-testing', 'prop-installation', 'esc-settings'],
   links: [
     { kind: 'article', targetId: 'motor-installation', label: 'مقال: التركيب واتجاه الدوران والترتيب' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات' },

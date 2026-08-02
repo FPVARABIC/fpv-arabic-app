@@ -411,8 +411,10 @@ export const fcFailures: KbArticle = {
   prerequisiteIds: ['fc-power'],
   coverage: ['failures', 'safety', 'maintenance', 'diagnostics', 'power', 'installation', 'beginner', 'intermediate', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['polarity', 'short-circuit', 'smoke-stopper', 'esd'],
-  relatedArticleIds: ['fc-power', 'fc-testing', 'fc-usb-bootloader'],
+  relatedArticleIds: ['fc-power', 'fc-testing', 'fc-usb-bootloader', 'power-protection', 'esc-failures'],
   links: [
+    { kind: 'article', targetId: 'power-protection', label: 'مقال: الحماية والقطبية والقصر', reason: 'أكثر أسباب تلف اللوحة تأتي من مسار الطاقة' },
+    { kind: 'article', targetId: 'esc-failures', label: 'مقال: أعطال الـESC وعلامات التلف', reason: 'الحادث الكهربائي الواحد كثيراً ما يأخذ الاثنين معاً' },
     { kind: 'lesson', targetId: 'lesson-pre-battery-safety', label: 'درس: السلامة قبل البطارية' },
     { kind: 'lesson', targetId: 'lesson-electricity-basics', label: 'درس: أساسيات الكهرباء' },
     { kind: 'dx', targetId: 'dx-fc-no-power', label: 'تشخيص: اللوحة لا تعمل على البطارية' },

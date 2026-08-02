@@ -206,8 +206,10 @@ export const propSelection: KbArticle = {
   prerequisiteIds: ['prop-sizing', 'prop-pitch', 'prop-blade-count'],
   coverage: ['compatibility', 'comparison', 'performance', 'power', 'applications', 'testing', 'intermediate', 'advanced', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['propeller', 'prop-pitch', 'prop-diameter', 'blade-count', 'kv', 'thrust-to-weight', 'esc'],
-  relatedArticleIds: ['prop-sizing', 'prop-pitch', 'prop-blade-count', 'prop-materials', 'motor-selection'],
+  relatedArticleIds: ['prop-sizing', 'prop-pitch', 'prop-blade-count', 'prop-materials', 'motor-selection', 'esc-ratings', 'battery-selection'],
   links: [
+    { kind: 'article', targetId: 'esc-ratings', label: 'مقال: تصنيفات الـESC', reason: 'المروحة تحدد التيار الذي يجب أن يتحمّله الـESC' },
+    { kind: 'article', targetId: 'battery-selection', label: 'مقال: كيف تختار البطارية', reason: 'الحمل الذي تفرضه المروحة تدفعه البطارية' },
     { kind: 'article', targetId: 'motor-selection', label: 'مقال: كيف تختار المحرك', reason: 'المحرك والمروحة يُختاران معاً لا بالتتابع' },
     { kind: 'article', targetId: 'prop-materials', label: 'المواد والمتانة' },
     { kind: 'assembly', targetId: 'stage-13', label: 'التجميع — اختيار المراوح' },

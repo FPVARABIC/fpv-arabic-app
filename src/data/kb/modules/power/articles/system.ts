@@ -258,8 +258,9 @@ export const powerNoise: KbArticle = {
   prerequisiteIds: ['power-rails'],
   coverage: ['principle', 'diagnostics', 'failures', 'testing', 'performance', 'intermediate', 'advanced', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['capacitor', 'low-esr', 'ripple', 'brownout', 'voltage-sag', 'vbat', 'esc'],
-  relatedArticleIds: ['power-rails', 'power-protection', 'esc-anatomy'],
+  relatedArticleIds: ['power-rails', 'power-protection', 'esc-anatomy', 'esc-anatomy'],
   links: [
+    { kind: 'article', targetId: 'fc-power', label: 'مقال: نظام الطاقة على متحكم الطيران', reason: 'حدود خطوط الجهد على اللوحة' },
     { kind: 'article', targetId: 'esc-anatomy', label: 'مقال: تشريح الـESC', reason: 'مصدر القفزات هو التبديل نفسه' },
     { kind: 'article', targetId: 'power-protection', label: 'الحماية: القطبية والقصر' },
     { kind: 'dx', targetId: 'dx-power-noise', label: 'تشخيص: ضجيج في الصورة أو إعادة تشغيل' },

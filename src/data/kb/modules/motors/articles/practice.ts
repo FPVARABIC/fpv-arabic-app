@@ -20,8 +20,10 @@ export const motorEscRelation: KbArticle = {
   prerequisiteIds: ['motor-kv'],
   coverage: ['compatibility', 'power', 'performance', 'failures', 'diagnostics', 'configuration', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['esc', 'dshot', 'bidirectional-dshot', 'motor', 'kv'],
-  relatedArticleIds: ['motor-kv', 'motor-selection', 'motor-failures'],
+  relatedArticleIds: ['motor-kv', 'motor-selection', 'motor-failures', 'esc-what-is', 'prop-pitch'],
   links: [
+    { kind: 'article', targetId: 'esc-what-is', label: 'مقال: ما هو الـESC', reason: 'الضلع الثاني في المثلث، مشروحاً من جانبه' },
+    { kind: 'article', targetId: 'prop-pitch', label: 'مقال: ميل المروحة', reason: 'الضلع الثالث: الحمل الذي يقرر التيار' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات', reason: 'بروتوكول المحرك وتفعيل تليمتري الدوران' },
     { kind: 'betaflight', targetId: 'configuration', label: 'Betaflight — الإعدادات العامة', reason: 'اختيار بروتوكول الإخراج' },
     { kind: 'assembly', targetId: 'stage-7', label: 'التجميع — اختيار الـESC' },
@@ -385,8 +387,9 @@ export const motorInstallation: KbArticle = {
   prerequisiteIds: ['motor-anatomy'],
   coverage: ['installation', 'configuration', 'testing', 'safety', 'failures', 'diagnostics', 'beginner', 'intermediate', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['motor-order', 'motor', 'esc', 'dshot'],
-  relatedArticleIds: ['motor-anatomy', 'motor-testing', 'motor-esc-relation'],
+  relatedArticleIds: ['motor-anatomy', 'motor-testing', 'motor-esc-relation', 'prop-installation'],
   links: [
+    { kind: 'article', targetId: 'prop-installation', label: 'مقال: تركيب المروحة واتجاهها', reason: 'اتجاه المحرك واتجاه المروحة يُضبطان معاً' },
     { kind: 'lesson', targetId: 'lesson-motor-install', label: 'درس: تركيب المحركات' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات', reason: 'اختبار الترتيب وتغيير الاتجاه' },
     { kind: 'roadmap', targetId: 'build-motors', label: 'خريطة البناء — تركيب المحركات' },

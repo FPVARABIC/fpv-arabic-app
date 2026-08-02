@@ -247,8 +247,10 @@ export const fcSelection: KbArticle = {
   prerequisiteIds: ['fc-mcu', 'fc-ports', 'fc-form-factors'],
   coverage: ['compatibility', 'comparison', 'types', 'power', 'protocols', 'applications', 'beginner', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['uart', 'aio', 'mcu', 'bec', 'esc', 'stack'],
-  relatedArticleIds: ['fc-mcu', 'fc-ports', 'fc-form-factors', 'fc-power'],
+  relatedArticleIds: ['fc-mcu', 'fc-ports', 'fc-form-factors', 'fc-power', 'esc-selection', 'battery-selection'],
   links: [
+    { kind: 'article', targetId: 'esc-selection', label: 'مقال: كيف تختار الـESC', reason: 'اللوحتان تُركّبان معاً في بنية واحدة فتُختاران معاً' },
+    { kind: 'article', targetId: 'battery-selection', label: 'مقال: كيف تختار البطارية', reason: 'عدد الخلايا قيد مشترك بين اللوحة والـESC والمحرك' },
     { kind: 'assembly', targetId: 'stage-8', label: 'التجميع — اختر متحكم طيران حقيقي', reason: 'قطع موثّقة بمواصفات ومستوى ثقة معلن' },
     { kind: 'article', targetId: 'fc-mcu', label: 'المعالج' },
     { kind: 'article', targetId: 'fc-ports', label: 'المنافذ' },

@@ -214,8 +214,9 @@ export const propPitch: KbArticle = {
   prerequisiteIds: ['prop-sizing'],
   coverage: ['principle', 'performance', 'power', 'comparison', 'advanced', 'intermediate', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['prop-pitch', 'propeller', 'kv', 'propwash', 'motor', 'esc'],
-  relatedArticleIds: ['prop-sizing', 'prop-selection', 'prop-blade-count', 'motor-kv'],
+  relatedArticleIds: ['prop-sizing', 'prop-selection', 'prop-blade-count', 'motor-kv', 'esc-ratings'],
   links: [
+    { kind: 'article', targetId: 'esc-ratings', label: 'مقال: تصنيفات الـESC', reason: 'رفع الميل هو أسرع طريق لتجاوز تصنيف التيار' },
     { kind: 'article', targetId: 'motor-kv', label: 'مقال: ثابت KV', reason: 'الميل وثابت KV يجب أن يُختارا معاً لا كلٌّ على حدة' },
     { kind: 'article', targetId: 'prop-selection', label: 'كيف تختار المروحة لمشروعك' },
     { kind: 'dx', targetId: 'dx-motor-hot', label: 'تشخيص: محرك يسخن' },

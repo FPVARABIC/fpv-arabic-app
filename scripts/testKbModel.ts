@@ -22,7 +22,10 @@ import {
 import { kbTerms, getTerm } from '../src/data/kb/glossary/terms';
 import { allDxTrees, getDxTree } from '../src/data/kb/diagnostics/trees';
 import { getBacklinks, resetBacklinkCache } from '../src/data/kb/backlinks';
-import { domainMatrixStatus, summarizeDomainMatrix, domainElements, MATRIX_CORNERS } from '../src/data/kb/domainMatrix';
+import {
+  domainMatrixStatus, summarizeDomainMatrix, domainElements, MATRIX_CORNERS,
+  MATRIX_DIMENSIONS, MIN_DX_TREES_FOR_COMPLETE, MIN_TERMS_FOR_COMPLETE,
+} from '../src/data/kb/domainMatrix';
 import { getSearchIndex } from '../src/data/kb/search/buildIndex';
 import { lessonsData } from '../src/data/lessonsData';
 import { bfPageRegistry } from '../src/data/betaflight/pageRegistry';
@@ -348,6 +351,114 @@ console.log('\n[9] Domain matrix — status is derived, never claimed');
     summary.byArea.reduce((n, a) => n + a.total, 0) === summary.totalElements);
 
   console.log(`  → inventory: ${summary.complete} complete, ${summary.partial} partial, ${summary.notStarted} not started, of ${summary.totalElements}`);
+}
+
+console.log('\n[9b] The matrix distinguishes partial coverage from complete coverage');
+{
+  const systems = new Set(getSearchIndex().map(d => d.system).filter((s): s is string => !!s));
+  for (const d of getSearchIndex()) if (d.software) systems.add(d.software);
+  const rows = domainMatrixStatus(systems);
+
+  // The load-bearing rule the spec asks for: a full content model does NOT make
+  // an element complete if its build or software corner is still partial.
+  // Verified as an invariant rather than by example.
+  const overallIsWeakest = rows.every(r => {
+    const states = MATRIX_DIMENSIONS.map(d => r.dimensions[d]);
+    const expected = states.every(s => s === 'complete') ? 'complete'
+      : states.every(s => s === 'none') ? 'none' : 'partial';
+    return r.overall === expected;
+  });
+  ok('an element is complete only when EVERY dimension is complete', overallIsWeakest);
+
+  // And the inverse: nothing may be marked complete while a dimension lags.
+  const lying = rows.filter(r => r.overall === 'complete'
+    && MATRIX_DIMENSIONS.some(d => r.dimensions[d] !== 'complete'));
+  ok('no element claims completeness while a dimension lags', lying.length === 0);
+
+  // Three-state must actually be three-state: if every dimension collapsed to a
+  // binary the matrix would be back to the tick it replaced.
+  const summary = summarizeDomainMatrix(rows);
+  const anyPartial = summary.byDimension.some(d => d.partial > 0);
+  ok('at least one dimension genuinely reports partial coverage', anyPartial);
+
+  // Declared floors must be honoured, not merely declared.
+  for (const r of rows) {
+    if (r.dimensions.diagnostics === 'complete') {
+      ok(`${r.element.id}: complete diagnostics means >= ${MIN_DX_TREES_FOR_COMPLETE} trees`,
+        r.dxCount >= MIN_DX_TREES_FOR_COMPLETE);
+    }
+    if (r.dimensions.glossary === 'complete') {
+      ok(`${r.element.id}: complete glossary means >= ${MIN_TERMS_FOR_COMPLETE} terms`,
+        r.termCount >= MIN_TERMS_FOR_COMPLETE);
+    }
+    if (r.dimensions.content === 'complete') {
+      ok(`${r.element.id}: complete content means every required axis is covered`,
+        r.coverageRequired > 0 && r.coverageCovered === r.coverageRequired);
+    }
+    if (r.dimensions.build === 'complete') {
+      ok(`${r.element.id}: complete build means the catalogue actually offers parts`, r.partCount > 0);
+    }
+  }
+
+  const dims = summary.byDimension.map(d => `${d.dimension} ${d.complete}/${d.partial}/${d.none}`).join(' · ');
+  console.log(`  → per dimension (complete/partial/none): ${dims}`);
+}
+
+console.log('\n[9c] Batch-one systems are cross-linked, not islands');
+{
+  // The spec is explicit: "لا أريد الوحدات الخمس كجزر منفصلة". Cross-linking is
+  // easy to claim and easy to lose, so it is asserted here as a property of the
+  // real link graph: every batch-one module must reach every other one, either
+  // directly or through one hop.
+  const BATCH_ONE = ['flight-controller', 'motors', 'propellers', 'esc', 'power-battery'];
+  const present = BATCH_ONE.filter(id => !!getModule(id));
+  ok(`all five batch-one modules are registered (${present.length}/5)`, present.length === 5);
+
+  const moduleOf = (articleId: string) => getArticle(articleId)?.moduleId;
+
+  /** Direct module→module edges taken from article links and related ids. */
+  const edges = new Map<string, Set<string>>();
+  for (const id of BATCH_ONE) edges.set(id, new Set<string>());
+  for (const a of articles) {
+    if (!BATCH_ONE.includes(a.moduleId)) continue;
+    const targets = [
+      ...a.links.filter(l => l.kind === 'article').map(l => moduleOf(l.targetId)),
+      ...a.relatedArticleIds.map(moduleOf),
+    ];
+    for (const t of targets) {
+      if (t && t !== a.moduleId && BATCH_ONE.includes(t)) edges.get(a.moduleId)!.add(t);
+    }
+  }
+
+  for (const id of BATCH_ONE) {
+    ok(`module ${id} links out to at least one other batch-one module`, edges.get(id)!.size > 0);
+  }
+
+  // Reachability within two hops — the relation between, say, the battery and
+  // the propeller is real but runs through the ESC and the motor.
+  const reachable = (from: string) => {
+    const seen = new Set<string>([from]);
+    const one = edges.get(from)!;
+    for (const b of one) {
+      seen.add(b);
+      for (const c of edges.get(b) ?? []) seen.add(c);
+    }
+    seen.delete(from);
+    return seen;
+  };
+  for (const id of BATCH_ONE) {
+    const r = reachable(id);
+    const missing = BATCH_ONE.filter(x => x !== id && !r.has(x));
+    if (missing.length) console.error(`  ${id} cannot reach:`, missing);
+    ok(`module ${id} reaches every other batch-one module within two hops`, missing.length === 0);
+  }
+
+  // Diagnostics must cross modules too: a desync tree that never mentions the
+  // motor, or a sag tree that never mentions the ESC, would be an island.
+  const crossModuleDx = allDxTrees.filter(t =>
+    t.relatedArticleIds.some(a => moduleOf(a) && moduleOf(a) !== t.moduleId));
+  ok(`diagnostic trees reach across modules (${crossModuleDx.length} of ${allDxTrees.length})`,
+    crossModuleDx.length >= 4);
 }
 
 console.log(`\n✅ testKbModel: ${passed} assertions passed\n`);

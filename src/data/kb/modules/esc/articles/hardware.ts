@@ -197,8 +197,9 @@ export const escRatings: KbArticle = {
   prerequisiteIds: ['esc-what-is'],
   coverage: ['compatibility', 'power', 'performance', 'comparison', 'safety', 'intermediate', 'advanced', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['continuous-current', 'burst-current', 'esc', 'vbat', 'kv', 'current-sensor'],
-  relatedArticleIds: ['esc-selection', 'esc-anatomy', 'motor-esc-relation'],
+  relatedArticleIds: ['esc-selection', 'esc-anatomy', 'motor-esc-relation', 'battery-specs'],
   links: [
+    { kind: 'article', targetId: 'battery-specs', label: 'مقال: مواصفات البطارية', reason: 'قدرة تسليم البطارية والتيار الذي يمرّ في الـESC وجهان لمسار واحد' },
     { kind: 'article', targetId: 'esc-selection', label: 'كيف تختار الـESC لمشروعك' },
     { kind: 'article', targetId: 'motor-esc-relation', label: 'مقال: المحرك والـESC والمروحة كمنظومة' },
     { kind: 'article', targetId: 'prop-pitch', label: 'مقال: ميل المروحة', reason: 'الميل هو أسرع طريق لتجاوز تصنيف الـESC' },

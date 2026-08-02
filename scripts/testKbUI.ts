@@ -21,8 +21,9 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Page, type Browser } from 'playwright';
 
-import { domainElements } from '../src/data/kb/domainMatrix';
+import { domainElements, domainMatrixStatus, MATRIX_DIMENSIONS } from '../src/data/kb/domainMatrix';
 import { allKbModules } from '../src/data/kb/registry';
+import { getSearchIndex } from '../src/data/kb/search/buildIndex';
 
 const PORT = 4381;
 const BASE = `http://localhost:${PORT}`;
@@ -163,17 +164,37 @@ async function main() {
       await page.locator('[data-testid="matrix-area-propulsion"]').click();
       await page.waitForSelector(`[data-testid="matrix-row-${authored.id}"]`, { timeout: 10000 });
 
-      ok(`an authored element (${authored.id}) reports its module corner as covered`,
-        await page.locator(`[data-testid="matrix-${authored.id}-hasModule"]`).getAttribute('data-on') === 'true');
-      ok('…and its diagnostics corner',
-        await page.locator(`[data-testid="matrix-${authored.id}-hasDiagnostics"]`).getAttribute('data-on') === 'true');
+      ok(`an authored element (${authored.id}) reports its content dimension complete`,
+        await page.locator(`[data-testid="matrix-${authored.id}-content"]`).getAttribute('data-state') === 'complete');
+      ok('…and its diagnostics dimension',
+        await page.locator(`[data-testid="matrix-${authored.id}-diagnostics"]`).getAttribute('data-state') === 'complete');
+      ok('…and its overall verdict is rendered, not just the ticks',
+        ((await page.locator(`[data-testid="matrix-overall-${authored.id}"]`).textContent()) ?? '').includes('مكتمل'));
 
       if (unauthored.area !== 'propulsion') {
         await page.locator(`[data-testid="matrix-area-${unauthored.area}"]`).click();
         await page.waitForSelector(`[data-testid="matrix-row-${unauthored.id}"]`, { timeout: 10000 });
       }
       ok(`an unauthored element (${unauthored.id}) shows its gap openly`,
-        await page.locator(`[data-testid="matrix-${unauthored.id}-hasModule"]`).getAttribute('data-on') === 'false');
+        await page.locator(`[data-testid="matrix-${unauthored.id}-content"]`).getAttribute('data-state') === 'none');
+
+      // The three-state matrix must actually RENDER a partial, or it has
+      // silently collapsed back into the binary tick it replaced. The element is
+      // derived, and its area expanded, so the check tests the property rather
+      // than a hard-coded example.
+      const systemsForUi = new Set(getSearchIndex().map(d => d.system).filter((s): s is string => !!s));
+      for (const d of getSearchIndex()) if (d.software) systemsForUi.add(d.software);
+      const partialRow = domainMatrixStatus(systemsForUi)
+        .find(r => MATRIX_DIMENSIONS.some(d => r.dimensions[d] === 'partial'));
+      assert.ok(partialRow, 'expected at least one element with a partial dimension');
+      const partialDim = MATRIX_DIMENSIONS.find(d => partialRow.dimensions[d] === 'partial')!;
+      await page.locator(`[data-testid="matrix-area-${partialRow.element.area}"]`).click();
+      await page.waitForSelector(`[data-testid="matrix-row-${partialRow.element.id}"]`, { timeout: 10000 });
+      ok(`partial coverage renders as partial, not rounded to a tick (${partialRow.element.id}/${partialDim})`,
+        await page.locator(`[data-testid="matrix-${partialRow.element.id}-${partialDim}"]`).getAttribute('data-state') === 'partial');
+      ok('…and that element is NOT reported as complete overall',
+        await page.locator(`[data-testid="matrix-row-${partialRow.element.id}"]`).getAttribute('data-overall') !== 'complete');
+      await page.locator(`[data-testid="matrix-area-${partialRow.element.area}"]`).click();
 
       if (unauthored.area !== 'propulsion') {
         await page.locator('[data-testid="matrix-area-propulsion"]').click();

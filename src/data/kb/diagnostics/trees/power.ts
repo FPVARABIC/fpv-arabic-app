@@ -172,7 +172,7 @@ export const dxBatterySag: DxTree = {
     'حرارة واضحة في الموصل أو في أسلاك البطارية → افصل فوراً؛ المقاومة الزائدة هنا تسبق الاحتراق.',
     'تكرار العرَض مع بطاريات مختلفة سليمة → المشكلة في الطائرة لا في البطارية، ولا فائدة من شراء بطارية أخرى.',
   ],
-  relatedArticleIds: ['battery-voltage', 'power-noise', 'battery-specs', 'power-rails'],
+  relatedArticleIds: ['battery-voltage', 'power-noise', 'battery-specs', 'power-rails', 'esc-ratings'],
   links: [
     { kind: 'article', targetId: 'battery-voltage', label: 'مقال: الجهد وهبوطه وتوازن الخلايا' },
     { kind: 'article', targetId: 'power-noise', label: 'مقال: الضجيج والمكثفات' },
@@ -323,7 +323,7 @@ export const dxBatterySwelling: DxTree = {
     'حرارة واضحة أثناء الشحن → افصل فوراً وابتعد وراقب من مسافة قبل الاقتراب.',
     'بطارية تعرضت لارتطام قوي → اعزلها وراقبها قبل أي شحن؛ الضرر الداخلي قد لا يظهر بصرياً.',
   ],
-  relatedArticleIds: ['battery-safety', 'battery-charging', 'battery-voltage', 'battery-specs'],
+  relatedArticleIds: ['battery-safety', 'battery-charging', 'battery-voltage', 'battery-specs', 'esc-ratings'],
   links: [
     { kind: 'article', targetId: 'battery-safety', label: 'مقال: السلامة والتخزين والتخلص' },
     { kind: 'article', targetId: 'battery-charging', label: 'مقال: الشحن الصحيح والآمن' },
@@ -459,7 +459,7 @@ export const dxPowerNoise: DxTree = {
     'مكثف منتفخ → القطعة تالفة فعلاً: استبدله ولا تشغّل الطائرة به.',
     'استمرار الضجيج بعد استبعاد التوجيه والأرضي والحمل → قد يكون منظّم اللوحة أو البطارية عتاداً تالفاً لا إعداداً، وعندها الاستبدال هو الحل لا الضبط.',
   ],
-  relatedArticleIds: ['power-noise', 'power-rails', 'battery-voltage'],
+  relatedArticleIds: ['power-noise', 'power-rails', 'battery-voltage', 'esc-anatomy'],
   links: [
     { kind: 'article', targetId: 'power-noise', label: 'مقال: الضجيج والمكثفات' },
     { kind: 'article', targetId: 'power-rails', label: 'مقال: توزيع الطاقة والأرضي المشترك' },

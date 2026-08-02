@@ -4,20 +4,25 @@ import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { ArrowRight, ChevronLeft, Grid3x3, Info } from 'lucide-react';
 import {
-  domainMatrixStatus, summarizeDomainMatrix, DOMAIN_AREA_LABEL_AR, MATRIX_CORNERS,
-  type DomainArea, type DomainElementStatus,
+  domainMatrixStatus, summarizeDomainMatrix, DOMAIN_AREA_LABEL_AR,
+  MATRIX_DIMENSIONS, MATRIX_DIMENSION_LABEL_AR, MATRIX_DIMENSION_SHORT_AR,
+  MIN_DX_TREES_FOR_COMPLETE, MIN_TERMS_FOR_COMPLETE, MIN_PARTS_FOR_COMPLETE,
+  type DomainArea, type DimensionState,
 } from '../data/kb/domainMatrix';
 import { getSearchIndex } from '../data/kb/search/buildIndex';
 import { RichText } from '../components/kb/Term';
 
-const CORNERS: { key: keyof DomainElementStatus; labelAr: string; shortAr: string }[] = [
-  { key: 'hasModule', labelAr: 'وحدة تعليمية', shortAr: 'دروس' },
-  { key: 'hasBuild', labelAr: 'موجود في قسم البناء', shortAr: 'بناء' },
-  { key: 'hasSoftware', labelAr: 'إعداد برمجي', shortAr: 'برامج' },
-  { key: 'hasDiagnostics', labelAr: 'شجرة تشخيص', shortAr: 'تشخيص' },
-  { key: 'hasGlossary', labelAr: 'مصطلحات قاموس', shortAr: 'قاموس' },
-  { key: 'hasSearch', labelAr: 'يصله البحث', shortAr: 'بحث' },
-];
+const STATE_STYLE: Record<DimensionState, { bg: string; fg: string; border: string; mark: string }> = {
+  complete: { bg: 'rgba(16,185,129,0.12)', fg: '#047857', border: 'rgba(16,185,129,0.30)', mark: '✓' },
+  partial: { bg: 'rgba(245,158,11,0.14)', fg: '#b45309', border: 'rgba(245,158,11,0.32)', mark: '◐' },
+  none: { bg: 'rgba(148,163,184,0.14)', fg: '#94a3b8', border: 'rgba(148,163,184,0.25)', mark: '✕' },
+};
+
+const STATE_LABEL_AR: Record<DimensionState, string> = {
+  complete: 'مكتمل',
+  partial: 'جزئي',
+  none: 'لم يبدأ',
+};
 
 const KIND_LABEL_AR: Record<string, string> = {
   system: 'نظام',
@@ -98,9 +103,15 @@ export const KbMatrixView: React.FC = () => {
         >
           <Info size={14} style={{ color: '#0369a1', flexShrink: 0, marginTop: 2 }} aria-hidden />
           <div style={{ fontSize: 11.5, lineHeight: 1.8, color: '#475569' }}>
-            الأركان الستة لكل عنصر: {CORNERS.map(c => c.shortAr).join(' · ')}.
-            العنصر لا يُعدّ مكتملاً إلا إذا وُجد في الستة، لأن المكوّن المشروح في الدروس وغير الموجود
-            في البناء لا ينفع أحداً.
+            ستة أبعاد لكل عنصر: {MATRIX_DIMENSIONS.map(d => MATRIX_DIMENSION_SHORT_AR[d]).join(' · ')}،
+            ولكل بُعد ثلاث حالات: مكتمل ◐ جزئي ✕ لم يبدأ.
+            <br />
+            <strong>حالة العنصر الكلية هي أضعف أبعاده لا متوسطها.</strong> نظام مشروح في الدروس
+            بتغطية كاملة لكن قسم البناء فيه جزئي يبقى «جزئياً» — لأن المستخدم الذي يبني لن يجد
+            ما يحتاجه.
+            <br />
+            حدود الاكتمال المعلنة: {MIN_DX_TREES_FOR_COMPLETE} أشجار تشخيص · {MIN_TERMS_FOR_COMPLETE} مصطلحات ·
+            {' '}{MIN_PARTS_FOR_COMPLETE} قطع في البناء · وكل محاور التغطية المطلوبة مغطّاة.
           </div>
         </div>
 
@@ -141,6 +152,7 @@ export const KbMatrixView: React.FC = () => {
                       key={r.element.id}
                       data-testid={`matrix-row-${r.element.id}`}
                       data-corners={r.coveredCorners}
+                      data-overall={r.overall}
                       style={{
                         background: '#ffffff', border: '1px solid rgba(15,23,42,0.09)',
                         borderRadius: 12, padding: '11px 12px', marginBottom: 7,
@@ -159,22 +171,22 @@ export const KbMatrixView: React.FC = () => {
                       </p>
 
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                        {CORNERS.map(c => {
-                          const on = Boolean(r[c.key]);
+                        {MATRIX_DIMENSIONS.map(d => {
+                          const state = r.dimensions[d];
+                          const s = STATE_STYLE[state];
                           return (
                             <span
-                              key={c.key}
-                              title={c.labelAr}
-                              data-testid={`matrix-${r.element.id}-${c.key}`}
-                              data-on={on ? 'true' : 'false'}
+                              key={d}
+                              title={`${MATRIX_DIMENSION_LABEL_AR[d]}: ${STATE_LABEL_AR[state]}`}
+                              data-testid={`matrix-${r.element.id}-${d}`}
+                              data-state={state}
+                              data-on={state !== 'none' ? 'true' : 'false'}
                               style={{
                                 fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 999,
-                                background: on ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.14)',
-                                color: on ? '#047857' : '#94a3b8',
-                                border: `1px solid ${on ? 'rgba(16,185,129,0.30)' : 'rgba(148,163,184,0.25)'}`,
+                                background: s.bg, color: s.fg, border: `1px solid ${s.border}`,
                               }}
                             >
-                              {on ? '✓' : '✕'} {c.shortAr}
+                              {s.mark} {MATRIX_DIMENSION_SHORT_AR[d]}
                             </span>
                           );
                         })}
@@ -182,13 +194,20 @@ export const KbMatrixView: React.FC = () => {
 
                       <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 10.5, color: '#94a3b8', flexWrap: 'wrap' }}>
                         <span>{r.articleCount} مقالاً</span>
+                        {r.coverageRequired > 0 && (
+                          <span>تغطية {r.coverageCovered}/{r.coverageRequired}</span>
+                        )}
                         <span>{r.dxCount} شجرة تشخيص</span>
                         <span>{r.termCount} مصطلحاً</span>
-                        <span>{r.coveredCorners}/{MATRIX_CORNERS} أركان</span>
+                        <span>{r.partCount} قطعة في البناء</span>
+                        {r.bfDeclared > 0 && <span>{r.bfReviewed}/{r.bfDeclared} صفحة برنامج</span>}
+                        <span data-testid={`matrix-overall-${r.element.id}`}>
+                          الحالة: {STATE_LABEL_AR[r.overall]}
+                        </span>
                         <span>أولوية {r.element.priority}</span>
                       </div>
 
-                      {r.hasModule && r.element.moduleId && (
+                      {r.articleCount > 0 && r.element.moduleId && (
                         <button
                           type="button"
                           data-testid={`matrix-open-${r.element.id}`}

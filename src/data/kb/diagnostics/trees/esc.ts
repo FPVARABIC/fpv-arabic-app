@@ -187,7 +187,7 @@ export const dxEscNoTones: DxTree = {
     'اسوداد أو انتفاخ على أي قناة → عتاد تالف، استبدل ولا تحاول الترميم.',
     'تكرار العطل نفسه في الموضع نفسه بعد الاستبدال → السبب في المنظومة لا في القطعة؛ توقف عن الاستبدال وابحث في الحمل والأسلاك.',
   ],
-  relatedArticleIds: ['esc-testing', 'esc-failures', 'esc-installation'],
+  relatedArticleIds: ['esc-testing', 'esc-failures', 'esc-installation', 'power-protection'],
   links: [
     { kind: 'article', targetId: 'esc-testing', label: 'مقال: الاختبار الآمن للـESC' },
     { kind: 'article', targetId: 'esc-failures', label: 'مقال: الأعطال وعلامات التلف' },
@@ -323,7 +323,7 @@ export const dxEscNotDetected: DxTree = {
     'لا تكرّر محاولة الاتصال والبطارية موصولة والمراوح مركّبة — انزع المراوح أولاً بلا استثناء.',
     'إن كنت في منتصف تحديث Firmware وانقطع الاتصال، لا تفصل البطارية عشوائياً؛ راجع خطوات الاستعادة في مقال الـFirmware أولاً.',
   ],
-  relatedArticleIds: ['esc-firmware', 'esc-testing', 'esc-installation'],
+  relatedArticleIds: ['esc-firmware', 'esc-testing', 'esc-installation', 'fc-usb-bootloader'],
   links: [
     { kind: 'article', targetId: 'esc-firmware', label: 'مقال: الـFirmware والعبور والتحديث الآمن' },
     { kind: 'article', targetId: 'esc-testing', label: 'مقال: الاختبار الآمن للـESC' },

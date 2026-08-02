@@ -43,12 +43,14 @@ export const fcPower: KbArticle = {
   prerequisiteIds: ['fc-what-is'],
   coverage: ['power', 'components', 'wiring', 'compatibility', 'installation', 'testing', 'safety', 'failures', 'diagnostics', 'configuration', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['vbat', 'bec', 'current-sensor', 'adc', 'capacitor', 'voltage-sag', 'smoke-stopper', 'lipo'],
-  relatedArticleIds: ['fc-outputs', 'fc-failures', 'fc-first-setup'],
+  relatedArticleIds: ['fc-outputs', 'fc-failures', 'fc-first-setup', 'power-rails', 'battery-voltage'],
   links: [
     { kind: 'betaflight', targetId: 'power', label: 'Betaflight — الطاقة والبطارية', reason: 'معايرة قراءتي الجهد والتيار' },
     { kind: 'lesson', targetId: 'lesson-power-rails', label: 'درس: GND / 5V / VBAT' },
     { kind: 'lesson', targetId: 'lesson-electricity-basics', label: 'درس: أساسيات الكهرباء' },
     { kind: 'dx', targetId: 'dx-fc-no-power', label: 'تشخيص: اللوحة لا تعمل على البطارية' },
+    { kind: 'article', targetId: 'power-rails', label: 'مقال: توزيع الطاقة في الطائرة كلها', reason: 'هذا المقال يغطي اللوحة؛ ذاك يغطي المنظومة من البطارية إلى كل جهاز' },
+    { kind: 'article', targetId: 'battery-voltage', label: 'مقال: الجهد وهبوطه', reason: 'ما تقرؤه اللوحة يتبع ما تفعله البطارية تحت الحمل' },
   ],
   layers: {
     quick: [
@@ -303,8 +305,10 @@ export const fcOutputs: KbArticle = {
   prerequisiteIds: ['fc-what-is', 'fc-mcu'],
   coverage: ['components', 'wiring', 'configuration', 'testing', 'compatibility', 'safety', 'diagnostics', 'failures', 'intermediate', 'advanced', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['dshot', 'motor-order', 'resource-remap', 'bidirectional-dshot', 'esc', 'firmware', 'dma', 'osd'],
-  relatedArticleIds: ['fc-control-loop', 'fc-power', 'fc-testing'],
+  relatedArticleIds: ['fc-control-loop', 'fc-power', 'fc-testing', 'esc-protocols', 'motor-installation'],
   links: [
+    { kind: 'article', targetId: 'esc-protocols', label: 'مقال: بروتوكولات المحركات من جانب الـESC', reason: 'هذا المقال يغطي المخرج على اللوحة؛ ذاك يغطي ما يفعله الـESC بما يصله' },
+    { kind: 'article', targetId: 'motor-installation', label: 'مقال: تركيب المحرك وترتيبه واتجاهه' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات', reason: 'الترتيب والاتجاه والاختبار' },
     { kind: 'betaflight', targetId: 'led-strip', label: 'Betaflight — شريط الإضاءة' },
     { kind: 'betaflight', targetId: 'cli', label: 'Betaflight — سطر الأوامر', reason: 'إعادة توزيع المخارج تتم عبر أوامر Resource' },

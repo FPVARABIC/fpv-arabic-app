@@ -342,7 +342,7 @@ export const dxFcNoPower: DxTree = {
     'رائحة احتراق أو سخونة غير معتادة → افصل فوراً ولا تعِد التوصيل.',
     'المنظّم لا يعمل بلا أي حمل خارجي → العطل في اللوحة، والاستمرار في التجربة لن يغيّر النتيجة.',
   ],
-  relatedArticleIds: ['fc-power', 'fc-failures', 'fc-testing'],
+  relatedArticleIds: ['fc-power', 'fc-failures', 'fc-testing', 'power-protection'],
   links: [
     { kind: 'article', targetId: 'fc-power', label: 'مقال: نظام الطاقة على اللوحة' },
     { kind: 'article', targetId: 'fc-failures', label: 'مقال: كيف تتلف اللوحة' },
@@ -732,7 +732,7 @@ export const dxFcMotorNotSpinning: DxTree = {
     'الـESC ساخن جداً بعد ثوانٍ → افصل فوراً، هناك قصر في المحرك أو في القناة.',
     'انتقال العطل مع القطعة في اختبارين مختلفين → القطعة تالفة، وتكرار الاختبار لن يغيّر النتيجة.',
   ],
-  relatedArticleIds: ['fc-outputs', 'fc-testing', 'fc-failures'],
+  relatedArticleIds: ['fc-outputs', 'fc-testing', 'fc-failures', 'esc-testing'],
   links: [
     { kind: 'article', targetId: 'fc-outputs', label: 'مقال: المخارج' },
     { kind: 'betaflight', targetId: 'motors', label: 'Betaflight — المحركات' },
@@ -959,7 +959,7 @@ export const dxFcGyroNoise: DxTree = {
     'ضجيج مستمر على USB وحده مع هدف صحيح → الحساس تالف، والاستمرار في الضبط بلا فائدة.',
     'تشقق ظاهر في ذراع كربون → لا تطر قبل الاستبدال مهما تحسّن الاهتزاز.',
   ],
-  relatedArticleIds: ['fc-sensors', 'fc-mounting', 'fc-control-loop', 'fc-storage'],
+  relatedArticleIds: ['fc-sensors', 'fc-mounting', 'fc-control-loop', 'fc-storage', 'prop-balance'],
   links: [
     { kind: 'article', targetId: 'fc-mounting', label: 'مقال: التثبيت والعزل عن الاهتزاز' },
     { kind: 'article', targetId: 'fc-control-loop', label: 'مقال: حلقة التحكم' },

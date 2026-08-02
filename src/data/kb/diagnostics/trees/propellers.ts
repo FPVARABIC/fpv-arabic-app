@@ -352,7 +352,7 @@ export const dxPropThrown: DxTree = {
     'ارتخاء متكرر بعد إصلاح كل الأسباب الظاهرة → توقف عن الطيران فوق أي شخص أو ممتلكات حتى يُحسم مصدر الاهتزاز.',
     'شرخ في الحُبّ ظهر بعد شدّ عادي → الشدّ مفرط أو المروحة رديئة؛ غيّر أسلوب الشدّ أو غيّر الطراز.',
   ],
-  relatedArticleIds: ['prop-installation', 'prop-damage-safety', 'prop-anatomy'],
+  relatedArticleIds: ['prop-installation', 'prop-damage-safety', 'prop-anatomy', 'motor-installation'],
   links: [
     { kind: 'article', targetId: 'prop-installation', label: 'مقال: التركيب والاتجاه والشدّ' },
     { kind: 'article', targetId: 'prop-damage-safety', label: 'مقال: التلف والفحص والسلامة' },

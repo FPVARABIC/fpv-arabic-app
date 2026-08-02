@@ -216,8 +216,9 @@ export const batterySelection: KbArticle = {
   prerequisiteIds: ['battery-specs'],
   coverage: ['compatibility', 'comparison', 'applications', 'performance', 'installation', 'intermediate', 'advanced', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['capacity-mah', 'watt-hour', 'series-count', 'thrust-to-weight', 'lipo', 'li-ion', 'esc'],
-  relatedArticleIds: ['battery-types', 'battery-specs', 'power-math', 'esc-selection'],
+  relatedArticleIds: ['battery-types', 'battery-specs', 'power-math', 'esc-selection', 'motor-kv', 'prop-selection'],
   links: [
+    { kind: 'article', targetId: 'prop-selection', label: 'مقال: كيف تختار المروحة', reason: 'المروحة تحدد السحب الذي يجب أن تسلّمه البطارية' },
     { kind: 'article', targetId: 'esc-selection', label: 'مقال: كيف تختار الـESC', reason: 'نطاق الجهد يجب أن يقبله الـESC والمحرك معاً' },
     { kind: 'article', targetId: 'motor-kv', label: 'مقال: ثابت KV', reason: 'الجهد وثابت KV يُختاران معاً' },
     { kind: 'article', targetId: 'power-math', label: 'تقدير زمن الطيران' },

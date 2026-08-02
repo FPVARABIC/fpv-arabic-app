@@ -193,8 +193,9 @@ export const motorKv: KbArticle = {
   prerequisiteIds: ['motor-sizing'],
   coverage: ['principle', 'compatibility', 'comparison', 'performance', 'power', 'failures', 'intermediate', 'advanced', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment'],
   glossaryIds: ['kv', 'motor', 'stator', 'esc'],
-  relatedArticleIds: ['motor-sizing', 'motor-selection', 'motor-failures'],
+  relatedArticleIds: ['motor-sizing', 'motor-selection', 'motor-failures', 'battery-what-is'],
   links: [
+    { kind: 'article', targetId: 'battery-what-is', label: 'مقال: البطارية والجهد', reason: 'ثابت KV يُختار مع الجهد لا وحده' },
     { kind: 'article', targetId: 'motor-selection', label: 'كيف تختار المحرك لمشروعك' },
     { kind: 'lesson', targetId: 'lesson-lipo-batteries', label: 'درس: بطاريات LiPo', reason: 'عدد الخلايا يحدد الجهد الذي يُختار KV على أساسه' },
     { kind: 'dx', targetId: 'dx-motor-hot', label: 'تشخيص: محرك يسخن' },
