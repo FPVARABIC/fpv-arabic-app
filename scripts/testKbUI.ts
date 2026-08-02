@@ -133,6 +133,56 @@ async function main() {
       await page.close();
     }
 
+    // ── B2. Domain matrix renders DERIVED status, including real gaps ───────
+    {
+      const page = await newPage(browser, consoleErrors);
+      await page.goto(`${BASE}/kb/matrix`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-testid="matrix-total"]', { timeout: 10000 });
+
+      const total = Number((await page.locator('[data-testid="matrix-total"]').textContent())?.replace(/\D/g, ''));
+      ok(`the inventory lists the whole domain (${total} elements)`, total >= 25);
+
+      await page.locator('[data-testid="matrix-area-propulsion"]').click();
+      await page.waitForSelector('[data-testid="matrix-row-motors"]', { timeout: 10000 });
+
+      // Motors is authored: its module/diagnostics/glossary corners must be on.
+      ok('an authored element reports its module corner as covered',
+        await page.locator('[data-testid="matrix-motors-hasModule"]').getAttribute('data-on') === 'true');
+      ok('…and its diagnostics corner',
+        await page.locator('[data-testid="matrix-motors-hasDiagnostics"]').getAttribute('data-on') === 'true');
+
+      // Propellers is NOT authored yet: the gap must be visible, not rounded away.
+      ok('an unauthored element shows its gap openly',
+        await page.locator('[data-testid="matrix-propellers-hasModule"]').getAttribute('data-on') === 'false');
+
+      await page.locator('[data-testid="matrix-open-motors"]').click();
+      await page.waitForURL('**/kb/motors', { timeout: 10000 });
+      ok('the matrix opens the authored module', page.url().includes('/kb/motors'));
+      await page.close();
+    }
+
+    // ── B3. A learning path carries through to the article ─────────────────
+    {
+      const page = await newPage(browser, consoleErrors);
+      await page.goto(`${BASE}/kb/motors`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-testid="kb-path-motor-path-choose"]', { timeout: 10000 });
+      await page.locator('[data-testid="kb-path-step-motor-sizing"]').click();
+      await page.waitForSelector('[data-testid="kb-path-context"]', { timeout: 10000 });
+
+      const ctx = (await page.locator('[data-testid="kb-path-context"]').textContent()) ?? '';
+      ok('the article shows its position within the path', /الخطوة\s*1\s*من\s*4/.test(ctx));
+
+      // "Next" must follow the PATH, not authoring order.
+      await page.locator('[data-testid="kb-next"]').click();
+      await page.waitForURL('**/motor-kv**', { timeout: 10000 });
+      ok('"next" follows the path order', page.url().includes('motor-kv') && page.url().includes('path='));
+
+      await page.locator('[data-testid="kb-exit-path"]').click();
+      await page.waitForTimeout(400);
+      ok('leaving the path drops the path context', await page.locator('[data-testid="kb-path-context"]').count() === 0);
+      await page.close();
+    }
+
     // ── C. Article: layers, quiz, bookmark, progress persistence ────────────
     {
       const page = await newPage(browser, consoleErrors);
