@@ -30,8 +30,8 @@ import { propellers } from '../src/data/assembly/parts/propellers';
 import { batteries } from '../src/data/assembly/parts/batteries';
 import { tools } from '../src/data/assembly/parts/tools';
 import type { BasePart } from '../src/data/assembly/types';
-import { frameMatchesSize, getAvailableSizeOptions } from '../src/components/Assembly/utils/frameSizeMatch';
-import { PART_CATEGORY_MAP } from '../src/components/Assembly/utils/assemblyPersistence';
+import { frameMatchesSize, getAvailableSizeOptions } from '../src/data/assembly/frameSizeMatch';
+import { PART_CATEGORY_MAP } from '../src/data/project/store';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -49,10 +49,10 @@ const buildFlowTsx = readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.
 const useAssemblyBuildTs = readFileSync(join(ROOT, 'src/components/Assembly/hooks/useAssemblyBuild.ts'), 'utf8');
 const finalReportScreenTsx = readFileSync(join(ROOT, 'src/components/Assembly/FinalReportScreen.tsx'), 'utf8');
 const validatorsTs = readFileSync(join(ROOT, 'src/data/assembly/compatibility/validators.ts'), 'utf8');
-const assemblyPersistenceTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/assemblyPersistence.ts'), 'utf8');
+const assemblyPersistenceTs = readFileSync(join(ROOT, 'src/data/project/store.ts'), 'utf8');
 const assemblyViewTsx = readFileSync(join(ROOT, 'src/views/AssemblyView.tsx'), 'utf8');
 const fallbackImageTsx = readFileSync(join(ROOT, 'src/components/Assembly/FallbackImage.tsx'), 'utf8');
-const frameSizeMatchTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/frameSizeMatch.ts'), 'utf8');
+const frameSizeMatchTs = readFileSync(join(ROOT, 'src/data/assembly/frameSizeMatch.ts'), 'utf8');
 const buildStagesTs = readFileSync(join(ROOT, 'src/data/assembly/buildStages.ts'), 'utf8');
 
 console.log('\n[1] Drone-type selector — exactly four visible, Cinewhoop absent, 2×2 order');
@@ -295,7 +295,19 @@ console.log('\n[9] Assembly build persistence (Phase 2) — wired correctly, GPS
   ok('loadAndValidateAssemblyProject rejects an unrecognized droneTypeId', /droneTypes\.some\(t => t\.id === droneTypeId\)/.test(assemblyPersistenceTs));
   ok('loadAndValidateAssemblyProject rejects a stale/unknown part id by looking it up in the real, current part arrays', /list\.find\(p => p\.id === id\)/.test(assemblyPersistenceTs));
   ok('validation is deliberately all-or-nothing (any bad field returns null, never a partially-hydrated build)', (assemblyPersistenceTs.match(/return null;/g) ?? []).length >= 8);
-  ok('every localStorage access is guarded by try/catch (never crashes when storage is disabled/unavailable)', (assemblyPersistenceTs.match(/try\s*\{/g) ?? []).length >= 3);
+  // The guarantee is unchanged — storage must never crash the app — but the
+  // store no longer touches localStorage itself: it goes through the platform
+  // storage contract, which owns the guarding. So the assertion follows the
+  // guarantee to where it now lives, and additionally forbids the store from
+  // reaching around the contract.
+  const platformStorageTs = readFileSync(join(ROOT, 'src/platform/storage.ts'), 'utf8');
+  ok('every localStorage access is guarded by try/catch (never crashes when storage is disabled/unavailable)',
+    !/localStorage\./.test(assemblyPersistenceTs)
+    && assemblyPersistenceTs.includes("from '../../platform/storage'")
+    && (platformStorageTs.match(/try\s*\{/g) ?? []).length >= 4
+    && !/localStorage\.(getItem|setItem|removeItem)/.test(
+      platformStorageTs.replace(/try\s*\{[\s\S]*?\}\s*catch/g, ''),
+    ));
 
   ok('useAssemblyBuild.ts seeds its initial state from a restored project when one is passed in', /restored\?\.stageIndex/.test(useAssemblyBuildTs) && /restored\s*\?\s*\{ sizeInch: restored\.sizeInch/.test(useAssemblyBuildTs));
   ok('useAssemblyBuild.ts persists on every relevant change via a useEffect calling saveAssemblyProject', /useEffect\(\(\) => \{\s*saveAssemblyProject/.test(useAssemblyBuildTs));
@@ -516,7 +528,17 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // content plus its registries; it holds no Assembly business logic, and
     // scripts/testKbModel.ts is the gate that actually guards it.
     !f.startsWith('src/data/kb/') &&
-    !f.startsWith('scripts/testKb'),
+    !f.startsWith('scripts/testKb') &&
+    // Multi-platform readiness: the project store and the frame-size helper
+    // moved OUT of components/Assembly/utils into the data layer, because they
+    // were the only place src/data reached into src/components. Behaviour is
+    // unchanged — testAssemblyPersistence.ts and testFrameSizeMatch.ts still
+    // pass against them at their new paths. The platform layer below is the
+    // interface-neutral contract they now sit on.
+    !f.startsWith('src/platform/') &&
+    !f.startsWith('scripts/testPlatformCore') &&
+    f !== 'scripts/testAssemblyPersistence.ts' &&
+    f !== 'scripts/testFrameSizeMatch.ts',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

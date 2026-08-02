@@ -8,7 +8,7 @@
  * writer; every other surface in the app consumes this.
  */
 
-import { loadAndValidateAssemblyProject } from '../../components/Assembly/utils/assemblyPersistence';
+import { loadAndValidateAssemblyProject } from './store';
 import { droneTypes } from '../assembly/droneTypes';
 import { buildStages } from '../assembly/buildStages';
 import type {

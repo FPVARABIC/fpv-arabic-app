@@ -1,3 +1,22 @@
+/**
+ * The user's project — the one store, and the only writer.
+ *
+ * MOVED HERE FROM `components/Assembly/utils/assemblyPersistence.ts`, unchanged
+ * in behaviour. It was the single place in the codebase where `src/data/**`
+ * reached into `src/components/**`, and it was the worst possible place for
+ * that to happen: the project is the platform's spine, so every system that
+ * later reads it — the verdict engine, the article context panel, the bot, a
+ * future web client — would have inherited a dependency on a phone-UI folder.
+ * The Assembly section is still the only writer; it now imports downward like
+ * everything else instead of owning the store.
+ *
+ * Storage access goes through `platform/storage.ts`, which is what gives this
+ * store the five properties a syncable store needs: a written model, a schema
+ * version in the payload, whole-value validation, migration from older
+ * versions, and export/import as plain data. Values written before that
+ * contract existed are un-enveloped; they migrate from version 0 on first read,
+ * so nobody's saved project is lost to the refactor.
+ */
 // Assembly build persistence (Phase 2) — the originally-planned but never-
 // implemented `localStorage` key referenced in AssemblyView.tsx's own
 // "KNOWN GAP" comment. Deliberately stores only stable IDs and primitive
@@ -10,22 +29,27 @@
 // (Phase 3) is the one deliberate exception — only that single selection
 // is invalidated, mirroring selectSize()'s own live-session behavior (see
 // loadAndValidateAssemblyProject below for both).
-import { droneTypes } from '../../../data/assembly/droneTypes';
-import { buildStages } from '../../../data/assembly/buildStages';
-import { frames } from '../../../data/assembly/parts/frames';
-import { motors } from '../../../data/assembly/parts/motors';
-import { escs } from '../../../data/assembly/parts/escs';
-import { flightControllers } from '../../../data/assembly/parts/flightControllers';
-import { receivers } from '../../../data/assembly/parts/receivers';
-import { videoUnits } from '../../../data/assembly/parts/videoUnits';
-import { gps } from '../../../data/assembly/parts/gps';
-import { buzzers } from '../../../data/assembly/parts/buzzers';
-import { capacitors } from '../../../data/assembly/parts/capacitors';
-import { propellers } from '../../../data/assembly/parts/propellers';
-import { batteries } from '../../../data/assembly/parts/batteries';
-import { tools } from '../../../data/assembly/parts/tools';
-import type { BasePart, Frame } from '../../../data/assembly/types';
-import { frameMatchesSize, getAvailableSizeOptions } from './frameSizeMatch';
+import { droneTypes } from '../assembly/droneTypes';
+import { buildStages } from '../assembly/buildStages';
+import { frames } from '../assembly/parts/frames';
+import { motors } from '../assembly/parts/motors';
+import { escs } from '../assembly/parts/escs';
+import { flightControllers } from '../assembly/parts/flightControllers';
+import { receivers } from '../assembly/parts/receivers';
+import { videoUnits } from '../assembly/parts/videoUnits';
+import { gps } from '../assembly/parts/gps';
+import { buzzers } from '../assembly/parts/buzzers';
+import { capacitors } from '../assembly/parts/capacitors';
+import { propellers } from '../assembly/parts/propellers';
+import { batteries } from '../assembly/parts/batteries';
+import { tools } from '../assembly/parts/tools';
+import type { BasePart, Frame } from '../assembly/types';
+import { frameMatchesSize, getAvailableSizeOptions } from '../assembly/frameSizeMatch';
+import {
+  load as loadStore, save as saveStore, clear as clearStore,
+  exportStore, importStore,
+  type StoreDefinition, type ExportedStore,
+} from '../../platform/storage';
 
 // Single source of truth for "which parts/*.ts array backs which stage
 // category" — previously duplicated inline inside BuildFlow.tsx; moved here
@@ -59,6 +83,25 @@ export interface RestoredAssemblyProject {
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/**
+ * The store definition — the model, the version, and how an older payload is
+ * brought forward. Every read and write below goes through it, so validation
+ * can never be skipped by a caller in a hurry.
+ */
+const PROJECT_STORE: StoreDefinition<PersistedAssemblyProject> = {
+  key: ASSEMBLY_STORAGE_KEY,
+  version: SCHEMA_VERSION,
+  validate: validatePersistedProject,
+  migrate: (data, fromVersion) => {
+    // Version 0 means "written before the storage contract existed": the payload
+    // was saved bare, with its version field inside it rather than in an
+    // envelope. The shape is otherwise identical, so it carries forward as-is
+    // and the validator below is what decides whether it is actually usable.
+    if (fromVersion === 0) return data;
+    return null;
+  },
+};
+
 // Saving is a best-effort convenience, never a hard requirement — a
 // disabled/unavailable localStorage (private browsing, quota exceeded,
 // browser settings) must never crash the build flow. Silently no-ops.
@@ -75,23 +118,36 @@ export function saveAssemblyProject(project: {
     stageIndex: project.stageIndex,
     sizeInch: project.sizeInch,
     batteryVoltage: project.batteryVoltage,
+    // Ids, never objects: a saved project is a small identity payload that any
+    // device can rehydrate from its own live catalogue. This is the decision
+    // that makes future sync a transport problem rather than a data-conflict one.
     partIds: Object.fromEntries(
       Object.entries(project.parts).map(([category, part]) => [category, part.id]),
     ),
   };
-  try {
-    localStorage.setItem(ASSEMBLY_STORAGE_KEY, JSON.stringify(payload));
-  } catch {
-    // Storage unavailable — persistence is best-effort, not fatal.
-  }
+  saveStore(PROJECT_STORE, payload);
 }
 
 export function clearAssemblyProject(): void {
-  try {
-    localStorage.removeItem(ASSEMBLY_STORAGE_KEY);
-  } catch {
-    // Storage unavailable — nothing to clear, nothing to crash over.
-  }
+  clearStore(PROJECT_STORE);
+}
+
+/**
+ * The saved project as plain data — for a file, a share, or a sync payload.
+ * Returns null when there is nothing valid to export rather than an empty shell.
+ */
+export function exportAssemblyProject(at?: number): ExportedStore | null {
+  return exportStore(PROJECT_STORE, at);
+}
+
+/**
+ * Restores an exported project. Goes through the same validation as any read,
+ * so an edited or foreign file cannot write a shape the app would refuse.
+ * Returns the rehydrated project, or null if the import was rejected.
+ */
+export function importAssemblyProject(exported: unknown): RestoredAssemblyProject | null {
+  const payload = importStore(PROJECT_STORE, exported);
+  return payload ? rehydrateProject(payload) : null;
 }
 
 // Reads, parses, and validates the persisted project against the CURRENT
@@ -104,25 +160,20 @@ export function clearAssemblyProject(): void {
 // "fail safely by resetting to a clean build" — never a partially-hydrated,
 // logically-inconsistent build.
 export function loadAndValidateAssemblyProject(): RestoredAssemblyProject | null {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(ASSEMBLY_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-  if (!raw) return null;
+  const payload = loadStore(PROJECT_STORE);
+  return payload ? rehydrateProject(payload) : null;
+}
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!isPlainObject(parsed)) return null;
+/**
+ * Structural validation only — is this a well-formed payload whose every id
+ * still exists in the CURRENT catalogue? Rehydration into real part objects is
+ * a separate step, so the stored shape and the in-memory shape never blur.
+ */
+function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null {
+  if (!isPlainObject(raw)) return null;
+  if (raw.version !== SCHEMA_VERSION) return null;
 
-  if (parsed.version !== SCHEMA_VERSION) return null;
-
-  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds } = parsed;
+  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds } = raw;
 
   if (typeof droneTypeId !== 'string' || !droneTypes.some(t => t.id === droneTypeId)) return null;
   if (typeof stageIndex !== 'number' || !Number.isInteger(stageIndex) || stageIndex < 0 || stageIndex >= buildStages.length) return null;
@@ -130,14 +181,37 @@ export function loadAndValidateAssemblyProject(): RestoredAssemblyProject | null
   if (batteryVoltage !== undefined && typeof batteryVoltage !== 'number') return null;
   if (!isPlainObject(partIds)) return null;
 
-  const parts: Record<string, BasePart> = {};
   for (const [category, id] of Object.entries(partIds)) {
     if (typeof id !== 'string') return null;
     const list = PART_CATEGORY_MAP[category];
     if (!list) return null; // unknown category — the catalog changed shape since this was saved
     const part = list.find(p => p.id === id);
     if (!part) return null; // stale/unknown part id — the catalog no longer contains it
-    parts[category] = part;
+  }
+
+  return {
+    version: SCHEMA_VERSION,
+    droneTypeId,
+    stageIndex,
+    sizeInch,
+    batteryVoltage,
+    partIds: partIds as Record<string, string>,
+  };
+}
+
+/**
+ * Turns a validated payload into live part objects, applying the two
+ * single-field invalidations that mirror the build flow's own live behaviour.
+ */
+function rehydrateProject(p: PersistedAssemblyProject): RestoredAssemblyProject {
+  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds } = p;
+
+  const parts: Record<string, BasePart> = {};
+  for (const [category, id] of Object.entries(partIds)) {
+    // Both lookups are guaranteed by validatePersistedProject; the guards stay
+    // so that a future caller cannot rehydrate an unvalidated payload silently.
+    const part = PART_CATEGORY_MAP[category]?.find(x => x.id === id);
+    if (part) parts[category] = part;
   }
 
   // Stage 2 size <-> frame validation (Phase 3): a restored frame that no

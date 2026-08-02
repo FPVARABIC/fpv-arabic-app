@@ -1,13 +1,13 @@
 /**
  * Pure unit tests for Assembly Stage 2 size <-> frame matching (Phase 3) —
- * src/components/Assembly/utils/frameSizeMatch.ts. No React, no browser,
+ * src/data/assembly/frameSizeMatch.ts. No React, no browser,
  * no localStorage: a plain function over real Frame objects from the
  * actual catalog, so the exact tolerance behavior is verified against real
  * data, not synthetic fixtures alone.
  *
  * Run with: npx tsx scripts/testFrameSizeMatch.ts
  */
-import { frameMatchesSize, FRAME_SIZE_TOLERANCE_INCH, getAvailableSizeOptions } from '../src/components/Assembly/utils/frameSizeMatch';
+import { frameMatchesSize, FRAME_SIZE_TOLERANCE_INCH, getAvailableSizeOptions } from '../src/data/assembly/frameSizeMatch';
 import { frames } from '../src/data/assembly/parts/frames';
 import { droneSizeOptions } from '../src/data/assembly/droneSizeOptions';
 import type { Frame } from '../src/data/assembly/types';

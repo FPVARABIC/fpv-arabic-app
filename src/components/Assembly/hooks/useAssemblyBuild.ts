@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { buildStages } from '../../../data/assembly/buildStages';
 import type { BasePart, Frame } from '../../../data/assembly/types';
-import { saveAssemblyProject, type RestoredAssemblyProject } from '../utils/assemblyPersistence';
-import { frameMatchesSize } from '../utils/frameSizeMatch';
+import { saveAssemblyProject, type RestoredAssemblyProject } from '../../../data/project/store';
+import { frameMatchesSize } from '../../../data/assembly/frameSizeMatch';
 
 export interface AssemblySelections {
   sizeInch?: number;

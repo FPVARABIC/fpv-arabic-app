@@ -633,11 +633,28 @@ async function main() {
       await waitForStage(page, 11, 'اختيار الـBuzzer');
 
       const savedAfterRealClicks = await page.evaluate(() => localStorage.getItem('fpv-assembly-project-v1'));
-      const parsedSaved = savedAfterRealClicks ? JSON.parse(savedAfterRealClicks) : null;
-      ok('a real click-through session writes a saved project to localStorage', parsedSaved !== null);
+      const envelope = savedAfterRealClicks ? JSON.parse(savedAfterRealClicks) : null;
+      ok('a real click-through session writes a saved project to localStorage', envelope !== null);
+      // The payload now travels inside a versioned envelope (platform/storage.ts),
+      // so that a future device, web client or sync layer can tell which schema
+      // it is looking at without inferring it from the shape.
+      ok('the saved value carries its schema version in an envelope', envelope?.v === 1 && !!envelope?.data);
+      const parsedSaved = envelope?.data ?? null;
       ok('the saved project records the real stage reached (index 10, stage-11)', parsedSaved?.stageIndex === 10);
       ok('the real, explicitly-selected GPS part id is captured in the saved project (not skipped/omitted)', parsedSaved?.partIds?.gps === 'gps-hglrc-m100-mini-budget');
       ok('the real frame selection is also captured', parsedSaved?.partIds?.frames === 'frame-aos5-evo-mid');
+      ok('the payload is still ids only — no part objects, which is what keeps it portable',
+        JSON.stringify(parsedSaved).length < 600
+        && Object.values(parsedSaved?.partIds ?? {}).every(v => typeof v === 'string'));
+
+      // A project saved by the PREVIOUS release has no envelope. It must still
+      // restore, or this refactor would have silently wiped every existing
+      // user's build.
+      await page.evaluate(legacy => localStorage.setItem('fpv-assembly-project-v1', legacy),
+        JSON.stringify({ ...parsedSaved, version: 1 }));
+      await page.reload({ waitUntil: 'networkidle' });
+      await waitForStage(page, 11, 'اختيار الـBuzzer');
+      ok('a project saved in the pre-envelope format still restores, migrated in place', true);
 
       // Refresh/restore: a full page reload must land back on the exact
       // same stage, not AssemblyHome and not stage 1.

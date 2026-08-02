@@ -1,6 +1,6 @@
 /**
  * Pure unit tests for Assembly build persistence (Phase 2) —
- * src/components/Assembly/utils/assemblyPersistence.ts's save/load/validate
+ * src/data/project/store.ts's save/load/validate
  * logic, exercised for real rather than merely asserted against source
  * text.
  *
@@ -24,7 +24,7 @@ const memoryStorage = new MemoryStorage();
 
 const {
   saveAssemblyProject, loadAndValidateAssemblyProject, clearAssemblyProject, ASSEMBLY_STORAGE_KEY,
-} = await import('../src/components/Assembly/utils/assemblyPersistence');
+} = await import('../src/data/project/store');
 const { gps } = await import('../src/data/assembly/parts/gps');
 const { frames } = await import('../src/data/assembly/parts/frames');
 const { batteries } = await import('../src/data/assembly/parts/batteries');

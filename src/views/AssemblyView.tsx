@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell';
 import { AssemblyLayout } from '../components/Assembly/AssemblyLayout';
 import { AssemblyHome } from '../components/Assembly/AssemblyHome';
 import { BuildFlow } from '../components/Assembly/BuildFlow';
-import { loadAndValidateAssemblyProject, type RestoredAssemblyProject } from '../components/Assembly/utils/assemblyPersistence';
+import { loadAndValidateAssemblyProject, type RestoredAssemblyProject } from '../data/project/store';
 
 // Persistence (Phase 2): a valid saved project (see
 // components/Assembly/utils/assemblyPersistence.ts) is restored once, here,

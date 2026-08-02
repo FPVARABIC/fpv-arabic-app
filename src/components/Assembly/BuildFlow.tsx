@@ -7,8 +7,8 @@ import { StageNavigation } from './StageNavigation';
 import { FinalReportScreen } from './FinalReportScreen';
 import { FallbackImage } from './FallbackImage';
 import { useAssemblyBuild } from './hooks/useAssemblyBuild';
-import { PART_CATEGORY_MAP, clearAssemblyProject, type RestoredAssemblyProject } from './utils/assemblyPersistence';
-import { frameMatchesSize, getAvailableSizeOptions } from './utils/frameSizeMatch';
+import { PART_CATEGORY_MAP, clearAssemblyProject, type RestoredAssemblyProject } from '../../data/project/store';
+import { frameMatchesSize, getAvailableSizeOptions } from '../../data/assembly/frameSizeMatch';
 import type { Frame } from '../../data/assembly/types';
 
 // Every part category a build cannot be completed without — i.e. all

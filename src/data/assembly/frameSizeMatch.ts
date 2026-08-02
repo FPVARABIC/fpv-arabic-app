@@ -2,11 +2,11 @@
 // tiny module so the exact same tolerance and match logic is shared by
 // every place that needs it: the frame-stage filter (BuildFlow.tsx), the
 // size-change invalidation (useAssemblyBuild.ts), and restored-project
-// validation (utils/assemblyPersistence.ts) — one source of truth, not
+// validation (data/project/store.ts) — one source of truth, not
 // three copies of the same magic number.
-import type { Frame } from '../../../data/assembly/types';
-import { droneSizeOptions, type DroneSizeOption } from '../../../data/assembly/droneSizeOptions';
-import { frames } from '../../../data/assembly/parts/frames';
+import type { Frame } from './types';
+import { droneSizeOptions, type DroneSizeOption } from './droneSizeOptions';
+import { frames } from './parts/frames';
 
 // Frame sizeInch values are real decimals (5, 5.1, 5.5, 7); Stage 2's
 // droneSizeOptions.ts offers rounded nominal-class labels instead (3.5, 5,
