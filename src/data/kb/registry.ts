@@ -12,6 +12,7 @@ import { motorsModule } from './modules/motors/module';
 import { propellersModule } from './modules/propellers/module';
 import { escModule } from './modules/esc/module';
 import { powerModule } from './modules/power/module';
+import { rcLinkModule } from './modules/rcLink/module';
 
 export const allKbModules: KbModule[] = [
   flightControllerModule,
@@ -19,6 +20,7 @@ export const allKbModules: KbModule[] = [
   propellersModule,
   escModule,
   powerModule,
+  rcLinkModule,
 ];
 
 const moduleById = new Map<string, KbModule>(allKbModules.map(m => [m.id, m]));

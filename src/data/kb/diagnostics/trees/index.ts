@@ -10,6 +10,7 @@ import { dxMotorHot, dxMotorWrongDirection } from './motors';
 import { dxPropVibration, dxPropThrown } from './propellers';
 import { dxEscNoTones, dxEscNotDetected, dxEscDesync } from './esc';
 import { dxBatterySag, dxBatterySwelling, dxPowerNoise, dxPowerShort } from './power';
+import { dxRcNoLink, dxRcBindFail, dxRcRange, dxRcFailsafe } from './rcLink';
 
 export const allDxTrees: DxTree[] = [
   dxFcNoUsb,
@@ -28,6 +29,10 @@ export const allDxTrees: DxTree[] = [
   dxBatterySwelling,
   dxPowerNoise,
   dxPowerShort,
+  dxRcNoLink,
+  dxRcBindFail,
+  dxRcRange,
+  dxRcFailsafe,
 ];
 
 const byId = new Map(allDxTrees.map(t => [t.id, t]));

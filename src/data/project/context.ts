@@ -59,6 +59,11 @@ export const MODULE_PART_SLOTS: Record<string, PartSlot[]> = {
   motors: [SLOT.motor, SLOT.propeller, SLOT.battery],
   propellers: [SLOT.propeller, SLOT.motor, SLOT.frame],
   'power-battery': [SLOT.battery, SLOT.esc],
+  // The link ends at the flight controller's serial port, so the board the
+  // reader owns is as much a part of this subject as the receiver itself:
+  // which UART is free and whether it inverts decides whether the wiring in
+  // these articles will work at all on their build.
+  'rc-link': [SLOT.receiver, SLOT.flightController],
 };
 
 export interface ProjectPartRef {

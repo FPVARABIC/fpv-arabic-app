@@ -511,7 +511,12 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // Linkage: the encyclopedia article page reads the project so it can show
     // the reader their own parts. Knowledge-base surface, no Assembly logic.
     f !== 'src/components/kb/ProjectContextCard.tsx' &&
-    f !== 'src/views/KbArticleView.tsx',
+    f !== 'src/views/KbArticleView.tsx' &&
+    // The encyclopedia itself — modules, glossary and diagnostic trees. It is
+    // content plus its registries; it holds no Assembly business logic, and
+    // scripts/testKbModel.ts is the gate that actually guards it.
+    !f.startsWith('src/data/kb/') &&
+    !f.startsWith('scripts/testKb'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
