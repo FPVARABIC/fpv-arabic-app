@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import type { BasePart, Frame, Motor, Esc, Battery, Propeller } from '../../data/assembly/types';
+import type {
+  BasePart, Frame, Motor, Esc, Battery, Propeller,
+  FlightController, Receiver, VideoUnit, Gps,
+} from '../../data/assembly/types';
 import { droneTypes } from '../../data/assembly/droneTypes';
 import { buildStages } from '../../data/assembly/buildStages';
 import { buildCompatibilityReport } from './utils/buildReport';
@@ -30,21 +33,41 @@ const CATEGORY_LABELS_AR: Record<string, string> = {
 interface FinalReportScreenProps {
   selections: Record<string, BasePart>;
   droneTypeId?: string;
+  /** The design voltage chosen at stage 4, when the caller tracks it. */
+  batteryVoltage?: number;
   onBack: () => void;
+  /**
+   * Opens the «مشروعي» workspace. Optional because this screen is also
+   * mounted outside the router by assembly-preview.tsx — the doorway is
+   * simply not rendered there rather than rendered as a dead button.
+   */
+  onOpenProject?: () => void;
 }
 
-export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({ selections, droneTypeId, onBack }) => {
+export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({
+  selections, droneTypeId, batteryVoltage, onBack, onOpenProject,
+}) => {
   const [imageFailed, setImageFailed] = useState(false);
   const [copied, setCopied] = useState(false);
   const droneType = droneTypeId ? droneTypes.find(t => t.id === droneTypeId) : undefined;
   const showImage = !!droneType?.imagePath && !imageFailed;
 
+  // Every selected part goes to the engine, not just the five the old
+  // four-boolean report could reason about: the flight controller unlocks the
+  // stack-mounting and UART-budget rules, and the video unit unlocks the
+  // board-support rule. Checks the user never saw before are the reason this
+  // screen is worth opening.
   const report = buildCompatibilityReport({
     frame: selections.frames as Frame | undefined,
     motor: selections.motors as Motor | undefined,
     esc: selections.escs as Esc | undefined,
     battery: selections.batteries as Battery | undefined,
     propeller: selections.propellers as Propeller | undefined,
+    flightController: selections.flightControllers as FlightController | undefined,
+    receiver: selections.receivers as Receiver | undefined,
+    videoUnit: selections.videoUnits as VideoUnit | undefined,
+    gps: selections.gps as Gps | undefined,
+    cellCount: batteryVoltage,
   });
   const isFullyCompatible = report.items.length > 0 && report.scorePercent === 100;
 
@@ -122,6 +145,13 @@ export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({ selections
         <p style={{ fontSize: 13, color: '#5a4e3a', margin: '4px 0 0' }}>
           {isFullyCompatible ? 'كل القطع متوافقة' : 'يوجد تعارض في بعض القطع'}
         </p>
+        {report.openQuestions.length > 0 && (
+          // The percentage counts only what we were able to decide. Saying so
+          // next to the number is the difference between a score and a claim.
+          <p style={{ fontSize: 11.5, color: '#8a7a5e', margin: '6px 0 0' }}>
+            النسبة تحسب الفحوص التي نملك بياناتها فقط — وبقي ما يحتاج تحقّقاً بالأسفل
+          </p>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {report.items.map((item, i) => (
@@ -142,6 +172,66 @@ export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({ selections
           </div>
         ))}
       </div>
+      {report.openQuestions.length > 0 && (
+        // Not a failure and not a pass. Hiding these would let an absent
+        // warning read as approval, which is exactly the mistake this whole
+        // screen exists to prevent.
+        <div style={{ marginTop: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: '#3a2e1f', margin: '0 0 8px' }}>
+            ما لا نستطيع الحكم فيه
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {report.openQuestions.map(q => (
+              <div
+                key={q.id}
+                style={{
+                  padding: 12, borderRadius: 10,
+                  background: '#fffaf0', border: '1px solid #e0c98a',
+                }}
+              >
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#3a2e1f', margin: 0 }}>
+                  ؟ {q.claimAr}
+                </p>
+                <p style={{ fontSize: 12, color: '#5a4e3a', margin: '6px 0 0', lineHeight: 1.7 }}>{q.whyAr}</p>
+                {q.missingAr.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7a6a52' }}>ما ينقصنا</div>
+                    <ul style={{ margin: '2px 0 0', paddingInlineStart: 18, fontSize: 12, color: '#5a4e3a' }}>
+                      {q.missingAr.map(m => <li key={m} style={{ lineHeight: 1.7 }}>{m}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {q.actionsAr.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7a6a52' }}>ما تفعله الآن</div>
+                    <ul style={{ margin: '2px 0 0', paddingInlineStart: 18, fontSize: 12, color: '#5a4e3a' }}>
+                      {q.actionsAr.map(a => <li key={a} style={{ lineHeight: 1.7 }}>{a}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {q.manualCheckAr && (
+                  <p style={{ fontSize: 11.5, color: '#8a7a5e', margin: '8px 0 0' }}>{q.manualCheckAr}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {onOpenProject && (
+        // The same engine drives «مشروعي», where these findings carry their
+        // evidence, confidence and links into the lessons and diagnostics.
+        // This is the seam between building and everything else.
+        <button
+          onClick={onOpenProject}
+          style={{
+            width: '100%', marginTop: 16, padding: 12, borderRadius: 12,
+            border: '1px solid #D4A574', background: '#fffbf7', color: '#3a2e1f',
+            fontWeight: 700, fontSize: 14, cursor: 'pointer',
+          }}
+        >
+          افتح «مشروعي» — الفحوصات كاملةً بأسبابها ومصادرها
+        </button>
+      )}
       {selectedRows.length > 0 && (
         <div style={{ marginTop: 20 }}>
           <h3 style={{ fontSize: 15, fontWeight: 800, color: '#3a2e1f', margin: '0 0 8px' }}>القطع المختارة</h3>

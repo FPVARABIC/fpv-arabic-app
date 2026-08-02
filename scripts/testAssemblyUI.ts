@@ -15,11 +15,39 @@
  * visible" would race the previous stage's still-visible heading.
  */
 import assert from 'node:assert/strict';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Page } from 'playwright';
 
 const PORT = 4402;
 const BASE = `http://localhost:${PORT}`;
+const OUT_DIR = 'dist-assembly-uitest';
+
+// This script used to serve whatever happened to be in dist/, which meant it
+// could only run on a machine that had already built the app WITH real
+// Firebase credentials in the environment — without them the bundle throws
+// `auth/invalid-api-key` at startup, React never mounts, and every wait below
+// times out on an empty page. It now builds its own bundle with placeholder
+// credentials, exactly as scripts/testNavigationRegression.ts does: Assembly
+// touches no Firebase surface, so a dummy key is enough to get the app
+// mounted, and the test then proves what it actually claims to prove.
+const DUMMY_FIREBASE_ENV = {
+  VITE_FIREBASE_API_KEY: 'AIzaSyDUMMY-ui-test-key-000000000000000',
+  VITE_FIREBASE_AUTH_DOMAIN: 'demo.firebaseapp.com',
+  VITE_FIREBASE_PROJECT_ID: 'demo',
+  VITE_FIREBASE_STORAGE_BUCKET: 'demo.appspot.com',
+  VITE_FIREBASE_MESSAGING_SENDER_ID: '000000000000',
+  VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
+};
+
+function buildFreshBundle() {
+  console.log(`\n[build] producing a fresh production bundle in ${OUT_DIR}/ …`);
+  const res = spawnSync('npx', ['vite', 'build', '--outDir', OUT_DIR], {
+    cwd: process.cwd(), stdio: ['ignore', 'ignore', 'inherit'],
+    env: { ...process.env, ...DUMMY_FIREBASE_ENV },
+  });
+  if (res.status !== 0) throw new Error(`vite build failed with status ${res.status}`);
+  console.log('[build] done');
+}
 
 let passed = 0;
 function ok(label: string, cond: boolean) {
@@ -100,7 +128,8 @@ async function main() {
   let server: ChildProcess | null = null;
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   try {
-    server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
+    buildFreshBundle();
+    server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort', '--outDir', OUT_DIR], {
       cwd: process.cwd(),
       stdio: 'ignore',
       detached: true,
@@ -805,11 +834,15 @@ async function main() {
 
       await waitForFinalReport(page);
       ok('the selected GPS module appears in the final "القطع المختارة" selected-parts summary', (await page.locator('text=القطع المختارة').locator('..').textContent() ?? '').includes(gpsName));
-      // buildCompatibilityReport only ever runs the 4 frame/motor/esc/battery/
-      // propeller checks — GPS was never wired into any of them, so its
-      // presence cannot change scorePercent at all; 100% here proves that,
-      // not merely that the other 4 parts happen to be compatible.
-      ok('a fully-selected, genuinely-compatible build (GPS included) still reaches 100% — GPS is not itself a compatibility-report item', await page.locator('text=100%').count() === 1);
+      // buildCompatibilityReport is now an adapter over the one verdict engine,
+      // so GPS is no longer inert here: it consumes a UART, and the UART-budget
+      // rule counts it. This board has spare ports, so the verdict is still a
+      // pass — which is what 100% must mean. The next case (GPS skipped
+      // entirely) reaching the same 100% is what proves the score reflects a
+      // real judgement about this board rather than GPS being ignored.
+      ok('a fully-selected, genuinely-compatible build (GPS included, and counted against the UART budget) still reaches 100%', await page.locator('text=100%').count() === 1);
+      ok('the report is explicit that the score covers only what it could decide, because current headroom cannot be decided from catalogue data', await page.locator('text=ما لا نستطيع الحكم فيه').count() === 1);
+      ok('the doorway into «مشروعي» is present on the final report — the two surfaces are one platform, not two', await page.locator('button', { hasText: 'افتح «مشروعي»' }).count() === 1);
 
       await page.locator('button', { hasText: 'نسخ ملخص البناء' }).click();
       const copiedText = await page.evaluate(() => navigator.clipboard.readText());

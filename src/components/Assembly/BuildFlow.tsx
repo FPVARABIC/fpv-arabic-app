@@ -97,12 +97,15 @@ interface BuildFlowProps {
   // exact droneTypeId (see AssemblyView.tsx); undefined for a fresh manual
   // drone-type selection from AssemblyHome, which always starts clean.
   restoredProject?: RestoredAssemblyProject | null;
+  // Router-aware navigation into «مشروعي», supplied by AssemblyView. Optional
+  // because assembly-preview.tsx mounts BuildFlow outside the router.
+  onOpenProject?: () => void;
 }
 
 // Starts at stage index 1 (Stage 2 — Size) unless a matching restored
 // project says otherwise: Stage 1 (drone type) is already resolved by
 // AssemblyHome (or by persistence restoration) before BuildFlow mounts.
-export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType, restoredProject }) => {
+export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType, restoredProject, onOpenProject }) => {
   // Defensive re-check, not just trusting the caller: only ever hydrate
   // from a restored project that genuinely belongs to THIS droneTypeId.
   const initialRestored = restoredProject && restoredProject.droneTypeId === droneTypeId ? restoredProject : null;
@@ -157,7 +160,13 @@ export const BuildFlow: React.FC<BuildFlowProps> = ({ droneTypeId, onChangeType,
     return (
       <div>
         <ChangeTypeLink />
-        <FinalReportScreen selections={selections.parts} droneTypeId={droneTypeId} onBack={goPrev} />
+        <FinalReportScreen
+          selections={selections.parts}
+          droneTypeId={droneTypeId}
+          batteryVoltage={selections.batteryVoltage}
+          onBack={goPrev}
+          onOpenProject={onOpenProject}
+        />
       </div>
     );
   }

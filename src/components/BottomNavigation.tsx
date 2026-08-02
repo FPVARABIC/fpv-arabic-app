@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { House, Wrench, BookOpen, CircuitBoard, Package, Library } from 'lucide-react';
+import { House, Wrench, BookOpen, CircuitBoard, Package, Library, Hammer } from 'lucide-react';
 
 // The five original tabs are unchanged — same order, same routes, same labels.
 // "الموسوعة" is appended as a sixth tab and is the single entry point for the
@@ -10,6 +10,11 @@ import { House, Wrench, BookOpen, CircuitBoard, Package, Library } from 'lucide-
 // that no longer renders — see docs/platform/00-AUDIT.md items A1/A2/C1).
 const mainNav: { icon: typeof House; label: string; path: string; activeMatchPrefixes?: string[] }[] = [
   { icon: House,        label: 'الرئيسية', path: '/home' },
+  // «مشروعي» — the workspace. Added as a NEW tab rather than by merging the two
+  // existing build tabs: /roadmap and /assembly are both live, tested surfaces,
+  // and collapsing them would have removed working navigation to satisfy a
+  // tidier information architecture. The workspace links to both instead.
+  { icon: Hammer,       label: 'مشروعي',   path: '/project' },
   { icon: Wrench,       label: 'البناء',   path: '/roadmap' },
   { icon: BookOpen,     label: 'الدروس',   path: '/lessons' },
   { icon: Library,      label: 'الموسوعة', path: '/kb', activeMatchPrefixes: ['/kb', '/search', '/glossary', '/diagnose', '/troubleshooting', '/checklists'] },
@@ -73,9 +78,11 @@ export const BottomNavigation: React.FC = () => {
             borderTop: '1px solid rgba(103,232,249,0.2)',
           }}
         >
-          {/* px-0.5 + tighter per-item padding: six tabs have to fit the fixed
-              390px column without the labels wrapping or clipping. */}
-          <div className="flex items-center justify-around px-0.5 pt-3 pb-3" style={{ minHeight: 64 }}>
+          {/* Seven tabs in a fixed 390px column: padding and label size are the
+              only levers left before labels wrap or clip, so both are minimal
+              here. testKbUI/testNavigationRegression assert no horizontal
+              overflow at exactly 390px, which is what keeps this honest. */}
+          <div className="flex items-center justify-around px-0 pt-3 pb-3" style={{ minHeight: 64 }}>
             {mainNav.map(item => {
               const active = isActive(item);
               return (
@@ -83,7 +90,7 @@ export const BottomNavigation: React.FC = () => {
                   key={item.path}
                   onClick={() => handleNavClick(item)}
                   data-testid={`nav-${item.path.replace('/', '')}`}
-                  className={`relative flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
+                  className={`relative flex flex-col items-center gap-1 px-1 py-1.5 rounded-2xl press transition-all ${active ? 'text-[#12222a]' : 'text-[#3a484d] hover:text-[#26353c]'}`}
                   style={active ? { background: 'rgba(103,232,249,0.3)', boxShadow: '0 0 14px -4px rgba(103,232,249,0.7)' } : undefined}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center">
@@ -100,7 +107,7 @@ export const BottomNavigation: React.FC = () => {
                     )}
                     <item.icon size={20} style={{ position: 'relative', zIndex: 1 }}/>
                   </div>
-                  <span className={`text-[10.5px] whitespace-nowrap ${active ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
+                  <span className={`text-[9.5px] whitespace-nowrap ${active ? 'font-bold' : 'font-medium'}`}>{item.label}</span>
                 </button>
               );
             })}

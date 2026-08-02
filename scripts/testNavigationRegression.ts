@@ -88,11 +88,20 @@ async function main() {
       const order = await page.evaluate(() =>
         Array.from(document.querySelectorAll('nav [data-testid^="nav-"]')).map(e => e.getAttribute('data-testid')),
       );
-      ok(`the nav has exactly 6 tabs (5 original + الموسوعة), got ${order.length}`, order.length === 6);
+      // Tabs added AFTER the original five are listed here explicitly. The
+      // guarantee this test exists to protect is "the five original tabs still
+      // exist, still navigate where they did, and keep their relative order" —
+      // not "no tab may ever be added". Naming the additions keeps the
+      // guarantee intact while letting the product grow.
+      const ADDED_TABS = ['nav-kb', 'nav-project'];
+      ok(`the nav has the 5 original tabs plus ${ADDED_TABS.length} added, got ${order.length}`,
+        order.length === ORIGINAL_TABS.length + ADDED_TABS.length);
       ok('the five original tabs are all still present',
         ORIGINAL_TABS.every(t => order.includes(t.testid)));
+      ok('every added tab is one we deliberately declared',
+        order.every(t => ORIGINAL_TABS.some(o => o.testid === t) || ADDED_TABS.includes(t!)));
       ok('the original relative order of the five is preserved',
-        JSON.stringify(order.filter(t => t !== 'nav-kb')) === JSON.stringify(ORIGINAL_TABS.map(t => t.testid)));
+        JSON.stringify(order.filter(t => !ADDED_TABS.includes(t!))) === JSON.stringify(ORIGINAL_TABS.map(t => t.testid)));
 
       for (const tab of ORIGINAL_TABS) {
         await page.locator(`[data-testid="${tab.testid}"]`).click();

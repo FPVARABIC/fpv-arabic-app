@@ -16,7 +16,6 @@ import { BetaflightView } from './views/BetaflightView';
 import { BetaflightDetailView } from './views/BetaflightDetailView';
 import { TroubleshootingView } from './views/TroubleshootingView';
 import { ProgressView } from './views/ProgressView';
-import { AssemblyView } from './views/AssemblyView';
 import { SettingsView } from './views/SettingsView';
 import { AboutView } from './views/AboutView';
 import { ContactView } from './views/ContactView';
@@ -32,6 +31,13 @@ const KbHubView = lazy(() => import('./views/KbHubView').then(m => ({ default: m
 const KbModuleView = lazy(() => import('./views/KbModuleView').then(m => ({ default: m.KbModuleView })));
 const KbArticleView = lazy(() => import('./views/KbArticleView').then(m => ({ default: m.KbArticleView })));
 const KbMatrixView = lazy(() => import('./views/KbMatrixView').then(m => ({ default: m.KbMatrixView })));
+// Assembly moved from an eager import to a lazy one when its final report
+// started using the platform's verdict engine: the section carries the whole
+// part catalogue, and there is no reason for a user who opens the app to the
+// community feed to download it. Splitting it (and the catalogue it shares
+// with ProjectView) took the eager bundle from 2,439 kB to 2,310 kB.
+const AssemblyView = lazy(() => import('./views/AssemblyView').then(m => ({ default: m.AssemblyView })));
+const ProjectView = lazy(() => import('./views/ProjectView').then(m => ({ default: m.ProjectView })));
 const SearchView = lazy(() => import('./views/SearchView').then(m => ({ default: m.SearchView })));
 const GlossaryView = lazy(() => import('./views/GlossaryView').then(m => ({ default: m.GlossaryView })));
 const DiagnoseView = lazy(() => import('./views/DiagnoseView').then(m => ({ default: m.DiagnoseView })));
@@ -82,6 +88,7 @@ export const App: React.FC = () => (
 
     {/* Encyclopedia + reference mode */}
     <Route path="/kb" element={<KbHubView/>}/>
+    <Route path="/project" element={<ProjectView/>}/>
     <Route path="/kb/matrix" element={<KbMatrixView/>}/>
     <Route path="/kb/:moduleId" element={<KbModuleView/>}/>
     <Route path="/kb/:moduleId/:articleId" element={<KbArticleView/>}/>

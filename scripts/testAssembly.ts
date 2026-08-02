@@ -235,7 +235,22 @@ console.log('\n[6] Final summary accepts 4S — no hardcoded 6S-only assumption'
 {
   ok('FinalReportScreen.tsx renders whatever battery was actually selected (selections.batteries), not a hardcoded 6S reference', finalReportScreenTsx.includes('selections.batteries'));
   ok('FinalReportScreen.tsx has no hardcoded "6S" string that would misrepresent a 4S build', !/['"`][^'"`]*6S[^'"`]*['"`]/.test(finalReportScreenTsx));
-  ok('buildCompatibilityReport (used by the final summary) checks motor-battery compatibility using the real specs.compatibleVoltages field — the same field this task\'s data fixes updated', /validateMotorBattery/.test(finalReportScreenTsx) || readFileSync(join(ROOT, 'src/components/Assembly/utils/buildReport.ts'), 'utf8').includes('validateMotorBattery'));
+  // buildReport.ts became a thin adapter over the platform's one verdict
+  // engine (data/project/verdicts.ts), so the motor-battery check now reaches
+  // validateMotorBattery through that engine instead of calling it directly.
+  // The guarantee being protected is unchanged — the final summary still
+  // decides motor-battery compatibility with the real specs.compatibleVoltages
+  // field, via the same validator — so the assertion follows the chain rather
+  // than pinning the old call site.
+  const buildReportTs = readFileSync(join(ROOT, 'src/components/Assembly/utils/buildReport.ts'), 'utf8');
+  const verdictsTs = readFileSync(join(ROOT, 'src/data/project/verdicts.ts'), 'utf8');
+  ok('buildCompatibilityReport (used by the final summary) checks motor-battery compatibility using the real specs.compatibleVoltages field — the same field this task\'s data fixes updated',
+    /validateMotorBattery/.test(finalReportScreenTsx)
+    || buildReportTs.includes('validateMotorBattery')
+    || (buildReportTs.includes('computeFindings') && /validateMotorBattery\(/.test(verdictsTs)));
+  ok('that check still rests on specs.compatibleVoltages and not on a second, re-derived voltage rule',
+    validatorsTs.includes('motor.specs.compatibleVoltages.includes(battery.specs.sCount)')
+    && !/compatibleVoltages\.includes/.test(buildReportTs));
 }
 
 console.log('\n[7] No duplicate compatibility engine — validators.ts is the sole source, dead rules.ts removed (Phase 4)');
@@ -469,7 +484,30 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // scoped, entirely unrelated to Assembly. scripts/testCommunity.ts's own
     // equivalent scope check (already allow-listed above) covers this
     // directory's own "no unrelated area touched" concern.
-    !f.startsWith('src/components/Community/'),
+    !f.startsWith('src/components/Community/') &&
+    // Platform spine — the assembly project was promoted out of the Assembly
+    // section to become the object the whole app reasons about, so that
+    // articles, diagnostics and the build flow all speak about the same
+    // parts. The Assembly-side edits are covered by the prefixes above; the
+    // files below are the platform half of that same change, none of which
+    // contains Assembly business logic:
+    //   data/project/*  — the verdict engine + next-step rule, which now owns
+    //                     the four validators the final report used to call
+    //                     directly (one engine, see buildReport.ts)
+    //   ProjectView     — the «مشروعي» workspace that renders those findings
+    //   App/BottomNav   — the /project route and tab it is reached through
+    !f.startsWith('src/data/project/') &&
+    f !== 'src/views/ProjectView.tsx' &&
+    !f.startsWith('scripts/testProject') &&
+    f !== 'src/App.tsx' &&
+    f !== 'src/components/BottomNavigation.tsx' &&
+    f !== 'scripts/testNavigationRegression.ts' &&
+    // The browser tests now build their own bundles into their own output
+    // directories (so they run without real Firebase credentials); .gitignore
+    // gained those directories.
+    f !== '.gitignore' &&
+    // The product-vision document records what this spine actually delivered.
+    !f.startsWith('docs/platform/'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
@@ -479,7 +517,14 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f.startsWith('src/views/BuildRoadmap') || f.startsWith('src/data/roadmap') || f.startsWith('src/data/lessonsData') ||
     f.startsWith('src/components/BotV2') || f.startsWith('src/views/BotV2'),
   ));
-  ok('src/App.tsx was not modified (no new route was needed)', !allChanged.includes('src/App.tsx'));
+  // App.tsx was originally asserted to be untouched, on the grounds that that
+  // task needed no new route. The platform spine does need one (/project), so
+  // the assertion now protects what that line was actually there to protect:
+  // the Assembly section's own entry point is not moved, renamed or removed by
+  // whatever else is being added to the router.
+  const appTsx = readFileSync(join(ROOT, 'src/App.tsx'), 'utf8');
+  ok('the Assembly section is still routed at /assembly and still mounted from AssemblyView',
+    /path="\/assembly"/.test(appTsx) && /AssemblyView/.test(appTsx));
 }
 
 console.log('\n[15] GPS racing-gap research pass (Issue 3 follow-up) — 2 new real, evidence-backed entries; cinematic gap honestly left open');
