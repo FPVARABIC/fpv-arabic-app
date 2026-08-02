@@ -153,9 +153,12 @@ async function main() {
       const authored = domainElements.find(e =>
         e.area === 'propulsion' && !!e.moduleId
         && (allKbModules.find(m => m.id === e.moduleId)?.articles.length ?? 0) > 0);
-      const unauthored = domainElements.find(e => e.area === 'propulsion' && !e.moduleId);
+      // The unauthored example is searched across ALL areas: as modules land, a
+      // whole area can become fully authored, and pinning the search to one
+      // area would make this assertion unsatisfiable rather than just stale.
+      const unauthored = domainElements.find(e => !e.moduleId);
       assert.ok(authored, 'expected at least one authored propulsion element');
-      assert.ok(unauthored, 'expected at least one unauthored propulsion element');
+      assert.ok(unauthored, 'expected at least one unauthored element somewhere');
 
       await page.locator('[data-testid="matrix-area-propulsion"]').click();
       await page.waitForSelector(`[data-testid="matrix-row-${authored.id}"]`, { timeout: 10000 });
@@ -165,8 +168,17 @@ async function main() {
       ok('…and its diagnostics corner',
         await page.locator(`[data-testid="matrix-${authored.id}-hasDiagnostics"]`).getAttribute('data-on') === 'true');
 
+      if (unauthored.area !== 'propulsion') {
+        await page.locator(`[data-testid="matrix-area-${unauthored.area}"]`).click();
+        await page.waitForSelector(`[data-testid="matrix-row-${unauthored.id}"]`, { timeout: 10000 });
+      }
       ok(`an unauthored element (${unauthored.id}) shows its gap openly`,
         await page.locator(`[data-testid="matrix-${unauthored.id}-hasModule"]`).getAttribute('data-on') === 'false');
+
+      if (unauthored.area !== 'propulsion') {
+        await page.locator('[data-testid="matrix-area-propulsion"]').click();
+        await page.waitForSelector(`[data-testid="matrix-row-${authored.id}"]`, { timeout: 10000 });
+      }
 
       await page.locator(`[data-testid="matrix-open-${authored.id}"]`).click();
       await page.waitForURL(`**/kb/${authored.moduleId}`, { timeout: 10000 });

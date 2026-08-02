@@ -420,7 +420,7 @@ export const fcFirmwareTargets: KbArticle = {
   ],
   prerequisiteIds: ['fc-usb-bootloader'],
   coverage: ['configuration', 'maintenance', 'compatibility', 'safety', 'failures', 'diagnostics', 'testing', 'updatability', 'intermediate', 'advanced', 'pro', 'sources', 'internalLinks', 'search', 'assessment'],
-  glossaryIds: ['firmware', 'target', 'diff', 'dump', 'full-chip-erase'],
+  glossaryIds: ['firmware', 'target', 'diff', 'dump', 'full-chip-erase', 'osd'],
   relatedArticleIds: ['fc-usb-bootloader', 'fc-first-setup', 'fc-mcu'],
   links: [
     { kind: 'betaflight', targetId: 'firmware-flasher', label: 'Betaflight — محدّث الفيرموير' },
