@@ -20,6 +20,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 import { buildStages } from '../src/data/assembly/buildStages';
 import { computeFindings } from '../src/data/project/verdicts';
+import { SCHEMA_VERSION } from '../src/data/project/store';
 import { moduleArticles } from '../src/data/kb/registry';
 import type { ProjectSnapshot } from '../src/data/project/types';
 import { motors } from '../src/data/assembly/parts/motors';
@@ -382,8 +383,14 @@ async function main() {
 
       const stored = await page.evaluate(k => localStorage.getItem(k), STORAGE_KEY);
       const parsedStore = JSON.parse(stored ?? '{}');
+      // The version is read from the store rather than pinned here. What this
+      // assertion is actually protecting is that there is ONE store and the
+      // control-link record lives inside it — not which schema number that
+      // store happens to be on. Pinning the number made this fail the moment
+      // the video record was added, which is a false alarm about a real
+      // additive migration.
       ok('…because it was written into the one project store, not a second one',
-        parsedStore?.v === 2 && parsedStore?.data?.rcSetup?.txBand === 'sub-ghz');
+        parsedStore?.v === SCHEMA_VERSION && parsedStore?.data?.rcSetup?.txBand === 'sub-ghz');
       ok('…and the parts the build flow chose are still there beside it',
         parsedStore?.data?.partIds?.motors === CONFLICT.motor.id);
       await page.close();

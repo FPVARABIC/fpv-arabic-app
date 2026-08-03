@@ -11,6 +11,16 @@ import { dxPropVibration, dxPropThrown } from './propellers';
 import { dxEscNoTones, dxEscNotDetected, dxEscDesync } from './esc';
 import { dxBatterySag, dxBatterySwelling, dxPowerNoise, dxPowerShort } from './power';
 import { dxRcNoLink, dxRcBindFail, dxRcRange, dxRcFailsafe } from './rcLink';
+import {
+  dxVideoNoImage,
+  dxVideoBreakup,
+  dxVideoOsdMissing,
+  dxVideoSnow,
+  dxVideoOverheat,
+  dxVideoControl,
+  dxVideoGogglesLink,
+  dxVideoRecording,
+} from './video';
 
 export const allDxTrees: DxTree[] = [
   dxFcNoUsb,
@@ -33,6 +43,14 @@ export const allDxTrees: DxTree[] = [
   dxRcBindFail,
   dxRcRange,
   dxRcFailsafe,
+  dxVideoNoImage,
+  dxVideoBreakup,
+  dxVideoOsdMissing,
+  dxVideoSnow,
+  dxVideoOverheat,
+  dxVideoControl,
+  dxVideoGogglesLink,
+  dxVideoRecording,
 ];
 
 const byId = new Map(allDxTrees.map(t => [t.id, t]));

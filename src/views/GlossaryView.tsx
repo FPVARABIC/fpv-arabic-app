@@ -273,6 +273,7 @@ const DOMAIN_LABEL: Record<string, string> = {
   'navigation-sensors': 'الملاحة والحساسات',
   tuning: 'الضبط والأداء',
   'power-battery': 'البطاريات',
+  video: 'نظام الفيديو',
   safety: 'السلامة',
 };
 

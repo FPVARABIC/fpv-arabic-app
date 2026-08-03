@@ -16,7 +16,9 @@ import {
 import { resolveLinkRoute } from '../data/kb/registry';
 import { RichText } from '../components/kb/Term';
 import { RcSetupCard } from '../components/project/RcSetupCard';
+import { VideoSetupCard } from '../components/project/VideoSetupCard';
 import { RC_FIELD_INPUT_ID, type RcSetup } from '../data/project/rcSetup';
+import { VIDEO_FIELD_INPUT_ID, type VideoSetup } from '../data/project/videoSetup';
 
 const SEV: Record<FindingSeverity, { bg: string; fg: string; border: string; Icon: typeof CircleAlert }> = {
   blocker: { bg: 'rgba(239,68,68,0.10)', fg: '#b91c1c', border: 'rgba(239,68,68,0.30)', Icon: CircleAlert },
@@ -43,13 +45,22 @@ export const ProjectView: React.FC = () => {
   const findingsRef = useRef<HTMLDivElement>(null);
 
   // Aimed entry: `?view=findings` opens the conflict report, `?view=rc&field=X`
-  // opens the control-link form at field X. This is what turns «افتح تقرير
-  // التعارض» and «طلب Target» into executable actions instead of instructions —
-  // an answer that can only say "go to your project" is not an answer.
+  // opens the control-link form at field X, `?view=video&field=X` the video one.
+  // This is what turns «افتح تقرير التعارض» and «سجّل منظومة نظارتك» into
+  // executable actions instead of instructions — an answer that can only say
+  // "go to your project" is not an answer.
+  //
+  // Which form a field belongs to is decided by which map contains it, not by
+  // the `view` parameter. That is deliberate and matches `kbLinkToDestination`:
+  // content names a FIELD, and if a field ever moves between the two records the
+  // links written against it keep working without being rewritten.
   const view = searchParams.get('view');
   const requestedField = searchParams.get('field') ?? undefined;
   const focusField = requestedField && requestedField in RC_FIELD_INPUT_ID
     ? (requestedField as keyof RcSetup)
+    : undefined;
+  const focusVideoField = requestedField && requestedField in VIDEO_FIELD_INPUT_ID
+    ? (requestedField as keyof VideoSetup)
     : undefined;
 
   useEffect(() => {
@@ -157,6 +168,11 @@ export const ProjectView: React.FC = () => {
               initial={project.rcSetup}
               onSaved={() => setProject(readProjectSnapshot())}
               focusField={focusField}
+            />
+            <VideoSetupCard
+              initial={project.videoSetup}
+              onSaved={() => setProject(readProjectSnapshot())}
+              focusField={focusVideoField}
             />
 
             {/* ── The verdicts ────────────────────────────────────────────── */}

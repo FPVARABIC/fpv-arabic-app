@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Wrench, ChevronLeft, CircleAlert, TriangleAlert, CircleHelp, CircleCheck } from 'lucide-react';
 import { readProjectSnapshot } from '../../data/project/snapshot';
 import { computeFindings } from '../../data/project/verdicts';
-import { findingsForBetaflightPage, rcFactsForBetaflightPage } from '../../data/project/context';
+import { findingsForBetaflightPage, factsForBetaflightPage } from '../../data/project/context';
 import { SEVERITY_LABEL_AR, type FindingSeverity } from '../../data/project/types';
 
 /**
@@ -37,7 +37,11 @@ export const BetaflightProjectContext: React.FC<{ pageId: string }> = ({ pageId 
   const navigate = useNavigate();
 
   const project = useMemo(() => readProjectSnapshot(), []);
-  const facts = useMemo(() => rcFactsForBetaflightPage(project, pageId), [project, pageId]);
+  // Both records, merged. The ports page is the reason: a reader looking at it
+  // needs the receiver's UART and the video control's UART in the same list, or
+  // the clash between them is invisible at exactly the moment they are about to
+  // create it.
+  const facts = useMemo(() => factsForBetaflightPage(project, pageId), [project, pageId]);
   const findings = useMemo(
     () => findingsForBetaflightPage(computeFindings(project), pageId),
     [project, pageId],
@@ -73,8 +77,8 @@ export const BetaflightProjectContext: React.FC<{ pageId: string }> = ({ pageId 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: findings.length ? 10 : 0 }}>
           {facts.map(f => (
             <div
-              key={f.field}
-              data-testid={`bf-rc-fact-${f.field}`}
+              key={`${f.record}-${f.field}`}
+              data-testid={`bf-${f.record}-fact-${f.field}`}
               style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}
             >
               <span style={{ fontSize: 11, color: '#94b8b8', minWidth: 108 }}>{f.labelAr}</span>

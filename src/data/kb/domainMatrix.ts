@@ -134,7 +134,7 @@ export const domainElements: DomainElement[] = [
   { id: 'antennas', area: 'control', kind: 'component', titleAr: 'الهوائيات والترددات', titleEn: 'Antennas and RF', whyAr: 'يحدد المدى والموثوقية في التحكم والفيديو معاً.', priority: 2 },
 
   // ── Video ─────────────────────────────────────────────────────────────────
-  { id: 'video', area: 'video', kind: 'system', titleAr: 'نظام الفيديو', titleEn: 'FPV video system', whyAr: 'العين التي يطير بها الطيار: الكاميرا والمرسل والنظارة.', assemblyCategory: 'videoUnits', glossaryDomain: 'video', betaflightPageIds: ['osd', 'vtx'], priority: 2 },
+  { id: 'video', area: 'video', kind: 'system', titleAr: 'نظام الفيديو', titleEn: 'FPV video system', whyAr: 'العين التي يطير بها الطيار: الكاميرا والمرسل والنظارة.', moduleId: 'video', assemblyCategory: 'videoUnits', glossaryDomain: 'video', betaflightPageIds: ['osd', 'vtx'], priority: 2 },
   { id: 'cameras-payload', area: 'video', kind: 'component', titleAr: 'الكاميرات والحمولة', titleEn: 'Cameras and payload', whyAr: 'التصوير والحمولة يغيّران الوزن ومركز الثقل وسلوك الطيران.', priority: 3 },
 
   // ── Navigation ────────────────────────────────────────────────────────────

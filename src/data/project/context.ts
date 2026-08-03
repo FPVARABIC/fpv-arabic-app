@@ -28,6 +28,13 @@ import {
   RC_ANTENNA_LABEL_AR, RC_FAILSAFE_LABEL_AR, RC_MODULE_LABEL_AR,
   type RcSetup,
 } from './rcSetup';
+import {
+  VIDEO_LINK_CLASS_LABEL_AR, VIDEO_ECOSYSTEM_LABEL_AR, VIDEO_DEVICE_ROLE_LABEL_AR,
+  VTX_CONTROL_LABEL_AR, OSD_PROTOCOL_LABEL_AR, VIDEO_RECORDING_LABEL_AR,
+  VIDEO_BAND_LABEL_AR, VIDEO_POLARISATION_LABEL_AR, VIDEO_CONNECTOR_LABEL_AR,
+  VIDEO_POWER_LABEL_AR, VIDEO_COOLING_LABEL_AR,
+} from '../video/types';
+import type { VideoSetup } from './videoSetup';
 import type { Finding, ProjectSnapshot } from './types';
 
 /** A part slot on the snapshot, with the label the user sees for it. */
@@ -69,6 +76,11 @@ export const MODULE_PART_SLOTS: Record<string, PartSlot[]> = {
   // which UART is free and whether it inverts decides whether the wiring in
   // these articles will work at all on their build.
   'rc-link': [SLOT.receiver, SLOT.flightController],
+  // The video chain ends at a serial port too, and on most builds the camera is
+  // powered from the board. So the reader's flight controller is as much part of
+  // this subject as the video unit itself — and leaving it out would hide the
+  // half of every video wiring decision that is actually a board decision.
+  video: [SLOT.videoUnit, SLOT.flightController],
 };
 
 export interface ProjectPartRef {
@@ -360,4 +372,184 @@ export function rcFactsForElrsEntry(p: ProjectSnapshot, entryId: string): RcFact
 export function findingsForElrsEntry(findings: Finding[], entryId: string): Finding[] {
   return findings.filter(f => f.links.some(
     l => (l.kind === 'elrs-setup' || l.kind === 'elrs-issue') && l.targetId === entryId));
+}
+
+// ── The video system, applied to the reader's own build ──────────────────────
+
+/**
+ * Which recorded video facts each Betaflight page is actually about.
+ *
+ * The same declared-not-inferred rule as `BF_PAGE_RC_FIELDS`, and deliberately
+ * a SEPARATE map rather than more entries in that one: the two records have
+ * different owners and different shapes, and merging them would have meant a
+ * single map whose value type was a union nobody could read.
+ *
+ * `ports` appears in both maps on purpose. It is the one screen where the
+ * control link and the video system genuinely compete for the same resource, so
+ * the reader needs both sets of numbers side by side to see the conflict at all
+ * — which is exactly what the merged `factsForBetaflightPage` below produces.
+ */
+export const BF_PAGE_VIDEO_FIELDS: Record<string, (keyof VideoSetup)[]> = {
+  ports: ['vtxControlProtocol', 'vtxControlUartIndex', 'osdProtocol', 'osdUartIndex'],
+  osd: ['osdProtocol', 'osdUartIndex', 'linkClass', 'ecosystem', 'osdTestedOn'],
+  vtx: [
+    'ecosystem', 'airDeviceRole', 'airUnitModel', 'vtxControlProtocol',
+    'vtxControlUartIndex', 'band', 'channel', 'powerMw',
+  ],
+  power: ['powerSource', 'becCurrentMa', 'cameraPowerSource'],
+  configuration: ['linkClass', 'osdProtocol'],
+};
+
+/** Human labels for the recorded video values, so a page can render them directly. */
+export interface VideoFactRef {
+  field: keyof VideoSetup;
+  labelAr: string;
+  valueAr: string;
+}
+
+const VIDEO_FIELD_LABEL_AR: Partial<Record<keyof VideoSetup, string>> = {
+  ecosystem: 'منظومة الفيديو',
+  linkClass: 'نوع الرابط',
+  airDeviceRole: 'دور الجهاز على الطائرة',
+  airUnitModel: 'وحدة الطائرة',
+  airUnitFirmware: 'إصدار وحدة الطائرة',
+  cameraModel: 'الكاميرا',
+  cameraIntegrated: 'كاميرا مدمجة',
+  gogglesModel: 'النظارة',
+  gogglesFirmware: 'إصدار النظارة',
+  gogglesEcosystem: 'منظومة النظارة',
+  vrxModule: 'وحدة الاستقبال في النظارة',
+  trueDiversity: 'تنويع حقيقي',
+  vtxControlProtocol: 'بروتوكول التحكم بالوحدة',
+  vtxControlUartIndex: 'منفذ التحكم بالوحدة',
+  powerSource: 'مصدر تغذية الوحدة',
+  becCurrentMa: 'سعة المصدر',
+  cameraPowerSource: 'مصدر تغذية الكاميرا',
+  sharedGroundConfirmed: 'أرضي مشترك مؤكَّد',
+  osdProtocol: 'بروتوكول طبقة المعلومات',
+  osdUartIndex: 'منفذ طبقة المعلومات',
+  band: 'النطاق',
+  channel: 'القناة',
+  powerMw: 'قدرة الإرسال',
+  txAntennaPolarisation: 'استقطاب هوائي الطائرة',
+  rxAntennaPolarisation: 'استقطاب هوائي النظارة',
+  txAntennaConnector: 'موصل هوائي الطائرة',
+  antennaFittedConfirmed: 'الهوائي مركّب ومؤكَّد',
+  cooling: 'حالة التبريد',
+  mountingNote: 'موضع الوحدة',
+  recording: 'التسجيل',
+  imageTestedOn: 'آخر اختبار صورة',
+  osdTestedOn: 'آخر اختبار لطبقة المعلومات',
+  rangeTestedOn: 'آخر اختبار مدى للفيديو',
+  thermalTestedOn: 'آخر اختبار حراري',
+};
+
+/** Renders one recorded video value into Arabic, using the closed-set labels. */
+function videoValueAr(field: keyof VideoSetup, v: VideoSetup): string | undefined {
+  const raw = v[field];
+  if (raw === undefined || raw === '') return undefined;
+  switch (field) {
+    case 'ecosystem': case 'gogglesEcosystem':
+      return VIDEO_ECOSYSTEM_LABEL_AR[raw as keyof typeof VIDEO_ECOSYSTEM_LABEL_AR];
+    case 'linkClass':
+      return VIDEO_LINK_CLASS_LABEL_AR[raw as keyof typeof VIDEO_LINK_CLASS_LABEL_AR];
+    case 'airDeviceRole':
+      return VIDEO_DEVICE_ROLE_LABEL_AR[raw as keyof typeof VIDEO_DEVICE_ROLE_LABEL_AR];
+    case 'vtxControlProtocol':
+      return VTX_CONTROL_LABEL_AR[raw as keyof typeof VTX_CONTROL_LABEL_AR];
+    case 'osdProtocol':
+      return OSD_PROTOCOL_LABEL_AR[raw as keyof typeof OSD_PROTOCOL_LABEL_AR];
+    case 'powerSource': case 'cameraPowerSource':
+      return VIDEO_POWER_LABEL_AR[raw as keyof typeof VIDEO_POWER_LABEL_AR];
+    case 'band':
+      return VIDEO_BAND_LABEL_AR[raw as keyof typeof VIDEO_BAND_LABEL_AR];
+    case 'txAntennaPolarisation': case 'rxAntennaPolarisation':
+      return VIDEO_POLARISATION_LABEL_AR[raw as keyof typeof VIDEO_POLARISATION_LABEL_AR];
+    case 'txAntennaConnector':
+      return VIDEO_CONNECTOR_LABEL_AR[raw as keyof typeof VIDEO_CONNECTOR_LABEL_AR];
+    case 'cooling':
+      return VIDEO_COOLING_LABEL_AR[raw as keyof typeof VIDEO_COOLING_LABEL_AR];
+    case 'recording':
+      return VIDEO_RECORDING_LABEL_AR[raw as keyof typeof VIDEO_RECORDING_LABEL_AR];
+    case 'vtxControlUartIndex': case 'osdUartIndex': return `UART ${raw}`;
+    case 'becCurrentMa': return `${raw} mA`;
+    case 'powerMw': return `${raw} mW`;
+    case 'cameraIntegrated': case 'trueDiversity':
+    case 'sharedGroundConfirmed': case 'antennaFittedConfirmed':
+      return raw ? 'نعم' : 'لا';
+    default: return String(raw);
+  }
+}
+
+/**
+ * The recorded video facts for a given set of fields, skipping anything absent.
+ *
+ * Same contract as `rcFactsFor`: a field the reader never filled in produces no
+ * row. The video record is far more likely to be partly empty than the control
+ * one — most of it can only be filled from a manufacturer's manual — so this
+ * matters more here, not less.
+ */
+export function videoFactsFor(p: ProjectSnapshot, fields: (keyof VideoSetup)[]): VideoFactRef[] {
+  const v = p.videoSetup;
+  if (!p.exists || !v) return [];
+  const out: VideoFactRef[] = [];
+  for (const field of fields) {
+    const valueAr = videoValueAr(field, v);
+    const labelAr = VIDEO_FIELD_LABEL_AR[field];
+    if (valueAr && labelAr) out.push({ field, labelAr, valueAr });
+  }
+  return out;
+}
+
+/** The recorded video facts a specific Betaflight page is about. */
+export function videoFactsForBetaflightPage(p: ProjectSnapshot, pageId: string): VideoFactRef[] {
+  return videoFactsFor(p, BF_PAGE_VIDEO_FIELDS[pageId] ?? []);
+}
+
+/**
+ * Both records' facts for one Betaflight page, in one list the UI can render.
+ *
+ * This exists because the alternative — two panels stacked on the ports screen,
+ * one headed «رابط التحكم» and one headed «الفيديو» — hides the single most
+ * important thing that screen has to say: that UART 2 is claimed twice. Merging
+ * them into one ordered list puts the two numbers next to each other where the
+ * conflict is visible.
+ *
+ * Control-link facts come first because on every page in both maps they are the
+ * ones that also constrain the video side, never the other way round.
+ */
+export type PageFactRef =
+  | ({ record: 'rc' } & RcFactRef)
+  | ({ record: 'video' } & VideoFactRef);
+
+export function factsForBetaflightPage(p: ProjectSnapshot, pageId: string): PageFactRef[] {
+  return [
+    ...rcFactsForBetaflightPage(p, pageId).map(f => ({ record: 'rc' as const, ...f })),
+    ...videoFactsForBetaflightPage(p, pageId).map(f => ({ record: 'video' as const, ...f })),
+  ];
+}
+
+/**
+ * The video facts worth showing beside a knowledge-base article.
+ *
+ * Keyed by module for the same reason `MODULE_RC_FIELDS` is: every article in
+ * the video module is improved by knowing which system the reader actually
+ * runs, and per-article keys would be upkeep with no editorial gain.
+ */
+export const MODULE_VIDEO_FIELDS: Record<string, (keyof VideoSetup)[]> = {
+  video: [
+    'ecosystem', 'linkClass', 'airDeviceRole', 'airUnitModel', 'gogglesModel',
+    'gogglesEcosystem', 'vtxControlProtocol', 'osdProtocol', 'powerSource',
+    'band', 'channel', 'txAntennaPolarisation', 'cooling',
+  ],
+};
+
+export function videoFactsForModule(p: ProjectSnapshot, moduleId: string): VideoFactRef[] {
+  return videoFactsFor(p, MODULE_VIDEO_FIELDS[moduleId] ?? []);
+}
+
+/** The findings that named this diagnostic tree as where to act. */
+export function findingsForDxTree(findings: Finding[], treeId: string): Finding[] {
+  return findings.filter(f =>
+    f.links.some(l => l.kind === 'dx' && l.targetId === treeId));
 }

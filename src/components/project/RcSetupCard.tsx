@@ -6,6 +6,8 @@ import {
   rcSetupCompleteness, hasRcSetup, RC_FIELD_INPUT_ID, type RcSetup,
 } from '../../data/project/rcSetup';
 import { saveRcSetup } from '../../data/project/store';
+import { Row, Select, Text, Num, Toggle, SectionTitle } from './SetupFields';
+import { optionsOf } from './setupFieldStyles';
 
 /**
  * «نظام التحكم» — where the user records the facts no catalogue can hold.
@@ -24,115 +26,6 @@ import { saveRcSetup } from '../../data/project/store';
  * judgement all live in the data layer, so a future web client can offer a much
  * richer editor over exactly the same model without re-implementing any of it.
  */
-
-type Option<T extends string> = { value: T; label: string };
-
-function optionsOf<T extends string>(labels: Record<T, string>): Option<T>[] {
-  return (Object.keys(labels) as T[]).map(value => ({ value, label: labels[value] }));
-}
-
-const LABEL: React.CSSProperties = { fontSize: 11, color: '#64748b', marginBottom: 3, display: 'block' };
-const FIELD: React.CSSProperties = {
-  width: '100%', fontSize: 12.5, padding: '8px 9px', borderRadius: 9,
-  border: '1px solid rgba(15,23,42,0.15)', background: '#fff', color: '#0f172a',
-};
-
-const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 9 }}>{children}</div>
-);
-
-function Select<T extends string>({ label, value, options, onChange, testid }: {
-  label: string; value: T | undefined; options: Option<T>[];
-  onChange: (v: T | undefined) => void; testid: string;
-}) {
-  return (
-    <div>
-      <label style={LABEL} htmlFor={testid}>{label}</label>
-      <select
-        id={testid}
-        data-testid={testid}
-        value={value ?? ''}
-        onChange={e => onChange((e.target.value || undefined) as T | undefined)}
-        style={FIELD}
-      >
-        <option value="">— غير محدد —</option>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
-}
-
-const Text: React.FC<{
-  label: string; value: string | undefined; onChange: (v: string | undefined) => void;
-  testid: string; placeholder?: string; dirLtr?: boolean;
-}> = ({ label, value, onChange, testid, placeholder, dirLtr }) => (
-  <div>
-    <label style={LABEL} htmlFor={testid}>{label}</label>
-    <input
-      id={testid}
-      data-testid={testid}
-      type="text"
-      value={value ?? ''}
-      placeholder={placeholder}
-      dir={dirLtr ? 'ltr' : undefined}
-      onChange={e => onChange(e.target.value.trim() === '' ? undefined : e.target.value)}
-      style={{ ...FIELD, ...(dirLtr ? { unicodeBidi: 'isolate' as const, textAlign: 'left' as const } : {}) }}
-    />
-  </div>
-);
-
-const Num: React.FC<{
-  label: string; value: number | undefined; onChange: (v: number | undefined) => void;
-  testid: string; min: number; max: number;
-}> = ({ label, value, onChange, testid, min, max }) => (
-  <div>
-    <label style={LABEL} htmlFor={testid}>{label}</label>
-    <input
-      id={testid}
-      data-testid={testid}
-      type="number"
-      inputMode="numeric"
-      min={min}
-      max={max}
-      value={value ?? ''}
-      dir="ltr"
-      onChange={e => {
-        const n = Number(e.target.value);
-        onChange(e.target.value === '' || !Number.isFinite(n) ? undefined : n);
-      }}
-      style={{ ...FIELD, textAlign: 'left', unicodeBidi: 'isolate' }}
-    />
-  </div>
-);
-
-const Toggle: React.FC<{
-  label: string; value: boolean | undefined; onChange: (v: boolean | undefined) => void; testid: string;
-}> = ({ label, value, onChange, testid }) => (
-  <div>
-    <span style={LABEL}>{label}</span>
-    <div style={{ display: 'flex', gap: 6 }}>
-      {[
-        { v: true, t: 'نعم' }, { v: false, t: 'لا' },
-      ].map(o => (
-        <button
-          key={String(o.v)}
-          type="button"
-          data-testid={`${testid}-${o.v ? 'yes' : 'no'}`}
-          aria-pressed={value === o.v}
-          onClick={() => onChange(value === o.v ? undefined : o.v)}
-          style={{
-            flex: 1, fontSize: 12, fontWeight: 700, padding: '8px 4px', borderRadius: 9, cursor: 'pointer',
-            border: value === o.v ? '1px solid rgba(14,165,233,0.5)' : '1px solid rgba(15,23,42,0.15)',
-            background: value === o.v ? 'rgba(14,165,233,0.10)' : '#fff',
-            color: value === o.v ? '#0369a1' : '#475569',
-          }}
-        >
-          {o.t}
-        </button>
-      ))}
-    </div>
-  </div>
-);
 
 export const RcSetupCard: React.FC<{
   initial: RcSetup | undefined;
@@ -311,12 +204,3 @@ export const RcSetupCard: React.FC<{
     </div>
   );
 };
-
-const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div style={{
-    fontSize: 11, fontWeight: 800, color: '#0369a1', margin: '4px 0 8px',
-    paddingBottom: 4, borderBottom: '1px solid rgba(14,165,233,0.18)',
-  }}>
-    {children}
-  </div>
-);

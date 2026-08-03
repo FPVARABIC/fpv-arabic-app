@@ -29,9 +29,11 @@
     "test:project": "npx tsx scripts/testProject.ts",
     "test:platform-core": "npx tsx scripts/testPlatformCore.ts",
     "test:project-ui": "npx tsx scripts/testProjectUI.ts",
+    "test:video": "npx tsx scripts/testVideo.ts",
+    "test:video-ui": "npx tsx scripts/testVideoUI.ts",
     "test:assembly": "npx tsx scripts/testAssembly.ts",
     "test:assembly-ui": "npx tsx scripts/testAssemblyUI.ts",
-    "test:platform": "npm run test:platform-core && npm run test:kb && npm run test:kb-ui && npm run test:project && npm run test:project-ui && npm run test:navigation-regression",
+    "test:platform": "npm run test:platform-core && npm run test:kb && npm run test:kb-ui && npm run test:project && npm run test:project-ui && npm run test:video && npm run test:video-ui && npm run test:navigation-regression",
     "test:feed-ranking-batch": "firebase emulators:exec --project demo-community-rules-test --only firestore \"npx tsx functions/testFeedRankingBatch.ts\""
   },
   "dependencies": {

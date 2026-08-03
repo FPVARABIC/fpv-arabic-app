@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wrench, ChevronLeft, CircleAlert, TriangleAlert, CircleHelp, CircleCheck } from 'lucide-react';
 import { SEVERITY_LABEL_AR, type Finding, type FindingSeverity } from '../../data/project/types';
-import type { RcFactRef } from '../../data/project/context';
 
 /**
  * «في مشروعك» — one panel, several screens.
@@ -14,6 +13,15 @@ import type { RcFactRef } from '../../data/project/context';
  * they share is the RENDERING, not the selection — so the selection stays in
  * the data layer where it can be tested without a browser, and only the paint
  * lives here.
+ *
+ * WHY THE FACT TYPE IS STRUCTURAL
+ * -------------------------------
+ * It takes `{ field, labelAr, valueAr }` rather than `RcFactRef` specifically,
+ * because the video record produces the identical shape from a different key
+ * space. Widening the prop was the whole cost of reusing this panel across both
+ * records; the alternative — a second panel that renders the same three columns
+ * in the same colours — is the duplication that makes one of the two quietly
+ * diverge six months later.
  *
  * THE RULE IT ENFORCES
  * --------------------
@@ -30,14 +38,27 @@ const SEV: Record<FindingSeverity, { bg: string; fg: string; border: string; Ico
   ok: { bg: 'rgba(16,185,129,0.10)', fg: '#047857', border: 'rgba(16,185,129,0.28)', Icon: CircleCheck },
 };
 
+/** What either setup record renders down to. Structural on purpose. */
+export interface ContextFact {
+  field: string;
+  labelAr: string;
+  valueAr: string;
+}
+
 export const RcContextPanel: React.FC<{
   /** Prefix for the test ids, so each surface stays independently assertable. */
   testIdPrefix: string;
   /** Which entry this panel is for — rendered as a data attribute for tests. */
   entryId: string;
-  facts: RcFactRef[];
+  facts: ContextFact[];
+  /**
+   * Which record these facts came from. Only affects the test id, so a screen
+   * showing both can be asserted per-record rather than as one undifferentiated
+   * list.
+   */
+  factKind?: 'rc' | 'video';
   findings: Finding[];
-}> = ({ testIdPrefix, entryId, facts, findings }) => {
+}> = ({ testIdPrefix, entryId, facts, factKind = 'rc', findings }) => {
   const navigate = useNavigate();
 
   if (facts.length === 0 && findings.length === 0) return null;
@@ -73,7 +94,7 @@ export const RcContextPanel: React.FC<{
           {facts.map(f => (
             <div
               key={f.field}
-              data-testid={`${testIdPrefix}-rc-fact-${f.field}`}
+              data-testid={`${testIdPrefix}-${factKind}-fact-${f.field}`}
               style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}
             >
               <span style={{ fontSize: 11, color: '#64748b', minWidth: 112 }}>{f.labelAr}</span>

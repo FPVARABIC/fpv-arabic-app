@@ -16,6 +16,7 @@ import { propellersModule } from './modules/propellers/module';
 import { escModule } from './modules/esc/module';
 import { powerModule } from './modules/power/module';
 import { rcLinkModule } from './modules/rcLink/module';
+import { videoModule } from './modules/video/module';
 // Field-id maps only — two tiny pure-data objects with no catalogue and no
 // React behind them. They exist here so a `project` link can name a field
 // without also naming which form it lives on.
@@ -29,6 +30,7 @@ export const allKbModules: KbModule[] = [
   escModule,
   powerModule,
   rcLinkModule,
+  videoModule,
 ];
 
 const moduleById = new Map<string, KbModule>(allKbModules.map(m => [m.id, m]));

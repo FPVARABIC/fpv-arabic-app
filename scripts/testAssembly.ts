@@ -575,7 +575,12 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('src/data/video/') &&
     !f.startsWith('src/components/video/') &&
     !f.startsWith('src/views/Video') &&
-    !f.startsWith('scripts/testVideo'),
+    !f.startsWith('scripts/testVideo') &&
+    // The glossary screen gained one label — the `video` domain, so the 27 new
+    // video terms are filterable like every other domain's. One entry in a
+    // Record<domain, string>; no Assembly logic, and scripts/testKbLanguage.ts
+    // is the gate that guards the terms themselves.
+    f !== 'src/views/GlossaryView.tsx',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

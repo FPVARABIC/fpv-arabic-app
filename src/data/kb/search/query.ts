@@ -57,6 +57,10 @@ const TYPE_BIAS: Record<SearchDocType, number> = {
   troubleshooting: 4,
   'elrs-issue': 4,
   'edgetx-topic': 4,
+  // Same tier as the other software-centre entries: a procedure page is worth
+  // more than a single field label and less than the article that explains the
+  // subject, which is exactly where the ExpressLRS and EdgeTX entries sit.
+  'video-tool': 4,
   'elrs-step': 3,
   'assembly-stage': 2,
   roadmap: 2,

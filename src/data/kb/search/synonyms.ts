@@ -74,15 +74,56 @@ const RAW_GROUPS: string[][] = [
   ['rssi', 'ار اس اس اي', 'قوة الاشارة'],
 
   // ── Video ──
-  ['vtx', 'video transmitter', 'في تي اكس', 'مرسل الفيديو', 'مرسل فيديو'],
-  ['camera', 'cam', 'كاميرا', 'الكاميرا'],
-  ['goggles', 'نظارة', 'النظارات', 'نظارات', 'قوقلز'],
-  ['osd', 'او اس دي', 'العرض على الشاشة'],
-  ['smartaudio', 'smart audio', 'سمارت اوديو'],
-  ['msp displayport', 'displayport', 'ديسبلاي بورت'],
-  ['antenna', 'هوائي', 'انتينا', 'الهوائي'],
-  ['analog', 'انالوق', 'تناظري'],
-  ['digital', 'ديجيتال', 'رقمي'],
+  //
+  // Expanded when the video system was closed. Two things drive what is here
+  // that is not in the other blocks:
+  //
+  //   1. Brand names are search terms. Nobody types «منظومة رقمية مغلقة» — they
+  //      type «دي جي اي» or «او فور». The ecosystem groups exist so those land
+  //      on the ecosystem article and its tooling page rather than on nothing.
+  //   2. Symptoms are search terms. «شاشة سوداء» and «الصورة تقطع» are what a
+  //      person types when they have a problem, and neither contains a single
+  //      word from the title of the page that answers it.
+  ['vtx', 'video transmitter', 'في تي اكس', 'مرسل الفيديو', 'مرسل فيديو', 'فيتياكس'],
+  ['vrx', 'video receiver', 'في ار اكس', 'مستقبل الفيديو', 'مستقبل فيديو'],
+  ['air unit', 'airunit', 'اير يونت', 'وحدة الهواء', 'وحدة الطائرة'],
+  ['camera', 'cam', 'كاميرا', 'الكاميرا', 'كام'],
+  ['goggles', 'نظارة', 'النظارات', 'نظارات', 'قوقلز', 'قوقل', 'النظاره'],
+  ['osd', 'او اس دي', 'العرض على الشاشة', 'الاوسدي', 'طبقة المعلومات', 'المعلومات على الصورة'],
+  ['smartaudio', 'smart audio', 'سمارت اوديو', 'سمارت اودیو'],
+  ['irc tramp', 'tramp', 'ترامب', 'اي ار سي ترامب'],
+  ['msp displayport', 'displayport', 'ديسبلاي بورت', 'ام اس بي'],
+  ['canvas mode', 'canvas', 'كانفاس', 'وضع الكانفاس'],
+  ['antenna', 'هوائي', 'انتينا', 'الهوائي', 'هوائيات'],
+  ['analog', 'انالوق', 'تناظري', 'تماثلي', 'انالوج'],
+  ['digital', 'ديجيتال', 'رقمي', 'الرقمي'],
+  ['dvr', 'دي في ار', 'ديفيار', 'التسجيل', 'تسجيل', 'ريكورد'],
+  ['pit mode', 'pitmode', 'بت مود', 'وضع الصيانة', 'ايقاف البث'],
+  ['raceband', 'race band', 'رايس باند', 'نطاق السباق'],
+  ['rhcp', 'ار اتش سي بي', 'استقطاب يميني', 'دائري يميني'],
+  ['lhcp', 'ال اتش سي بي', 'استقطاب يساري', 'دائري يساري'],
+  ['polarisation', 'polarization', 'الاستقطاب', 'استقطاب', 'بولاريزيشن'],
+  ['gain', 'كسب', 'الكسب', 'قين', 'جين'],
+  ['diversity', 'دايفرستي', 'تنويع', 'التنويع'],
+  ['latency', 'زمن التاخير', 'التاخير', 'لاتنسي', 'لاق', 'lag'],
+  ['bitrate', 'bit rate', 'بت ريت', 'معدل البيانات'],
+  ['multipath', 'multi path', 'مالتي باث', 'الانعكاسات', 'تعدد المسارات'],
+  ['fresnel', 'فرينل', 'منطقة فرينل'],
+  ['pal', 'ntsc', 'بال', 'انتسك', 'معيار الفيديو'],
+  ['band', 'النطاق', 'نطاق', 'باند', 'الباند'],
+  ['channel', 'القناة', 'قناة', 'شانل', 'الشانل'],
+
+  // ── Video ecosystems (brand names people actually type) ──
+  ['dji', 'دي جي اي', 'ديجياي', 'o3', 'o4', 'او ثري', 'او فور'],
+  ['walksnail', 'walk snail', 'ووكسنيل', 'وولك سنيل', 'avatar', 'افاتار'],
+  ['hdzero', 'hd zero', 'اتش دي زيرو', 'اتشديزيرو'],
+
+  // ── Video symptoms (what people type when it is already broken) ──
+  ['no image', 'شاشة سوداء', 'لا توجد صورة', 'ما في صورة', 'الصورة مو طالعة', 'بلاك سكرين'],
+  ['video breakup', 'الصورة تقطع', 'الصورة تتقطع', 'الفيديو يقطع', 'الصورة تتكسر'],
+  ['video noise', 'صورة مشوشة', 'ثلج', 'سنو', 'snow', 'تشويش', 'صورة رمادية'],
+  ['vtx overheat', 'الفي تي اكس تسخن', 'الوحدة حارة', 'تسخن', 'حرارة الوحدة'],
+  ['pairing failed', 'الاقتران يفشل', 'النظارة لا ترى الوحدة', 'بايندنق', 'ما يقترن'],
 
   // ── Navigation ──
   ['gps', 'جي بي اس', 'جيبياس', 'تحديد المواقع'],

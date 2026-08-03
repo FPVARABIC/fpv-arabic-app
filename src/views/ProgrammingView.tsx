@@ -1,14 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
-import { Cpu, Radio, Link2, Navigation, ChevronLeft, Sliders } from 'lucide-react';
+import { Cpu, Radio, Link2, Navigation, ChevronLeft, Sliders, Video } from 'lucide-react';
 
 interface ProgrammingCard {
   id: string;
   title: string;
   description: string;
   icon: React.FC<{ size?: number; className?: string }>;
-  accentKey: 'betaflight' | 'expresslrs' | 'binding' | 'inav' | 'edgetx';
+  accentKey: 'betaflight' | 'expresslrs' | 'binding' | 'inav' | 'edgetx' | 'video';
   available: boolean;
   route?: string;
 }
@@ -40,6 +40,15 @@ const cards: ProgrammingCard[] = [
     accentKey: 'edgetx',
     available: true,
     route: '/programming/edgetx',
+  },
+  {
+    id: 'video',
+    title: 'برامج الفيديو',
+    description: 'المنافذ وجدول القنوات وطبقة المعلومات، وأدوات الشركات: التحديث والاقتران والاسترجاع.',
+    icon: Video,
+    accentKey: 'video',
+    available: true,
+    route: '/programming/video',
   },
   {
     id: 'binding',

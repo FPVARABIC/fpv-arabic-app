@@ -362,6 +362,11 @@
   .programming-card--edgetx { --pc-accent-1: rgba(56,224,224,0.4); --pc-glow: rgba(56,224,224,0.18); }
   .programming-card--edgetx .programming-card-icon { background: linear-gradient(135deg, rgba(56,224,224,0.24), rgba(14,165,233,0.16)); border: 1px solid rgba(56,224,224,0.35); }
   .programming-card--edgetx .programming-card-icon svg { color: #67e8f9; }
+  /* The video software centre — violet, matching the video accent used on the
+     project's video card and the centre's own section headings. */
+  .programming-card--video { --pc-accent-1: rgba(167,139,250,0.4); --pc-glow: rgba(167,139,250,0.18); }
+  .programming-card--video .programming-card-icon { background: linear-gradient(135deg, rgba(167,139,250,0.24), rgba(124,58,237,0.16)); border: 1px solid rgba(167,139,250,0.35); }
+  .programming-card--video .programming-card-icon svg { color: #c4b5fd; }
 
   .programming-card--binding { --pc-accent-1: rgba(45,212,191,0.35); --pc-glow: rgba(45,212,191,0.15); }
   .programming-card--binding .programming-card-icon { background: linear-gradient(135deg, rgba(45,212,191,0.18), rgba(74,222,128,0.13)); border: 1px solid rgba(45,212,191,0.3); }

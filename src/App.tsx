@@ -47,6 +47,11 @@ const ExpressLrsTroubleshootingView = lazy(() => import('./views/ExpressLrsTroub
 // radio's software centre should not download it.
 const EdgeTxView = lazy(() => import('./views/EdgeTxView').then(m => ({ default: m.EdgeTxView })));
 const EdgeTxPageView = lazy(() => import('./views/EdgeTxPageView').then(m => ({ default: m.EdgeTxPageView })));
+// The video software centre. Lazy for the same reason every other centre is:
+// its data pulls in the whole tool-page set plus the project record, and none
+// of that belongs in the bundle someone downloads to open the home screen.
+const VideoSoftwareView = lazy(() => import('./views/VideoSoftwareView').then(m => ({ default: m.VideoSoftwareView })));
+const VideoSoftwarePageView = lazy(() => import('./views/VideoSoftwarePageView').then(m => ({ default: m.VideoSoftwarePageView })));
 
 // Assembly moved from an eager import to a lazy one when its final report
 // started using the platform's verdict engine: the section carries the whole
@@ -94,6 +99,8 @@ export const App: React.FC = () => (
     <Route path="/programming/expresslrs/troubleshooting" element={<ExpressLrsTroubleshootingView/>}/>
     <Route path="/programming/edgetx" element={<EdgeTxView/>}/>
     <Route path="/programming/edgetx/:pageId" element={<EdgeTxPageView/>}/>
+    <Route path="/programming/video" element={<VideoSoftwareView/>}/>
+    <Route path="/programming/video/:pageId" element={<VideoSoftwarePageView/>}/>
     <Route path="/betaflight" element={<BetaflightView/>}/>
     <Route path="/betaflight/:sectionId" element={<BetaflightDetailView/>}/>
     <Route path="/troubleshooting" element={<TroubleshootingView/>}/>

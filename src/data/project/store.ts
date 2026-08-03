@@ -63,7 +63,7 @@ export const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
 };
 
 export const ASSEMBLY_STORAGE_KEY = 'fpv-assembly-project-v1';
-const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 3;
 
 interface PersistedAssemblyProject {
   version: number;

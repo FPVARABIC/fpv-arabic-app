@@ -24,6 +24,7 @@ const TYPE_COLOR: Partial<Record<SearchDocType, string>> = {
   'bf-field': '#4338ca',
   'edgetx-topic': '#0e7490',
   'edgetx-setting': '#0e7490',
+  'video-tool': '#7c3aed',
 };
 
 /**

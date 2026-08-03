@@ -30,6 +30,7 @@ import { roadmapData } from '../../roadmapData';
 import { checklistsData } from '../../checklistsData';
 import { setupSteps } from '../../expresslrs/setupSteps';
 import { allEdgeTxPages } from '../../edgetx/registry';
+import { allVideoToolPages } from '../../video/software/registry';
 import { troubleshootingIssues } from '../../expresslrs/troubleshootingIssues';
 import { resolveDestination } from '../../../platform/destinations';
 import { troubleshootingData } from '../../troubleshootingData';
@@ -63,6 +64,7 @@ export type SearchDocType =
   | 'elrs-issue'
   | 'edgetx-topic'
   | 'edgetx-setting'
+  | 'video-tool'
   | 'troubleshooting';
 
 export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
@@ -80,6 +82,7 @@ export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   'elrs-issue': 'ExpressLRS — مشكلة',
   'edgetx-topic': 'EdgeTX — موضوع',
   'edgetx-setting': 'EdgeTX — إعداد',
+  'video-tool': 'برامج الفيديو',
   troubleshooting: 'مشكلة وحل',
 };
 
@@ -441,6 +444,44 @@ function buildDocs(): SearchDoc[] {
         });
       }
     }
+  }
+
+  // The video software centre.
+  //
+  // Indexed at page level only, with no per-setting split — unlike EdgeTX and
+  // Betaflight, whose screens are grids of named fields a reader searches for
+  // by name. These pages are procedures: their unit of usefulness is the whole
+  // ordered sequence, and dropping someone into step 4 of a firmware update is
+  // exactly the failure mode the safety ordering exists to prevent.
+  //
+  // `bot.symptomsAr` carries the real search surface here — «التحديث توقف»،
+  // «الاداة لا ترى الجهاز» — which is what people type when something has
+  // already gone wrong, and is nothing like the page's own title.
+  for (const p of allVideoToolPages) {
+    docs.push({
+      key: `video-tool:${p.id}`,
+      type: 'video-tool',
+      sourceId: p.id,
+      titleAr: p.titleAr,
+      titleEn: p.titleEn,
+      subtitle: p.summaryAr,
+      route: resolveDestination({ kind: 'video', id: p.id }) ?? '/programming/video',
+      contentClass: p.kind === 'problem' ? 'diagnostic' : 'reference',
+      software: p.scope === 'betaflight' ? 'betaflight' : undefined,
+      system: 'video',
+      version: p.sources[0]?.version,
+      titleTokens: toks(p.titleAr, p.titleEn),
+      keywordTokens: toks(
+        'video', 'فيديو',
+        ...(p.bot?.symptomsAr ?? []), ...(p.bot?.misspellingsAr ?? []),
+      ),
+      bodyTokens: bodyToks(
+        p.summaryAr, p.whenNeededAr, p.toolAr,
+        ...p.prerequisitesAr, ...p.relationAr, ...p.commonMistakesAr,
+        ...p.verifyAr, p.revertAr, ...p.versionNotesAr, ...p.manualRequiredAr,
+        ...p.stepsAr.map(x => x.textAr),
+      ),
+    });
   }
 
   // Legacy troubleshooting list — kept alive and now reachable via search.
