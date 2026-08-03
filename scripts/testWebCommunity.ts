@@ -248,7 +248,7 @@ console.log('\n[5] Writes cannot forge identity, status or ranking');
     writes.includes("status: 'deleted'") && !/deleteDoc\(/.test(writes));
 
   // Every mutating helper requires a signed-in user before it does anything.
-  const helpers = ['createTextPost', 'editPostText', 'softDeletePost', 'createComment',
+  const helpers = ['createPost', 'editPostText', 'softDeletePost', 'createComment',
     'softDeleteComment', 'reportContent'];
   for (const h of helpers) {
     const body = writes.slice(writes.indexOf(`export async function ${h}`));

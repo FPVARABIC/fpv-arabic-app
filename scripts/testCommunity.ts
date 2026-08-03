@@ -53,7 +53,16 @@ const useComposerTs = readFileSync(join(ROOT, 'src/components/Community/hooks/us
 const migrationProdTs = readFileSync(join(ROOT, 'functions/scripts/migrateDisplayNameNormalizedProd.ts'), 'utf8');
 const homeViewTsx = readFileSync(join(ROOT, 'src/views/HomeView.tsx'), 'utf8');
 const bottomNavTsx = readFileSync(join(ROOT, 'src/components/BottomNavigation.tsx'), 'utf8');
-const mediaUploaderTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/MediaUploader.tsx'), 'utf8');
+// The media pipeline was split in web Batch 3: everything that decides WHAT
+// may be uploaded moved into mediaPipeline.ts so the web surface runs the
+// SAME code rather than reimplementing it, and MediaUploader.tsx became the
+// phone's binding of it (supplying `firebaseStorage`). Every assertion below
+// is unchanged in what it guarantees — it is read from the file that now
+// holds the code. The two are concatenated so an assertion never passes just
+// because a constant drifted from one file into the other.
+const mediaPipelineTs = readFileSync(join(ROOT, 'src/components/Community/Composer/mediaPipeline.ts'), 'utf8');
+const mediaBindingTsx = readFileSync(join(ROOT, 'src/components/Community/Composer/MediaUploader.ts'), 'utf8');
+const mediaUploaderTsx = `${mediaPipelineTs}\n${mediaBindingTsx}`;
 const feedRankingTs = readFileSync(join(ROOT, 'functions/src/feedRanking.ts'), 'utf8');
 const useFeedTs = readFileSync(join(ROOT, 'src/components/Community/hooks/useFeed.ts'), 'utf8');
 const feedDiversityTs = readFileSync(join(ROOT, 'src/components/Community/utils/feedDiversity.ts'), 'utf8');
@@ -432,10 +441,10 @@ console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
   ok('the allow-list check function is exported for reuse by the composer\'s own pre-validation', /export const isAllowedImageMimeType/.test(mediaUploaderTsx));
   ok('verifyImageDecodable is exported — a genuine decode check, not merely a MIME/extension check', /export const verifyImageDecodable/.test(mediaUploaderTsx) && /createImageBitmap/.test(mediaUploaderTsx));
   ok('MAX_RAW_INPUT_BYTES (pre-compression ceiling) is exported for the composer to enforce before spending a compression pass', /export const MAX_RAW_INPUT_BYTES/.test(mediaUploaderTsx));
-  ok('uploadMedia takes an explicit uid parameter — the path is uid-scoped, never trusted from anywhere else', /uploadMedia\s*=\s*async\s*\(\s*file:\s*File,\s*uid:\s*string,\s*postId:\s*string/.test(mediaUploaderTsx));
+  ok('uploadMedia takes an explicit uid parameter — the path is uid-scoped, never trusted from anywhere else', /uploadMediaWith\s*=\s*async\s*\(\s*\n?\s*storage:\s*FirebaseStorage,\s*\n?\s*file:\s*File,\s*\n?\s*uid:\s*string,\s*\n?\s*postId:\s*string/.test(mediaUploaderTsx));
   ok('uploadMedia derives real width/height from the actual compressed output via verifyImageDecodable, never fabricated', /verifyImageDecodable\(fullBlob\)/.test(mediaUploaderTsx));
-  ok('deleteMedia is exported — the orphan-cleanup primitive useComposer.ts calls on a failed post-create', /export const deleteMedia/.test(mediaUploaderTsx));
-  ok('deleteMedia attempts both files independently via classifyAndRetryDelete (one failing never blocks the other)', /classifyAndRetryDelete\(\(\) => deleteObject\(fullRef\)/.test(mediaUploaderTsx) && /classifyAndRetryDelete\(\(\) => deleteObject\(thumbRef\)/.test(mediaUploaderTsx));
+  ok('deleteMedia is exported — the orphan-cleanup primitive useComposer.ts calls on a failed post-create', /export const deleteMediaWith/.test(mediaUploaderTsx) && /export const deleteMedia =/.test(mediaBindingTsx));
+  ok('deleteMedia attempts both files independently via classifyAndRetryDelete (one failing never blocks the other)', /classifyAndRetryDelete\(\(\) => deleteObject\(mainRef\)/.test(mediaUploaderTsx) && /classifyAndRetryDelete\(\(\) => deleteObject\(thumbRef\)/.test(mediaUploaderTsx));
   ok('deleteMedia returns a structured MediaDeleteResult (derived via deriveMediaDeleteResult), not void — the correction-pass fix for the independent review\'s partial-failure finding', /deriveMediaDeleteResult\(full, thumbnail\)/.test(mediaUploaderTsx));
 
   ok('useComposer.ts passes currentUser.uid into uploadMedia (the uid segment is Auth-derived, never trusted from form data)', /uploadMedia\(imageFile,\s*currentUser\.uid,\s*postId/.test(useComposerTs));
@@ -451,7 +460,7 @@ console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
   // the main thread instead of widening the CSP to admit blob: workers.
   ok('MediaUploader.tsx compresses on the main thread (useWebWorker: false), not a CSP-blocked blob: Worker', /const IMAGE_COMPRESSION_OPTIONS = \{ useWebWorker: false \} as const;/.test(mediaUploaderTsx));
   ok('both the full-image and thumbnail imageCompression calls share the same useWebWorker setting via IMAGE_COMPRESSION_OPTIONS, not two independently-drifting literals', (mediaUploaderTsx.match(/\.\.\.IMAGE_COMPRESSION_OPTIONS/g) ?? []).length === 2);
-  ok('a hard timeout wraps the combined compress+upload flow so a stalled network (or the pre-fix CSP deadlock) cannot leave submitting stuck true forever', /const MEDIA_UPLOAD_TIMEOUT_MS = 40_000;/.test(mediaUploaderTsx) && /withTimeout\(uploadMediaInner\(file, uid, postId, onProgress\), MEDIA_UPLOAD_TIMEOUT_MS\)/.test(mediaUploaderTsx));
+  ok('a hard timeout wraps the combined compress+upload flow so a stalled network (or the pre-fix CSP deadlock) cannot leave submitting stuck true forever', /MEDIA_UPLOAD_TIMEOUT_MS = 40_000;/.test(mediaUploaderTsx) && /uploadMediaInner\(storage, file, uid, postId, onProgress, control\),\s*\n?\s*MEDIA_UPLOAD_TIMEOUT_MS/.test(mediaUploaderTsx));
   ok('the timeout race clears its own timer on settle either way (Promise.race + finally), leaving no dangling timer after a normal fast upload', /Promise\.race\(\[promise, timeout\]\)\.finally\(\(\) => clearTimeout\(timer\)\)/.test(mediaUploaderTsx));
   ok('MediaUploadTimeoutError is exported as a distinguishable type, not a plain Error a catch block would have to string-match', /export class MediaUploadTimeoutError extends Error/.test(mediaUploaderTsx));
   ok('useComposer.ts imports MediaUploadTimeoutError and shows a distinct, honest Arabic message for an upload timeout specifically (not the generic post-publish-failed message)', /import \{ uploadMedia, deleteMedia, MediaUploadTimeoutError, type UploadedMedia \} from '\.\.\/Composer\/MediaUploader';/.test(useComposerTs) && /err instanceof MediaUploadTimeoutError \? 'تعذّر رفع الصورة، حاول مرة أخرى' : 'تعذر نشر المنشور\. حاول مرة أخرى\.'/.test(useComposerTs));
@@ -536,7 +545,13 @@ console.log('\n[24] Image-only publish is independently valid (composer audit co
   ok('PostComposer.tsx\'s image preview alt text is meaningful, not decorative alt=""', /alt="معاينة الصورة المختارة قبل النشر"/.test(postComposerTsx));
 
   ok('firestore.rules no longer requires text.size() > 0 unconditionally for every post (the pre-fix defect that would deny image-only posts even after the UI fix)', !/request\.resource\.data\.text\.size\(\) > 0\s*\n\s*&& request\.resource\.data\.text\.size\(\) <= 2000/.test(rulesTxt));
-  ok('firestore.rules allows empty text specifically when mediaType == "image" (image-only publish, server-side)', /request\.resource\.data\.mediaType == 'image'\s*\n\s*\|\| !request\.resource\.data\.text\.matches\('\^\\\\s\*\$'\)/.test(rulesTxt));
+  // Web Batch 3 widened this from `== 'image'` to `in ['image', 'video']`,
+  // deliberately: a video post is content on its own for exactly the same
+  // reason an image post is, and leaving video out would have made an
+  // uncaptioned clip impossible to publish. What the assertion still
+  // guarantees is unchanged — empty text is allowed ONLY when the post
+  // actually carries media, never for a text-only post.
+  ok('firestore.rules allows empty text specifically when the post carries media (image or video), server-side', /request\.resource\.data\.mediaType in \['image', 'video'\]\s*\n\s*\|\| !request\.resource\.data\.text\.matches\('\^\\\\s\*\$'\)/.test(rulesTxt));
   ok('firestore.rules still requires genuinely non-whitespace text for a text-only post (mediaType != "image") via a whole-string whitespace regex, not merely text.size() > 0', /matches\('\^\\\\s\*\$'\)/.test(rulesTxt));
 
   ok('PostCard.tsx (shared by feed/search/profile/saved) only renders the post-text paragraph when there is real text — no meaningless empty <p> for image-only posts', /\{post\.text && \(/.test(postCardTsx) && /Image-only posts have text: ''/.test(postCardTsx));
@@ -663,8 +678,15 @@ console.log('\n[28] Admin dashboard (Phase 2) — reports review, user ban/unban
 {
   ok('types.ts declares ReportWithId', typesTs.includes('interface ReportWithId extends Report'));
 
-  ok('firestore.rules opens reports read to isModerator() only (no longer allow read: if false)',
-    /match \/reports\/\{reportId\} \{[\s\S]*?allow read: if isModerator\(\);/.test(rulesTxt));
+  // Web Batch 2 widened this by exactly one case: a reporter may read the
+  // reports THEY filed, because otherwise the "you already reported this"
+  // guard queries a collection it cannot read, swallows the refusal and
+  // silently always passes. What must remain true — and is what this
+  // assertion now states — is that reading is limited to a moderator or the
+  // report's own author, and to nobody else. The emulator suite proves the
+  // behaviour directly (AD2, AD3, AD3a-c in scripts/testCommunityRules.ts).
+  ok('firestore.rules limits reports read to a moderator or the report\'s own reporter, and no one else',
+    /match \/reports\/\{reportId\} \{[\s\S]*?allow read: if isModerator\(\)\s*\n\s*\|\| \(isSignedIn\(\) && resource\.data\.reporterId == request\.auth\.uid\);/.test(rulesTxt));
   ok('firestore.rules scopes the reports update to a resolved-only, true-only flip',
     rulesTxt.includes("request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])") &&
     rulesTxt.includes('request.resource.data.resolved == true'));
@@ -846,6 +868,28 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // User-requested standalone copy of firestore.rules for manual console
     // publishing — deliberately left untracked/uncommitted per instruction,
     // but still present in the working tree, so it needs to be excluded here.
+    // ── The web platform (batches 1-3) ────────────────────────────────────
+    // `web/` is a separate Next.js build that IMPORTS the shared core rather
+    // than copying it, so nothing under it reaches the phone bundle. The
+    // Community-adjacent files it needs are named individually below with
+    // their reason, so this stays a real scope check rather than a blanket
+    // exemption.
+    !f.startsWith('web/') &&
+    !f.startsWith('src/data/auth/') &&
+    !f.startsWith('scripts/testWeb') &&
+    f !== 'eslint.config.js' &&
+    f !== 'package.json' &&
+    // Batch 3's media work. The upload pipeline was EXTRACTED from
+    // MediaUploader (which became a thin phone-side binding of it) so the web
+    // runs the same code instead of a second uploader; storage.rules gained a
+    // video branch beside the untouched image one; orphanMedia.ts is the
+    // sweep's decision logic with its own test; and the lifecycle document
+    // records what is and is not deployed.
+    !f.startsWith('src/components/Community/Composer/') &&
+    f !== 'storage.rules' &&
+    !f.startsWith('functions/src/') &&
+    f !== 'scripts/testOrphanMedia.ts' &&
+    !f.startsWith('docs/platform/') &&
     f !== 'RULES_FOR_PUBLISH.md',
   );
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

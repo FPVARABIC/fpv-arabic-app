@@ -9,6 +9,22 @@ import path from 'node:path';
  * it Next traces only files under `web/` and a production build silently ships
  * without the encyclopedia — the failure looks like an empty site rather than
  * an error, which is the worst kind.
+ *
+ * ONE COPY OF EVERY RUNTIME PACKAGE THE SHARED CORE IMPORTS
+ * ---------------------------------------------------------
+ * `firebase` and `browser-image-compression` are DELIBERATELY ABSENT from
+ * `web/package.json`, so both this app and the shared core resolve them from
+ * the repository root's `node_modules` — one copy, shared.
+ *
+ * Listing them here as well installs a SECOND copy under `web/node_modules`,
+ * and the two are mutually unintelligible: `clientStorage()` would return a
+ * handle built by the web's copy, `ref()` inside the core would receive it,
+ * fail to recognise it, and throw "Cannot read properties of undefined
+ * (reading 'path')" the first time anybody uploaded a photo. Typecheck, lint
+ * and `next build` all pass in that state — the types are structurally
+ * identical — so only running it finds the fault. It cost an end-to-end run to
+ * find once; the rule is: a runtime package imported by `../src` belongs in the
+ * ROOT manifest and nowhere else. `scripts/testWebCore.ts` enforces it.
  */
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), '..'),

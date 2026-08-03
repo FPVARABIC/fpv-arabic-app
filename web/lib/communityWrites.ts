@@ -6,6 +6,13 @@ import {
 } from 'firebase/firestore';
 import { clientAuth, clientDb } from './firebaseClient';
 import { normalizeDisplayName } from '@core/community/utils/userSearch';
+import {
+  uploadImage, uploadVideo, deleteUploadedMedia,
+  isAllowedImageMimeType, isAllowedVideoMimeType,
+  MediaUploadCancelledError, MediaUploadTimeoutError,
+  MAX_RAW_INPUT_BYTES, MAX_VIDEO_SIZE_BYTES, MAX_VIDEO_DURATION_SECONDS,
+  type UploadedMedia, type UploadedVideo, type UploadControl,
+} from './mediaUpload';
 
 /**
  * Every community MUTATION, performed from the browser on the client SDK.
@@ -113,10 +120,14 @@ export const COMMENT_COOLDOWN_MS = 5_000;
 export interface CreatePostInput {
   text: string;
   category?: string | null;
+  /** The picked file, if any. Uploaded by this function — never by the caller. */
+  file?: File | null;
+  onProgress?: (pct: number) => void;
+  control?: UploadControl;
 }
 
 /**
- * Create a text post.
+ * Create a post — text, or text plus one image or video.
  *
  * The shape mirrors `firestore.rules`' create allow-list exactly, including the
  * constants it demands (`status: 'active'`, `commentsCount: 0`, `likesCount: 0`,
@@ -137,10 +148,14 @@ export interface CreatePostInput {
  * and the rate-limit stamp land together or not at all, so there is no window
  * in which a post exists with the limit un-armed.
  */
-export async function createTextPost(input: CreatePostInput): Promise<string> {
+export async function createPost(input: CreatePostInput): Promise<string> {
   const user = await requireUser();
   const text = input.text.trim();
-  if (!text) throw new Error('اكتب نصّ المنشور');
+  // Text is required only when there is nothing else. An image or a video is
+  // content on its own — `firestore.rules` permits an empty-text post exactly
+  // when it carries media — so demanding a caption here would be this function
+  // enforcing a stricter rule than the platform has.
+  if (!text && !input.file) throw new Error('اكتب نصّ المنشور أو أرفق ملفاً');
   if (text.length > POST_TEXT_MAX) throw new Error('النص أطول من الحد المسموح');
 
   // authorName/authorPhoto must equal the profile document, because the rules
@@ -161,33 +176,139 @@ export async function createTextPost(input: CreatePostInput): Promise<string> {
     }
   }
 
+  // THE POST ID IS MINTED BEFORE THE UPLOAD, NOT AFTER.
+  //
+  // `storage.rules` only accepts writes under
+  // `community/posts/{uid}/{postId}/`, and `firestore.rules` only accepts a
+  // post whose `mediaPath` equals exactly that string for ITS OWN id. So the id
+  // has to exist before a single byte is uploaded. This is also why the file
+  // cannot be uploaded by a component ahead of time and handed in: it would not
+  // know which folder it belongs in.
   const postRef = doc(collection(db(), 'posts'));
-  const batch = writeBatch(db());
-  batch.set(postRef, {
-    authorId: user.uid,
-    authorName: profile.displayName ?? user.displayName ?? 'طيّار',
-    authorPhoto: profile.photoURL ?? null,
-    text,
-    ...(input.category ? { category: input.category } : {}),
-    mediaType: 'none',
-    mediaURL: null,
-    thumbnailURL: null,
-    mediaSize: null,
-    mediaDuration: null,
-    mediaPath: null,
-    mediaWidth: null,
-    mediaHeight: null,
-    commentsCount: 0,
-    likesCount: 0,
-    createdAt: serverTimestamp(),
-    status: 'active',
-    searchTokens: tokensFor(text),
-    feedScore: 100,
-  });
-  batch.update(userRef, { lastPostAt: serverTimestamp(), postsCount: increment(1) });
-  await batch.commit();
+  const media = input.file
+    ? await uploadFor(input.file, user.uid, postRef.id, input.onProgress, input.control)
+    : null;
+
+  try {
+    const batch = writeBatch(db());
+    batch.set(postRef, {
+      authorId: user.uid,
+      authorName: profile.displayName ?? user.displayName ?? 'طيّار',
+      authorPhoto: profile.photoURL ?? null,
+      text,
+      ...(input.category ? { category: input.category } : {}),
+      ...mediaFields(media),
+      commentsCount: 0,
+      likesCount: 0,
+      createdAt: serverTimestamp(),
+      status: 'active',
+      searchTokens: tokensFor(text),
+      feedScore: 100,
+    });
+    batch.update(userRef, { lastPostAt: serverTimestamp(), postsCount: increment(1) });
+    await batch.commit();
+  } catch (err) {
+    // COMPENSATION: the bytes are in Storage but no post references them, so
+    // they are an orphan the moment this throws. Deleting them here is the
+    // cheapest possible cleanup — it happens while we still know exactly which
+    // two objects they are, with no listing, no scheduled job and no delay.
+    //
+    // It is best-effort by necessity (the tab may be closing, the network may
+    // be the very thing that failed), which is why the scheduled sweep
+    // described in docs/platform/14-MEDIA-LIFECYCLE.md still has to exist. It
+    // is the safety net; this is the common case.
+    if (media) {
+      await deleteUploadedMedia(media).catch(() => { /* the sweep will catch it */ });
+    }
+    throw err;
+  }
 
   return postRef.id;
+}
+
+/**
+ * Pick the right uploader for what the person actually chose, and translate
+ * every refusal into something a human can act on.
+ *
+ * The type checks here are a courtesy so the message is specific; they are not
+ * the control. `storage.rules` refuses a disallowed content type outright, and
+ * `firestore.rules` refuses a post whose media fields do not match what was
+ * uploaded — both proven in the emulator suite.
+ */
+async function uploadFor(
+  file: File,
+  uid: string,
+  postId: string,
+  onProgress?: (pct: number) => void,
+  control?: UploadControl,
+): Promise<UploadedMedia | UploadedVideo | null> {
+  try {
+    if (isAllowedImageMimeType(file.type)) {
+      if (file.size > MAX_RAW_INPUT_BYTES) {
+        throw new Error('الصورة أكبر من الحد المسموح قبل الضغط.');
+      }
+      const media = await uploadImage(file, uid, postId, (full, thumb) => onProgress?.(Math.max(full, thumb)), control);
+      if (!media) throw new Error('تعذّر ضغط الصورة بما يكفي. جرّب صورة أخرى.');
+      return media;
+    }
+
+    if (isAllowedVideoMimeType(file.type)) {
+      if (file.size > MAX_VIDEO_SIZE_BYTES) {
+        throw new Error(`الفيديو أكبر من ${Math.round(MAX_VIDEO_SIZE_BYTES / (1024 * 1024))} ميغابايت.`);
+      }
+      const media = await uploadVideo(file, uid, postId, onProgress, control);
+      if (!media) throw new Error('تعذّر قراءة هذا الفيديو. جرّب ملفاً بصيغة MP4 أو WebM.');
+      return media;
+    }
+
+    throw new Error('نوع الملف غير مدعوم. الصور: JPEG أو PNG أو WebP. الفيديو: MP4 أو WebM.');
+  } catch (err) {
+    if (err instanceof MediaUploadCancelledError) throw err;
+    if (err instanceof MediaUploadTimeoutError) {
+      throw new Error('استغرق الرفع وقتاً طويلاً. تحقّق من الاتصال وأعد المحاولة.');
+    }
+    if (err instanceof Error && err.message === 'VIDEO_TOO_LONG') {
+      throw new Error(`الفيديو أطول من ${MAX_VIDEO_DURATION_SECONDS} ثانية.`);
+    }
+    if (err instanceof Error && err.message === 'VIDEO_TOO_LARGE') {
+      throw new Error(`الفيديو أكبر من ${Math.round(MAX_VIDEO_SIZE_BYTES / (1024 * 1024))} ميغابايت.`);
+    }
+    throw err;
+  }
+}
+
+/**
+ * The media half of a post document.
+ *
+ * Every field is written on every post, present or absent, because
+ * `firestore.rules` validates the WHOLE set as one shape: a text post must have
+ * all of them null, and a media post must have all of them populated
+ * consistently. Omitting a key rather than nulling it would fail the create.
+ *
+ * `mediaPath` is not passed through from the uploader by accident — it is the
+ * uploader's own computed folder, which the rules then re-derive from
+ * `request.auth.uid` and the post id and compare. A client that made one up
+ * would be refused.
+ */
+function mediaFields(media: UploadedMedia | UploadedVideo | null) {
+  if (!media) {
+    return {
+      mediaType: 'none' as const,
+      mediaURL: null, thumbnailURL: null, mediaSize: null,
+      mediaDuration: null, mediaPath: null, mediaWidth: null, mediaHeight: null,
+    };
+  }
+  const isVideo = 'durationSeconds' in media;
+  return {
+    mediaType: (isVideo ? 'video' : 'image') as 'video' | 'image',
+    mediaURL: media.mediaURL,
+    thumbnailURL: media.thumbnailURL,
+    mediaSize: media.mediaSize,
+    mediaDuration: isVideo ? (media as UploadedVideo).durationSeconds : null,
+    mediaPath: media.mediaPath,
+    mediaWidth: media.width,
+    mediaHeight: media.height,
+  };
 }
 
 /**

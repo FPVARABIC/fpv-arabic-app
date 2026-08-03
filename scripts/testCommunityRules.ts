@@ -304,6 +304,192 @@ async function main() {
   await record('P5i a DIFFERENT user cannot delete uidA\'s uploaded file', 'deny', () =>
     deleteObject(ref(asB.storage(), 'community/posts/uidA/post-p2/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg')));
 
+  // ── Video in Storage (web Batch 3) ──────────────────────────────────────
+  //
+  // The image cases above are unchanged and still run; these are the new
+  // branch. What matters most here is the NEGATIVE set: a video path must not
+  // become a way around the image rules, and the byte ceiling must be the real
+  // physical one rather than a number a client reports about itself.
+  const VID = new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]); // ftyp box
+
+  await record('MV1 the owner may upload an mp4 under the size ceiling', 'allow', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/aa11bb22-cc33-4d44-8e55-ff6677889900.mp4'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV2 the owner may upload a webm', 'allow', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/bb22cc33-dd44-4e55-9f66-001122334455.webm'),
+      VID, { contentType: 'video/webm' },
+    ));
+
+  await record('MV3 an unauthenticated caller cannot upload a video', 'deny', () =>
+    uploadBytes(
+      ref(testEnv.unauthenticatedContext().storage(), 'community/posts/uidA/post-p2/cc33dd44-ee55-4f66-a077-112233445566.mp4'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV4 a different user cannot upload a video into uidA\'s path', 'deny', () =>
+    uploadBytes(
+      ref(asB.storage(), 'community/posts/uidA/post-p2/dd44ee55-ff66-4077-b188-223344556677.mp4'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV5 a banned user cannot upload a video into their own path', 'deny', () =>
+    uploadBytes(
+      ref(asBanned.storage(), 'community/posts/uidBanned/post-banned-media/ee55ff66-0077-4188-9299-334455667788.mp4'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV6 a video over the 40MB physical ceiling is denied', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/ff660077-1188-4299-83aa-445566778899.mp4'),
+      new Uint8Array(40 * 1024 * 1024 + 1), { contentType: 'video/mp4' },
+    ));
+
+  await record('MV7 a video container the browser cannot play (video/quicktime) is denied', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/00771188-2299-43aa-94bb-556677889900.mp4'),
+      VID, { contentType: 'video/quicktime' },
+    ));
+
+  // The renamed-payload cases. A file's NAME must never be what decides how it
+  // is treated, and its declared type must never be able to launder it into a
+  // branch with a laxer limit.
+  await record('MV8 an executable declared as video/mp4 under a .mp4 name is still denied by content type shape', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/11882299-33aa-44bb-85cc-6677889900aa.mp4'),
+      VID, { contentType: 'application/x-msdownload' },
+    ));
+
+  await record('MV9 an image content type under a .mp4 filename is denied (name and type must agree)', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/229933aa-44bb-45cc-96dd-77889900aabb.mp4'),
+      VID, { contentType: 'image/jpeg' },
+    ));
+
+  await record('MV10 a video content type under a .jpg filename is denied — it would smuggle 40MB past the 2MB image cap', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/33aa44bb-55cc-46dd-a7ee-889900aabbcc.jpg'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV11 an arbitrary extension is denied even with an allowed content type', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/44bb55cc-66dd-47ee-b8ff-9900aabbccdd.mkv'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV12 a path traversal in the filename is denied', 'deny', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/..%2F..%2Fevil.mp4'),
+      VID, { contentType: 'video/mp4' },
+    ));
+
+  await record('MV13 a video poster is an ordinary _thumb.jpg — governed by the unchanged image branch', 'allow', () =>
+    uploadBytes(
+      ref(asA.storage(), 'community/posts/uidA/post-p2/aa11bb22-cc33-4d44-8e55-ff6677889900_thumb.jpg'),
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), { contentType: 'image/jpeg' },
+    ));
+
+  await record('MV14 the owner may delete their own video', 'allow', () =>
+    deleteObject(ref(asA.storage(), 'community/posts/uidA/post-p2/aa11bb22-cc33-4d44-8e55-ff6677889900.mp4')));
+
+  await record('MV15 a different user cannot delete uidA\'s video', 'deny', () =>
+    deleteObject(ref(asB.storage(), 'community/posts/uidA/post-p2/bb22cc33-dd44-4e55-9f66-001122334455.webm')));
+
+  await record('MV16 a moderator has NO implicit access to another user\'s files — moderation runs through the Admin SDK, not a Storage grant', 'deny', () =>
+    deleteObject(ref(testEnv.authenticatedContext('uidMod').storage(), 'community/posts/uidA/post-p2/bb22cc33-dd44-4e55-9f66-001122334455.webm')));
+
+  console.log('\n=== 0b. Video posts in Firestore (web Batch 3) ===');
+  {
+    // A video post's document, shaped exactly as web/lib/communityWrites.ts
+    // writes it. `uidC` is used so these creates are not fighting uidA's
+    // 60-second posting rate limit, which the earlier cases already armed.
+    const asC = testEnv.authenticatedContext('uidC');
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      // The displayName MUST equal what validPostDoc will put in authorName
+      // (its `?? 'Pilot'` fallback for a uid absent from AUTHOR_NAMES), because
+      // the create rule compares the two. A mismatch here fails every VP case
+      // for a reason that has nothing to do with video.
+      await setDoc(doc(ctx.firestore(), 'users/uidC'), validUserDoc({ displayName: 'Pilot' }));
+    });
+
+    const videoPost = (postId: string, uid: string, overrides: Record<string, unknown> = {}) =>
+      validPostDoc(uid, {
+        mediaType: 'video',
+        mediaURL: 'https://example.test/v.mp4',
+        thumbnailURL: 'https://example.test/v_thumb.jpg',
+        mediaSize: 12 * 1024 * 1024,
+        mediaDuration: 24,
+        mediaPath: `community/posts/${uid}/${postId}`,
+        mediaWidth: 1920,
+        mediaHeight: 1080,
+        ...overrides,
+      });
+
+    await record('VP1 a well-formed video post is accepted', 'allow', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-1'), videoPost('post-vid-1', 'uidC')));
+
+    // Everything below must be refused. These are the reasons the mediaType
+    // allow-list was widened carefully rather than by deleting a condition.
+    await record('VP2 a video post whose mediaPath points at ANOTHER user is denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-2'), videoPost('post-vid-2', 'uidC', {
+        mediaPath: 'community/posts/uidA/post-vid-2',
+      })));
+
+    await record('VP3 a video post whose mediaPath points at a DIFFERENT post id is denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-3'), videoPost('post-vid-3', 'uidC', {
+        mediaPath: 'community/posts/uidC/some-other-post',
+      })));
+
+    await record('VP4 a video post with no duration is denied — duration is required, unlike for an image', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-4'), videoPost('post-vid-4', 'uidC', { mediaDuration: null })));
+
+    await record('VP5 a video longer than the 60s bound is denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-5'), videoPost('post-vid-5', 'uidC', { mediaDuration: 61 })));
+
+    await record('VP6 a video with a negative duration is denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-6'), videoPost('post-vid-6', 'uidC', { mediaDuration: -1 })));
+
+    await record('VP7 a video declaring more than the 40MB bound is denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-7'), videoPost('post-vid-7', 'uidC', {
+        mediaSize: 40 * 1024 * 1024 + 1,
+      })));
+
+    await record('VP8 a video post with no poster (thumbnailURL) is denied — the feed could not render it', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-8'), videoPost('post-vid-8', 'uidC', { thumbnailURL: null })));
+
+    await record('VP9 an IMAGE post may still not carry a duration (the image branch is unchanged)', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-9'), validPostDoc('uidC', {
+        mediaType: 'image',
+        mediaURL: 'https://example.test/i.jpg',
+        thumbnailURL: 'https://example.test/i_thumb.jpg',
+        mediaSize: 100 * 1024,
+        mediaDuration: 10,
+        mediaPath: 'community/posts/uidC/post-vid-9',
+        mediaWidth: 800, mediaHeight: 600,
+      })));
+
+    await record('VP10 a TEXT post may still not carry any media field (the none branch is unchanged)', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-10'), validPostDoc('uidC', {
+        mediaType: 'none', mediaDuration: 5,
+      })));
+
+    await record('VP11 an unknown mediaType is still denied', 'deny', () =>
+      setDoc(doc(asC.firestore(), 'posts/post-vid-11'), videoPost('post-vid-11', 'uidC', { mediaType: 'audio' })));
+
+    await record('VP12 a video post is publicly readable like any other active post', 'allow', () =>
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'posts/post-vid-1')));
+
+    await record('VP13 its author can soft-delete it, and the media fields are untouched by that diff', 'allow', () =>
+      updateDoc(doc(asC.firestore(), 'posts/post-vid-1'), { status: 'deleted' }));
+
+    await record('VP14 a soft-deleted video post is no longer publicly readable', 'deny', () =>
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'posts/post-vid-1')));
+  }
+
   console.log('\n=== 1. Forged role/status ===');
 
   await record('reject create of a new user doc with role=moderator', 'deny', () =>

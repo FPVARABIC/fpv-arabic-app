@@ -60,6 +60,10 @@ export interface PostSummary {
   thumbnailURL: string | null;
   mediaWidth: number | null;
   mediaHeight: number | null;
+  // Video only. Absent on every image and text post, and on every post written
+  // before video existed — so `null` means "not a video or not recorded", never
+  // "zero seconds".
+  mediaDuration: number | null;
   commentsCount: number;
   likesCount: number;
   /** ISO string — a Firestore Timestamp cannot cross the server/client boundary. */
@@ -100,6 +104,7 @@ function toPostSummary(id: string, d: FirebaseFirestore.DocumentData): PostSumma
     thumbnailURL: typeof d.thumbnailURL === 'string' ? d.thumbnailURL : null,
     mediaWidth: typeof d.mediaWidth === 'number' ? d.mediaWidth : null,
     mediaHeight: typeof d.mediaHeight === 'number' ? d.mediaHeight : null,
+    mediaDuration: typeof d.mediaDuration === 'number' ? d.mediaDuration : null,
     // `?? 0` everywhere: these fields were added over time, and a post written
     // before one existed must render rather than show NaN.
     commentsCount: typeof d.commentsCount === 'number' ? d.commentsCount : 0,

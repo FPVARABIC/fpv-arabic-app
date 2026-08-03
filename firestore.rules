@@ -412,7 +412,7 @@ service cloud.firestore {
                     // post the UI would block (a raw client bypass sending
                     // whitespace-only text with no image) is still denied.
                     && (
-                         request.resource.data.mediaType == 'image'
+                         request.resource.data.mediaType in ['image', 'video']
                          || !request.resource.data.text.matches('^\\s*$')
                        )
                     && (
@@ -459,10 +459,14 @@ service cloud.firestore {
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.searchTokens is list
                     && request.resource.data.searchTokens.size() <= 30
-                    // V1 accepts images only. 'video' is rejected at write time even
-                    // though the schema supports it (D4) — enabling it later is a
-                    // one-line rules change, not a redesign.
-                    && request.resource.data.mediaType in ['none', 'image']
+                    // Web Batch 3 enables 'video' alongside 'image'. It was
+                    // schema-ready from D4 and rejected at write time until
+                    // there was a real upload path, a real duration bound and
+                    // real Storage rules for it — all of which now exist and
+                    // are tested. What is still NOT claimed: server-side
+                    // re-verification of the declared duration/dimensions, or
+                    // any transcoding. See the video branch below.
+                    && request.resource.data.mediaType in ['none', 'image', 'video']
                     && (
                          (request.resource.data.mediaType == 'none'
                            && request.resource.data.mediaURL == null
@@ -498,6 +502,41 @@ service cloud.firestore {
                            && request.resource.data.mediaHeight is number
                            && request.resource.data.mediaHeight > 0
                            && request.resource.data.mediaHeight <= 10000)
+                          ||
+                          // VIDEO (web Batch 3).
+                          //
+                          // Structurally the image branch with three differences: a
+                          // much larger byte ceiling, a REQUIRED duration, and the
+                          // same thumbnailURL requirement — which is what makes a
+                          // video post cost a feed row exactly what an image post
+                          // costs, because the feed renders the captured poster frame
+                          // and never touches the video file until someone presses
+                          // play.
+                          //
+                          // mediaSize and mediaDuration are SELF-REPORTED, exactly as
+                          // mediaWidth/mediaHeight already are for images. The real
+                          // byte enforcement is storage.rules' hard cap on what was
+                          // actually uploaded. The duration has no server-side
+                          // equivalent — that would need a Cloud Function with a media
+                          // probe, which does not exist — so it is bounded here to keep
+                          // a false value harmless, and it is never used for an
+                          // authorization decision.
+                          (request.resource.data.mediaType == 'video'
+                            && request.resource.data.mediaURL is string
+                            && request.resource.data.thumbnailURL is string
+                            && request.resource.data.mediaSize is number
+                            && request.resource.data.mediaSize > 0
+                            && request.resource.data.mediaSize <= 40 * 1024 * 1024
+                            && request.resource.data.mediaPath == 'community/posts/' + request.auth.uid + '/' + postId
+                            && request.resource.data.mediaDuration is number
+                            && request.resource.data.mediaDuration > 0
+                            && request.resource.data.mediaDuration <= 60
+                            && request.resource.data.mediaWidth is number
+                            && request.resource.data.mediaWidth > 0
+                            && request.resource.data.mediaWidth <= 10000
+                            && request.resource.data.mediaHeight is number
+                            && request.resource.data.mediaHeight > 0
+                            && request.resource.data.mediaHeight <= 10000)
                        )
                     // rate limit: 1 post / 60s (D11). First-ever post has no
                     // lastPostAt yet, so it's allowed through.
@@ -558,7 +597,7 @@ service cloud.firestore {
                            // meaningful, non-whitespace text. An edit must not be a
                            // way to empty a post that creation would have rejected.
                            && (
-                                resource.data.mediaType == 'image'
+                                resource.data.mediaType in ['image', 'video']
                                 || !request.resource.data.text.matches('^\\s*$')
                               )
                            && request.resource.data.searchTokens is list

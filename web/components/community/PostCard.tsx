@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { PostSummary } from '@/lib/server/community';
 import { toParagraphs, formatRelativeArabic } from '@/lib/text';
 import { CATEGORY_LABELS } from '@core/community/utils/categories';
+import { PostMedia } from './PostMedia';
 
 /**
  * One post in the feed.
@@ -98,22 +99,29 @@ export const PostCard: React.FC<{ post: PostSummary; compact?: boolean }> = ({ p
         )}
       </div>
 
-      {post.mediaType === 'image' && post.mediaURL && (
-        // Existing media only. Batch 2 adds no upload path; these are posts the
-        // phone app already created, and they must keep rendering.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={post.thumbnailURL ?? post.mediaURL}
-          alt={`صورة في منشور ${post.authorName}`}
-          loading="lazy"
-          width={post.mediaWidth ?? undefined}
-          height={post.mediaHeight ?? undefined}
-          style={{
-            marginTop: 14, maxWidth: '100%', height: 'auto', borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-soft)', display: 'block',
-          }}
-        />
-      )}
+      {/*
+        Feed variant: the thumbnail for an image, and for a video the captured
+        poster frame with no <video> element mounted at all. Scrolling the feed
+        never downloads a video file.
+      */}
+      <PostMedia
+        mediaType={post.mediaType}
+        // A VIDEO'S OWN URL IS WITHHELD FROM THE FEED ON PURPOSE.
+        //
+        // The feed paints the poster frame and never mounts a player, so it has
+        // no use for the clip's URL — and passing it would still embed that URL
+        // in the serialised props Next ships inside the feed's HTML. Nothing
+        // would fetch it, but every feed page would carry a link to a 40MB file
+        // for every video post on it. Withholding it keeps the payload honest
+        // about what the page actually needs.
+        mediaURL={post.mediaType === 'video' ? null : post.mediaURL}
+        thumbnailURL={post.thumbnailURL}
+        mediaWidth={post.mediaWidth}
+        mediaHeight={post.mediaHeight}
+        mediaDuration={post.mediaDuration}
+        authorName={post.authorName}
+        variant="feed"
+      />
 
       <footer
         style={{

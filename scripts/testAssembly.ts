@@ -606,6 +606,15 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // browser against a Next server and the real rules; it imports nothing
     // from Assembly.
     f !== 'scripts/testWebCommunityE2E.ts' &&
+    // Batch 3's media work: the shared upload pipeline (extracted so the web
+    // runs the phone's code rather than a copy), its orphan-detection logic,
+    // its tests, and the Storage rules they prove. None of it touches Assembly.
+    f !== 'scripts/testOrphanMedia.ts' &&
+    f !== 'scripts/testCommunity.ts' &&
+    f !== 'storage.rules' &&
+    !f.startsWith('functions/src/') &&
+    !f.startsWith('src/components/Community/Composer/') &&
+    !f.startsWith('docs/platform/') &&
     f !== 'eslint.config.js',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);

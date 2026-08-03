@@ -31,20 +31,57 @@ service firebase.storage {
       allow write: if request.auth != null
                    && request.auth.uid == uid
                    && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active'
-                   && fileName.matches('[a-zA-Z0-9-]+(_thumb)?\\.jpg')
-                   // Exact allow-list, not a wildcard (Phase 9 hardening) —
-                   // matches MediaUploader.tsx's ALLOWED_IMAGE_MIME_TYPES.
-                   // The previous `image/.*` pattern also matched
-                   // image/svg+xml (an XML/script-capable payload, not a
-                   // raster image at all) and image/gif (never audited for
-                   // animation/size/cost implications) — both are now
-                   // structurally rejected, not merely discouraged.
-                   && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
-                   // Hard physical ceiling; D5's compression targets (≤300KB
-                   // full / ≤40KB thumb) sit far under this. This is a
-                   // backstop against a compromised or bypassed client, not
-                   // the primary size control.
-                   && request.resource.size < 2 * 1024 * 1024;
+                   && (
+                        // IMAGE — {uuid}.jpg (full) and {uuid}_thumb.jpg
+                        // (thumbnail), the only two shapes the pipeline
+                        // produces. Exact MIME allow-list, not a wildcard
+                        // (Phase 9 hardening): the previous `image/.*` pattern
+                        // also matched image/svg+xml (an XML/script-capable
+                        // payload, not a raster image at all) and image/gif
+                        // (never audited for animation/size/cost) — both are
+                        // structurally rejected, not merely discouraged.
+                        //
+                        // The uploader re-encodes every image to JPEG, so the
+                        // only content type it ever actually sends is
+                        // image/jpeg; png and webp remain accepted here purely
+                        // so a future direct-upload path is not silently
+                        // broken by this rule.
+                        (
+                          fileName.matches('[a-zA-Z0-9-]+(_thumb)?\\.jpg')
+                          && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp']
+                          // Hard physical ceiling; D5's compression targets
+                          // (≤300KB full / ≤40KB thumb) sit far under this.
+                          // A backstop against a compromised or bypassed
+                          // client, not the primary size control.
+                          && request.resource.size < 2 * 1024 * 1024
+                        )
+                        ||
+                        // VIDEO (web Batch 3) — {uuid}.mp4 or {uuid}.webm.
+                        //
+                        // The poster frame a video post needs is NOT covered by
+                        // this branch: it is uploaded as an ordinary
+                        // {uuid}_thumb.jpg and is therefore governed by the
+                        // image branch above, unchanged. That is deliberate —
+                        // it means cleanupPostMedia's prefix delete already
+                        // removes a video's poster with no new code, and it
+                        // means the feed renders video posts through exactly
+                        // the same <img> path as image posts.
+                        //
+                        // Only formats a browser can play without transcoding,
+                        // because there is no transcoding infrastructure and
+                        // this project will not pretend there is.
+                        //
+                        // 40MB is the hard physical ceiling and the real
+                        // enforcement — firestore.rules' matching mediaSize
+                        // bound is self-reported metadata, so THIS is the
+                        // number that actually limits what a bypassed client
+                        // can store.
+                        (
+                          fileName.matches('[a-zA-Z0-9-]+\\.(mp4|webm)')
+                          && request.resource.contentType in ['video/mp4', 'video/webm']
+                          && request.resource.size <= 40 * 1024 * 1024
+                        )
+                      );
 
       // Phase 9: the path's own owner may delete their own files — required
       // for useComposer.ts's client-side orphan cleanup (Storage upload

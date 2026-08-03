@@ -3,6 +3,7 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator, type FirebaseStorage } from 'firebase/storage';
 
 /**
  * The Firebase CLIENT SDK — the browser half, and the only Firebase the browser
@@ -45,6 +46,7 @@ import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 
 /** `host:port` of the local emulator suite, or null in every real environment. */
 function emulatorHost(): string | null {
@@ -93,6 +95,26 @@ export function clientDb(): Firestore {
     connectFirestoreEmulator(db, h, Number(p));
   }
   return db;
+}
+
+/**
+ * Firebase Storage for the browser.
+ *
+ * The ONLY Storage handle on this surface, for the same reason `clientDb` is
+ * the only Firestore one: `storage.rules` is written against a single naming
+ * and ownership scheme, and a second entry point that talked to production
+ * while the rest of the app talked to the emulator would make a green test
+ * meaningless.
+ *
+ * The emulator's Storage port is fixed at 9199 by `firebase.json`; the host
+ * comes from the same variable the other two use.
+ */
+export function clientStorage(): FirebaseStorage {
+  if (storage) return storage;
+  const host = emulatorHost();
+  storage = getStorage(firebaseApp());
+  if (host) connectStorageEmulator(storage, host.split(':')[0], 9199);
+  return storage;
 }
 
 /**

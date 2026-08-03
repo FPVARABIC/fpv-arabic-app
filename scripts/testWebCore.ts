@@ -341,4 +341,57 @@ console.log('\n[9] The phone app is untouched by the web surface');
   ok('no phone file imports anything from web/', phoneImportsWeb.length === 0);
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * [10] Media — one pipeline, one Firebase, no second uploader
+ * ──────────────────────────────────────────────────────────────────────────── */
+console.log('\n[10] The media pipeline is shared, not duplicated');
+{
+  const pipeline = readFileSync(path.join(ROOT, 'src/components/Community/Composer/mediaPipeline.ts'), 'utf8');
+  const webBinding = readFileSync(path.join(ROOT, 'web/lib/mediaUpload.ts'), 'utf8');
+  const phoneBinding = readFileSync(path.join(ROOT, 'src/components/Community/Composer/MediaUploader.ts'), 'utf8');
+
+  ok('the web binds the SHARED pipeline rather than importing firebase/storage itself',
+    webBinding.includes("@core/community/Composer/mediaPipeline"));
+  ok('the phone binds the same shared pipeline',
+    phoneBinding.includes("./mediaPipeline"));
+
+  // The limits must exist in exactly one place. A second copy is how the two
+  // surfaces start disagreeing with storage.rules.
+  for (const [name, pattern] of [
+    ['the image MIME allow-list', /ALLOWED_IMAGE_MIME_TYPES\s*=\s*\[/],
+    ['the video MIME allow-list', /ALLOWED_VIDEO_MIME_TYPES\s*=\s*\[/],
+    ['the compressed-image ceiling', /MAX_MEDIA_SIZE_BYTES\s*=/],
+    ['the raw-input ceiling', /MAX_RAW_INPUT_BYTES\s*=/],
+    ['the video byte ceiling', /MAX_VIDEO_SIZE_BYTES\s*=/],
+    ['the video duration ceiling', /MAX_VIDEO_DURATION_SECONDS\s*=/],
+  ] as const) {
+    ok(`${name} is DEFINED in the shared pipeline`, pattern.test(pipeline));
+    ok(`${name} is not re-defined in the web binding`, !pattern.test(webBinding));
+    ok(`${name} is not re-defined in the phone binding`, !pattern.test(phoneBinding));
+  }
+
+  ok('the shared pipeline takes the storage handle as a parameter — that is what makes it shareable',
+    /uploadMediaWith\s*=\s*async\s*\(\s*\n?\s*storage:\s*FirebaseStorage/.test(pipeline));
+  ok('the shared pipeline imports no app-specific Firebase singleton',
+    !/lib\/firebase'|firebaseClient/.test(pipeline));
+  ok('the shared pipeline imports no React', !/from 'react'/.test(pipeline));
+
+  // The dual-instance trap. A runtime package imported by ../src MUST resolve
+  // to one copy, or objects made by one half are unrecognisable to the other.
+  const webPkg = JSON.parse(readFileSync(path.join(ROOT, 'web/package.json'), 'utf8')) as
+    { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+  const webDeps = { ...webPkg.dependencies, ...webPkg.devDependencies };
+  for (const shared of ['firebase', 'browser-image-compression']) {
+    ok(`${shared} is NOT duplicated in web/package.json — the shared core imports it, so one copy must serve both`,
+      !(shared in webDeps));
+  }
+  ok('the web still declares firebase-admin, which only it uses',
+    'firebase-admin' in webDeps);
+
+  // The web must never invent its own storage path — the path IS the
+  // authorization in storage.rules.
+  ok('the folder path comes from the shared helper, never rebuilt in web code',
+    !/community\/posts\/\$\{/.test(readFileSync(path.join(ROOT, 'web/lib/communityWrites.ts'), 'utf8')));
+}
+
 console.log(`\n✅ testWebCore: ${passed} assertions passed\n`);

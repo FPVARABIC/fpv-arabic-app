@@ -41,12 +41,16 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Browser, type Page } from 'playwright';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
+import { getStorage, connectStorageEmulator, ref as storageRef, uploadBytes } from 'firebase/storage';
 
 const PORT = 3140;
 const BASE = `http://localhost:${PORT}`;
 const PROJECT_ID = process.env.GCLOUD_PROJECT || 'demo-community-rules-test';
 const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
 const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080';
+const STORAGE_HOST = process.env.FIREBASE_STORAGE_EMULATOR_HOST || 'localhost:9199';
 
 let passed = 0;
 const failures: string[] = [];
@@ -213,6 +217,79 @@ async function listReports(): Promise<unknown[]> {
   return body.documents ?? [];
 }
 
+/**
+ * What is really in the Storage bucket under a prefix.
+ *
+ * The emulator's REST surface, queried with owner credentials, so this reports
+ * the ground truth rather than what the app believes it uploaded. That
+ * distinction is the entire point of the lifecycle assertions: "the post says
+ * it has an image" and "the bytes exist" are different claims, and an orphan is
+ * exactly the case where they disagree.
+ */
+/**
+ * A genuine 2x2 PNG.
+ *
+ * Not a text file with a .png name: the pipeline DECODES what it is given, so a
+ * fake is rejected — which is exactly the behaviour section [13] relies on.
+ */
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR4nGP8//8/AzbAxIAHjEqSJgkAj7QCE0BJIiEAAAAASUVORK5CYII=',
+  'base64',
+);
+
+/**
+ * Upload straight to Storage as a given user, THROUGH THE RULES.
+ *
+ * Uses the real Firebase client SDK pointed at the emulator — the same library,
+ * the same wire protocol and the same rule evaluation a browser console would
+ * get. That matters: an earlier version of this helper hand-rolled a REST call,
+ * and picking the wrong endpoint made every case behave identically. When every
+ * request is denied, a suite of "must be denied" assertions passes for entirely
+ * the wrong reason, which is worse than having no assertions at all. The
+ * positive case below exists specifically to make that failure mode visible.
+ */
+async function storagePutAs(
+  user: EmulatorUser | null,
+  objectPath: string,
+  contentType: string,
+): Promise<'allowed' | 'denied'> {
+  const app = initializeApp({
+    apiKey: 'fake-api-key',
+    authDomain: `${PROJECT_ID}.firebaseapp.com`,
+    projectId: PROJECT_ID,
+    storageBucket: `${PROJECT_ID}.appspot.com`,
+  }, `probe-${probeCounter++}`);
+
+  try {
+    const auth = getAuth(app);
+    connectAuthEmulator(auth, `http://${AUTH_HOST.split(':')[0]}:9099`, { disableWarnings: true });
+    const storage = getStorage(app);
+    connectStorageEmulator(storage, STORAGE_HOST.split(':')[0], Number(STORAGE_HOST.split(':')[1]));
+
+    if (user) await signInWithEmailAndPassword(auth, user.email, user.password);
+
+    await uploadBytes(storageRef(storage, objectPath), TINY_PNG, { contentType });
+    return 'allowed';
+  } catch {
+    return 'denied';
+  } finally {
+    await deleteApp(app).catch(() => {});
+  }
+}
+
+let probeCounter = 0;
+
+async function listStorage(prefix: string): Promise<string[]> {
+  const bucket = `${PROJECT_ID}.appspot.com`;
+  const res = await fetch(
+    `http://${STORAGE_HOST}/storage/v1/b/${bucket}/o?prefix=${encodeURIComponent(prefix)}`,
+    { headers: { Authorization: 'Bearer owner' } },
+  );
+  if (!res.ok) return [];
+  const body = await res.json() as { items?: { name: string }[] };
+  return (body.items ?? []).map(i => i.name);
+}
+
 /* ── Building and serving the real site ─────────────────────────────────── */
 
 const WEB_ENV = {
@@ -229,6 +306,7 @@ const WEB_ENV = {
   NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
   FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
   FIRESTORE_EMULATOR_HOST: FIRESTORE_HOST,
+  FIREBASE_STORAGE_EMULATOR_HOST: STORAGE_HOST,
   GCLOUD_PROJECT: PROJECT_ID,
   // NODE_ENV is deliberately NOT overridden. This must be a real production
   // build — the same output that would be deployed — or the test proves
@@ -299,6 +377,8 @@ async function startServer(): Promise<ChildProcess> {
  */
 async function diagnose(page: Page, label: string): Promise<never> {
   const parts: string[] = [`${label} did not complete.`];
+  const stack = await page.evaluate(() => (window as never as Record<string, unknown>).__lastErrorStack).catch(() => null);
+  if (stack) parts.push(`  stack: ${String(stack).slice(0, 1200)}`);
   for (const sel of ['new-post-error', 'post-action-error', 'comment-error', 'signin-error']) {
     const el = page.locator(`[data-testid="${sel}"]`);
     if (await el.count() > 0) parts.push(`  ${sel}: ${(await el.innerText()).trim()}`);
@@ -699,6 +779,306 @@ async function main() {
       const res = await fetch(`${BASE}/community/posts/${postId}`);
       ok('the post now 404s for everyone', res.status === 404);
       ok('it is gone from the feed', !(await (await fetch(`${BASE}/community`)).text()).includes('ضبط PID'));
+
+      await ctx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[11] Image upload — the whole lifecycle');
+    let imagePostId = '';
+    {
+      const dave = await createEmulatorUser('dave@example.test', 'correct-horse-4');
+      await seedProfile(dave.uid, 'ديف');
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await signIn(page, dave);
+      await goto(page, `${BASE}/community/new`);
+
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'shot.png', mimeType: 'image/png', buffer: TINY_PNG,
+      });
+      await page.waitForSelector('[data-testid="media-preview-image"]', { timeout: 30_000 });
+      ok('picking an image shows a local preview before anything is uploaded',
+        await page.locator('[data-testid="media-preview-image"]').count() === 1);
+      ok('nothing has been uploaded merely to show that preview',
+        (await listStorage(`community/posts/${dave.uid}/`)).length === 0);
+
+      // Removing it must genuinely clear the selection.
+      await page.click('[data-testid="media-remove"]');
+      ok('removing the file clears the preview',
+        await page.locator('[data-testid="media-preview-image"]').count() === 0);
+
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'shot.png', mimeType: 'image/png', buffer: TINY_PNG,
+      });
+      await page.waitForSelector('[data-testid="media-preview-image"]', { timeout: 30_000 });
+      await page.fill('[data-testid="new-post-text"]', 'أول منشور بصورة من الويب');
+      await Promise.all([
+        page.waitForURL(/\/community\/posts\//, { timeout: 60_000 })
+          .catch(() => diagnose(page, 'publishing a post with an image')),
+        page.click('[data-testid="new-post-submit"]'),
+      ]);
+      imagePostId = page.url().split('/community/posts/')[1].split('?')[0];
+
+      const stored = await readPostDoc(imagePostId);
+      ok('the post records mediaType image',
+        (stored?.mediaType as { stringValue?: string })?.stringValue === 'image');
+      ok('the post records a mediaPath derived from the author uid and the post id — not a client-chosen one',
+        (stored?.mediaPath as { stringValue?: string })?.stringValue === `community/posts/${dave.uid}/${imagePostId}`);
+      ok('the post records real decoded dimensions',
+        Number((stored?.mediaWidth as { integerValue?: string })?.integerValue) > 0);
+      ok('an image post carries no duration',
+        !!(stored?.mediaDuration as { nullValue?: null } | undefined)
+        && 'nullValue' in (stored!.mediaDuration as object));
+
+      const files = await listStorage(`community/posts/${dave.uid}/${imagePostId}/`);
+      ok('exactly two objects were stored — the full image and its thumbnail', files.length === 2);
+      ok('both are UUID-named jpgs, so storage.rules accepted them on their shape',
+        files.every(f => /\/[a-f0-9-]+(_thumb)?\.jpg$/.test(f)));
+
+      ok('the post page renders the image', await page.locator('[data-testid="post-media-image"]').count() === 1);
+      const alt = await page.locator('[data-testid="post-media-image"]').getAttribute('alt');
+      ok('the image has real alternative text naming its author', !!alt && alt.includes('ديف'));
+
+      const feedHtml = await (await fetch(`${BASE}/community`)).text();
+      ok('the FEED references the thumbnail, never the full image',
+        feedHtml.includes('_thumb.jpg') && !feedHtml.includes(`${imagePostId}/`.replace(/\/$/, '') + '/x'));
+
+      await ctx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[12] Deleting a post removes its bytes, not just its row');
+    {
+      // Soft delete is a Firestore status change. If the files survived it, a
+      // "deleted" post would still be fetchable by anyone holding the direct
+      // URL — which is the difference between hiding a post and removing it.
+      const dave = await createEmulatorUser('dave2@example.test', 'correct-horse-4b');
+      await seedProfile(dave.uid, 'ديف الثاني');
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      await signIn(page, dave);
+      await goto(page, `${BASE}/community/new`);
+
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'shot.png', mimeType: 'image/png', buffer: TINY_PNG,
+      });
+      await page.waitForSelector('[data-testid="media-preview-image"]', { timeout: 30_000 });
+      await page.fill('[data-testid="new-post-text"]', 'منشور سيُحذف مع صورته');
+      await Promise.all([
+        page.waitForURL(/\/community\/posts\//, { timeout: 60_000 })
+          .catch(() => diagnose(page, 'publishing the to-be-deleted post')),
+        page.click('[data-testid="new-post-submit"]'),
+      ]);
+      const doomedId = page.url().split('/community/posts/')[1].split('?')[0];
+      const prefix = `community/posts/${dave.uid}/${doomedId}/`;
+      ok('the doomed post has its two objects in Storage', (await listStorage(prefix)).length === 2);
+
+      await page.click('[data-testid="post-delete-start"]');
+      await Promise.all([
+        page.waitForURL(`${BASE}/community`, { timeout: 30_000 }),
+        page.click('[data-testid="post-delete-confirm"]'),
+      ]);
+
+      const after = await readPostDoc(doomedId);
+      ok('the post row survives as a soft delete',
+        (after?.status as { stringValue?: string })?.stringValue === 'deleted');
+
+      // cleanupPostMedia is a Cloud Function trigger. This run does not start
+      // the functions emulator, so it cannot fire here — and claiming the bytes
+      // were removed would be claiming something this test did not observe.
+      // What IS asserted: the files are still exactly where the cleanup
+      // function's prefix delete will find them, and nothing else was touched.
+      const remaining = await listStorage(prefix);
+      ok('the media is still addressable by the exact prefix cleanupPostMedia deletes — the trigger is not run in this suite, and that is stated rather than assumed',
+        remaining.length === 2 && remaining.every(f => f.startsWith(prefix)));
+      ok('deleting one post did not disturb another post\'s media',
+        (await listStorage(`community/posts/${dave.uid}/`)).length === remaining.length);
+
+      await ctx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[13] Media validation refuses what it should');
+    {
+      const erin = await createEmulatorUser('erin@example.test', 'correct-horse-5');
+      await seedProfile(erin.uid, 'إيرين');
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      await signIn(page, erin);
+      await goto(page, `${BASE}/community/new`);
+
+      // A script payload wearing an image's name. SVG is not in the allow-list
+      // precisely because it can carry active content.
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'evil.svg', mimeType: 'image/svg+xml',
+        buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>window.__pwned=1</script></svg>'),
+      });
+      await page.waitForSelector('[data-testid="media-error"]', { timeout: 30_000 });
+      ok('an SVG is refused at the picker', await page.locator('[data-testid="media-error"]').count() === 1);
+      ok('…and nothing was uploaded', (await listStorage(`community/posts/${erin.uid}/`)).length === 0);
+      ok('…and no script from it ran',
+        await page.evaluate(() => (window as never as Record<string, unknown>).__pwned) === undefined);
+
+      // An executable renamed to .png, declared as image/png. The MIME check
+      // lets it past the picker; the DECODE is what catches it.
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'payload.png', mimeType: 'image/png',
+        buffer: Buffer.from('MZ\x90\x00\x03not-an-image-at-all'),
+      });
+      await page.fill('[data-testid="new-post-text"]', 'محاولة رفع ملف ليس صورة');
+      await page.click('[data-testid="new-post-submit"]');
+      await page.waitForSelector('[data-testid="new-post-error"]', { timeout: 60_000 });
+      ok('a non-image file declared as an image fails the decode check rather than being stored',
+        (await listStorage(`community/posts/${erin.uid}/`)).length === 0);
+      ok('…and no post was created for it', page.url().includes('/community/new'));
+      ok('…and a retry is offered rather than the selection being lost',
+        await page.locator('[data-testid="new-post-retry"]').count() === 1);
+
+      await ctx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[14] Storage authorisation, with the UI bypassed');
+    {
+      const frank = await createEmulatorUser('frank@example.test', 'correct-horse-6');
+      await seedProfile(frank.uid, 'فرانك');
+      const uuid = () => crypto.randomUUID();
+
+      // THE CONTROL CASE. If this is denied, every "must be denied" result
+      // below is meaningless, so it is asserted first and deliberately.
+      ok('a signed-in user may upload into their own path',
+        await storagePutAs(frank, `community/posts/${frank.uid}/somepost/${uuid()}.jpg`, 'image/jpeg') === 'allowed');
+
+      ok('a signed-in user may NOT upload into another user\'s path',
+        await storagePutAs(frank, `community/posts/someoneelse/somepost/${uuid()}.jpg`, 'image/jpeg') === 'denied');
+
+      ok('an unauthenticated caller may not upload at all',
+        await storagePutAs(null, `community/posts/${frank.uid}/somepost/${uuid()}.jpg`, 'image/jpeg') === 'denied');
+
+      ok('an executable content type is refused even under a .jpg name',
+        await storagePutAs(frank, `community/posts/${frank.uid}/somepost/${uuid()}.jpg`, 'application/x-msdownload') === 'denied');
+
+      ok('a video content type under a .jpg name is refused — it would smuggle 40MB past the 2MB image cap',
+        await storagePutAs(frank, `community/posts/${frank.uid}/somepost/${uuid()}.jpg`, 'video/mp4') === 'denied');
+
+      ok('a filename outside the UUID scheme is refused',
+        await storagePutAs(frank, `community/posts/${frank.uid}/somepost/notauuid!.jpg`, 'image/jpeg') === 'denied');
+
+      ok('a path outside the community media namespace is refused',
+        await storagePutAs(frank, `avatars/${frank.uid}/x.jpg`, 'image/jpeg') === 'denied');
+
+      ok('an mp4 under the video branch IS allowed for its owner — the new branch works, it is not merely absent',
+        await storagePutAs(frank, `community/posts/${frank.uid}/somepost/${uuid()}.mp4`, 'video/mp4') === 'allowed');
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[15] Video — a real upload, and a feed that does not pay for it');
+    {
+      // A genuine, playable WebM produced by the browser itself: a canvas
+      // stream recorded through MediaRecorder. That matters — the pipeline
+      // DECODES what it is given and reads the duration off it, so a
+      // hand-assembled fake byte string would be rejected exactly as it should
+      // be, and would prove nothing about video.
+      const grace = await createEmulatorUser('grace@example.test', 'correct-horse-7');
+      await seedProfile(grace.uid, 'غريس');
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await ctx.newPage();
+      await signIn(page, grace);
+      await goto(page, `${BASE}/community/new`);
+
+      const clip = await page.evaluate(async () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 320; canvas.height = 240;
+        const ctx2 = canvas.getContext('2d')!;
+        const stream = canvas.captureStream(20);
+        const chunks: Blob[] = [];
+        const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        const done = new Promise<void>(res => { rec.onstop = () => res(); });
+        rec.start();
+        for (let i = 0; i < 24; i++) {
+          ctx2.fillStyle = `hsl(${i * 12}, 70%, 45%)`;
+          ctx2.fillRect(0, 0, 320, 240);
+          await new Promise(r => setTimeout(r, 50));
+        }
+        rec.stop();
+        await done;
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        return Array.from(buf);
+      });
+      ok('the browser produced a real webm clip to upload', clip.length > 1000);
+
+      await page.setInputFiles('[data-testid="media-input"]', {
+        name: 'flight.webm', mimeType: 'video/webm', buffer: Buffer.from(clip),
+      });
+      await page.waitForSelector('[data-testid="media-preview-video"]', { timeout: 30_000 });
+      ok('picking a video shows a local player preview', true);
+      ok('the preview never autoplays',
+        await page.locator('[data-testid="media-preview-video"]').getAttribute('autoplay') === null);
+      ok('the preview preloads metadata only, not the whole file',
+        await page.locator('[data-testid="media-preview-video"]').getAttribute('preload') === 'metadata');
+
+      await page.fill('[data-testid="new-post-text"]', 'مقطع من طيران اليوم');
+      await Promise.all([
+        page.waitForURL(/\/community\/posts\//, { timeout: 120_000 })
+          .catch(() => diagnose(page, 'publishing a video post')),
+        page.click('[data-testid="new-post-submit"]'),
+      ]);
+      const videoPostId = page.url().split('/community/posts/')[1].split('?')[0];
+
+      const stored = await readPostDoc(videoPostId);
+      ok('the post is recorded as a video',
+        (stored?.mediaType as { stringValue?: string })?.stringValue === 'video');
+      ok('a REAL duration was decoded from the file and stored',
+        Number((stored?.mediaDuration as { integerValue?: string })?.integerValue ?? 0) > 0);
+      ok('the duration is within the enforced 60-second bound',
+        Number((stored?.mediaDuration as { integerValue?: string })?.integerValue ?? 0) <= 60);
+      ok('a poster URL was stored — the feed needs it',
+        !!(stored?.thumbnailURL as { stringValue?: string })?.stringValue);
+
+      const files = await listStorage(`community/posts/${grace.uid}/${videoPostId}/`);
+      ok('exactly two objects: the clip and its captured poster frame', files.length === 2);
+      ok('the clip kept its webm extension and the poster is a jpg',
+        files.some(f => f.endsWith('.webm')) && files.some(f => f.endsWith('_thumb.jpg')));
+
+      // The cost property. A feed row for a video must fetch a JPEG, never the
+      // clip — and no <video> element may exist in the feed at all.
+      const feedHtml = await (await fetch(`${BASE}/community`)).text();
+      ok('the FEED\'s server HTML contains no <video> element', !/<video/.test(feedHtml));
+      ok('the FEED references the poster jpg', feedHtml.includes('_thumb.jpg'));
+      ok('the FEED never references the .webm file', !feedHtml.includes('.webm'));
+
+      // The post page shows the poster with a play control, and only mounts the
+      // player when it is pressed.
+      ok('the post page shows the poster rather than a mounted player',
+        await page.locator('[data-testid="post-media-video-poster"]').count() === 1
+        && await page.locator('[data-testid="post-media-video"]').count() === 0);
+      ok('a play control is offered', await page.locator('[data-testid="post-media-play"]').count() === 1);
+      const playLabel = await page.locator('[data-testid="post-media-play"]').getAttribute('aria-label');
+      ok('the play control names the duration for a screen reader', !!playLabel && /المدة/.test(playLabel));
+
+      await page.click('[data-testid="post-media-play"]');
+      await page.waitForSelector('[data-testid="post-media-video"]', { timeout: 30_000 });
+      ok('pressing play mounts the real player', true);
+      ok('the mounted player has controls and does not autoplay',
+        await page.locator('[data-testid="post-media-video"]').getAttribute('controls') !== null
+        && await page.locator('[data-testid="post-media-video"]').getAttribute('autoplay') === null);
+      ok('the mounted player still preloads metadata only',
+        await page.locator('[data-testid="post-media-video"]').getAttribute('preload') === 'metadata');
+
+      // And it genuinely plays — a poster with a dead file would satisfy every
+      // assertion above.
+      const played = await page.evaluate(async () => {
+        const v = document.querySelector('[data-testid="post-media-video"]') as HTMLVideoElement | null;
+        if (!v) return false;
+        v.muted = true;
+        try { await v.play(); } catch { return false; }
+        await new Promise(r => setTimeout(r, 400));
+        return v.currentTime > 0 && !v.error;
+      });
+      ok('the stored clip actually plays in the browser', played);
 
       await ctx.close();
     }

@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { createTextPost, POST_TEXT_MAX } from '@/lib/communityWrites';
+import { createPost, POST_TEXT_MAX } from '@/lib/communityWrites';
+import { MediaUploadCancelledError } from '@/lib/mediaUpload';
+import { MediaPicker, type PickedMedia } from './MediaPicker';
 import { CATEGORY_LABELS, VISIBLE_CATEGORY_IDS } from '@core/community/utils/categories';
 import { toParagraphs } from '@/lib/text';
 
@@ -75,6 +77,14 @@ export const NewPostForm: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [picked, setPicked] = useState<PickedMedia | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  // Set by the pipeline the moment a transfer starts, so «إلغاء الرفع» can
+  // abort the real in-flight request rather than merely hiding the bar.
+  const cancelRef = useRef<(() => void) | null>(null);
+  // A failed attempt keeps the picked file, so «أعد المحاولة» resumes from the
+  // same selection instead of making the person find the photo again.
+  const [failedAttempt, setFailedAttempt] = useState(false);
 
   const setText = (value: string) => setTyped(value);
 
@@ -87,24 +97,55 @@ export const NewPostForm: React.FC = () => {
   }, [typed]);
 
   const trimmed = text.trim();
-  const canSubmit = trimmed.length > 0 && trimmed.length <= POST_TEXT_MAX && !busy;
+  // A post needs SOMETHING: text, or a file. An image on its own is valid
+  // content — `firestore.rules` says so explicitly — so requiring text as well
+  // would be this component inventing a rule the platform does not have.
+  const hasContent = trimmed.length > 0 || picked !== null;
+  const canSubmit = hasContent && trimmed.length <= POST_TEXT_MAX && !busy;
+
+  async function publish() {
+    setBusy(true);
+    setError(null);
+    setFailedAttempt(false);
+    if (picked) setProgress(0);
+    try {
+      const id = await createPost({
+        text,
+        category: category || null,
+        file: picked?.file ?? null,
+        onProgress: pct => setProgress(pct),
+        control: { onStart: cancel => { cancelRef.current = cancel; } },
+      });
+      writeDraft('');
+      router.refresh();
+      router.push(`/community/posts/${id}`);
+    } catch (err) {
+      // Cancelling is a decision, not a failure. It returns the composer to
+      // exactly where it was, with the file still selected.
+      if (err instanceof MediaUploadCancelledError) {
+        setError(null);
+      } else {
+        setError(err instanceof Error ? err.message : 'تعذّر نشر المنشور');
+        // Only offer a retry when there is a file worth not re-picking.
+        setFailedAttempt(picked !== null);
+      }
+      setBusy(false);
+      setProgress(null);
+      cancelRef.current = null;
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     // Double-submit guard: `busy` disables the button AND short-circuits here,
     // because a keyboard Enter can fire while the button is already disabled.
     if (!canSubmit) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const id = await createTextPost({ text, category: category || null });
-      writeDraft('');
-      router.refresh();
-      router.push(`/community/posts/${id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر نشر المنشور');
-      setBusy(false);
-    }
+    await publish();
+  }
+
+  function cancelUpload() {
+    cancelRef.current?.();
+    cancelRef.current = null;
   }
 
   const FIELD: React.CSSProperties = {
@@ -141,7 +182,11 @@ export const NewPostForm: React.FC = () => {
         onChange={e => setText(e.target.value)}
         rows={10}
         maxLength={POST_TEXT_MAX}
-        required
+        // NOT `required`: a post carrying only an image is valid content, and
+        // firestore.rules says so explicitly (the whitespace-only text check
+        // applies to mediaType 'none' alone). Marking the field required would
+        // let the browser block a submission the platform would have accepted.
+        aria-describedby="media-limits"
         placeholder="اشرح ما تريده بوضوح: القطع التي تستخدمها، وما جرّبته، وما حدث بالضبط."
         style={FIELD}
       />
@@ -186,6 +231,14 @@ export const NewPostForm: React.FC = () => {
         </section>
       )}
 
+      <MediaPicker
+        picked={picked}
+        onPick={m => { setPicked(m); setFailedAttempt(false); }}
+        progress={progress}
+        onCancel={cancelUpload}
+        disabled={busy}
+      />
+
       {error && (
         <p role="alert" data-testid="new-post-error" style={{
           margin: '16px 0 0', padding: '11px 14px', borderRadius: 'var(--radius-sm)',
@@ -203,8 +256,13 @@ export const NewPostForm: React.FC = () => {
       <div style={{ display: 'flex', gap: 9, marginTop: 18 }}>
         <button type="submit" className="btn-primary" disabled={!canSubmit} data-testid="new-post-submit"
           style={{ opacity: canSubmit ? 1 : 0.55 }}>
-          {busy ? 'جارٍ النشر…' : 'انشر'}
+          {busy ? (progress !== null ? 'جارٍ الرفع…' : 'جارٍ النشر…') : 'انشر'}
         </button>
+        {failedAttempt && !busy && (
+          <button type="button" className="btn-ghost" data-testid="new-post-retry" onClick={() => void publish()}>
+            أعد المحاولة
+          </button>
+        )}
       </div>
     </form>
   );

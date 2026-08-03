@@ -6,6 +6,7 @@ import { getSession } from '@/lib/server/session';
 import { toParagraphs, formatArabicDate, formatRelativeArabic } from '@/lib/text';
 import { PostActions } from '@/components/community/PostActions';
 import { CommentForm } from '@/components/community/CommentForm';
+import { PostMedia } from '@/components/community/PostMedia';
 import { CATEGORY_LABELS } from '@core/community/utils/categories';
 
 export const dynamic = 'force-dynamic';
@@ -141,20 +142,21 @@ export default async function PostPage(
           ))}
         </div>
 
-        {post.mediaType === 'image' && post.mediaURL && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.mediaURL}
-            alt={`صورة في منشور ${post.authorName}`}
-            loading="lazy"
-            width={post.mediaWidth ?? undefined}
-            height={post.mediaHeight ?? undefined}
-            style={{
-              marginTop: 18, maxWidth: '100%', height: 'auto',
-              borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-soft)', display: 'block',
-            }}
-          />
-        )}
+        {/*
+          Detail variant: the full image, or a video the reader can choose to
+          play. Nothing about a video is fetched beyond its poster frame until
+          they press the button.
+        */}
+        <PostMedia
+          mediaType={post.mediaType}
+          mediaURL={post.mediaURL}
+          thumbnailURL={post.thumbnailURL}
+          mediaWidth={post.mediaWidth}
+          mediaHeight={post.mediaHeight}
+          mediaDuration={post.mediaDuration}
+          authorName={post.authorName}
+          variant="detail"
+        />
 
         <footer style={{ display: 'flex', gap: 16, marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
           <span style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
