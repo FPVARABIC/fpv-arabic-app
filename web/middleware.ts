@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { safeNextPath } from '@/lib/safeNext';
 
 /**
  * The first gate in front of `/admin`.
@@ -46,10 +47,11 @@ export function middleware(request: NextRequest) {
     }
     const url = request.nextUrl.clone();
     url.pathname = '/signin';
-    // Preserve where they were going so sign-in can return them there. The
-    // value is a path from this same request, never attacker-supplied input,
-    // and `next` is validated as a relative path before use.
-    url.search = `?next=${encodeURIComponent(pathname + search)}`;
+    // Preserve where they were going so sign-in can return them there. This
+    // value comes from the current request's own path, but it is passed through
+    // the SAME validator the sign-in page uses on the way back out — the check
+    // lives in one place so it cannot be enforced here and forgotten there.
+    url.search = `?next=${encodeURIComponent(safeNextPath(pathname + search))}`;
     return NextResponse.redirect(url);
   }
 

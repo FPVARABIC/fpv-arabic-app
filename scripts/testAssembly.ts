@@ -597,6 +597,7 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // scoped to exclude web/ (which has its own lint setup). Test and config
     // only — neither carries Assembly logic.
     f !== 'scripts/testWebCore.ts' &&
+    f !== 'scripts/testWebAuth.ts' &&
     f !== 'eslint.config.js',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);

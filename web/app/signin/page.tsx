@@ -1,41 +1,56 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { SignInForm } from '@/components/auth/SignInForm';
+import { getSession } from '@/lib/server/session';
+import { safeNextPath } from '@/lib/safeNext';
 
 export const metadata: Metadata = {
   title: 'تسجيل الدخول',
   robots: { index: false, follow: false },
 };
 
+// The page branches on whether there is already a session, so it must never be
+// cached — a cached "signed out" view served to a signed-in user is confusing,
+// and the reverse would be a leak.
+export const dynamic = 'force-dynamic';
+
 /**
  * Sign-in.
  *
- * The account is the SAME account as the phone app's — the same Firebase
- * project, the same users/{uid} document, the same posts and the same
- * moderation state. There is no web-only identity, which is why signing in here
- * shows a user their existing community history rather than an empty profile.
+ * The account is the SAME account as the phone app's: same Firebase project,
+ * same `users/{uid}` document, same posts, same moderation state. There is no
+ * web-only identity, which is why signing in here shows a user their existing
+ * community history rather than an empty profile.
  *
- * The interactive form is a client component (Firebase Auth runs in the
- * browser); the surrounding page is server-rendered. On success the client
- * exchanges its ID token for an httpOnly session cookie at /api/auth/session, so
- * that the server — and only the server — can verify who is asking on every
- * subsequent request.
+ * Already signed in? Bounce them onward rather than showing a login form to
+ * someone who is logged in — but only to a validated path (see safeNextPath):
+ * `?next=` is attacker-controllable, and an unchecked redirect turns this page
+ * into a phishing relay.
  */
-export default function SignInPage() {
+export default async function SignInPage(
+  { searchParams }: { searchParams: Promise<{ next?: string }> },
+) {
+  const { next } = await searchParams;
+  const nextPath = safeNextPath(next, '/');
+
+  const session = await getSession();
+  if (session) redirect(nextPath);
+
   return (
-    <div className="shell" style={{ paddingTop: 60, paddingBottom: 60, maxWidth: 460 }}>
+    <div className="shell" style={{ paddingTop: 56, paddingBottom: 60, maxWidth: 470 }}>
       <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0 }}>تسجيل الدخول</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '12px 0 0', lineHeight: 1.95 }}>
-        حسابك هنا هو حسابك نفسه في تطبيق الهاتف: المنشورات والتعليقات والمستوى والحالة
-        كلها واحدة. لا يوجد حساب منفصل للموقع.
+      <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '12px 0 22px', lineHeight: 1.95 }}>
+        حسابك هنا هو حسابك نفسه في تطبيق الهاتف: المنشورات والتعليقات والحالة كلها واحدة.
+        لا يوجد حساب منفصل للموقع.
       </p>
 
-      <div className="card" style={{ padding: '20px 22px', marginTop: 24 }}>
-        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-          واجهة تسجيل الدخول التفاعلية قيد الإكمال في هذه المرحلة. البنية الخادمية جاهزة:
-          التحقق يتم من ملفّ تعريف ارتباط موقّع من Firebase، والدور يُقرأ من مصدر لا يستطيع
-          المتصفح الكتابة فيه.
-        </p>
-      </div>
+      <SignInForm nextPath={nextPath} />
+
+      <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '20px 0 0', lineHeight: 1.9 }}>
+        تُحفَظ جلستك في ملفّ تعريف ارتباط لا تستطيع صفحات الموقع قراءته بجافاسكربت، ويتحقّق
+        منه الخادم في كل طلب. تسجيل الخروج يُنهي جلساتك على الأجهزة الأخرى أيضاً.
+      </p>
 
       <p style={{ marginTop: 22 }}>
         <Link href="/" className="btn-ghost">← العودة إلى الرئيسية</Link>
