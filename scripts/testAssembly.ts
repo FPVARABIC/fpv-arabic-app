@@ -580,7 +580,19 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // video terms are filterable like every other domain's. One entry in a
     // Record<domain, string>; no Assembly logic, and scripts/testKbLanguage.ts
     // is the gate that guards the terms themselves.
-    f !== 'src/views/GlossaryView.tsx',
+    f !== 'src/views/GlossaryView.tsx' &&
+    // ── The web platform ───────────────────────────────────────────────────
+    // `web/` is the Next.js surface. It is a SEPARATE build that imports the
+    // shared core out of ../src rather than copying it, so nothing under it can
+    // affect the phone bundle — `vite build` never sees these files, and
+    // `npm --prefix web run build` never sees the phone's.
+    !f.startsWith('web/') &&
+    // The role model moved INTO the shared core deliberately rather than living
+    // in the web app: the phone, the web, Cloud Functions and firestore.rules
+    // must agree on what «مشرف» means, and a role list owned by one surface
+    // would let the same account have different powers depending on where it
+    // signed in. Pure data and pure functions — no Assembly logic, no React.
+    !f.startsWith('src/data/auth/'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

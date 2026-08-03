@@ -1,0 +1,66 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "ES2022"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "verbatimModuleSyntax": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      // ── THE DECISION THAT MAKES DUPLICATION IMPOSSIBLE ──────────────────
+      //
+      // The web app does not own a copy of the encyclopedia, the search
+      // engine, the verdict engine, the diagnostics or the project record. It
+      // imports the SAME TypeScript modules the phone app compiles, straight
+      // out of ../src.
+      //
+      // This is safe because the core was audited and proven self-contained:
+      // src/data/ imports only src/data/ and src/platform/, src/platform/
+      // imports nothing at all, and neither touches React or the DOM. The one
+      // browser-coupled file (platform/storage.ts) already guards every
+      // localStorage call in try/catch, so it degrades to "no saved data"
+      // during server rendering instead of throwing.
+      //
+      // The practical consequence: a new article, a new diagnostic tree or a
+      // changed compatibility rule reaches both surfaces the moment it is
+      // written, and it is impossible for the two to disagree — there is
+      // nothing to keep in sync, because there is only one copy.
+      "@core/data/*": [
+        "../src/data/*"
+      ],
+      "@core/platform/*": [
+        "../src/platform/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

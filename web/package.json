@@ -1,0 +1,27 @@
+{
+  "name": "fpv-arabic-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase": "^12.15.0",
+    "firebase-admin": "^14.2.0",
+    "next": "16.2.12",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "~6.0.2"
+  }
+}
