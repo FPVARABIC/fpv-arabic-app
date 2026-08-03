@@ -24,7 +24,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, collection, collectionGroup,
-  query, where, runTransaction, getCountFromServer, serverTimestamp, Timestamp, increment,
+  query, where, limit, runTransaction, getCountFromServer, serverTimestamp, Timestamp, increment,
 } from 'firebase/firestore';
 import { ref, uploadBytes, deleteObject } from 'firebase/storage';
 import { normalizeDisplayName } from '../src/components/Community/utils/userSearch';
@@ -1519,11 +1519,42 @@ async function main() {
   await record('AD1 a moderator can read a report', 'allow', () =>
     getDoc(doc(asAdminMod.firestore(), 'reports/report-ok')));
 
-  await record('AD2 a non-moderator cannot read a report, even one they reported themselves', 'deny', () =>
+  // AD2 CHANGED IN WEB BATCH 2, DELIBERATELY.
+  //
+  // It previously asserted that a reporter could not read even their OWN
+  // report. That made the "you have already reported this" guard impossible to
+  // implement from a browser: the query was refused, the client swallowed the
+  // refusal, and the duplicate check silently always passed. The rule now
+  // permits exactly one extra thing — reading a report whose `reporterId` is
+  // the caller — which returns a person only what they themselves wrote. AD3
+  // below is the case that actually protects other people's reports, and it is
+  // unchanged.
+  await record('AD2 a reporter CAN read the report they filed themselves (web Batch 2)', 'allow', () =>
     getDoc(doc(asAdminA.firestore(), 'reports/report-ok')));
 
   await record('AD3 a non-moderator (not the reporter) cannot read a report', 'deny', () =>
     getDoc(doc(asAdminB.firestore(), 'reports/report-ok')));
+
+  // The exact query the web duplicate-check issues. A getDoc passing does not
+  // imply a query passes — Firestore refuses any query it cannot prove is
+  // constrained to readable documents — so the shape is tested as written.
+  await record('AD3a a reporter can QUERY their own reports by reporterId+targetId', 'allow', () =>
+    getDocs(query(
+      collection(asAdminA.firestore(), 'reports'),
+      where('reporterId', '==', 'uidA'),
+      where('targetId', '==', 'post-existing'),
+      limit(1),
+    )));
+
+  await record('AD3b a user cannot query reports filed by SOMEONE ELSE', 'deny', () =>
+    getDocs(query(
+      collection(asAdminB.firestore(), 'reports'),
+      where('reporterId', '==', 'uidA'),
+      limit(1),
+    )));
+
+  await record('AD3c a user cannot query the reports collection unfiltered', 'deny', () =>
+    getDocs(query(collection(asAdminA.firestore(), 'reports'), limit(5))));
 
   await record('AD4 a guest cannot read a report', 'deny', () =>
     getDoc(doc(asGuest.firestore(), 'reports/report-ok')));
@@ -1565,6 +1596,145 @@ async function main() {
 
   await record('AD16 a non-moderator cannot change their OWN status either — status is not self-writable at all', 'deny', () =>
     updateDoc(doc(asAdminA.firestore(), 'users/uidA'), { status: 'banned' }));
+
+  // ── Post editing (web Batch 2) ─────────────────────────────────────────
+  //
+  // The audit before this batch found that NO rule permitted a post owner to
+  // change their own text: the update rule's branches covered only 'status',
+  // 'commentsCount' and 'likesCount'. The phone app has never offered editing,
+  // so nothing had ever needed it. These cases prove the new branch grants
+  // exactly the edit and nothing adjacent to it.
+  console.log('\n=== 24. Post editing by the owner (web Batch 2) ===');
+
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'posts/post-edit-a'), validPostDoc('uidA'));
+    await setDoc(doc(db, 'posts/post-edit-b'), validPostDoc('uidB'));
+    await setDoc(doc(db, 'posts/post-edit-deleted'), validPostDoc('uidA', { status: 'deleted' }));
+    await setDoc(doc(db, 'posts/post-edit-hidden'), validPostDoc('uidA', { status: 'hidden' }));
+    await setDoc(doc(db, 'posts/post-edit-image'), validPostDoc('uidA', {
+      mediaType: 'image',
+      mediaURL: 'https://example.invalid/i.jpg',
+      thumbnailURL: 'https://example.invalid/t.jpg',
+      mediaSize: 1000, mediaPath: 'community/posts/uidA/post-edit-image',
+      mediaWidth: 100, mediaHeight: 100,
+    }));
+    await setDoc(doc(db, 'posts/post-edit-banned'), validPostDoc('uidBanned'));
+  });
+
+  await record('PE1 the owner edits their own post text', 'allow', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ محرَّر', searchTokens: ['نص', 'محرر'], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE2 a different user cannot edit someone else\'s post', 'deny', () =>
+    updateDoc(doc(asB.firestore(), 'posts/post-edit-a'), {
+      text: 'اختطاف', searchTokens: ['اختطاف'], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE3 an anonymous caller cannot edit any post', 'deny', () =>
+    updateDoc(doc(testEnv.unauthenticatedContext().firestore(), 'posts/post-edit-a'), {
+      text: 'مجهول', searchTokens: ['مجهول'], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE4 a banned author cannot edit even their own post', 'deny', () =>
+    updateDoc(doc(asBanned.firestore(), 'posts/post-edit-banned'), {
+      text: 'محظور', searchTokens: ['محظور'], editedAt: serverTimestamp(),
+    }));
+
+  // The whole point of hasOnly(): an edit must not be a vehicle for anything else.
+  await record('PE5 an edit cannot change authorId', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(), authorId: 'uidB',
+    }));
+
+  await record('PE6 an edit cannot change status (no un-deleting, no self-hiding)', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(), status: 'hidden',
+    }));
+
+  await record('PE7 an edit cannot inflate likesCount', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(), likesCount: 999,
+    }));
+
+  await record('PE8 an edit cannot promote feedScore', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(), feedScore: 9999,
+    }));
+
+  await record('PE9 an edit cannot attach media that was never uploaded', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(),
+      mediaType: 'image', mediaURL: 'https://evil.invalid/x.jpg',
+    }));
+
+  await record('PE10 an edit cannot change the category', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: serverTimestamp(), category: 'flights',
+    }));
+
+  // editedAt must be the server's clock, so an edit cannot be hidden.
+  await record('PE11 editedAt must be the server timestamp, not a client-chosen one', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'نصّ', searchTokens: ['نص'], editedAt: Timestamp.fromDate(new Date('2020-01-01')),
+    }));
+
+  await record('PE12 an edit that omits editedAt is refused (an edit must be recorded)', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'بلا ختم', searchTokens: ['بلا'],
+    }));
+
+  // Content validity survives editing.
+  await record('PE13 a text-only post cannot be emptied by an edit', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: '   ', searchTokens: [], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE14 an IMAGE post may have its text emptied (the image is the content)', 'allow', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-image'), {
+      text: '', searchTokens: [], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE15 text over the 2000-character ceiling is refused', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-a'), {
+      text: 'ط'.repeat(2001), searchTokens: ['ط'], editedAt: serverTimestamp(),
+    }));
+
+  // A removed or hidden post must not be rewritten into something else.
+  await record('PE16 a soft-deleted post cannot be edited', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-deleted'), {
+      text: 'عودة', searchTokens: ['عودة'], editedAt: serverTimestamp(),
+    }));
+
+  await record('PE17 a moderator-hidden post cannot be edited by its author', 'deny', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-edit-hidden'), {
+      text: 'تحايل', searchTokens: ['تحايل'], editedAt: serverTimestamp(),
+    }));
+
+  // Backward compatibility: a post created before `editedAt` existed must stay
+  // readable and editable. This is the "read an old document without the new
+  // field" case the requirement asked for explicitly.
+  await testEnv.withSecurityRulesDisabled(async ctx => {
+    const legacy = validPostDoc('uidA');
+    delete (legacy as Record<string, unknown>).likesCount;
+    delete (legacy as Record<string, unknown>).feedScore;
+    await setDoc(doc(ctx.firestore(), 'posts/post-legacy-noedit'), legacy);
+  });
+
+  await record('PE18 a legacy post with no editedAt/likesCount/feedScore is still readable', 'allow', () =>
+    getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'posts/post-legacy-noedit')));
+
+  await record('PE19 …and its owner can still edit it, gaining editedAt for the first time', 'allow', () =>
+    updateDoc(doc(asA.firestore(), 'posts/post-legacy-noedit'), {
+      text: 'تحديث لمنشور قديم', searchTokens: ['تحديث'], editedAt: serverTimestamp(),
+    }));
+
+  // The moderator path must be unchanged by any of this.
+  await record('PE20 a moderator still cannot edit post TEXT (only hide)', 'deny', () =>
+    updateDoc(doc(asAdminMod.firestore(), 'posts/post-edit-b'), {
+      text: 'تعديل إشرافي', searchTokens: ['تعديل'], editedAt: serverTimestamp(),
+    }));
 
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 

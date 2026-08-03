@@ -97,6 +97,15 @@ export interface Post {
   // Null until the scheduled recomputeFeedScores function's first pass
   // touches this post; Admin-SDK-written only, never client-writable.
   feedScoreComputedAt?: Timestamp | null;
+  // Set the first time the author edits the post's text (web Batch 2).
+  //
+  // OPTIONAL AND BACKWARD-COMPATIBLE BY DESIGN: every post created before
+  // editing existed — which is every post the phone app has ever made — has no
+  // such field, and must keep rendering. Absence means "never edited", so read
+  // sites test for presence rather than assuming a value. `firestore.rules`
+  // requires it to be `request.time` on any edit, so a client cannot backdate
+  // one to conceal that the text changed.
+  editedAt?: Timestamp | null;
   // Set true once a post ages past the scheduled function's recompute
   // horizon (40h momentum window + 168h decay tail + buffer) and its score
   // has settled at the permanent decay floor — lets that function's own

@@ -598,6 +598,14 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // only — neither carries Assembly logic.
     f !== 'scripts/testWebCore.ts' &&
     f !== 'scripts/testWebAuth.ts' &&
+    // The web community's own gate. It reads `web/` sources as TEXT and asserts
+    // about escaping, ownership, pagination and labels — it imports no Assembly
+    // module and changes no product data.
+    f !== 'scripts/testWebCommunity.ts' &&
+    // The emulator-backed end-to-end run for the same surface. It drives a
+    // browser against a Next server and the real rules; it imports nothing
+    // from Assembly.
+    f !== 'scripts/testWebCommunityE2E.ts' &&
     f !== 'eslint.config.js',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);

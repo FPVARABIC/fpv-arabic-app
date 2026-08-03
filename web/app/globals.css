@@ -10,13 +10,21 @@
  * wide tables. The colours, the typography and the Arabic voice stay put.
  */
 
-@font-face {
-  font-family: 'Cairo Variable';
-  font-style: normal;
-  font-weight: 200 1000;
-  font-display: swap;
-  src: url('/fonts/cairo-variable.woff2') format('woff2-variations');
-}
+/**
+ * Cairo comes from `@fontsource-variable/cairo`, imported in `app/layout.tsx`
+ * — the SAME package and the same font files the phone app imports in
+ * `src/index.css`.
+ *
+ * This used to be a hand-written `@font-face` pointing at
+ * `/fonts/cairo-variable.woff2`, a file that was never added to `public/`. It
+ * 404'd on every page load, so the entire site silently rendered in a fallback
+ * system font while claiming to share the phone's identity. Nothing in a build
+ * or a typecheck can catch that; the end-to-end console check did.
+ *
+ * The package also ships proper `unicode-range` subsets, so a Latin-only page
+ * never downloads the Arabic file and vice versa — which the single hand-rolled
+ * declaration could not do.
+ */
 
 :root {
   /* Surfaces — identical to the phone app */

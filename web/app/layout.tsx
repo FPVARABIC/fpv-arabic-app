@@ -1,4 +1,8 @@
 import type { Metadata, Viewport } from 'next';
+// The same font package the phone app imports in src/index.css, so both
+// surfaces render in literally the same Cairo files. Imported BEFORE
+// globals.css so the site's own rules win any tie.
+import '@fontsource-variable/cairo';
 import './globals.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';

@@ -25,6 +25,16 @@ import { getFirestore } from 'firebase-admin/firestore';
  * Application Default Credentials take over — which is the better production
  * posture, because then no private key exists in any environment variable at
  * all.
+ *
+ * THE EMULATOR
+ * ------------
+ * The Admin SDK reads `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST`
+ * itself and needs no credentials when they are set — a project id is enough.
+ * That is why `isAdminConfigured()` accepts `GCLOUD_PROJECT` alone: it is the
+ * state an emulator-backed end-to-end run is in, and refusing to serve there
+ * would mean the community could only ever be proven by reading source text.
+ * No deployed environment sets those variables, so this widens nothing in
+ * production.
  */
 
 let cached: App | null = null;

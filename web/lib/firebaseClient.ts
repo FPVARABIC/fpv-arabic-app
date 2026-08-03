@@ -1,7 +1,8 @@
 'use client';
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 
 /**
  * The Firebase CLIENT SDK — the browser half, and the only Firebase the browser
@@ -30,9 +31,25 @@ import { getAuth, type Auth } from 'firebase/auth';
  * Initialised on first use rather than at module load, so importing this file
  * from a component that never signs anyone in does not construct an app or open
  * a connection.
+ *
+ * THE EMULATOR SWITCH
+ * -------------------
+ * When `NEXT_PUBLIC_FIREBASE_EMULATOR_HOST` is set, Auth and Firestore are
+ * pointed at the local emulator suite instead of Google's servers. That is what
+ * makes a genuine end-to-end test possible — a real browser, a real session
+ * cookie, real `firestore.rules` evaluation — rather than asserting about
+ * source text and hoping. In any environment that does not set the variable
+ * (which is every deployed one) these branches are dead code: the emulator is
+ * opt-in and can never be reached by accident from a production build.
  */
 
 let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
+
+/** `host:port` of the local emulator suite, or null in every real environment. */
+function emulatorHost(): string | null {
+  return process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST || null;
+}
 
 function firebaseApp(): FirebaseApp {
   if (app) return app;
@@ -51,7 +68,31 @@ function firebaseApp(): FirebaseApp {
 }
 
 export function clientAuth(): Auth {
-  return getAuth(firebaseApp());
+  const auth = getAuth(firebaseApp());
+  const host = emulatorHost();
+  // `connectAuthEmulator` is idempotent-safe to call again with the same URL,
+  // and `clientAuth()` is called from several components.
+  if (host) connectAuthEmulator(auth, `http://${host.split(':')[0]}:9099`, { disableWarnings: true });
+  return auth;
+}
+
+/**
+ * Firestore for the browser.
+ *
+ * Centralised here rather than each caller doing `getFirestore(getApp())`, so
+ * that the emulator switch above applies to EVERY client write. A second entry
+ * point would silently talk to production while the rest of the app talked to
+ * the emulator — the kind of split-brain that makes a green test meaningless.
+ */
+export function clientDb(): Firestore {
+  if (db) return db;
+  const host = emulatorHost();
+  db = getFirestore(firebaseApp());
+  if (host) {
+    const [h, p] = host.split(':');
+    connectFirestoreEmulator(db, h, Number(p));
+  }
+  return db;
 }
 
 /**

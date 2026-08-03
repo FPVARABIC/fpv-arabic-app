@@ -112,7 +112,6 @@ export function isSafeExternalUrl(url: string): boolean {
   const trimmed = url.trim();
   // Reject control characters outright: they are used to smuggle a scheme past
   // naive prefix checks (e.g. "java\tscript:").
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(trimmed)) return false;
   try {
     const parsed = new URL(trimmed, 'https://fpv-arabic.invalid');

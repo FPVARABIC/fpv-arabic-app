@@ -521,6 +521,50 @@ service cloud.firestore {
                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                            && request.resource.data.status == 'deleted')
                          ||
+                         // Owner edits their own post's TEXT (web Batch 2).
+                         //
+                         // WHY THIS BRANCH DID NOT EXIST BEFORE: the phone app has
+                         // never offered post editing, so no rule ever permitted it.
+                         // Adding the web UI without adding this branch would have
+                         // produced a save button that always failed — the audit
+                         // caught it before a line of UI was written.
+                         //
+                         // hasOnly(['text', 'searchTokens', 'editedAt']) is what makes
+                         // this safe: the branch is STRUCTURALLY incapable of touching
+                         // authorId, status, category, media, commentsCount, likesCount
+                         // or any feed-ranking field in the same write. An edit cannot
+                         // be used to change who owns a post, to un-delete it, to
+                         // promote its ranking, or to attach media that was never
+                         // uploaded.
+                         //
+                         // searchTokens travels with the text because leaving it stale
+                         // would make an edited post findable by words it no longer
+                         // contains and unfindable by the ones it now does. Same
+                         // shape-trust model already accepted for it at creation.
+                         //
+                         // editedAt is required and must be the server's clock, so a
+                         // client cannot backdate an edit to hide that it happened.
+                         // Only posts that are still 'active' may be edited: a deleted
+                         // or moderator-hidden post must not be rewritten into
+                         // something else.
+                         (resource.data.authorId == request.auth.uid
+                           && isActiveCaller()
+                           && resource.data.status == 'active'
+                           && request.resource.data.diff(resource.data).affectedKeys()
+                                .hasOnly(['text', 'searchTokens', 'editedAt'])
+                           && request.resource.data.text is string
+                           && request.resource.data.text.size() <= 2000
+                           // Same rule as creation: a post with no image must keep
+                           // meaningful, non-whitespace text. An edit must not be a
+                           // way to empty a post that creation would have rejected.
+                           && (
+                                resource.data.mediaType == 'image'
+                                || !request.resource.data.text.matches('^\\s*$')
+                              )
+                           && request.resource.data.searchTokens is list
+                           && request.resource.data.searchTokens.size() <= 30
+                           && request.resource.data.editedAt == request.time)
+                         ||
                          // moderator hides a post — status only, and only to 'hidden'
                          (isModerator()
                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
@@ -694,11 +738,20 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      // Admin dashboard (Phase 2) — reports are now reviewable by a
-      // moderator directly from the client, scoped to isModerator() only.
-      // The reporter themselves still cannot read reports (D11 —
-      // "reporters cannot read others' reports" — unchanged by this).
-      allow read: if isModerator();
+      // Admin dashboard (Phase 2) — reports are reviewable by a moderator
+      // directly from the client, scoped to isModerator().
+      //
+      // Web Batch 2 adds one narrow second case: a reporter may read the
+      // reports THEY THEMSELVES filed. Without it the "you have already
+      // reported this" check is structurally impossible from a browser — the
+      // query is refused, the client swallows the refusal, and the duplicate
+      // guard silently never fires while appearing to. Scoped by
+      // `resource.data.reporterId == request.auth.uid`, this returns a person
+      // only text they wrote themselves, so it discloses nothing new; D11
+      // ("reporters cannot read OTHERS' reports") is unchanged and still
+      // tested.
+      allow read: if isModerator()
+                  || (isSignedIn() && resource.data.reporterId == request.auth.uid);
 
       allow create: if isSignedIn()
                     && isActiveCaller()

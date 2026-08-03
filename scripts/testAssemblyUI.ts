@@ -17,6 +17,12 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Page } from 'playwright';
+// Read from the store rather than pinning a literal: this assertion is about
+// the envelope EXISTING and carrying whatever version the store currently
+// writes, not about the number 2. It was pinned at 2 and silently went stale
+// when the video record additively bumped the schema to 3 — the same stale-pin
+// that testProjectUI had.
+import { SCHEMA_VERSION } from '../src/data/project/store';
 
 const PORT = 4402;
 const BASE = `http://localhost:${PORT}`;
@@ -638,7 +644,7 @@ async function main() {
       // The payload now travels inside a versioned envelope (platform/storage.ts),
       // so that a future device, web client or sync layer can tell which schema
       // it is looking at without inferring it from the shape.
-      ok('the saved value carries its schema version in an envelope', envelope?.v === 2 && !!envelope?.data);
+      ok('the saved value carries its schema version in an envelope', envelope?.v === SCHEMA_VERSION && !!envelope?.data);
       const parsedSaved = envelope?.data ?? null;
       ok('the saved project records the real stage reached (index 10, stage-11)', parsedSaved?.stageIndex === 10);
       ok('the real, explicitly-selected GPS part id is captured in the saved project (not skipped/omitted)', parsedSaved?.partIds?.gps === 'gps-hglrc-m100-mini-budget');

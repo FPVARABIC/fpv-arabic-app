@@ -50,6 +50,13 @@
       ],
       "@core/platform/*": [
         "../src/platform/*"
+      ],
+      // The community's TYPES only. The phone's community COMPONENTS stay out
+      // of the web entirely (testWebCore asserts it); what is shared is the
+      // shape of a post, a comment and a report — because both surfaces read
+      // and write the same Firestore documents and must agree on their fields.
+      "@core/community/*": [
+        "../src/components/Community/*"
       ]
     }
   },
