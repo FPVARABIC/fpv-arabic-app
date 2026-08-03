@@ -592,7 +592,12 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // must agree on what «مشرف» means, and a role list owned by one surface
     // would let the same account have different powers depending on where it
     // signed in. Pure data and pure functions — no Assembly logic, no React.
-    !f.startsWith('src/data/auth/'),
+    !f.startsWith('src/data/auth/') &&
+    // The no-duplication gate for the web surface, and the root ESLint config
+    // scoped to exclude web/ (which has its own lint setup). Test and config
+    // only — neither carries Assembly logic.
+    f !== 'scripts/testWebCore.ts' &&
+    f !== 'eslint.config.js',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
