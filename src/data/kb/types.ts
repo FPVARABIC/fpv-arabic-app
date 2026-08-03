@@ -231,6 +231,7 @@ export type KbLinkKind =
   | 'elrs-setup'
   | 'elrs-issue'
   | 'edgetx'
+  | 'video'
   | 'project'
   | 'external';
 
@@ -238,13 +239,15 @@ export interface KbLink {
   kind: KbLinkKind;
   /**
    * The target's id. Empty is legal ONLY for kinds whose destination is a whole
-   * screen (`elrs-setup`, `elrs-issue`, `edgetx`, `project`, `assembly`,
-   * `checklist`); for every other kind an empty id resolves to null and the
+   * screen (`elrs-setup`, `elrs-issue`, `edgetx`, `video`, `project`,
+   * `assembly`, `checklist`); for every other kind an empty id resolves to null and the
    * link renders as unavailable rather than as a guess.
    *
    * For `project` the id names the field the reader is being asked for
-   * (`rxTarget`, `rxFirmware`, …) or the literal `findings`, so «طلب Target»
-   * lands on the field itself instead of on a form of twenty.
+   * (`rxTarget`, `rxFirmware`, `gogglesEcosystem`, …) or the literal `findings`,
+   * so «طلب Target» lands on the field itself instead of on a form of twenty.
+   * The resolver decides which form the field belongs to, so content never has
+   * to know whether a field lives on the control-link record or the video one.
    */
   targetId: string;
   label: string;

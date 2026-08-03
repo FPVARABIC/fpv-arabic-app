@@ -64,6 +64,11 @@ export const KEEP_IN_LATIN: string[] = [
   'Firmware', 'Bootloader', 'DFU', 'OSD', 'VTX', 'GPS', 'GNSS', 'PID', 'LiPo', 'BEC',
   'Blackbox', 'Failsafe', 'Telemetry', 'Pinout', 'Smoke Stopper', 'Flux', 'MOSFET',
   'Whoop', 'Cinewhoop', 'Toothpick', 'Freestyle', 'Stack', 'AIO', 'PDB', 'MSP', 'RSSI', 'SNR',
+  // Video. Every one of these is a string the reader will meet on a product, in
+  // a configurator menu, or in a manufacturer's manual. Translating them would
+  // make the real thing unfindable, which is the exact harm this list prevents.
+  'VRX', 'DVR', 'DisplayPort', 'Canvas Mode', 'SmartAudio', 'Tramp', 'Raceband',
+  'Pit Mode', 'RHCP', 'LHCP', 'PAL', 'NTSC', 'FOV', 'TVL', 'WDR', 'FPV',
 ];
 
 export const canonicalTerms: CanonicalTerm[] = [
@@ -161,6 +166,35 @@ export const canonicalTerms: CanonicalTerm[] = [
     en: 'Vibration',
     forbiddenInProse: ['الفيبريشن', 'الرجة'],
     rationale: 'مصطلح فيزيائي عربي قياسي.',
+  },
+
+  // ── Video ──────────────────────────────────────────────────────────────────
+  // Only concepts with a genuinely established Arabic form appear here. VTX,
+  // OSD, MSP, DVR, SmartAudio and the rest stay in Latin (see KEEP_IN_LATIN):
+  // they are strings the reader must recognise inside real software.
+  {
+    canonicalAr: 'النطاق',
+    en: 'Band',
+    forbiddenInProse: ['الباند', 'باند'],
+    rationale: '«النطاق» عربية قياسية ومستعملة في الهندسة الراديوية، والنقحرة تبقى مدعومة في البحث لأن المستخدمين يكتبونها.',
+  },
+  {
+    canonicalAr: 'القناة',
+    en: 'Channel',
+    forbiddenInProse: ['الشانل', 'شانل'],
+    rationale: '«القناة» راسخة تماماً في العربية ولا لبس فيها.',
+  },
+  {
+    canonicalAr: 'زمن التأخير',
+    en: 'Latency',
+    forbiddenInProse: ['اللاتنسي', 'لاتنسي'],
+    rationale: 'مفهوم يجب أن يُفهم لا أن يُنطق: «زمن التأخير» يشرح نفسه، والنقحرة لا تشرح شيئاً.',
+  },
+  {
+    canonicalAr: 'الاستقطاب',
+    en: 'Polarisation',
+    forbiddenInProse: ['البولاريزيشن', 'بولاريزيشن'],
+    rationale: 'مصطلح فيزيائي عربي قياسي، والدقة هنا تتعلق بالمدى مباشرةً.',
   },
 ];
 

@@ -649,11 +649,13 @@ group('[10] Architecture — data stays data, content stays out of the eager bun
 group('[11] The project schema still migrates from the previous version');
 {
   const store = read('src/data/project/store.ts');
-  ok('the store declares schema version 2', /SCHEMA_VERSION = 2/.test(store));
+  // The version moves as systems are added; what must never change is that a
+  // bump stays additive and that an unknown declared version is still refused.
+  ok('the store declares its current schema version', /SCHEMA_VERSION = 3/.test(store));
   ok('the migration reads the version declared inside a pre-envelope payload',
     /const declared = fromVersion === 0\s*\n\s*\? \(data as Record<string, unknown>\)\.version\s*\n\s*: fromVersion;/.test(store));
   ok('the migration refuses a payload whose declared version it does not know',
-    /declared !== 1 && declared !== SCHEMA_VERSION/.test(store));
+    /declared !== 1 && declared !== 2 && declared !== SCHEMA_VERSION/.test(store));
   ok('the control-link setup is written through the one store', /export function saveRcSetup/.test(store));
 }
 

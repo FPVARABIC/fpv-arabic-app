@@ -30,6 +30,7 @@
 
 import type { KbLinkKind } from '../kb/types';
 import type { RcSetup } from './rcSetup';
+import type { VideoSetup } from './videoSetup';
 import type {
   BasePart, Frame, Motor, Esc, Battery, Propeller,
   FlightController, Receiver, VideoUnit, Gps,
@@ -65,6 +66,12 @@ export interface ProjectSnapshot {
    * band, firmware, wiring and failsafe posture are facts about THIS build.
    */
   rcSetup?: RcSetup;
+  /**
+   * Per-build video configuration. Same reasoning as `rcSetup`: the ecosystem,
+   * the band, the control protocol, the overlay path and whether a picture was
+   * ever actually seen are facts about THIS build, not about any catalogue part.
+   */
+  videoSetup?: VideoSetup;
 }
 
 /**

@@ -565,7 +565,17 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // card styling gained an EdgeTX accent. Presentation only — no Assembly
     // logic, and scripts/testKbSearch.ts is the gate that guards the index.
     f !== 'src/views/SearchView.tsx' &&
-    f !== 'src/index.css',
+    f !== 'src/index.css' &&
+    // The video system, closed vertically the same way the control link was.
+    // Its taxonomy, its per-build record and its rules are platform data, not
+    // Assembly logic — the build flow still owns part selection, and the one
+    // Assembly-adjacent change is that `video-fc-support` stopped identifying a
+    // digital unit by regex-matching its product NAME and now reads what the
+    // user recorded instead.
+    !f.startsWith('src/data/video/') &&
+    !f.startsWith('src/components/video/') &&
+    !f.startsWith('src/views/Video') &&
+    !f.startsWith('scripts/testVideo'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

@@ -33,12 +33,16 @@ export type Destination =
   | { kind: 'elrs-setup'; id?: string }
   | { kind: 'elrs-issue'; id?: string }
   | { kind: 'edgetx'; id?: string }
+  // The video software centre. Same optional-id shape as the other centres:
+  // without an id it is «افتح مركز الفيديو», with one it is the exact topic —
+  // and only the second of those is ever a useful answer.
+  | { kind: 'video'; id?: string }
   | { kind: 'roadmap'; id: string }
   // The workspace, optionally aimed at one part of it. `view` selects a section
   // ('rc' — the control-link form, 'findings' — the conflict report) and `field`
   // names the single input the reader is being asked to fill. That is what makes
   // «طلب Target» an action rather than a sentence: it opens the exact field.
-  | { kind: 'project'; view?: 'rc' | 'findings'; field?: string }
+  | { kind: 'project'; view?: 'rc' | 'video' | 'findings'; field?: string }
   | { kind: 'assembly' }
   | { kind: 'checklist' }
   | { kind: 'coverage' }
@@ -112,6 +116,8 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
         : '/programming/expresslrs/troubleshooting';
     case 'edgetx':
       return d.id ? `/programming/edgetx/${d.id}` : '/programming/edgetx';
+    case 'video':
+      return d.id ? `/programming/video/${d.id}` : '/programming/video';
     case 'roadmap':
       return d.id ? `/roadmap/${d.id}` : null;
     case 'project': {
@@ -164,6 +170,7 @@ export function destinationKey(d: Destination): string {
     case 'elrs-setup':
     case 'elrs-issue':
     case 'edgetx':
+    case 'video':
       return d.id ? `${d.kind}:${d.id}` : d.kind;
     default:
       return `${d.kind}:${d.id}`;
@@ -176,7 +183,7 @@ export function parseDestinationKey(key: string): Destination | null {
   if (i === -1) {
     return key === 'project' || key === 'assembly' || key === 'checklist'
       || key === 'coverage' || key === 'diagnose'
-      || key === 'elrs-setup' || key === 'elrs-issue' || key === 'edgetx'
+      || key === 'elrs-setup' || key === 'elrs-issue' || key === 'edgetx' || key === 'video'
       ? ({ kind: key } as Destination)
       : null;
   }
@@ -186,12 +193,12 @@ export function parseDestinationKey(key: string): Destination | null {
   switch (kind) {
     case 'article': case 'module': case 'glossary': case 'dx':
     case 'lesson': case 'betaflight': case 'roadmap':
-    case 'elrs-setup': case 'elrs-issue': case 'edgetx':
+    case 'elrs-setup': case 'elrs-issue': case 'edgetx': case 'video':
       return { kind, id: rest } as Destination;
     case 'project': {
       const dot = rest.indexOf('.');
       const view = dot === -1 ? rest : rest.slice(0, dot);
-      if (view !== 'rc' && view !== 'findings') return null;
+      if (view !== 'rc' && view !== 'video' && view !== 'findings') return null;
       const field = dot === -1 ? undefined : rest.slice(dot + 1);
       return field ? { kind: 'project', view, field } : { kind: 'project', view };
     }

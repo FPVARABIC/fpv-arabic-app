@@ -39,6 +39,8 @@ import {
   validateFramePropeller,
 } from '../assembly/compatibility/validators';
 import { computeRcFindings } from './rcVerdicts';
+import { computeVideoFindings } from './videoVerdicts';
+import { VIDEO_ECOSYSTEM_CLASS } from '../video/types';
 import type { ProjectSnapshot, Finding } from './types';
 import { SEVERITY_ORDER } from './types';
 
@@ -382,10 +384,19 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
   }
 
   // ── 10. Digital video unit against flight-controller support ──────────────
+  //
+  // This rule used to decide "is this a digital unit?" by running /dji|o4|o3/i
+  // over the product's DISPLAY NAME. A product name is marketing text: it is
+  // renamed between generations, it is translated, and it says nothing about
+  // what the device actually needs. The question is now answered from what the
+  // user RECORDED about their system — and when they have recorded nothing, the
+  // rule declines to fire rather than guessing from a string.
   if (p.videoUnit && p.flightController) {
     const supports = p.flightController.specs.supportsDjiO4;
-    const looksDji = /dji|o4|o3/i.test(`${p.videoUnit.nameEn} ${p.videoUnit.nameAr}`);
-    if (looksDji && supports === false) {
+    const isDigital = p.videoSetup?.linkClass === 'digital'
+      || (p.videoSetup?.ecosystem !== undefined
+        && VIDEO_ECOSYSTEM_CLASS[p.videoSetup.ecosystem] === 'digital');
+    if (isDigital && supports === false) {
       f.push({
         id: 'video-fc-support',
         severity: 'warning',
@@ -402,7 +413,10 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
         ],
         missingAr: ['متطلبات التوصيل الدقيقة لهذه الوحدة على هذه اللوحة تحديداً'],
         manualCheckAr: 'دليل اللوحة ودليل وحدة الفيديو معاً — التوافق هنا لا يُستنتج من الاسم.',
-        links: [{ kind: 'article', targetId: 'fc-outputs', label: 'مقال: المخارج وعرض المعلومات' }],
+        links: [
+          { kind: 'article', targetId: 'fc-outputs', label: 'مقال: المخارج وعرض المعلومات' },
+          { kind: 'project', targetId: 'powerSource', label: 'سجّل مصدر تغذية الوحدة' },
+        ],
       });
     }
   }
@@ -412,6 +426,7 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
   // the same engine, sorted into the same single ordering, so a screen can
   // never show one set without the other.
   f.push(...computeRcFindings(p));
+  f.push(...computeVideoFindings(p));
 
   return sortFindings(f);
 }

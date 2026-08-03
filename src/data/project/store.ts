@@ -46,6 +46,7 @@ import { tools } from '../assembly/parts/tools';
 import type { BasePart, Frame } from '../assembly/types';
 import { frameMatchesSize, getAvailableSizeOptions } from '../assembly/frameSizeMatch';
 import { validateRcSetup, type RcSetup } from './rcSetup';
+import { validateVideoSetup, type VideoSetup } from './videoSetup';
 import {
   load as loadStore, save as saveStore, clear as clearStore,
   exportStore, importStore,
@@ -62,7 +63,7 @@ export const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
 };
 
 export const ASSEMBLY_STORAGE_KEY = 'fpv-assembly-project-v1';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 interface PersistedAssemblyProject {
   version: number;
@@ -77,6 +78,12 @@ interface PersistedAssemblyProject {
    * because a half-filled setup is more useful than a forced one.
    */
   rcSetup?: RcSetup;
+  /**
+   * Per-build video configuration (schema 3). Optional for exactly the same
+   * reason `rcSetup` is: a project created before the video system existed
+   * simply has none, and a half-filled record is more useful than a forced one.
+   */
+  videoSetup?: VideoSetup;
 }
 
 export interface RestoredAssemblyProject {
@@ -86,6 +93,7 @@ export interface RestoredAssemblyProject {
   batteryVoltage?: number;
   parts: Record<string, BasePart>;
   rcSetup?: RcSetup;
+  videoSetup?: VideoSetup;
 }
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
@@ -114,10 +122,14 @@ const PROJECT_STORE: StoreDefinition<PersistedAssemblyProject> = {
     const declared = fromVersion === 0
       ? (data as Record<string, unknown>).version
       : fromVersion;
-    if (declared !== 1 && declared !== SCHEMA_VERSION) return null;
+    if (declared !== 1 && declared !== 2 && declared !== SCHEMA_VERSION) return null;
 
-    // Schema 2 only ADDED an optional rcSetup section, so a version-1 project
-    // is already valid — it simply has no control-link configuration yet.
+    // Every version bump so far has been PURELY ADDITIVE — schema 2 added an
+    // optional `rcSetup`, schema 3 added an optional `videoSetup` — so an older
+    // payload is already structurally valid and simply carries no configuration
+    // for the systems that did not exist when it was written. The moment a bump
+    // is NOT additive, this branch has to grow a real transform rather than a
+    // relabel, and `scripts/testAssemblyPersistence.ts` is what will catch it.
     return { ...(data as Record<string, unknown>), version: SCHEMA_VERSION };
   },
 };
@@ -212,6 +224,7 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
   }
 
   const rcSetup = validateRcSetup(raw.rcSetup);
+  const videoSetup = validateVideoSetup(raw.videoSetup);
 
   return {
     version: SCHEMA_VERSION,
@@ -221,6 +234,7 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
     batteryVoltage,
     partIds: partIds as Record<string, string>,
     ...(rcSetup ? { rcSetup } : {}),
+    ...(videoSetup ? { videoSetup } : {}),
   };
 }
 
@@ -229,7 +243,7 @@ function validatePersistedProject(raw: unknown): PersistedAssemblyProject | null
  * single-field invalidations that mirror the build flow's own live behaviour.
  */
 function rehydrateProject(p: PersistedAssemblyProject): RestoredAssemblyProject {
-  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds, rcSetup } = p;
+  const { droneTypeId, stageIndex, sizeInch, batteryVoltage, partIds, rcSetup, videoSetup } = p;
 
   const parts: Record<string, BasePart> = {};
   for (const [category, id] of Object.entries(partIds)) {
@@ -266,7 +280,7 @@ function rehydrateProject(p: PersistedAssemblyProject): RestoredAssemblyProject 
     ? sizeInch
     : undefined;
 
-  return { droneTypeId, stageIndex, sizeInch: validSizeInch, batteryVoltage, parts, rcSetup };
+  return { droneTypeId, stageIndex, sizeInch: validSizeInch, batteryVoltage, parts, rcSetup, videoSetup };
 }
 
 /**
@@ -283,6 +297,22 @@ export function saveRcSetup(rcSetup: RcSetup): RestoredAssemblyProject | null {
   const current = loadStore(PROJECT_STORE);
   if (!current) return null;
   saveStore(PROJECT_STORE, { ...current, rcSetup });
+  const reloaded = loadStore(PROJECT_STORE);
+  return reloaded ? rehydrateProject(reloaded) : null;
+}
+
+/**
+ * Writes the video configuration into the ONE project store.
+ *
+ * Deliberately identical in shape to `saveRcSetup`: there is one project
+ * object, and every system that configures itself writes a section of it. A
+ * second key would mean a second export, a second migration and a second thing
+ * to keep in sync with the verdict engine.
+ */
+export function saveVideoSetup(videoSetup: VideoSetup): RestoredAssemblyProject | null {
+  const current = loadStore(PROJECT_STORE);
+  if (!current) return null;
+  saveStore(PROJECT_STORE, { ...current, videoSetup });
   const reloaded = loadStore(PROJECT_STORE);
   return reloaded ? rehydrateProject(reloaded) : null;
 }

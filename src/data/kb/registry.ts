@@ -16,6 +16,11 @@ import { propellersModule } from './modules/propellers/module';
 import { escModule } from './modules/esc/module';
 import { powerModule } from './modules/power/module';
 import { rcLinkModule } from './modules/rcLink/module';
+// Field-id maps only — two tiny pure-data objects with no catalogue and no
+// React behind them. They exist here so a `project` link can name a field
+// without also naming which form it lives on.
+import { RC_FIELD_INPUT_ID } from '../project/rcSetup';
+import { VIDEO_FIELD_INPUT_ID } from '../project/videoSetup';
 
 export const allKbModules: KbModule[] = [
   flightControllerModule,
@@ -103,12 +108,27 @@ export function kbLinkToDestination(link: KbLink): Destination | null {
     case 'elrs-setup': return link.targetId ? { kind: 'elrs-setup', id: link.targetId } : { kind: 'elrs-setup' };
     case 'elrs-issue': return link.targetId ? { kind: 'elrs-issue', id: link.targetId } : { kind: 'elrs-issue' };
     case 'edgetx': return link.targetId ? { kind: 'edgetx', id: link.targetId } : { kind: 'edgetx' };
+    case 'video': return link.targetId ? { kind: 'video', id: link.targetId } : { kind: 'video' };
     // «افتح مشروعي» / «افتح تقرير التعارض» / «سجّل الـTarget» — three different
     // destinations, one link kind, distinguished by what the id names.
-    case 'project':
+    // Content names a FIELD; the resolver decides which form that field lives on.
+    // That split is deliberate: an article should be able to ask for
+    // «سجّل منظومة نظارتك» without knowing whether goggles happen to be recorded
+    // on the control-link record or the video one — and if a field later moves
+    // between forms, the content does not change.
+    case 'project': {
       if (!link.targetId) return { kind: 'project' };
       if (link.targetId === 'findings') return { kind: 'project', view: 'findings' };
-      return { kind: 'project', view: 'rc', field: link.targetId };
+      if (link.targetId in VIDEO_FIELD_INPUT_ID) {
+        return { kind: 'project', view: 'video', field: link.targetId };
+      }
+      if (link.targetId in RC_FIELD_INPUT_ID) {
+        return { kind: 'project', view: 'rc', field: link.targetId };
+      }
+      // An id that names no field at all opens the workspace rather than
+      // fabricating a form section that does not exist.
+      return { kind: 'project' };
+    }
     case 'external': return link.url ? { kind: 'external', url: link.url } : null;
     default: return null;
   }
