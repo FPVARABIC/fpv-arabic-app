@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { STORE_GROUP_LABEL_AR, STORE_GROUP_BLURB_AR } from '@core/data/store/categories';
-import {
-  categoriesInGroup, categoryProductCount, publicSettings, categoryHref, STORE_CATALOGUE,
-} from '@/lib/store';
+import { categoriesInGroup, publicSettings, categoryHref } from '@/lib/store';
+import { publishedProducts, sectionCounts } from '@/lib/server/storeCatalogue';
 import { StoreBanner } from '@/components/store/StorePieces';
 
 export const metadata: Metadata = {
@@ -14,6 +13,9 @@ export const metadata: Metadata = {
   alternates: { canonical: '/store' },
   openGraph: { type: 'website', title: 'متجر FPV بالعربي' },
 };
+
+/** See the note on the section page: on-demand revalidation with a floor. */
+export const revalidate = 300;
 
 /**
  * The storefront.
@@ -33,11 +35,19 @@ export const metadata: Metadata = {
  * should not have to scroll past aircraft to reach a receiver. Two groups, in
  * that order, answers both.
  */
-export default function StorePage() {
+export default async function StorePage() {
   const settings = publicSettings();
   const aircraft = categoriesInGroup('aircraft');
   const components = categoriesInGroup('components');
-  const total = STORE_CATALOGUE.filter(p => p.published).length;
+
+  // Counted from the merged catalogue, so a section the admin emptied says
+  // «لا خيارات» rather than advertising four products that are all hidden.
+  // Counted through `selectCategory`, so the number on the card is the number
+  // of cards the section actually renders — including the products that belong
+  // to it as a use case rather than by their own categoryId.
+  const [published, counts] = await Promise.all([publishedProducts(), sectionCounts()]);
+  const total = published.length;
+  const countIn = (categoryId: string) => counts[categoryId] ?? 0;
 
   return (
     <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 1100 }}>
@@ -73,7 +83,7 @@ export default function StorePage() {
 
           <div style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit, minmax(255px, 1fr))' }}>
             {cats.map(c => {
-              const n = categoryProductCount(c.id);
+              const n = countIn(c.id);
               return (
                 <Link key={c.id} href={categoryHref(c.id)} className="card-sm"
                   data-testid={`store-category-${c.id}`}

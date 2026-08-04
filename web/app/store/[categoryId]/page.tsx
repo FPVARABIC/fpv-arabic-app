@@ -3,11 +3,22 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
-import { storeCategory, productsInCategory, publicSettings, categoryHref } from '@/lib/store';
+import { storeCategory, publicSettings, categoryHref } from '@/lib/store';
+import { publishedInCategory } from '@/lib/server/storeCatalogue';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { ProductCard, StoreBanner } from '@/components/store/StorePieces';
 
 export const dynamicParams = false;
+
+/**
+ * Rebuilt on demand, and at worst five minutes stale.
+ *
+ * The admin actions call `revalidatePath` when they change a price or hide a
+ * product, so in practice a change is live on the next request. This number is
+ * the floor under that — the answer to «what if a revalidate call was lost»,
+ * not the mechanism.
+ */
+export const revalidate = 300;
 
 export function generateStaticParams() {
   return STORE_CATEGORIES.map(c => ({ categoryId: c.id }));
@@ -49,7 +60,8 @@ export default async function StoreCategoryPage(
   const category = storeCategory(categoryId);
   if (!category) notFound();
 
-  const products = productsInCategory(category.id);
+  // The merged catalogue: seeds with whatever the admin has changed since.
+  const products = await publishedInCategory(category.id);
   const settings = publicSettings();
   const learn = category.learnLink
     ? webHref({ kind: category.learnLink.kind, id: category.learnLink.targetId } as Parameters<typeof webHref>[0])

@@ -82,18 +82,25 @@ console.log('\n[2] The capability matrix — every role against every capability
       'community.hidePost', 'community.hideComment',
       'users.list', 'users.viewDetail', 'users.ban', 'users.unban',
     ],
-    reviewer: ['admin.access', 'community.viewReports', 'users.list', 'audit.view'],
+    // A reviewer audits without changing — now including the catalogue, which
+    // is where «published with no image» and «spec marked confirmed with no
+    // source» are visible. Read only: no write, and no sight of supply.
+    reviewer: [
+      'admin.access', 'community.viewReports', 'users.list', 'audit.view',
+      'store.viewProducts',
+    ],
     editor: ['admin.access', 'content.edit', 'content.publish', 'users.list'],
     admin: [
       'admin.access', 'community.viewReports', 'community.resolveReports',
       'community.hidePost', 'community.deletePost', 'community.hideComment',
       'users.list', 'users.viewDetail', 'users.ban', 'users.unban', 'users.assignRole',
       'content.edit', 'content.publish', 'audit.view',
-      // The store. An admin runs the shop, so all four — including seeing what
-      // we pay suppliers. The four stay SEPARATE capabilities so a future
+      // The store. An admin runs the shop, so all five — including seeing what
+      // we pay suppliers. They stay SEPARATE capabilities so a future
       // fulfilment role can be given orders without supply, which is the whole
       // reason they were not written as one 'store.manage'.
-      'store.viewOrders', 'store.manageOrders', 'store.editProducts', 'store.viewSupply',
+      'store.viewOrders', 'store.manageOrders',
+      'store.viewProducts', 'store.editProducts', 'store.viewSupply',
     ],
     owner: [...CAPABILITIES],
   };

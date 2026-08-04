@@ -31,6 +31,9 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: '/admin', labelAr: 'اللوحة', capability: 'admin.access' },
   { href: '/admin/reports', labelAr: 'البلاغات', capability: 'community.viewReports' },
   { href: '/admin/users', labelAr: 'المستخدمون', capability: 'users.list' },
+  { href: '/admin/store/orders', labelAr: 'الطلبات', capability: 'store.viewOrders' },
+  { href: '/admin/store/products', labelAr: 'المنتجات', capability: 'store.viewProducts' },
+  { href: '/admin/store/supply', labelAr: 'التسعير والموردون', capability: 'store.viewSupply' },
   { href: '/admin/audit', labelAr: 'سجل التدقيق', capability: 'audit.view' },
 ];
 
@@ -39,8 +42,10 @@ export const AdminShell: React.FC<{
   actorName: string | null;
   current: string;
   titleAr: string;
+  /** Set when the screen renders a better heading than its route name. */
+  ownTitle?: boolean;
   children: React.ReactNode;
-}> = ({ role, actorName, current, titleAr, children }) => {
+}> = ({ role, actorName, current, titleAr, ownTitle, children }) => {
   const items = ADMIN_NAV.filter(i => can(role, i.capability));
 
   return (
@@ -75,7 +80,13 @@ export const AdminShell: React.FC<{
       </nav>
 
       <main className="admin-main">
-        <h1 className="admin-title">{titleAr}</h1>
+        {/* The shell owns the page's one heading.
+            A screen that wants a more useful title than its route name — the
+            product editor wants the product's name — passes `ownTitle` and
+            renders its own. Two h1s in one document is two documents as far as
+            a screen reader is concerned, and it is what the admin end-to-end
+            run checks on every screen. */}
+        {!ownTitle && <h1 className="admin-title">{titleAr}</h1>}
         {children}
       </main>
     </div>

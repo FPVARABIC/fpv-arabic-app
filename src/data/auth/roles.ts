@@ -107,13 +107,19 @@ export const CAPABILITIES = [
 
   // The store.
   //
-  // Split into four rather than one «store.manage» because they are genuinely
+  // Split into five rather than one «store.manage» because they are genuinely
   // different powers: reading orders to fulfil them is a daily job, seeing what
   // we pay suppliers is commercially sensitive, and setting the margin decides
   // whether the shop makes money. A single capability would hand all three to
   // whoever needs the first.
+  //
+  // `viewProducts` and `editProducts` are the catalogue's read and write. A
+  // reviewer holds the first alone — which is what lets someone check that
+  // nothing is published without an image or with an unconfirmed spec, without
+  // being able to change either.
   'store.viewOrders',
   'store.manageOrders',
+  'store.viewProducts',
   'store.editProducts',
   'store.viewSupply',
 ] as const;
@@ -156,11 +162,16 @@ export const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
 
   // Deliberately read-only. A reviewer exists so someone can audit the queue
   // without being able to change it.
+  // A reviewer exists so someone can audit without being able to change. That
+  // now includes the catalogue: seeing which products have no image, no price,
+  // or a spec still marked «بانتظار التأكيد» is exactly the audit this role is
+  // for, and it grants no write and no sight of what we pay.
   reviewer: [
     'admin.access',
     'community.viewReports',
     'users.list',
     'audit.view',
+    'store.viewProducts',
   ],
 
   // Teaching content only. An editor has no power over people.
@@ -187,10 +198,11 @@ export const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
     'content.publish',
     'audit.view',
     // The store, in full. An admin runs the business; the split between these
-    // four exists so a future fulfilment role can be given the first two
+    // five exists so a future fulfilment role can be given the first two
     // without ever seeing what we pay a supplier.
     'store.viewOrders',
     'store.manageOrders',
+    'store.viewProducts',
     'store.editProducts',
     'store.viewSupply',
   ],

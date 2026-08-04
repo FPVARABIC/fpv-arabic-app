@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PRIMARY_NAV, navItem } from '@/lib/siteNav';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
+import { CartBadge } from '@/components/store/CartControls';
 import { isStaff, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
 
 /**
@@ -104,8 +105,16 @@ export const SiteHeader: React.FC<{
         </nav>
 
         {/* Search from anywhere. A client island inside a server header — the
-            only interactive thing on it, and the rest stays server-rendered. */}
+            rest of the header stays server-rendered. */}
         <HeaderSearch />
+
+        {/* The basket, from anywhere.
+            It renders NOTHING when the basket is empty, so it costs a reader
+            who is not shopping one component and no visual weight — this is a
+            teaching site with a shop attached, not the other way round.
+            It reads the stored cart and never the catalogue, so putting it on
+            every page in the site costs no database read. */}
+        <CartBadge />
 
         <div style={{ flexShrink: 0 }}>
           {signedIn ? (

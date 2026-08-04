@@ -660,6 +660,9 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // rule, no stage order, no persistence shape.
     !f.startsWith('src/data/store/') &&
     f !== 'scripts/testStore.ts' &&
+    // The shop's browser gate. Drives Playwright against a production build of
+    // web/ — it imports the store's own data and nothing from Assembly.
+    f !== 'scripts/testStoreE2E.ts' &&
     // The two new gates are registered as npm scripts like every gate before
     // them. `package.json` carries no product data.
     f !== 'package.json' &&

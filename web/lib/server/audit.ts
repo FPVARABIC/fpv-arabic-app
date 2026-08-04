@@ -60,11 +60,25 @@ export type AuditAction =
   | 'report.reject'
   | 'report.review'
   | 'media.delete'
-  | 'owner.grant';
+  | 'owner.grant'
+  // The store. An order's status decides whether somebody's money and
+  // hardware move, so it is audited exactly like a ban is.
+  | 'store.order.status'
+  // What we pay a supplier, and therefore what we charge. Audited because a
+  // margin change moves every price it touches.
+  | 'store.supply.set'
+  // Taking a product off the shop, or putting it back. The nearest thing the
+  // store has to a delete, and audited for the same reason a ban is: it removes
+  // something customers could see, and somebody should be able to ask who.
+  | 'store.product.publish'
+  // Availability, images, specs and the editorial copy. One action rather than
+  // five, because they are saved together by one screen.
+  | 'store.product.edit';
 
 export type AuditResult = 'ok' | 'denied' | 'error';
 
-export type AuditTargetType = 'user' | 'post' | 'comment' | 'report' | 'media';
+export type AuditTargetType =
+  'user' | 'post' | 'comment' | 'report' | 'media' | 'order' | 'product';
 
 export interface AuditEntry {
   action: AuditAction;

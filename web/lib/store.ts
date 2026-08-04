@@ -1,4 +1,4 @@
-import { STORE_CATALOGUE, storeProduct, productsInCategory, categoryProductCount } from '@core/data/store/catalogue';
+import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES, storeCategory, categoriesInGroup } from '@core/data/store/categories';
 import { INITIAL_PUBLIC_SETTINGS } from '@core/data/store/settings';
 import { formatPrice } from '@core/data/store/pricing';
@@ -19,12 +19,30 @@ import { SECTION_ROUTES } from './webRoutes';
  * The seeds carry no price. That is deliberate and it is the honest state: a
  * price exists only once somebody has recorded what we pay for the thing, and
  * a number invented to fill the gap is one a customer can act on.
+ *
+ * WHY THE SEED LOOKUPS ARE NOT RE-EXPORTED FROM HERE
+ * --------------------------------------------------
+ * `storeProduct`, `productsInCategory` and `categoryProductCount` used to be,
+ * and every one of them answers from the seeds — which is to say, from what was
+ * true when the code was built. A page that imported one of those rendered a
+ * shop that ignored its own admin panel. Merged reads live in
+ * `lib/server/storeCatalogue.ts` and are async because they are a database
+ * read; making that inconvenient to bypass is the point.
+ *
+ * `STORE_PRODUCTS` stays, for `generateStaticParams` alone: the set of ROUTES
+ * comes from the seeds, and it should. A product's page exists because somebody
+ * added it in a reviewed commit, not because a database row appeared.
  */
 
 export {
-  STORE_CATALOGUE, storeProduct, productsInCategory, categoryProductCount,
+  STORE_PRODUCTS,
   STORE_CATEGORIES, storeCategory, categoriesInGroup, formatPrice,
 };
+
+/** Where the basket opens. */
+export function cartHref(): string {
+  return `${SECTION_ROUTES.store}/cart`;
+}
 
 /**
  * The settings the storefront renders with.

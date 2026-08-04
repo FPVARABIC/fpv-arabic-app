@@ -19,6 +19,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Browser, type Page } from 'playwright';
+import { STORE_PRODUCTS } from '../src/data/store/catalogue';
 
 const PORT = 3150;
 const BASE = `http://localhost:${PORT}`;
@@ -244,13 +245,86 @@ async function main() {
     };
 
     /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[0] The shop\u2019s panel, driven by an admin');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await ctx.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      await signIn(page, admin);
+
+      // The products screen lists the catalogue grouped by section, and the
+      // grouping is the thing being managed — a flat list hides the moment a
+      // section drops to one option.
+      await goto(page, `${BASE}/admin/store/products`, 'h1');
+      const rows = await page.locator('[data-testid^="admin-product-"]').count();
+      ok(`the products screen lists the catalogue (${rows} rows)`, rows >= 30);
+      ok('every product offers an edit route',
+        (await page.locator('[data-testid^="admin-product-edit-"]').count()) >= 30);
+
+      // Opening one, and the editor is a form rather than a read-only dump.
+      const first = STORE_PRODUCTS.find(p => p.published)!;
+      await goto(page, `${BASE}/admin/store/products/${first.id}`, 'h1');
+      ok('the editor opens for a real product',
+        (await page.locator('[data-testid="product-editor"]').count()) === 1);
+      ok('…and shows the product id it is editing',
+        (await page.locator('[data-testid="admin-product-id"]').innerText()).includes(first.id));
+
+      // Nothing on this screen may type a price. Prices are a consequence of
+      // cost and margin, computed on the supply screen.
+      const priceFields = await page.locator(
+        'input[name*="price" i], input[name*="Minor" i]').count();
+      ok('the product editor has no price field at all', priceFields === 0);
+
+      // Images and specs can be added, and the provenance fields are present
+      // rather than optional extras somebody has to know to ask for.
+      await page.click('[data-testid="image-add"]');
+      ok('an image row can be added', (await page.locator('[data-testid^="image-row-"]').count()) >= 1);
+      await page.click('[data-testid="spec-add"]');
+      ok('a spec row can be added', (await page.locator('[data-testid^="spec-row-"]').count()) >= 1);
+
+      // The rule from the brief, proven through the real form: a spec marked
+      // confirmed with no source is refused, and the refusal names it.
+      await page.fill('[data-testid="spec-label-0"]', 'اختبار');
+      await page.fill('[data-testid="spec-value-0"]', '1234');
+      await page.check('[data-testid="spec-verified-0"]');
+      await page.click('[data-testid="product-editor-save"]');
+      await page.waitForSelector('[data-testid="product-editor-error"]', { timeout: 15_000 });
+      const specError = await page.locator('[data-testid="product-editor-error"]').innerText();
+      ok('a confirmed spec with no source is refused by the server',
+        specError.includes('اختبار') && specError.includes('مصدر'));
+
+      // The supply screen is the only place a cost appears, and it is behind
+      // its own capability.
+      await goto(page, `${BASE}/admin/store/supply`, 'h1');
+      ok('the supply screen lists the suppliers we buy from',
+        (await page.locator('[data-testid^="supplier-"]').count()) >= 4);
+      ok('…and every product, so an unpriced one is visible',
+        (await page.locator('[data-testid^="supply-edit-"]').count()) >= 30);
+
+      // The orders screen opens even with no orders — an empty state, not a
+      // crash and not a blank page.
+      await goto(page, `${BASE}/admin/store/orders`, 'h1');
+      ok('the orders screen opens', (await page.locator('h1').count()) === 1);
+
+      ok('no page error anywhere in the shop panel', errors.length === 0);
+      if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
+      await ctx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
     console.log('\n[1] A plain user cannot reach the admin surface at all');
     {
       const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
       const page = await ctx.newPage();
       await signIn(page, plain);
 
-      for (const path of ['/admin', '/admin/users', '/admin/reports', '/admin/audit']) {
+      for (const path of [
+        '/admin', '/admin/users', '/admin/reports', '/admin/audit',
+        // The shop's screens. `/admin/store/supply` is the one that matters
+        // most: it is the only page in the product that shows what we pay.
+        '/admin/store/orders', '/admin/store/products', '/admin/store/supply',
+      ]) {
         await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' });
         ok(`a plain user is redirected away from ${path}`, !page.url().includes('/admin'));
       }
@@ -544,7 +618,10 @@ async function main() {
         page.on('response', r => { if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`); });
         await signIn(page, admin);
 
-        for (const path of ['/admin', '/admin/users', '/admin/reports', '/admin/audit']) {
+        for (const path of [
+          '/admin', '/admin/users', '/admin/reports', '/admin/audit',
+          '/admin/store/orders', '/admin/store/products',
+        ]) {
           await goto(page, `${BASE}${path}`);
           /**
            * Does the PAGE scroll sideways?

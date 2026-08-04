@@ -1,26 +1,33 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { AVAILABILITY_LABEL_AR, CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
+import {
+  AVAILABILITY_LABEL_AR, CHOICE_POSITION_LABEL_AR, BUYER_LEVEL_LABEL_AR,
+  LINK_PROTOCOL_LABEL_AR, VIDEO_SYSTEM_LABEL_AR,
+} from '@core/data/store/types';
 import type { StoreProduct } from '@core/data/store/types';
 import {
-  STORE_CATALOGUE, storeProduct, storeCategory, publicSettings,
-  productHref, categoryHref, isOrderable,
+  STORE_PRODUCTS, storeCategory, publicSettings, productHref, categoryHref,
 } from '@/lib/store';
+import { resolvedProduct, publishedProducts } from '@/lib/server/storeCatalogue';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { Price, ProductImage, StoreBanner } from '@/components/store/StorePieces';
+import { AddToCart } from '@/components/store/CartControls';
 
 export const dynamicParams = false;
 
+/** See the note on the section page: on-demand revalidation with a floor. */
+export const revalidate = 300;
+
 export function generateStaticParams() {
-  return STORE_CATALOGUE.filter(p => p.published).map(p => ({ productId: p.id }));
+  return STORE_PRODUCTS.filter(p => p.published).map(p => ({ productId: p.id }));
 }
 
 export async function generateMetadata(
   { params }: { params: Promise<{ productId: string }> },
 ): Promise<Metadata> {
   const { productId } = await params;
-  const p = storeProduct(productId);
+  const p = await resolvedProduct(productId);
   if (!p || !p.published) return { title: 'منتج غير موجود', robots: { index: false, follow: false } };
   return {
     title: `${p.nameEn} — المتجر`,
@@ -58,15 +65,18 @@ export default async function ProductPage(
   { params }: { params: Promise<{ productId: string }> },
 ) {
   const { productId } = await params;
-  const product = storeProduct(productId);
+  const product = await resolvedProduct(productId);
   if (!product || !product.published) notFound();
 
   const category = storeCategory(product.categoryId);
   const settings = publicSettings();
-  const orderable = isOrderable(product);
 
+  // The related strips resolve against the merged catalogue too, so a product
+  // the admin hid this morning stops being recommended by its neighbours —
+  // rather than staying linked from three pages that never heard about it.
+  const all = await publishedProducts();
   const group = (ids: string[]) =>
-    ids.map(id => storeProduct(id)).filter((p): p is StoreProduct => !!p && p.published);
+    ids.map(id => all.find(p => p.id === id)).filter((p): p is StoreProduct => !!p);
   const alternatives = group(product.alternativeProductIds);
   const completes = group(product.completesProductIds);
   const related = group(product.relatedProductIds);
@@ -110,6 +120,19 @@ export default async function ProductPage(
             <span className="admin-badge" data-testid="product-availability">
               {AVAILABILITY_LABEL_AR[product.availability]}
             </span>
+            <span className="admin-badge" data-testid="product-level">
+              {BUYER_LEVEL_LABEL_AR[product.level]}
+            </span>
+            {product.linkProtocol !== 'none' && (
+              <span className="admin-badge" data-testid="product-protocol">
+                البروتوكول: {LINK_PROTOCOL_LABEL_AR[product.linkProtocol]}
+              </span>
+            )}
+            {product.videoSystem !== 'none' && (
+              <span className="admin-badge" data-testid="product-video-system">
+                الفيديو: {VIDEO_SYSTEM_LABEL_AR[product.videoSystem]}
+              </span>
+            )}
           </div>
 
           <div style={{ marginTop: 4 }}><Price product={product} large /></div>
@@ -117,25 +140,10 @@ export default async function ProductPage(
             {settings.shippingNoteAr}
           </p>
 
-          {/*
-            No order control ships until the cart and the order flow do.
-            A button that looks like it takes an order and does not is the exact
-            thing the brief refused, and it is worse in a shop than anywhere
-            else — it takes a decision the customer already made and drops it.
-          */}
-          {orderable ? (
-            <p data-testid="product-order-pending" className="card-sm"
-              style={{ padding: '12px 14px', marginTop: 14, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-              الطلب من الموقع يُفتح في التحديث القادم. حتى ذلك الحين تواصل معنا
-              وسنجهّزه لك مضبوطاً كما هو موضّح أعلى الصفحة.
-            </p>
-          ) : (
-            <p data-testid="product-not-orderable" className="card-sm"
-              style={{ padding: '12px 14px', marginTop: 14, fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-              هذا المنتج غير قابل للطلب حالياً — سعره أو توفّره لم يُحدَّث بعد.
-              نعرضه لأنه من الخيارات التي نوصي بها، لا لنبيعه اليوم.
-            </p>
-          )}
+          {/* The control decides for itself whether it can take an order —
+              see `AddToCart`, which renders an explanation rather than a
+              button when the product has no price yet. */}
+          <AddToCart product={product} />
         </div>
       </div>
 
@@ -154,6 +162,23 @@ export default async function ProductPage(
 
       <Block titleAr="أهم ما فيه" items={product.highlightsAr} testId="product-highlights" />
       <Block titleAr="ما الذي يأتي في الصندوق" items={product.inTheBoxAr} testId="product-in-box" />
+
+      {(product.weightGrams || product.dimensionsMm) && (
+        <dl className="admin-kv card-sm" data-testid="product-physical"
+          style={{ padding: '13px 15px', marginTop: 18 }}>
+          {product.weightGrams && (
+            <div><dt>الوزن</dt><dd className="ltr">{product.weightGrams} g</dd></div>
+          )}
+          {product.dimensionsMm && (
+            <div>
+              <dt>الأبعاد</dt>
+              <dd className="ltr">
+                {product.dimensionsMm.length} × {product.dimensionsMm.width} × {product.dimensionsMm.height} mm
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       {/* Specs render only once verified — see the note in the catalogue. */}
       {product.specs.length > 0 && (

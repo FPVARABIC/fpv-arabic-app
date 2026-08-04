@@ -916,6 +916,14 @@ service cloud.firestore {
       return isSignedIn() && callerProfile().role in ['admin', 'owner'];
     }
 
+    // A customer's own view of their orders. Scoped to the account, which is
+    // the whole reason ordering requires sign-in: «only the owner may read it»
+    // has no meaning without an owner.
+    match /users/{uid}/orderRefs/{orderId} {
+      allow read: if isOwner(uid) || isStoreStaff();
+      allow write: if false;
+    }
+
     match /storeProducts/{productId} {
       // Anyone may read a PUBLISHED product, signed in or not — a storefront
       // that requires an account to browse is a storefront nobody browses.

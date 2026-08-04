@@ -266,6 +266,15 @@ export const STORE_CATEGORIES: StoreCategory[] = [
     order: 14,
   },
   {
+    id: 'services',
+    titleAr: 'الخدمات',
+    titleEn: 'Services',
+    blurbAr: 'ما نفعله نحن بعتادك: البرمجة والربط والتجميع والفحص. الإعداد مجاني مع أي طلب.',
+    group: 'components',
+    choiceAxis: 'budget',
+    order: 16,
+  },
+  {
     id: 'accessories',
     titleAr: 'الإكسسوارات',
     titleEn: 'Accessories',

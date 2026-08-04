@@ -34,7 +34,10 @@
  * their permission recorded, which is why `ProductImage.credit` exists.
  */
 
-import type { ChoicePosition, StoreProduct } from './types';
+import type {
+  BuyerLevel, ChoicePosition, LinkProtocol, StoreProduct, VideoSystem,
+} from './types';
+import { STORE_SERVICES, serviceAsProduct } from './services';
 import type { KbLink } from '../kb/types';
 
 const REVIEWED = '2026-08-04';
@@ -53,6 +56,12 @@ function product(p: {
   titleAr: string;
   brandAr: string;
   pos: ChoicePosition;
+  /** Who it is for. Required — «للمتقدّمين» on a 7-inch is a warning. */
+  level: BuyerLevel;
+  /** Defaults to «لا ينطبق»: a battery has no control link and no video. */
+  link?: LinkProtocol;
+  video?: VideoSystem;
+  weightGrams?: number;
   summaryAr: string;
   suits: string[];
   notFor: string[];
@@ -72,6 +81,10 @@ function product(p: {
     titleAr: p.titleAr,
     brandAr: p.brandAr,
     choicePosition: p.pos,
+    level: p.level,
+    linkProtocol: p.link ?? 'none',
+    videoSystem: p.video ?? 'none',
+    ...(p.weightGrams ? { weightGrams: p.weightGrams } : {}),
     summaryAr: p.summaryAr,
     suitsAr: p.suits,
     notForAr: p.notFor,
@@ -97,6 +110,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Tiny Whoop ─────────────────────────────────────────────────────────── */
   product({
     id: 'betafpv-cetus-pro',
+    level: 'beginner',
+    link: 'elrs',
+    video: 'analog',
     categoryId: 'tiny-whoop',
     nameEn: 'BetaFPV Cetus Pro Kit',
     titleAr: 'طقم تدريب كامل للمبتدئ',
@@ -124,6 +140,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'betafpv-meteor75-pro',
+    level: 'beginner',
+    link: 'elrs',
+    video: 'analog',
     categoryId: 'tiny-whoop',
     nameEn: 'BetaFPV Meteor75 Pro',
     titleAr: 'ووب تناظري للطيران الحرّ داخل البيت',
@@ -144,6 +163,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'happymodel-mobula7',
+    level: 'beginner',
+    link: 'elrs',
+    video: 'analog',
     categoryId: 'tiny-whoop',
     nameEn: 'HappyModel Mobula7',
     titleAr: 'ووب اقتصادي واسع الانتشار',
@@ -162,6 +184,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── 2" / 2.5" / 3" / 3.5" ──────────────────────────────────────────────── */
   product({
     id: 'betafpv-pavo-pico',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
     collections: ['cinematic'],
     categoryId: 'size-2',
     nameEn: 'BetaFPV Pavo Pico',
@@ -178,6 +203,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'geprc-cinelog25',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
     collections: ['cinematic'],
     categoryId: 'size-2-5',
     nameEn: 'GEPRC Cinelog25',
@@ -194,6 +222,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'iflight-nazgul-evoque-f3',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
     collections: ['freestyle'],
     categoryId: 'size-3',
     nameEn: 'iFlight Nazgul Evoque F3',
@@ -211,6 +242,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'geprc-cinelog35',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
     collections: ['cinematic'],
     categoryId: 'size-3-5',
     nameEn: 'GEPRC Cinelog35',
@@ -228,6 +262,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── 5" ─────────────────────────────────────────────────────────────────── */
   product({
     id: 'iflight-nazgul5-v3',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
     collections: ['freestyle'],
     categoryId: 'size-5',
     nameEn: 'iFlight Nazgul5 V3',
@@ -253,6 +290,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'geprc-mark5',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'analog',
     collections: ['freestyle'],
     categoryId: 'size-5',
     nameEn: 'GEPRC MARK5',
@@ -269,6 +309,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'tbs-source-one-v5',
+    level: 'advanced',
     categoryId: 'size-5',
     nameEn: 'TBS Source One V5',
     titleAr: 'هيكل خمس إنشات مفتوح ورخيص',
@@ -287,6 +328,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── 7" / Long range ────────────────────────────────────────────────────── */
   product({
     id: 'iflight-chimera7-pro',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'analog',
     collections: ['long-range'],
     categoryId: 'size-7',
     nameEn: 'iFlight Chimera7 Pro',
@@ -309,6 +353,9 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── RTF ────────────────────────────────────────────────────────────────── */
   product({
     id: 'emax-tinyhawk-3-rtf',
+    level: 'beginner',
+    link: 'frsky',
+    video: 'analog',
     categoryId: 'rtf',
     nameEn: 'EMAX Tinyhawk III RTF',
     titleAr: 'طقم جاهز بديل',
@@ -327,6 +374,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Radios ─────────────────────────────────────────────────────────────── */
   product({
     id: 'radiomaster-pocket',
+    level: 'beginner',
+    link: 'elrs',
     categoryId: 'radios',
     nameEn: 'RadioMaster Pocket',
     titleAr: 'جهاز تحكم اقتصادي كامل الوظائف',
@@ -344,6 +393,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'radiomaster-boxer',
+    level: 'beginner',
+    link: 'elrs',
     categoryId: 'radios',
     nameEn: 'RadioMaster Boxer',
     titleAr: 'جهاز التحكم المتوسط الموصى به',
@@ -360,6 +411,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'radiomaster-tx16s-mk2',
+    level: 'intermediate',
+    link: 'elrs',
     categoryId: 'radios',
     nameEn: 'RadioMaster TX16S MKII',
     titleAr: 'جهاز التحكم الاحترافي',
@@ -378,6 +431,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Goggles ────────────────────────────────────────────────────────────── */
   product({
     id: 'dji-goggles-n3',
+    level: 'beginner',
+    video: 'dji',
     categoryId: 'goggles',
     nameEn: 'DJI Goggles N3',
     titleAr: 'نظارة رقمية من منظومة DJI',
@@ -399,6 +454,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'walksnail-avatar-hd-x',
+    level: 'intermediate',
+    video: 'walksnail',
     categoryId: 'goggles',
     nameEn: 'Walksnail Avatar HD Goggles X',
     titleAr: 'نظارة رقمية من منظومة Walksnail',
@@ -413,6 +470,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'hdzero-goggles',
+    level: 'advanced',
+    video: 'hdzero',
     categoryId: 'goggles',
     nameEn: 'HDZero Goggles',
     titleAr: 'نظارة رقمية بزمن استجابة منخفض',
@@ -430,6 +489,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Batteries / chargers ───────────────────────────────────────────────── */
   product({
     id: 'cnhl-black-series-6s',
+    level: 'intermediate',
     categoryId: 'batteries',
     nameEn: 'CNHL Black Series 6S',
     titleAr: 'بطارية 6S لمقاس الخمس إنشات',
@@ -447,6 +507,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'cnhl-black-series-4s',
+    level: 'beginner',
     categoryId: 'batteries',
     nameEn: 'CNHL Black Series 4S',
     titleAr: 'بطارية 4S للمقاسات الصغيرة',
@@ -463,6 +524,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'isdt-q6-charger',
+    level: 'beginner',
     categoryId: 'chargers',
     nameEn: 'ISDT Q6 Nano',
     titleAr: 'شاحن متوازن صغير وموثوق',
@@ -481,6 +543,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Receivers / antennas ───────────────────────────────────────────────── */
   product({
     id: 'radiomaster-rp1',
+    level: 'intermediate',
+    link: 'elrs',
     categoryId: 'receivers',
     nameEn: 'RadioMaster RP1',
     titleAr: 'مستقبل ExpressLRS صغير',
@@ -497,6 +561,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'truerc-x-air',
+    level: 'beginner',
     categoryId: 'antennas',
     nameEn: 'TrueRC X-Air',
     titleAr: 'هوائي فيديو دائري الاستقطاب',
@@ -512,6 +577,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Motors / FC / ESC / frames ─────────────────────────────────────────── */
   product({
     id: 'emax-eco-ii-2306',
+    level: 'intermediate',
     categoryId: 'motors',
     nameEn: 'EMAX ECO II 2306',
     titleAr: 'محرّك خمس إنشات اقتصادي',
@@ -528,6 +594,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'tmotor-f60-pro-v',
+    level: 'advanced',
     categoryId: 'motors',
     nameEn: 'T-Motor F60 Pro V',
     titleAr: 'محرّك خمس إنشات احترافي',
@@ -542,6 +609,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'speedybee-f405-v4-stack',
+    level: 'intermediate',
     categoryId: 'flight-controllers',
     nameEn: 'SpeedyBee F405 V4 Stack',
     titleAr: 'طقم متحكّم وESC للخمس إنشات',
@@ -558,6 +626,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'speedybee-bls-50a',
+    level: 'intermediate',
     categoryId: 'escs',
     nameEn: 'SpeedyBee BLS 50A',
     titleAr: 'وحدة ESC أربعة في واحد',
@@ -574,6 +643,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'armattan-marmotte',
+    level: 'advanced',
     categoryId: 'frames',
     nameEn: 'Armattan Marmotte',
     titleAr: 'هيكل خمس إنشات بضمان مدى الحياة',
@@ -592,6 +662,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   /* ── Cameras / VTX / air units / GPS / accessories ──────────────────────── */
   product({
     id: 'caddx-ratel-2',
+    level: 'intermediate',
+    video: 'analog',
     categoryId: 'cameras',
     nameEn: 'Caddx Ratel 2',
     titleAr: 'كاميرا تناظرية قوية في الضوء المنخفض',
@@ -607,6 +679,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'rush-tank-ultimate',
+    level: 'intermediate',
+    video: 'analog',
     categoryId: 'vtx',
     nameEn: 'Rush Tank Ultimate',
     titleAr: 'وحدة بثّ تناظرية موثوقة',
@@ -624,6 +698,8 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'dji-o3-air-unit',
+    level: 'intermediate',
+    video: 'dji',
     categoryId: 'air-units',
     nameEn: 'DJI O3 Air Unit',
     titleAr: 'وحدة طائرة رقمية من DJI',
@@ -640,6 +716,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'matek-m10-gps',
+    level: 'advanced',
     categoryId: 'gps',
     nameEn: 'Matek M10 GPS',
     titleAr: 'وحدة GPS صغيرة للمدى الطويل',
@@ -656,6 +733,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   }),
   product({
     id: 'lipo-safe-bag',
+    level: 'beginner',
     categoryId: 'accessories',
     nameEn: 'LiPo Safe Bag',
     titleAr: 'حقيبة شحن وتخزين مقاوِمة للحريق',
@@ -670,10 +748,719 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     inBox: ['الحقيبة'],
     learn: [{ kind: 'article', targetId: 'battery-safety', label: 'التخزين والشحن الآمن' }],
   }),
+  // ── Depth, added once the shop needed to be sellable rather than legible ──
+  //
+  // The rule is three to five per section, and it is not decoration: two
+  // options is a coin toss and one is not a shop. Everything below is a
+  // product that actually sells in this market — chosen for being widely used
+  // and widely recommended, not for filling a slot.
+  //
+  // WHAT IS DELIBERATELY ABSENT FROM EVERY ONE OF THEM
+  // -------------------------------------------------
+  // A specification. Not a thrust figure, not a KV, not a current rating.
+  // Those are on the model, they render when present, and they are left empty
+  // here because a number nobody checked against the manufacturer's own
+  // documentation is exactly the thing this project refuses to publish. The
+  // admin panel takes them, one at a time, with the source recorded — and until
+  // then the page says what the product IS and who it suits, which is what a
+  // buyer needs first and what most shops never write.
+
+  // ── 2 inch ──────────────────────────────────────────────────────────────
+  product({
+    id: 'betafpv-cetus-x',
+    level: 'beginner',
+    link: 'elrs',
+    video: 'analog',
+    collections: ['rtf'],
+    categoryId: 'size-2',
+    nameEn: 'BetaFPV Cetus X',
+    titleAr: 'طقم كامل بمقاس إنشين للانتقال بعد الووب',
+    brandAr: 'BetaFPV',
+    pos: 'entry',
+    summaryAr:
+      'الخطوة التالية بعد ووب المبتدئين: نفس فكرة الطقم الجاهز — طائرة وجهاز تحكّم '
+      + 'ونظّارة في صندوق واحد — لكن بمقاس ومحرّكات تسمح بالطيران خارج البيت.',
+    suits: ['من تعلّم داخل البيت ويريد الخروج دون شراء نظام كامل من الصفر.'],
+    notFor: ['من يملك نظّارة وجهاز تحكّم بالفعل — ستدفع ثمنهما مرّتين.'],
+    highlights: ['طقم كامل يطير من الصندوق', 'أقوى من ووب المبتدئين'],
+    inBox: ['الطائرة', 'جهاز التحكّم', 'النظّارة', 'بطاريات', 'مراوح احتياطية'],
+  }),
+  product({
+    id: 'happymodel-mobula8',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'analog',
+    categoryId: 'size-2',
+    nameEn: 'HappyModel Mobula8',
+    titleAr: 'ووب إنشين خفيف يقبل بطاريتين',
+    brandAr: 'HappyModel',
+    pos: 'middle',
+    summaryAr:
+      'أكبر من Mobula7 وأقوى منه، ويطير على 1S أو 2S حسب ما تركّبه. مناسب لمن تجاوز '
+      + 'الووب الصغير ولا يريد بعد الانتقال إلى مقاس 3 إنشات.',
+    suits: ['من يطير داخل البيت وفي الحديقة، ويريد قوة أعلى من الووب الصغير.'],
+    notFor: ['من يريد الطيران في الهواء المفتوح — وزنه لا يكفي لمقاومة الرياح.'],
+    highlights: ['يقبل 1S و2S', 'مراوح محاطة تسمح بالاصطدام الخفيف'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['betafpv-pavo-pico'],
+  }),
+
+  // ── 2.5 inch ────────────────────────────────────────────────────────────
+  product({
+    id: 'betafpv-pavo25',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'dji',
+    collections: ['cinematic'],
+    categoryId: 'size-2-5',
+    nameEn: 'BetaFPV Pavo25',
+    titleAr: 'سينيووب 2.5 إنش مصمَّم لوحدة فيديو رقمية',
+    brandAr: 'BetaFPV',
+    pos: 'entry',
+    summaryAr:
+      'سينيووب بمراوح محاطة مبني حول وحدة فيديو رقمية بدل النظام التماثلي — للّقطات '
+      + 'الداخلية القريبة بصورة أوضح، وبسعر ومقاس أصغر من طائرة تصوير كاملة.',
+    suits: ['التصوير الداخلي القريب بنظام فيديو رقمي.'],
+    notFor: ['من يملك نظّارة تماثلية فقط — الوحدة الرقمية تحتاج نظّارة تناسبها.'],
+    highlights: ['مراوح محاطة للاقتراب الآمن', 'مبني لوحدة فيديو رقمية'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+  }),
+  product({
+    id: 'geprc-cinebot25',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'dji',
+    categoryId: 'size-2-5',
+    nameEn: 'GEPRC Cinebot25',
+    titleAr: 'سينيووب 2.5 إنش بأداء أعلى',
+    brandAr: 'GEPRC',
+    pos: 'pro',
+    summaryAr:
+      'الطرف الأعلى من مقاس 2.5: محرّكات وإلكترونيات أقوى للّقطات التي تحتاج تسارعاً '
+      + 'ومتابعة، لا مجرّد تحليق ثابت.',
+    suits: ['من يصوّر مشاهد متحرّكة داخل مساحات ضيّقة.'],
+    notFor: ['المبتدئ — القوة الزائدة في مساحة ضيّقة تعني اصطدامات أغلى.'],
+    highlights: ['أداء أعلى داخل نفس المقاس', 'مبني لوحدة فيديو رقمية'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinelog25'],
+  }),
+
+  // ── 3 inch ──────────────────────────────────────────────────────────────
+  product({
+    id: 'geprc-cinelog30',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'dji',
+    collections: ['cinematic'],
+    categoryId: 'size-3',
+    nameEn: 'GEPRC Cinelog30',
+    titleAr: 'سينيووب 3 إنش لزمن طيران أطول',
+    brandAr: 'GEPRC',
+    pos: 'entry',
+    summaryAr:
+      'نفس فكرة Cinelog25 بمقاس أكبر: مراوح محاطة وثبات للتصوير، لكن المقاس الأكبر '
+      + 'يعطي زمن طيران أطول وتحمّلاً أفضل للهواء.',
+    suits: ['التصوير الذي يحتاج دقائق أطول في الجوّ.'],
+    notFor: ['المساحات الضيّقة جداً — المقاس الأكبر يحدّ من أين يمكن أن تدخل.'],
+    highlights: ['زمن طيران أطول من 2.5 إنش', 'مراوح محاطة'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+  }),
+  product({
+    id: 'iflight-nazgul-evoque-f3d',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'dji',
+    collections: ['freestyle'],
+    categoryId: 'size-3',
+    nameEn: 'iFlight Nazgul Evoque F3D',
+    titleAr: 'ثلاث إنشات للفريستايل بنظام فيديو رقمي',
+    brandAr: 'iFlight',
+    pos: 'pro',
+    summaryAr:
+      'النسخة الرقمية من Evoque F3: نفس الهيكل والغرض — فريستايل في مساحة أصغر من '
+      + 'خمس إنشات — مع وحدة فيديو رقمية بدل النظام التماثلي.',
+    suits: ['من يطير فريستايل في مساحات محدودة ويملك نظّارة رقمية.'],
+    notFor: ['من يملك نظّارة تماثلية — اشترِ النسخة التماثلية بدلاً منها.'],
+    highlights: ['فريستايل بمقاس صغير', 'وحدة فيديو رقمية مركّبة'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['iflight-nazgul-evoque-f3'],
+  }),
+
+  // ── 3.5 inch ────────────────────────────────────────────────────────────
+  product({
+    id: 'geprc-cinebot30',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'dji',
+    categoryId: 'size-3-5',
+    nameEn: 'GEPRC Cinebot30',
+    titleAr: 'طائرة تصوير مكشوفة المراوح بمقاس متوسط',
+    brandAr: 'GEPRC',
+    pos: 'entry',
+    summaryAr:
+      'ليست سينيووب: مراوحها مكشوفة، فهي أكفأ وأسرع وأطول زمناً — مقابل أنها لا '
+      + 'تُقارَب من الناس ولا من الأثاث. للتصوير في الخارج لا في الداخل.',
+    suits: ['التصوير في الهواء المفتوح حيث لا حاجة لحماية المراوح.'],
+    notFor: ['التصوير الداخلي أو قرب الناس — لا حماية حول المراوح.'],
+    highlights: ['أكفأ من السينيووب في نفس المقاس', 'زمن طيران أطول'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+  }),
+  product({
+    id: 'iflight-nazgul-evoque-f4',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'analog',
+    collections: ['freestyle'],
+    categoryId: 'size-3-5',
+    nameEn: 'iFlight Nazgul Evoque F4',
+    titleAr: 'أربع إنشات — بين الرشاقة والقوة',
+    brandAr: 'iFlight',
+    pos: 'middle',
+    summaryAr:
+      'مقاس وسط بين 3 و5: أخفّ وأرشق من الخمس إنشات في المساحات المتوسّطة، وأقوى '
+      + 'وأثبت من الثلاث في الهواء.',
+    suits: ['من يجد الخمس إنشات كبيرة على مكانه والثلاث ضعيفة عليه.'],
+    notFor: ['المبتدئ — هذا مقاس يُختار بعد معرفة ما ينقصك.'],
+    highlights: ['حلّ وسط بين مقاسين', 'قطع غيار متوفّرة'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+  }),
+
+  // ── 7 inch and long range ───────────────────────────────────────────────
+  product({
+    id: 'geprc-crocodile7',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'analog',
+    collections: ['long-range'],
+    categoryId: 'size-7',
+    nameEn: 'GEPRC Crocodile 7',
+    titleAr: 'سبع إنشات للمسافات الطويلة',
+    brandAr: 'GEPRC',
+    pos: 'entry',
+    summaryAr:
+      'مبنية للمدى: مقاس كبير ومراوح كبيرة تعني كفاءة عالية وزمن طيران طويل. تطير '
+      + 'بهدوء وثبات، ولا تُطار كما تُطار طائرة فريستايل.',
+    suits: ['الطيران الطويل فوق مساحات مفتوحة.'],
+    notFor: ['الفريستايل أو المساحات الضيّقة — الحجم والقصور الذاتي ضدّك.'],
+    highlights: ['زمن طيران طويل', 'مصمَّمة للمدى لا للحركات'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    learn: [{ kind: 'article', targetId: 'prop-sizing', label: 'كيف يغيّر المقاس سلوك الطائرة' }],
+  }),
+  product({
+    id: 'iflight-chimera7-eco',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'analog',
+    collections: ['long-range'],
+    categoryId: 'size-7',
+    nameEn: 'iFlight Chimera7 ECO',
+    titleAr: 'النسخة الاقتصادية من سبع إنشات',
+    brandAr: 'iFlight',
+    pos: 'middle',
+    summaryAr:
+      'نفس فكرة Chimera7 بمكوّنات أقلّ كلفة. تطير المهمّة نفسها بمدى أقصر قليلاً، '
+      + 'وهي المدخل المعقول لمن لم يجرّب هذا المقاس بعد.',
+    suits: ['أوّل تجربة مع مقاس سبع إنشات دون دفع ثمن النسخة الكاملة.'],
+    notFor: ['من يحتاج أقصى مدى ممكن — ادفع فرق النسخة الأعلى.'],
+    highlights: ['مدخل أرخص إلى المدى الطويل', 'قطع غيار مشتركة مع النسخة الأعلى'],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['iflight-chimera7-pro'],
+  }),
+
+  // ── ready to fly ────────────────────────────────────────────────────────
+  product({
+    id: 'betafpv-cetus-lite',
+    level: 'beginner',
+    link: 'frsky',
+    video: 'analog',
+    categoryId: 'rtf',
+    nameEn: 'BetaFPV Cetus Lite',
+    titleAr: 'أرخص طقم كامل للتعلّم داخل البيت',
+    brandAr: 'BetaFPV',
+    pos: 'entry',
+    summaryAr:
+      'أقلّ ما تحتاجه لتبدأ فعلاً: طائرة ونظّارة وجهاز تحكّم في صندوق واحد. مخصّص '
+      + 'للتعلّم داخل البيت، ووضع الثبات فيه يسامح أخطاء الأسبوع الأول.',
+    suits: ['أوّل شهر من التعلّم، داخل البيت، بأقلّ كلفة ممكنة.'],
+    notFor: ['من يريد الطيران خارجاً — الوزن والقوة ليسا لذلك.'],
+    highlights: ['كل ما يلزم في صندوق واحد', 'أوضاع طيران تسامح المبتدئ'],
+    inBox: ['الطائرة', 'جهاز التحكّم', 'النظّارة', 'بطاريات'],
+  }),
+  product({
+    id: 'radiomaster-pocket-combo',
+    level: 'beginner',
+    link: 'elrs',
+    video: 'none',
+    categoryId: 'rtf',
+    nameEn: 'RadioMaster Pocket + Simulator',
+    titleAr: 'جهاز تحكّم ومحاكي — الطريق الأرخص للتعلّم',
+    brandAr: 'RadioMaster',
+    pos: 'variant',
+    summaryAr:
+      'ليس طائرة، وهذا هو المقصود: أرخص وأسرع طريقة للتعلّم هي جهاز تحكّم حقيقي '
+      + 'ومحاكي على الحاسوب. تتحطّم مئة مرّة بلا كلفة، ثم تشتري طائرة وأنت تعرف الطيران.',
+    suits: ['من يريد أن يتعلّم قبل أن يدفع ثمن طائرة يحطّمها.'],
+    notFor: ['من يريد الطيران في الخارج هذا الأسبوع — هذا ليس طائرة.'],
+    highlights: ['جهاز تحكّم يبقى معك بعد المحاكي', 'لا كلفة للتحطّم'],
+    inBox: ['جهاز التحكّم', 'كابل الحاسوب'],
+    completes: ['radiomaster-pocket'],
+  }),
+
+  // ── motors ──────────────────────────────────────────────────────────────
+  product({
+    id: 'iflight-xing2-2207',
+    level: 'intermediate',
+    categoryId: 'motors',
+    nameEn: 'iFlight XING2 2207',
+    titleAr: 'محرّك خمس إنشات شائع في التركيبات الجاهزة',
+    brandAr: 'iFlight',
+    pos: 'middle',
+    summaryAr:
+      'من أكثر محرّكات الخمس إنشات استعمالاً، ويأتي مركّباً في كثير من الطائرات '
+      + 'الجاهزة — ما يعني أن قطع الغيار والتجارب حوله متوفّرة أكثر من غيره.',
+    suits: ['بناء أو إصلاح طائرة خمس إنشات للفريستايل.'],
+    notFor: ['المقاسات الصغيرة — هذا محرّك خمس إنشات.'],
+    highlights: ['شائع الاستعمال فقطع غياره متوفّرة', 'يُباع مفرداً وبالطقم'],
+    inBox: ['المحرّك', 'براغي'],
+    learn: [{ kind: 'article', targetId: 'motor-kv', label: 'ما معنى KV' }],
+  }),
+
+  // ── flight controllers ──────────────────────────────────────────────────
+  product({
+    id: 'speedybee-f405-v4-fc',
+    level: 'intermediate',
+    categoryId: 'flight-controllers',
+    nameEn: 'SpeedyBee F405 V4 (FC only)',
+    titleAr: 'متحكّم طيران مفرد بلا مسرّعات',
+    brandAr: 'SpeedyBee',
+    pos: 'entry',
+    summaryAr:
+      'نفس المتحكّم الموجود في الطقم، مفرداً. للحالة التي احترق فيها المتحكّم '
+      + 'وحده والمسرّعات سليمة — وهي حالة شائعة أكثر ممّا يتوقّع الناس.',
+    suits: ['استبدال متحكّم تالف دون شراء الطقم كاملاً.'],
+    notFor: ['بناء جديد من الصفر — الطقم أرخص من القطعتين منفصلتين.'],
+    highlights: ['بديل مفرد للطقم', 'يُضبط عبر تطبيق الهاتف'],
+    inBox: ['المتحكّم', 'كابلات', 'قواعد عازلة'],
+    alternatives: ['speedybee-f405-v4-stack'],
+    learn: [{ kind: 'betaflight', targetId: 'ports', label: 'صفحة Ports في Betaflight' }],
+  }),
+  product({
+    id: 'holybro-kakute-h7',
+    level: 'advanced',
+    categoryId: 'flight-controllers',
+    nameEn: 'Holybro Kakute H7',
+    titleAr: 'متحكّم بمعالج أحدث ومنافذ أكثر',
+    brandAr: 'Holybro',
+    pos: 'pro',
+    summaryAr:
+      'معالج من الجيل الأحدث ومنافذ UART أكثر — وهذا هو الفرق العملي: عدد المنافذ '
+      + 'هو ما يحدّ عادةً كم قطعة يمكن أن تركّب على طائرة واحدة.',
+    suits: ['تركيبة تحتاج مستقبِلاً وGPS ووحدة فيديو رقمية معاً.'],
+    notFor: ['تركيبة بسيطة — ستدفع ثمن منافذ لن تستعملها.'],
+    highlights: ['منافذ UART أكثر', 'معالج من جيل أحدث'],
+    inBox: ['المتحكّم', 'كابلات', 'قواعد عازلة'],
+    learn: [{ kind: 'betaflight', targetId: 'ports', label: 'كيف تُوزَّع منافذ UART' }],
+  }),
+
+  // ── ESCs ────────────────────────────────────────────────────────────────
+  product({
+    id: 'hobbywing-xrotor-g2',
+    level: 'intermediate',
+    categoryId: 'escs',
+    nameEn: 'Hobbywing XRotor Micro G2',
+    titleAr: 'مسرّعات رباعية معروفة بالمتانة',
+    brandAr: 'Hobbywing',
+    pos: 'entry',
+    summaryAr:
+      'لوحة مسرّعات رباعية من شركة قديمة في هذا المجال. تُشترى عادةً لأن سمعتها في '
+      + 'التحمّل أفضل من سعرها — وهي القطعة التي يكلّف احتراقها استبدال الأربعة.',
+    suits: ['بناء يريد مسرّعات لا يفكّر فيها بعد التركيب.'],
+    notFor: ['من يحتاج طاقة استثنائية لمقاس كبير — راجع الخيار الأعلى.'],
+    highlights: ['لوحة واحدة للمحرّكات الأربعة', 'سمعة جيّدة في التحمّل'],
+    inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+    learn: [{ kind: 'article', targetId: 'esc-what-is', label: 'ما وظيفة المسرّع' }],
+  }),
+  product({
+    id: 'tmotor-f55a-pro-ii',
+    level: 'advanced',
+    categoryId: 'escs',
+    nameEn: 'T-Motor F55A Pro II',
+    titleAr: 'مسرّعات لتيّار أعلى ومقاسات أكبر',
+    brandAr: 'T-Motor',
+    pos: 'pro',
+    summaryAr:
+      'للتركيبات التي تسحب تيّاراً أعلى ممّا تتحمّله اللوحات الاقتصادية — مقاسات '
+      + 'أكبر، أو بطاريات 6S مع محرّكات قويّة.',
+    suits: ['تركيبة 6S بمحرّكات قوية أو مقاس أكبر من خمس إنشات.'],
+    notFor: ['تركيبة صغيرة — طاقة زائدة ووزن زائد بلا فائدة.'],
+    highlights: ['تحمّل تيّار أعلى', 'للمقاسات الكبيرة و6S'],
+    inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+  }),
+
+  // ── frames ──────────────────────────────────────────────────────────────
+  product({
+    id: 'tbs-source-one-v5-frame',
+    level: 'beginner',
+    categoryId: 'frames',
+    nameEn: 'TBS Source One V5 Frame',
+    titleAr: 'هيكل خمس إنشات مفتوح ورخيص',
+    brandAr: 'Team BlackSheep',
+    pos: 'entry',
+    summaryAr:
+      'أرخص مدخل معقول إلى بناء طائرة خمس إنشات. تصميمه مفتوح وقطع غياره تُباع '
+      + 'مفردة، فذراع مكسورة تكلّف ثمن ذراع لا ثمن هيكل.',
+    suits: ['أوّل عملية بناء، حيث ستُكسر أذرع كثيرة.'],
+    notFor: ['من يريد أخفّ وأمتن هيكل ممكن — هذا هيكل اقتصادي.'],
+    highlights: ['قطع الغيار تُباع مفردة', 'تصميم مفتوح ومنتشر'],
+    inBox: ['ألواح الهيكل', 'براغي'],
+  }),
+  product({
+    id: 'impulserc-apex',
+    level: 'advanced',
+    categoryId: 'frames',
+    nameEn: 'ImpulseRC Apex',
+    titleAr: 'هيكل فريستايل معروف بتحمّل الاصطدام',
+    brandAr: 'ImpulseRC',
+    pos: 'pro',
+    summaryAr:
+      'هيكل يُشترى لسبب واحد: أن يبقى سليماً بعد ما يكسر غيره. أغلى بوضوح، '
+      + 'ومن يشتريه يحسبه على عدد الأذرع التي لن يستبدلها.',
+    suits: ['من يطير فريستايل ويصطدم كثيراً.'],
+    notFor: ['أوّل عملية بناء — ادفع الفرق بعد أن تعرف ماذا تريد.'],
+    highlights: ['سمعة قوية في تحمّل الاصطدام', 'قطع غيار متوفّرة'],
+    inBox: ['ألواح الهيكل', 'براغي'],
+    alternatives: ['armattan-marmotte'],
+  }),
+
+  // ── batteries ───────────────────────────────────────────────────────────
+  product({
+    id: 'tattu-r-line-v5-6s',
+    level: 'advanced',
+    categoryId: 'batteries',
+    nameEn: 'Tattu R-Line V5.0 6S',
+    titleAr: 'بطارية سباق 6S من الفئة الأعلى',
+    brandAr: 'Tattu',
+    pos: 'pro',
+    summaryAr:
+      'بطارية تُشترى للأداء تحت الحمل العالي لا للسعر. الفرق يظهر في آخر ثلاثين '
+      + 'ثانية من الطيران، وهو ما يهمّ في السباق أكثر ممّا يهمّ في غيره.',
+    suits: ['السباق والفريستايل الحادّ حيث يظهر فرق البطارية.'],
+    notFor: ['الطيران العادي — ستدفع فرقاً لن تشعر به.'],
+    highlights: ['أداء ثابت تحت حمل عالٍ', 'فئة سباق'],
+    inBox: ['البطارية'],
+    learn: [{ kind: 'article', targetId: 'battery-safety', label: 'التخزين والشحن الآمن' }],
+  }),
+
+  // ── chargers ────────────────────────────────────────────────────────────
+  product({
+    id: 'isdt-608ac',
+    level: 'beginner',
+    categoryId: 'chargers',
+    nameEn: 'ISDT 608AC',
+    titleAr: 'شاحن يعمل من الكهرباء مباشرة',
+    brandAr: 'ISDT',
+    pos: 'entry',
+    summaryAr:
+      'شاحن بمنفذ كهرباء مدمج — لا يحتاج مزوّد طاقة منفصلاً. هذا هو الفرق العملي '
+      + 'للمبتدئ: قطعة واحدة تشتريها بدل قطعتين.',
+    suits: ['أوّل شاحن، حيث كل قطعة إضافية عائق.'],
+    notFor: ['من يشحن عدّة بطاريات في وقت واحد — راجع الخيار المزدوج.'],
+    highlights: ['كهرباء مدمجة بلا مزوّد منفصل', 'حجم صغير'],
+    inBox: ['الشاحن', 'كابل الكهرباء'],
+    learn: [{ kind: 'article', targetId: 'battery-safety', label: 'الشحن الآمن' }],
+  }),
+  product({
+    id: 'hota-d6-pro',
+    level: 'intermediate',
+    categoryId: 'chargers',
+    nameEn: 'HOTA D6 Pro',
+    titleAr: 'شاحن مزدوج لبطاريتين معاً',
+    brandAr: 'HOTA',
+    pos: 'pro',
+    summaryAr:
+      'قناتان تشحنان بطاريتين في وقت واحد. من يملك ست بطاريات ويطير يوماً كاملاً '
+      + 'يعرف لماذا هذا فرق حقيقي وليس رفاهية.',
+    suits: ['من يملك عدّة بطاريات ويطير جلسات طويلة.'],
+    notFor: ['من يملك بطاريتين — القناة الواحدة تكفيك.'],
+    highlights: ['قناتان مستقلّتان', 'يشحن أنواعاً مختلفة من البطاريات'],
+    inBox: ['الشاحن', 'كابلات'],
+    alternatives: ['isdt-q6-charger'],
+  }),
+
+  // ── cameras ─────────────────────────────────────────────────────────────
+  product({
+    id: 'runcam-phoenix-2',
+    level: 'intermediate',
+    video: 'analog',
+    categoryId: 'cameras',
+    nameEn: 'RunCam Phoenix 2',
+    titleAr: 'كاميرا تماثلية شائعة في الفريستايل',
+    brandAr: 'RunCam',
+    pos: 'entry',
+    summaryAr:
+      'من أكثر الكاميرات التماثلية استعمالاً. تُشترى لأنها معروفة السلوك: كثيرون '
+      + 'يطيرون بها، فما تراه في مقاطعهم هو ما سترى.',
+    suits: ['بناء تماثلي جديد أو استبدال كاميرا تالفة.'],
+    notFor: ['من يطير بنظام رقمي — الكاميرا جزء من وحدة الفيديو هناك.'],
+    highlights: ['شائعة فسلوكها معروف', 'قطع تركيب متوفّرة'],
+    inBox: ['الكاميرا', 'كابل', 'براغي'],
+    learn: [{ kind: 'article', targetId: 'video-cameras', label: 'كيف تختار كاميرا الطيران' }],
+  }),
+  product({
+    id: 'foxeer-razer-micro',
+    level: 'beginner',
+    video: 'analog',
+    categoryId: 'cameras',
+    nameEn: 'Foxeer Razer Micro',
+    titleAr: 'كاميرا تماثلية اقتصادية',
+    brandAr: 'Foxeer',
+    pos: 'entry',
+    summaryAr:
+      'الخيار الاقتصادي المعقول. لن تتفوّق على الكاميرات الأعلى في الإضاءة الصعبة، '
+      + 'لكنها تفعل ما يلزم — وهي القطعة الأولى التي تُكسر في الاصطدام.',
+    suits: ['أوّل بناء، أو استبدال متكرّر بعد الاصطدامات.'],
+    notFor: ['التصوير في إضاءة صعبة — ادفع فرق الكاميرا الأعلى.'],
+    highlights: ['سعر منخفض لقطعة تُكسر كثيراً', 'تركيب قياسي'],
+    inBox: ['الكاميرا', 'كابل', 'براغي'],
+  }),
+
+  // ── VTX ─────────────────────────────────────────────────────────────────
+  product({
+    id: 'tbs-unify-pro32-nano',
+    level: 'intermediate',
+    video: 'analog',
+    categoryId: 'vtx',
+    nameEn: 'TBS Unify Pro32 Nano',
+    titleAr: 'مرسل فيديو صغير معروف الثبات',
+    brandAr: 'Team BlackSheep',
+    pos: 'entry',
+    summaryAr:
+      'مرسل صغير يُستعمل في المقاسات الضيّقة. يُشترى لثباته: مرسل يغيّر قناته '
+      + 'من تلقاء نفسه هو مشكلة لكلّ من يطير معك، لا لك وحدك.',
+    suits: ['بناء صغير أو متوسّط يحتاج مرسلاً موثوقاً.'],
+    notFor: ['من يحتاج أقصى طاقة إرسال — راجع الخيار الأعلى.'],
+    highlights: ['حجم صغير', 'ضبط القناة من Betaflight'],
+    inBox: ['المرسل', 'كابل'],
+    learn: [{ kind: 'video', targetId: 'bf-vtx-tables', label: 'جداول VTX في Betaflight' }],
+  }),
+  product({
+    id: 'foxeer-reaper-extreme',
+    level: 'advanced',
+    video: 'analog',
+    categoryId: 'vtx',
+    nameEn: 'Foxeer Reaper Extreme',
+    titleAr: 'مرسل فيديو عالي الطاقة للمدى الطويل',
+    brandAr: 'Foxeer',
+    pos: 'pro',
+    summaryAr:
+      'طاقة إرسال عالية للمسافات الطويلة. الطاقة العالية ليست مجّانية: حرارة أعلى، '
+      + 'واستهلاك أعلى، وقيود قانونية تختلف من بلد إلى بلد — تحقّق قبل الشراء.',
+    suits: ['الطيران الطويل حيث تفقد الصورة قبل أن تفقد التحكّم.'],
+    notFor: ['الطيران القريب — طاقة زائدة تشوّش على من حولك.'],
+    highlights: ['طاقة إرسال عالية', 'مستويات طاقة قابلة للضبط'],
+    inBox: ['المرسل', 'كابل'],
+    learn: [{ kind: 'video', targetId: 'bf-vtx-tables', label: 'ضبط مستويات الطاقة' }],
+  }),
+
+  // ── digital air units ───────────────────────────────────────────────────
+  product({
+    id: 'walksnail-avatar-hd-pro',
+    level: 'intermediate',
+    video: 'walksnail',
+    categoryId: 'air-units',
+    nameEn: 'Walksnail Avatar HD Pro Kit',
+    titleAr: 'وحدة فيديو رقمية بديلة عن نظام DJI',
+    brandAr: 'Walksnail',
+    pos: 'entry',
+    summaryAr:
+      'نظام رقمي كامل من شركة أخرى. المهمّ قبل الشراء: النظام الرقمي مغلق — الوحدة '
+      + 'تعمل مع نظّارة النظام نفسه فقط، لا مع أي نظّارة أخرى.',
+    suits: ['من يريد صورة رقمية ولا يريد الارتباط بنظام DJI.'],
+    notFor: ['من يملك نظّارة DJI أو HDZero — الأنظمة لا تتبادل.'],
+    highlights: ['نظام رقمي كامل', 'وحدة أصغر من بعض البدائل'],
+    inBox: ['الوحدة', 'الكاميرا', 'الهوائي', 'كابلات'],
+  }),
+  product({
+    id: 'hdzero-freestyle-v2',
+    level: 'advanced',
+    video: 'hdzero',
+    categoryId: 'air-units',
+    nameEn: 'HDZero Freestyle V2 VTX',
+    titleAr: 'وحدة رقمية بزمن تأخير منخفض',
+    brandAr: 'HDZero',
+    pos: 'middle',
+    summaryAr:
+      'نظام رقمي يركّز على قصر زمن التأخير أكثر من دقّة الصورة — وهو المقايضة التي '
+      + 'يختارها من يسابق. مغلق كغيره: يحتاج نظّارة النظام نفسه.',
+    suits: ['السباق والفريستايل السريع حيث التأخير أهمّ من الدقّة.'],
+    notFor: ['من يريد أوضح صورة ممكنة للتصوير.'],
+    highlights: ['زمن تأخير منخفض', 'يعمل مع نظّارات النظام نفسه'],
+    inBox: ['الوحدة', 'الكاميرا', 'كابلات'],
+    alternatives: ['dji-o3-air-unit'],
+  }),
+
+  // ── GPS ─────────────────────────────────────────────────────────────────
+  product({
+    id: 'holybro-m10-gps',
+    level: 'intermediate',
+    categoryId: 'gps',
+    nameEn: 'Holybro M10 GPS',
+    titleAr: 'وحدة GPS من جيل حديث',
+    brandAr: 'Holybro',
+    pos: 'entry',
+    summaryAr:
+      'وحدة GPS للطائرات الصغيرة. تُركَّب عادةً لتسجيل مكان السقوط — وهذا وحده يبرّر '
+      + 'ثمنها لمن يطير فوق مساحات واسعة.',
+    suits: ['الطيران الطويل، وإيجاد الطائرة بعد السقوط.'],
+    notFor: ['الطيران داخل البيت — لا إشارة ولا فائدة.'],
+    highlights: ['حجم صغير', 'يعمل مع Betaflight'],
+    inBox: ['الوحدة', 'كابل'],
+    learn: [{ kind: 'betaflight', targetId: 'gps', label: 'إعداد GPS في Betaflight' }],
+  }),
+  product({
+    id: 'flywoo-goku-gm10-pro',
+    level: 'advanced',
+    categoryId: 'gps',
+    nameEn: 'Flywoo GOKU GM10 Pro',
+    titleAr: 'وحدة GPS مدمجة مع بوصلة',
+    brandAr: 'Flywoo',
+    pos: 'pro',
+    summaryAr:
+      'GPS وبوصلة في وحدة واحدة. البوصلة تلزم بعض وظائف العودة التلقائية، ودمجها '
+      + 'يوفّر قطعة وكابلاً على طائرة ضيّقة المساحة.',
+    suits: ['تركيبة تحتاج بوصلة ولا تملك مكاناً لقطعتين.'],
+    notFor: ['تركيبة لا تستعمل وظائف تحتاج بوصلة.'],
+    highlights: ['GPS وبوصلة في قطعة واحدة', 'يوفّر مساحة وكابلاً'],
+    inBox: ['الوحدة', 'كابل'],
+    learn: [{ kind: 'betaflight', targetId: 'gps', label: 'صفحة GPS' }],
+  }),
+
+  // ── receivers ───────────────────────────────────────────────────────────
+  product({
+    id: 'happymodel-ep1-elrs',
+    level: 'beginner',
+    link: 'elrs',
+    categoryId: 'receivers',
+    nameEn: 'HappyModel EP1 (ExpressLRS)',
+    titleAr: 'مستقبِل ExpressLRS صغير ورخيص',
+    brandAr: 'HappyModel',
+    pos: 'entry',
+    summaryAr:
+      'من أكثر مستقبِلات ExpressLRS انتشاراً في المقاسات الصغيرة. يُشترى غالباً '
+      + 'أكثر من واحد: المستقبِل من القطع التي تُفقد مع الطائرة.',
+    suits: ['أي بناء صغير يعمل بـ ExpressLRS.'],
+    notFor: ['من يستعمل نظام تحكّم آخر — المستقبِل يجب أن يطابق مرسلك.'],
+    highlights: ['حجم صغير جداً', 'شائع فالدعم متوفّر'],
+    inBox: ['المستقبِل', 'هوائي'],
+    learn: [{ kind: 'elrs-setup', targetId: 'binding', label: 'كيف يتمّ الربط' }],
+  }),
+  product({
+    id: 'betafpv-superd-elrs',
+    level: 'advanced',
+    link: 'elrs',
+    categoryId: 'receivers',
+    nameEn: 'BetaFPV SuperD (ExpressLRS)',
+    titleAr: 'مستقبِل بهوائيين لتغطية أفضل',
+    brandAr: 'BetaFPV',
+    pos: 'pro',
+    summaryAr:
+      'مستقبِل بهوائيين يختار بينهما — يقلّل انقطاع الإشارة حين تدور الطائرة بحيث '
+      + 'يحجب جسمها هوائياً واحداً. للطيران الطويل أو خلف العوائق.',
+    suits: ['المدى الطويل، والطيران حيث يحجب جسم الطائرة الإشارة.'],
+    notFor: ['البناء الصغير — أكبر وأثقل ممّا يلزم.'],
+    highlights: ['هوائيان لتغطية أفضل', 'يقلّل الانقطاع المفاجئ'],
+    inBox: ['المستقبِل', 'هوائيان'],
+    learn: [{ kind: 'elrs-setup', targetId: 'binding', label: 'الربط والإعداد' }],
+  }),
+
+  // ── antennas ────────────────────────────────────────────────────────────
+  product({
+    id: 'lumenier-axii-2',
+    level: 'beginner',
+    video: 'analog',
+    categoryId: 'antennas',
+    nameEn: 'Lumenier AXII 2',
+    titleAr: 'هوائي فيديو معروف ومتين',
+    brandAr: 'Lumenier',
+    pos: 'entry',
+    summaryAr:
+      'هوائي دائري الاستقطاب من أكثر ما يُستعمل. الهوائي أرخص قطعة تحسّن الصورة، '
+      + 'وأوّل ما يُكسر في الاصطدام — فاشترِ اثنين.',
+    suits: ['أي نظام تماثلي، على الطائرة أو على النظّارة.'],
+    notFor: ['الأنظمة الرقمية — لها هوائياتها الخاصّة.'],
+    highlights: ['شائع ومتين', 'يحسّن الصورة بأقلّ كلفة'],
+    inBox: ['الهوائي'],
+  }),
+  product({
+    id: 'foxeer-lollipop-4',
+    level: 'beginner',
+    video: 'analog',
+    categoryId: 'antennas',
+    nameEn: 'Foxeer Lollipop 4',
+    titleAr: 'هوائي فيديو خفيف ومرن',
+    brandAr: 'Foxeer',
+    pos: 'entry',
+    summaryAr:
+      'خفيف ومرن، فيتحمّل الانثناء بدل أن ينكسر. الخيار المعتاد لمن يصطدم كثيراً '
+      + 'ولا يريد استبدال هوائي بعد كلّ جلسة.',
+    suits: ['الفريستايل والتعلّم، حيث الاصطدام متكرّر.'],
+    notFor: ['من يبحث عن أقصى مدى ممكن — راجع الهوائيات الاتجاهية.'],
+    highlights: ['خفيف ومرن', 'سعر منخفض'],
+    inBox: ['الهوائي'],
+    alternatives: ['lumenier-axii-2'],
+  }),
+
+  // ── accessories ─────────────────────────────────────────────────────────
+  product({
+    id: 'gemfan-hurricane-51466',
+    level: 'beginner',
+    categoryId: 'accessories',
+    nameEn: 'Gemfan Hurricane 51466',
+    titleAr: 'مراوح خمس إنشات — القطعة الأكثر استهلاكاً',
+    brandAr: 'Gemfan',
+    pos: 'middle',
+    summaryAr:
+      'المراوح هي ما تكسره في كلّ جلسة تقريباً، وتُباع بالطقم لهذا السبب. مروحة '
+      + 'مشروخة تسبّب اهتزازاً يُفسد الطيران قبل أن تنكسر تماماً — فافحصها بعد كلّ سقوط.',
+    suits: ['كل من يطير خمس إنشات. اشترِ أكثر ممّا تظنّ.'],
+    notFor: ['المقاسات الأخرى — المروحة يجب أن تطابق المقاس.'],
+    highlights: ['تُباع بالطقم', 'المقاس الأكثر شيوعاً'],
+    inBox: ['طقم مراوح'],
+    learn: [{ kind: 'article', targetId: 'prop-damage-safety', label: 'متى تُستبدل المروحة' }],
+  }),
+  product({
+    id: 'battery-strap-set',
+    level: 'beginner',
+    categoryId: 'accessories',
+    nameEn: 'Battery Strap Set',
+    titleAr: 'أحزمة تثبيت البطارية',
+    brandAr: 'عام',
+    pos: 'entry',
+    summaryAr:
+      'قطعة صغيرة يُستهان بها: حزام تالف يعني بطارية تنفلت في الجوّ. تتمدّد '
+      + 'بالاستعمال وتفقد قبضتها تدريجياً، فتُستبدل دورياً لا عند انقطاعها.',
+    suits: ['كل طائرة تُثبَّت بطاريتها بحزام.'],
+    notFor: ['لا أحد. تُستهلك وتُستبدل.'],
+    highlights: ['تُستبدل قبل أن تنقطع', 'رخيصة مقابل ما تمنعه'],
+    inBox: ['أحزمة'],
+  }),
 ];
 
 
-const productById = new Map(STORE_CATALOGUE.map(p => [p.id, p]));
+/**
+ * Services appear in the catalogue as products.
+ *
+ * Appended rather than written inline so their definition stays in
+ * `services.ts` with what they actually include — but from here on the cart,
+ * the order and the admin panel see them as ordinary products, which is the
+ * whole reason for modelling them this way.
+ */
+export const STORE_PRODUCTS: StoreProduct[] = [
+  ...STORE_CATALOGUE,
+  ...STORE_SERVICES.map(svc => serviceAsProduct(svc, REVIEWED)),
+];
+
+const productById = new Map(STORE_PRODUCTS.map(p => [p.id, p]));
 
 export function storeProduct(id: string): StoreProduct | undefined {
   return productById.get(id);
@@ -685,12 +1472,28 @@ export function storeProduct(id: string): StoreProduct | undefined {
  *
  * Ordered along the section's own axis, so the three read as a choice rather
  * than as a list: economy, then middle, then professional.
+ *
+ * WHY IT TAKES THE LIST RATHER THAN READING THE CATALOGUE
+ * -------------------------------------------------------
+ * Because the web renders a MERGED catalogue — the seeds with the admin's
+ * changes applied — and it has to select from that list by the same two rules
+ * this function encodes. An earlier version of the web's section page
+ * reimplemented the filter as `p.categoryId === id` and silently lost both the
+ * `collections` membership and the axis ordering: «الطائرات السينمائية» went to
+ * zero products and every other section fell out of order. One rule, one
+ * function, given whichever list the caller has.
  */
-export function productsInCategory(categoryId: string): StoreProduct[] {
+export function selectCategory<P extends {
+  categoryId: string; collections: string[]; choicePosition: string; published: boolean;
+}>(products: readonly P[], categoryId: string): P[] {
   const order: Record<string, number> = { entry: 0, middle: 1, pro: 2, variant: 3 };
-  return STORE_CATALOGUE
+  return products
     .filter(p => p.published && (p.categoryId === categoryId || p.collections.includes(categoryId)))
     .sort((a, b) => order[a.choicePosition] - order[b.choicePosition]);
+}
+
+export function productsInCategory(categoryId: string): StoreProduct[] {
+  return selectCategory(STORE_PRODUCTS, categoryId);
 }
 
 export function categoryProductCount(categoryId: string): number {

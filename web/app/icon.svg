@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FPV بالعربي">
+  <!--
+    The site icon.
+
+    The same mark the header draws in CSS — the accent gradient with an «F» on
+    it — expressed once as a file so the browser tab, the bookmark and the
+    installed shortcut all agree with the page they came from. Before this
+    existed every page on the site answered 404 to the browser's automatic
+    /favicon.ico request, which is invisible to a reader and noisy in every log
+    and every console.
+
+    Drawn rather than photographed, and deliberately so: this is our own mark,
+    not a product, so none of the sourcing rules that govern product imagery
+    apply to it.
+  -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="19" fill="url(#g)"/>
+  <path d="M23 17h20v7.5H30.5v7H41v7.5H30.5V47H23z" fill="#04101e"/>
+</svg>

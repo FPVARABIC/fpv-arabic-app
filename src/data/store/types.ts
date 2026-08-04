@@ -153,6 +153,52 @@ export const AVAILABILITY_LABEL_AR: Record<Availability, string> = {
   'coming-soon': 'قريباً',
 };
 
+/**
+ * Who a product is for, in one word.
+ *
+ * Kept to three because a shop is not a syllabus. «متقدّم» on a 7-inch build
+ * is a warning, not a compliment, and that is the whole job of this field.
+ */
+export type BuyerLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export const BUYER_LEVEL_LABEL_AR: Record<BuyerLevel, string> = {
+  beginner: 'مناسب للمبتدئ',
+  intermediate: 'يحتاج خبرة متوسطة',
+  advanced: 'للمتقدّمين',
+};
+
+/**
+ * The control link a product speaks, named the way a buyer names it.
+ *
+ * Deliberately coarse. The requirement was explicit: do not drag a shopper
+ * through Targets and firmware versions while they are deciding what to buy.
+ * «ExpressLRS» is what they need to know to tell whether it will bind to the
+ * radio they own; which Target to flash is a question for after it arrives, and
+ * the software centre already answers it.
+ */
+export type LinkProtocol = 'elrs' | 'crossfire' | 'tracer' | 'ghost' | 'frsky' | 'dji' | 'none';
+
+export const LINK_PROTOCOL_LABEL_AR: Record<LinkProtocol, string> = {
+  elrs: 'ExpressLRS',
+  crossfire: 'TBS Crossfire',
+  tracer: 'TBS Tracer',
+  ghost: 'ImmersionRC Ghost',
+  frsky: 'FrSky',
+  dji: 'جهاز تحكم DJI',
+  none: 'لا ينطبق',
+};
+
+/** The video system a product belongs to — same coarseness, same reason. */
+export type VideoSystem = 'analog' | 'dji' | 'walksnail' | 'hdzero' | 'none';
+
+export const VIDEO_SYSTEM_LABEL_AR: Record<VideoSystem, string> = {
+  analog: 'تناظري',
+  dji: 'DJI',
+  walksnail: 'Walksnail',
+  hdzero: 'HDZero',
+  none: 'لا ينطبق',
+};
+
 export interface ProductImage {
   /**
    * Where the image lives.
@@ -164,8 +210,25 @@ export interface ProductImage {
    */
   url: string;
   altAr: string;
-  /** Who owns it. An image with no stated permission is not published. */
-  credit?: { ownerAr: string; permissionAr: string; sourceUrl?: string };
+  /**
+   * Where it came from and on what terms.
+   *
+   * Required to publish. Product photography belongs to its manufacturer, and
+   * an image with no recorded permission is one nobody can defend later — so
+   * the model refuses to treat it as publishable rather than leaving that to
+   * whoever is uploading in a hurry.
+   */
+  credit?: {
+    ownerAr: string;
+    permissionAr: string;
+    sourceUrl?: string;
+    /** True when it comes from the manufacturer's own material. */
+    official: boolean;
+    /** When the permission and the link were last checked. */
+    reviewedAt: string;
+    /** Set when this is a stand-in that must be replaced with a better one. */
+    needsReplacement?: boolean;
+  };
 }
 
 /**
@@ -204,6 +267,20 @@ export interface StoreProduct {
   highlightsAr: string[];
   /** Everything in the box, itemised. The commonest source of a bad surprise. */
   inTheBoxAr: string[];
+
+  /** Who it is for. Rendered as a badge, and as a warning where it should be. */
+  level: BuyerLevel;
+  /**
+   * The control link and video system, for the two questions every buyer of an
+   * aircraft actually has: will it bind to my radio, and will it show in my
+   * goggles. `none` where the question does not apply — a battery has neither.
+   */
+  linkProtocol: LinkProtocol;
+  videoSystem: VideoSystem;
+  /** Grams, when the manufacturer states it. Never estimated. */
+  weightGrams?: number;
+  /** Millimetres, when stated. Never estimated. */
+  dimensionsMm?: { length: number; width: number; height: number };
 
   specs: ProductSpec[];
   images: ProductImage[];
@@ -249,7 +326,16 @@ export interface StoreProduct {
 export interface StoreSupply {
   /** Same id as the product it belongs to. */
   productId: string;
-  supplierNameAr: string;
+  /**
+   * Which supplier, by id, from `suppliers.ts`.
+   *
+   * An id rather than a name so moving a product between suppliers is one
+   * field, and so the lead time and reliability come from one place instead of
+   * being retyped per product. This is what makes AliExpress one row in a table
+   * rather than the shape of the store.
+   */
+  supplierId: string;
+  /** The exact listing. Staff-only — never rendered to a customer. */
   supplierUrl: string;
   /** What we pay for the unit. */
   unitCostMinor: Minor;
@@ -266,6 +352,14 @@ export interface StoreSupply {
   marginPercentOverride?: number;
   /** Free text for whoever manages supply. Never rendered to a customer. */
   notesAr?: string;
+  /**
+   * Whether the cost was checked against the supplier's live listing.
+   *
+   * Supplier prices move, and a margin computed from a figure nobody has looked
+   * at for a year is a guess. The admin panel shows the age of this date beside
+   * the price it produced.
+   */
+  verified: boolean;
   updatedAt: string;
 }
 
@@ -360,6 +454,27 @@ export interface OrderItem {
   quantity: number;
   unitPriceMinor: Minor;
   lineTotalMinor: Minor;
+}
+
+/**
+ * What a customer submits. The server computes everything else.
+ *
+ * Deliberately has no prices and no totals. A checkout form that posts its own
+ * total is the oldest hole in online shops: the browser is not a trusted
+ * source, and the only defence is never to read a number from it. The server
+ * takes these ids and quantities, prices them from the catalogue, and writes
+ * the order it computed.
+ */
+export interface OrderSubmission {
+  items: { productId: string; quantity: number }[];
+  contact: {
+    fullNameAr: string;
+    phone: string;
+    country: string;
+    cityAr: string;
+    addressAr: string;
+    notesAr?: string;
+  };
 }
 
 export interface StoreOrder {
