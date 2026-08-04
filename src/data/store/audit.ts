@@ -165,22 +165,32 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
 
   // ── 2 inch ────────────────────────────────────────────────────────────────
   {
-    productId: 'betafpv-pavo-pico', kind: 'real-product', sources: 'reseller',
+    productId: 'betafpv-pavo-pico', kind: 'aging', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'حقيقي ومناسب، لكن لم تُقرأ صفحته الرسمية في هذه الجولة. لا مواصفة تُنشر قبل ذلك.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته الرسمية. صُحّح وصفه: كان مكتوباً أنه «يحمل كاميرا تصوير صغيرة» '
+      + 'وهو في الحقيقة سينيووب يُباع بلا نظام فيديو ويُبنى حول وحدة رقمية تشتريها '
+      + 'معه — ووزنه يتغيّر بتغيّرها. تنبيه: BetaFPV تعرض الآن Pavo Pico II بدعم '
+      + 'وحدات DJI O4، وهو المرشّح لاستبداله عند الجولة القادمة.',
   },
   {
-    productId: 'betafpv-cetus-x', kind: 'real-product', sources: 'reseller',
+    productId: 'betafpv-cetus-x', kind: 'needs-variants', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'طقم انتقالي معقول. يحتاج قراءة الصفحة الرسمية قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته الرسمية وسُجّلت مواصفاته الثمان. يُباع بنسختَي بروتوكول '
+      + '(ExpressLRS وFrSky D8) وبنسخة HD — والبروتوكول ليس تفضيلاً: جهاز نسخة '
+      + 'ExpressLRS لا يبِنّ مستقبِل FrSky. أُضيفت النسخ الثلاث كخيارات شراء.',
   },
   {
     productId: 'happymodel-mobula8', kind: 'real-product', sources: 'reseller',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'defer',
-    noteAr: 'موجود ويُباع. مؤجَّل إلى جولة توثيق ثانية.',
+    noteAr:
+      'المنتج الوحيد في مجموعة الجولة الأولى الذي لم تُقرأ صفحته الرسمية بعد. '
+      + 'موقع Happymodel لا يعرض صفحة مستقلّة له بالوضوح الذي عرض به Mobula7، '
+      + 'ويحتاج بحثاً أطول. أُبقي مؤجَّلاً بدل أن يُنقل عنه ما لم يُقرأ.',
   },
 
   // ── 2.5 inch ──────────────────────────────────────────────────────────────

@@ -1820,6 +1820,92 @@ console.log('\n[23] The work list, and the decisions the system refuses to make'
     decisionAction.includes('option.labelAr'));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[24] The reviewed group holds together as a group');
+{
+  /**
+   * The beginner path, reviewed as one.
+   *
+   * Reviewing products one at a time is how a shop ends up recommending two
+   * aircraft that do the same thing, or three that all assume you already own
+   * goggles. These assertions are about the GROUP: that its members differ,
+   * that they point at each other, and that somebody starting from nothing can
+   * find their way through it.
+   */
+  const REVIEWED = [
+    'betafpv-cetus-pro', 'betafpv-meteor75-pro', 'happymodel-mobula7',
+    'betafpv-pavo-pico', 'betafpv-cetus-x',
+  ];
+  const group = REVIEWED.map(id => STORE_PRODUCTS.find(p => p.id === id)!);
+  ok('every reviewed product still exists', group.every(Boolean));
+
+  // Documented, each to its manufacturer.
+  for (const p of group) {
+    const sourced = p.specs.filter(isSpecVerified);
+    ok(`${p.id} carries at least four sourced figures (${sourced.length})`, sourced.length >= 4);
+    ok(`${p.id} sources only manufacturer documents`,
+      sourced.every(sp => sp.source!.kind === 'manufacturer-page'
+        || sp.source!.kind === 'manufacturer-manual'));
+  }
+
+  // The group must offer a real choice, not five versions of one decision.
+  const kits = group.filter(p => p.variants.some(v => v.packageKind === 'rtf'));
+  const bare = group.filter(p => p.variants.every(v => v.packageKind !== 'rtf'));
+  ok(`the group offers complete kits (${kits.length}) and bare aircraft (${bare.length})`,
+    kits.length >= 1 && bare.length >= 1);
+
+  // Alternatives here CROSS sections on purpose: «which beginner kit» is not a
+  // question one section answers.
+  const crossing = group.filter(p => p.alternativeProductIds
+    .some(id => STORE_PRODUCTS.find(x => x.id === id)?.categoryId !== p.categoryId));
+  ok(`the group's alternatives cross sections where the question does (${crossing.length})`,
+    crossing.length >= 3);
+  ok('…and every one of them resolves',
+    group.every(p => p.alternativeProductIds.every(id => STORE_PRODUCTS.some(x => x.id === id))));
+
+  // Where a product is superseded, the page says so rather than the shop
+  // quietly selling last year's model to somebody who did not know.
+  const pico = STORE_PRODUCTS.find(p => p.id === 'betafpv-pavo-pico')!;
+  ok('a superseded product warns the buyer in «لا يناسبك»',
+    pico.notForAr.some(t => t.includes('Pavo Pico II')));
+  ok('…and the successor is recorded as a sourced specification, not a rumour',
+    pico.specs.some(sp => sp.labelAr.includes('الجيل التالي') && isSpecVerified(sp)));
+
+  // A kit that arrives without the thing it needs must say so where a buyer
+  // reads before paying, not in the specification table.
+  ok('a product sold WITHOUT its video system says so in the box list',
+    pico.variants.every(v => v.inTheBoxAr.some(t => t.includes('بلا نظام فيديو'))));
+  ok('…and in «لا يناسبك», because that is what stops the wrong purchase',
+    pico.notForAr.some(t => t.includes('وحدة فيديو رقمية')));
+
+  // The protocol split is real and is presented as a purchase choice, never as
+  // a setup detail.
+  const cetusX = STORE_PRODUCTS.find(p => p.id === 'betafpv-cetus-x')!;
+  const links = new Set(cetusX.variants.map(v => v.linkProtocol));
+  ok('a kit sold on two radio protocols offers both as variants', links.size >= 2);
+  ok('…and every one of its variants says what is in its box',
+    cetusX.variants.every(v => v.inTheBoxAr.length >= 3));
+
+  // Every reviewed product is one owner-input away from sellable: nothing
+  // blocking, and what remains is a photograph and a cost.
+  const NOW = '2026-08-04T00:00:00.000Z';
+  for (const p of group) {
+    const priced = {
+      ...p,
+      variants: p.variants.map(v => ({ ...v, priceMinor: 9900, availability: 'in-stock' as const })),
+    };
+    const gate = publishability({
+      product: priced,
+      supply: { updatedAt: '2026-08-03T00:00:00.000Z', verified: true },
+      now: NOW,
+    });
+    ok(`${p.id} is publishable the moment a price and a cost exist`, gate.allowed);
+    // …and the only thing it is still warned about is the photograph.
+    ok(`…with nothing outstanding but the photograph`,
+      gate.advisory.every(a => a.gate === 'images'));
+  }
+}
+
 console.log(`\n${failed === 0 ? '✅' : '❌'} testStore: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 

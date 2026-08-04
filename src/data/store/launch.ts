@@ -72,6 +72,9 @@ const DJI_N3 = 'https://www.dji.com/goggles-n3/specs';
 const SPEEDYBEE_F405V4 = 'https://www.speedybee.com/speedybee-f405-v4-bls-55a-30x30-fc-esc-stack/';
 const GEPRC_CINELOG25 = 'https://geprc.com/product/cinelog25-v2-analog-quadcopter/';
 const MATEK_M10Q = 'https://www.mateksys.com/?portfolio=m10q-5883';
+const BETAFPV_PAVO_PICO = 'https://betafpv.com/products/pavo-pico-brushless-whoop-quadcopter';
+const BETAFPV_PAVO_PICO_II = 'https://betafpv.com/products/pavo-pico-ii-brushless-whoop-quadcopter';
+const BETAFPV_CETUS_X = 'https://betafpv.com/products/cetus-x-fpv-kit';
 const CADDX_RATEL2 =
   'https://www.caddxfpv.com/products/ratel-2-1-1-8inch-starlight-sensor-freestyle-fpv-camera';
 
@@ -253,6 +256,54 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
       '', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2,
     ),
     { labelAr: 'الوزن', valueAr: 'غير متوفّر من المصدر', status: 'pending' },
+  ],
+
+  // ── Round three: the beginner path, reviewed as one group ───────────────
+  // Tiny whoop and 2-inch together, because that is the order somebody
+  // actually buys in — and reviewing them apart is how a shop ends up
+  // recommending a second aircraft that duplicates the first.
+
+  'betafpv-cetus-x': [
+    official('المحرّكات', '1103 11000KV', '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official('المراوح', 'Gemfan 2020 رباعية الشفرات', '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official('الوزن مع البطارية', '55', 'غرام', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official('جهد البطارية', '2S', '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official('جهاز التحكّم المرفق', 'LiteRadio 3', '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official('النظّارة المرفقة', 'VR03 بفتحة بطاقة للتسجيل', '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X),
+    official(
+      'مساعدات الطيران',
+      'مقياس ضغط مدمج لثبات الارتفاع، ووضع تثبيت الموضع، وهبوط اضطراري تلقائي',
+      '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X,
+    ),
+    official(
+      'فتحة الوحدة الخارجية في جهاز التحكّم',
+      'مقاس Nano — يقبل وحدة إرسال خارجية لتشغيل طائرات أخرى',
+      '', 'صفحة Cetus X FPV Kit', BETAFPV_CETUS_X,
+    ),
+  ],
+
+  'betafpv-pavo-pico': [
+    official('المحرّكات', '1102 14000KV', '', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
+    official('المراوح', 'Gemfan 45mm', '', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
+    official(
+      'متحكّم الطيران',
+      'F4 AIO لجهد 2-3S بمسرّع 20A، وزنه 5.92 غرام، مصمَّم لوحدة فيديو رقمية',
+      '', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO,
+    ),
+    official('الوزن مع وحدة DJI O3', '71.2', 'غرام', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
+    official('الوزن مع وحدة Vista', '66.02', 'غرام', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
+    official('الوزن مع وحدة Avatar', '65.88', 'غرام', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
+    {
+      labelAr: 'الجيل التالي',
+      valueAr: 'Pavo Pico II بمحرّكات LAVA 1102 14000KV ودعم وحدات DJI O4 وO4 Pro',
+      status: 'verified',
+      source: {
+        kind: 'manufacturer-page',
+        titleAr: 'صفحة Pavo Pico II',
+        url: BETAFPV_PAVO_PICO_II,
+        checkedAt: CHECKED,
+      },
+    },
   ],
 };
 

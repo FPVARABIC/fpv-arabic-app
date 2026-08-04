@@ -225,7 +225,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
       'قطع غيار متوفّرة ورخيصة، وستحتاجها.',
     ],
     inBox: ['الطائرة', 'جهاز التحكم', 'النظارة', 'بطاريات', 'شاحن', 'مراوح احتياطية'],
-    alternatives: ['emax-tinyhawk-3-rtf'],
+    alternatives: ['betafpv-cetus-x', 'betafpv-cetus-lite', 'emax-tinyhawk-3-rtf'],
     learn: [{ kind: 'article', targetId: 'prop-damage-safety', label: 'لماذا الووب أأمن ما تتعلّم عليه' }],
     availability: 'in-stock',
     // BetaFPV sells the Cetus Pro as a complete kit and as the aircraft alone.
@@ -266,7 +266,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['وزن منخفض يعني ارتطاماً بلا ضرر تقريباً', 'يعمل مع مستقبِلات شائعة'],
     inBox: ['الطائرة', 'بطارية أو أكثر', 'مراوح احتياطية'],
     completes: ['radiomaster-pocket'],
-    alternatives: ['happymodel-mobula7'],
+    alternatives: ['happymodel-mobula7', 'happymodel-mobula8', 'betafpv-cetus-x'],
     availability: 'in-stock',
     // The analog and the digital Meteor75 Pro are different aircraft in the way
     // that matters: they show in different goggles. A buyer who owns analog
@@ -302,7 +302,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     notFor: ['من يريد أداءً عالياً — هذا مدخل لا نهاية.'],
     highlights: ['انتشار واسع يعني إجابات جاهزة لكل مشكلة', 'قطع غيار رخيصة'],
     inBox: ['الطائرة', 'بطاريات', 'مراوح احتياطية'],
-    alternatives: ['betafpv-meteor75-pro'],
+    alternatives: ['betafpv-meteor75-pro', 'happymodel-mobula8', 'betafpv-cetus-pro'],
     availability: 'in-stock',
     variants: [
       {
@@ -327,16 +327,32 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     collections: ['cinematic'],
     categoryId: 'size-2',
     nameEn: 'BetaFPV Pavo Pico',
-    titleAr: 'سينيووب صغير يحمل كاميرا خارجية',
+    titleAr: 'سينيووب صغير مبني حول وحدة فيديو رقمية تشتريها معه',
     brandAr: 'BetaFPV',
     pos: 'entry',
     summaryAr:
-      'ووب مغطّى المراوح لكنه أكبر وأقوى، ومصمَّم ليحمل كاميرا تصوير صغيرة — للتصوير '
-      + 'الداخلي القريب حيث لا يمكن إدخال طائرة أكبر.',
-    suits: ['التصوير داخل الغرف والممرّات الضيّقة.'],
-    notFor: ['الطيران في الهواء المفتوح — وزنها ومقاسها ليسا لذلك.'],
-    highlights: ['مراوح محاطة تسمح بالاقتراب من الناس والأثاث', 'يحمل كاميرا تصوير خفيفة'],
-    inBox: ['الطائرة', 'مراوح احتياطية'],
+      'أصغر سينيووب يحمل وحدة فيديو رقمية كاملة تحت مئة غرام. يُباع بلا نظام '
+      + 'فيديو: تشتري الوحدة التي تناسب نظّارتك وتركّبها، ووزنه يتغيّر بتغيّرها — '
+      + '71.2 غراماً مع DJI O3 و66 مع Vista. للتصوير الداخلي القريب حيث لا تدخل '
+      + 'طائرة أكبر.',
+    suits: [
+      'التصوير داخل الغرف والممرّات الضيّقة.',
+      'من يملك نظّارة رقمية بالفعل ويريد أصغر هيكل يحمل وحدتها.',
+    ],
+    notFor: [
+      'الطيران في الهواء المفتوح — وزنه ومقاسه ليسا لذلك.',
+      'من لا يملك وحدة فيديو رقمية: لا تأتي معه، وشراؤها يضاعف الكلفة تقريباً.',
+      'من يبحث عن الأحدث — BetaFPV تعرض الآن Pavo Pico II الذي يدعم وحدات DJI O4.',
+    ],
+    highlights: [
+      'مراوح محاطة تسمح بالاقتراب من الناس والأثاث',
+      'يقبل وحدات DJI O3 وVista وAvatar — تختار ما يناسب نظّارتك',
+      'أقلّ من مئة غرام في كل التركيبات المذكورة',
+    ],
+    inBox: ['الطائرة بلا نظام فيديو', 'مراوح احتياطية'],
+    // Across sections on purpose: the alternative to «smallest digital
+    // cinewhoop» is another cinewhoop, and they live in the 2.5-inch section.
+    alternatives: ['betafpv-pavo25', 'geprc-cinelog25'],
   }),
   product({
     id: 'geprc-cinelog25',
@@ -1025,6 +1041,37 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     notFor: ['من يملك نظّارة وجهاز تحكّم بالفعل — ستدفع ثمنهما مرّتين.'],
     highlights: ['طقم كامل يطير من الصندوق', 'أقوى من ووب المبتدئين'],
     inBox: ['الطائرة', 'جهاز التحكّم', 'النظّارة', 'بطاريات', 'مراوح احتياطية'],
+    availability: 'in-stock',
+    // BetaFPV sells the Cetus X kit with two different radio protocols and, in
+    // the HD kit, with a digital video system. The protocol is not a
+    // preference: an ExpressLRS kit's radio will not bind a FrSky receiver, and
+    // somebody who already owns one of the two must pick the matching one.
+    variants: [
+      {
+        id: 'elrs', nameAr: 'طقم ExpressLRS — تماثلي',
+        kind: 'rtf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'جهاز التحكّم LiteRadio 3', 'النظّارة VR03',
+          'بطاريات 2S', 'شاحن', 'مراوح احتياطية'],
+      },
+      {
+        id: 'frsky', nameAr: 'طقم FrSky D8 — تماثلي',
+        kind: 'rtf', link: 'frsky', video: 'analog',
+        inBox: ['الطائرة', 'جهاز التحكّم LiteRadio 3', 'النظّارة VR03',
+          'بطاريات 2S', 'شاحن', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd', nameAr: 'طقم HD — فيديو رقمي',
+        kind: 'rtf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بوحدة فيديو رقمية', 'جهاز التحكّم', 'نظّارة رقمية',
+          'بطاريات 2S', 'شاحن', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
+    // Real alternatives, chosen across sections rather than within one: the
+    // question a buyer is asking here is «which beginner kit», and the answer
+    // spans «ووب» and «أطقم جاهزة». Same-section-only would have offered them
+    // two more 2-inch aircraft they are not shopping for.
+    alternatives: ['betafpv-cetus-pro', 'betafpv-cetus-lite', 'emax-tinyhawk-3-rtf'],
   }),
   product({
     id: 'happymodel-mobula8',
