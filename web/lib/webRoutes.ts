@@ -58,11 +58,18 @@ const WEB_CHECKS: DestinationChecks = {
  */
 export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // The build flow is a long stateful wizard whose value is in being in your
-  // hand at the bench. Bringing it to the web is planned, not skipped — the
-  // project workspace it feeds already IS on the web.
-  assembly: 'تدفّق البناء متاح في تطبيق الهاتف',
-  roadmap: 'خريطة البناء متاحة في تطبيق الهاتف',
-  checklist: 'قوائم الفحص متاحة في تطبيق الهاتف',
+  // hand at the bench, and per-stage completion is tracked there. What the web
+  // now has is the project workspace those flows feed, including the full
+  // roadmap and checklist CONTENT under /project — so these messages point at
+  // it rather than simply refusing.
+  //
+  // They stay listed because the DEEP LINK is what is unavailable: a link to
+  // one specific stage or checklist group has no web address, and sending
+  // someone to a page that does not scroll to what they asked for is worse
+  // than telling them where it is.
+  assembly: 'تدفّق البناء خطوة بخطوة متاح في تطبيق الهاتف',
+  roadmap: 'مراحل البناء معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
+  checklist: 'قوائم الفحص معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
 };
 
 export interface WebHref {

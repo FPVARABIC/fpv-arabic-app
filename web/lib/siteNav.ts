@@ -70,8 +70,6 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'project', labelAr: 'مشروعي', href: '/project', group: 'build',
     blurbAr: 'قطعك وإعداداتك، وأحكام التوافق التي تُحسب منها.',
-    // Batch 5.
-    status: 'planned',
   },
 
   // ── Community ────────────────────────────────────────────────────────────

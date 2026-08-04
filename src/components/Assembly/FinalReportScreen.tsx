@@ -7,6 +7,9 @@ import { droneTypes } from '../../data/assembly/droneTypes';
 import { buildStages } from '../../data/assembly/buildStages';
 import { buildCompatibilityReport } from './utils/buildReport';
 import { FallbackImage } from './FallbackImage';
+// The category names now live beside PART_CATEGORY_MAP in the shared project
+// store, so the web workspace renders exactly the same words this screen does.
+import { PART_CATEGORY_LABEL_AR } from '../../data/project/store';
 
 const DEFAULT_REPORT_ICON = '🚁';
 // Same fallback convention as PartCard.tsx — per-category custom icons are
@@ -15,21 +18,6 @@ const DEFAULT_PART_ICON = '⚙️';
 
 // Arabic labels per category, taken from the stage titles' own terminology
 // (buildStages titleAr minus the leading verb) — no new naming invented.
-const CATEGORY_LABELS_AR: Record<string, string> = {
-  videoUnits: 'نظام الفيديو (VTX)',
-  frames: 'الإطار (Frame)',
-  motors: 'المحركات (Motors)',
-  escs: 'الـESC',
-  flightControllers: 'الـFlight Controller',
-  receivers: 'الـReceiver',
-  gps: 'GPS',
-  buzzers: 'الـBuzzer',
-  capacitors: 'الـCapacitor',
-  propellers: 'المراوح (Props)',
-  batteries: 'البطارية (LiPo)',
-  tools: 'الأدوات',
-};
-
 interface FinalReportScreenProps {
   selections: Record<string, BasePart>;
   droneTypeId?: string;
@@ -96,7 +84,7 @@ export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({
       const price = part.priceRangeUSD
         ? `${part.priceRangeUSD[0]}–${part.priceRangeUSD[1]} USD`
         : 'السعر غير متوفر';
-      lines.push(`${CATEGORY_LABELS_AR[category] ?? category}: ${part.nameEn} — ${price}`);
+      lines.push(`${PART_CATEGORY_LABEL_AR[category] ?? category}: ${part.nameEn} — ${price}`);
     }
     lines.push(`الإجمالي التقريبي: ${totalMin}–${totalMax} USD`);
     if (unpricedCount > 0) lines.push(unpricedCaveat);
@@ -255,7 +243,7 @@ export const FinalReportScreen: React.FC<FinalReportScreenProps> = ({
                   />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10.5, color: '#7a6a52' }}>{CATEGORY_LABELS_AR[category] ?? category}</div>
+                  <div style={{ fontSize: 10.5, color: '#7a6a52' }}>{PART_CATEGORY_LABEL_AR[category] ?? category}</div>
                   <div style={{
                     fontSize: 12.5, fontWeight: 700, color: '#3a2e1f',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

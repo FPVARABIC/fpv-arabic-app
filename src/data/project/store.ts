@@ -62,6 +62,30 @@ export const PART_CATEGORY_MAP: Record<string, BasePart[]> = {
   gps, buzzers, capacitors, propellers, batteries, tools,
 };
 
+/**
+ * What each part category is CALLED, in Arabic.
+ *
+ * Lifted out of `FinalReportScreen.tsx`, where it lived as a private constant.
+ * A category's name is platform data — the build flow, the report, the web
+ * workspace and any future surface all need it, and a second copy on the web
+ * would be a second vocabulary for the same twelve things. The keys are exactly
+ * `PART_CATEGORY_MAP`'s, and `scripts/testProject.ts` asserts they stay in step.
+ */
+export const PART_CATEGORY_LABEL_AR: Record<string, string> = {
+  videoUnits: 'نظام الفيديو (VTX)',
+  frames: 'الإطار (Frame)',
+  motors: 'المحركات (Motors)',
+  escs: 'الـESC',
+  flightControllers: 'الـFlight Controller',
+  receivers: 'الـReceiver',
+  gps: 'GPS',
+  buzzers: 'الـBuzzer',
+  capacitors: 'الـCapacitor',
+  propellers: 'المراوح (Props)',
+  batteries: 'البطارية (LiPo)',
+  tools: 'الأدوات',
+};
+
 export const ASSEMBLY_STORAGE_KEY = 'fpv-assembly-project-v1';
 export const SCHEMA_VERSION = 3;
 
@@ -137,6 +161,26 @@ const PROJECT_STORE: StoreDefinition<PersistedAssemblyProject> = {
 // Saving is a best-effort convenience, never a hard requirement — a
 // disabled/unavailable localStorage (private browsing, quota exceeded,
 // browser settings) must never crash the build flow. Silently no-ops.
+//
+// THIS WRITER MERGES; IT DOES NOT REPLACE.
+// ----------------------------------------
+// It used to build a fresh payload from its arguments alone, which meant the
+// sections it does not own — `rcSetup` and `videoSetup` — were dropped on every
+// call. And it IS called on every part change (see useAssemblyBuild.ts). So the
+// sequence "record your control link, then swap a motor" silently destroyed the
+// entire control-link record, and the same for the video record. Nothing
+// surfaced it: the write succeeded, the project still loaded, and the
+// configuration was simply gone.
+//
+// The build flow owns drone type, stage, size, voltage and parts. The workspace
+// owns rcSetup and videoSetup (see saveRcSetup/saveVideoSetup below). A writer
+// that owns half a document must carry the other half forward rather than
+// overwrite it with nothing — so the current payload is read first, and only
+// this writer's own fields are replaced.
+//
+// An explicitly-passed `rcSetup`/`videoSetup` still wins, so a caller that
+// genuinely wants to set them can; omitting them now means "leave them alone"
+// rather than "delete them".
 export function saveAssemblyProject(project: {
   droneTypeId: string;
   stageIndex: number;
@@ -144,7 +188,10 @@ export function saveAssemblyProject(project: {
   batteryVoltage?: number;
   parts: Record<string, BasePart>;
   rcSetup?: RcSetup;
+  videoSetup?: VideoSetup;
 }): void {
+  const current = loadStore(PROJECT_STORE);
+
   const payload: PersistedAssemblyProject = {
     version: SCHEMA_VERSION,
     droneTypeId: project.droneTypeId,
@@ -157,7 +204,12 @@ export function saveAssemblyProject(project: {
     partIds: Object.fromEntries(
       Object.entries(project.parts).map(([category, part]) => [category, part.id]),
     ),
-    ...(project.rcSetup ? { rcSetup: project.rcSetup } : {}),
+    ...(project.rcSetup ?? current?.rcSetup
+      ? { rcSetup: project.rcSetup ?? current?.rcSetup }
+      : {}),
+    ...(project.videoSetup ?? current?.videoSetup
+      ? { videoSetup: project.videoSetup ?? current?.videoSetup }
+      : {}),
   };
   saveStore(PROJECT_STORE, payload);
 }

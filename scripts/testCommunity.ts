@@ -890,10 +890,14 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('functions/src/') &&
     f !== 'scripts/testOrphanMedia.ts' &&
     f !== 'scripts/testAdminRoles.ts' &&
+    f !== 'scripts/testWebProject.ts' &&
+    f !== 'scripts/testProject.ts' &&
+    !f.startsWith('src/data/project/') &&
     f !== 'scripts/grantOwner.ts' &&
     !f.startsWith('docs/platform/') &&
     f !== 'RULES_FOR_PUBLISH.md',
   );
+  if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   // AuthContext.tsx used to be required to stay completely untouched by

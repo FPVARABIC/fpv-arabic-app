@@ -613,6 +613,12 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // Batch 4: the admin surface. Roles live in src/data/auth/ (already
     // allow-listed), everything else is under web/ or is a test/tool.
     f !== 'scripts/testAdminRoles.ts' &&
+    f !== 'scripts/testWebProject.ts' &&
+    f !== 'scripts/testWebProjectE2E.ts' &&
+    f !== 'scripts/testProject.ts' &&
+    !f.startsWith('src/data/project/') &&
+    !f.startsWith('src/data/roadmap') &&
+    f !== 'src/data/checklistsData.ts' &&
     f !== 'scripts/testWebAdminE2E.ts' &&
     f !== 'scripts/grantOwner.ts' &&
     f !== 'scripts/testCommunity.ts' &&

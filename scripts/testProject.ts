@@ -29,6 +29,12 @@ import {
 import { bfPageRegistry } from '../src/data/betaflight/pageRegistry';
 import { resolveLinkRoute, allKbModules, allKbArticles, getArticle } from '../src/data/kb/registry';
 import { buildStages } from '../src/data/assembly/buildStages';
+import { droneTypes } from '../src/data/assembly/droneTypes';
+import { frames } from '../src/data/assembly/parts/frames';
+import {
+  saveAssemblyProject, saveRcSetup, saveVideoSetup,
+  loadAndValidateAssemblyProject, clearAssemblyProject,
+} from '../src/data/project/store';
 import { motors } from '../src/data/assembly/parts/motors';
 import { escs } from '../src/data/assembly/parts/escs';
 import { batteries } from '../src/data/assembly/parts/batteries';
@@ -503,6 +509,77 @@ console.log('\n[11] The software centre reads the user\'s own setup');
   );
   ok(`findings link to real Betaflight pages (${allBfTargets.size})`,
     allBfTargets.size > 0 && [...allBfTargets].every(id => bfIds.has(id)));
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * The project store preserves what it does not own
+ *
+ * A REGRESSION TEST FOR REAL DATA LOSS
+ * ------------------------------------
+ * `saveAssemblyProject` used to construct its payload from its arguments alone.
+ * It is called on EVERY part change by the build flow, and the build flow does
+ * not pass `rcSetup` or `videoSetup` — so recording a control link and then
+ * swapping a motor silently destroyed the entire control-link record, and the
+ * video record with it. The write succeeded, the project still loaded, and the
+ * configuration was simply gone.
+ *
+ * The sequence below is exactly that: configure, then make an ordinary part
+ * change, then read back. It fails on the old writer and passes on the merging
+ * one.
+ * ──────────────────────────────────────────────────────────────────────────── */
+console.log('\n[storage] a part change does not destroy the control-link or video record');
+{
+  // `platform/storage.ts` talks to localStorage and try/catch-wraps it, so in
+  // node every write silently no-ops and every read returns null. A minimal
+  // in-memory shim is what makes the round trip observable at all — it is the
+  // real store code being exercised, only the browser API is stood in for.
+  const mem = new Map<string, string>();
+  (globalThis as Record<string, unknown>).localStorage = {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => { mem.set(k, v); },
+    removeItem: (k: string) => { mem.delete(k); },
+    clear: () => mem.clear(),
+  };
+
+  const dt = droneTypes[0].id;
+  const twoMotors = motors.slice(0, 2);
+
+  saveAssemblyProject({
+    droneTypeId: dt, stageIndex: 2, sizeInch: 5, batteryVoltage: 6,
+    parts: { frames: frames[0], motors: twoMotors[0] },
+  });
+
+  const withRc = saveRcSetup({ txSystem: 'elrs', txBand: '2.4ghz', serialProtocol: 'crsf' });
+  ok('the control-link record is stored', withRc?.rcSetup?.txSystem === 'elrs');
+
+  const withVideo = saveVideoSetup({ ecosystem: 'analog-58', airUnitModel: 'Test VTX' });
+  ok('the video record is stored', withVideo?.videoSetup?.ecosystem === 'analog-58');
+  ok('storing the video record leaves the control-link record intact',
+    withVideo?.rcSetup?.txSystem === 'elrs');
+
+  // The ordinary thing a user does next: change a part.
+  saveAssemblyProject({
+    droneTypeId: dt, stageIndex: 3, sizeInch: 5, batteryVoltage: 6,
+    parts: { frames: frames[0], motors: twoMotors[1] ?? twoMotors[0] },
+  });
+
+  const after = loadAndValidateAssemblyProject();
+  ok('the part change itself was saved', after?.stageIndex === 3);
+  ok('THE CONTROL-LINK RECORD SURVIVES A PART CHANGE', after?.rcSetup?.txSystem === 'elrs');
+  ok('THE VIDEO RECORD SURVIVES A PART CHANGE', after?.videoSetup?.ecosystem === 'analog-58');
+  ok('…with its detail, not merely a truthy object', after?.videoSetup?.airUnitModel === 'Test VTX');
+
+  // An explicit value still wins — merging must not make the field unwritable.
+  saveAssemblyProject({
+    droneTypeId: dt, stageIndex: 3, sizeInch: 5, batteryVoltage: 6,
+    parts: { frames: frames[0], motors: twoMotors[0] },
+    rcSetup: { txSystem: 'crossfire', txBand: 'sub-ghz' },
+  });
+  ok('an explicitly-passed control-link record still replaces the stored one',
+    loadAndValidateAssemblyProject()?.rcSetup?.txSystem === 'crossfire');
+
+  clearAssemblyProject();
+  ok('clearing removes the project entirely', loadAndValidateAssemblyProject() === null);
 }
 
 console.log(`\n✅ testProject: ${passed} assertions passed\n`);
