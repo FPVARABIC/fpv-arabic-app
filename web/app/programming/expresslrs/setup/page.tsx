@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'المسار الكامل لإعداد ExpressLRS: تحديد الأجهزة، وتجهيز الراديو، وبناء الفيرموير، '
     + 'وتحديث الطرفين، والربط، والتوصيل بمتحكم الطيران، والتحقق النهائي قبل الطيران.',
   alternates: { canonical: '/programming/expresslrs/setup' },
-  openGraph: { type: 'article', title: 'إعداد ExpressLRS خطوة بخطوة — FPV بالعربي' },
+  openGraph: { type: 'article', title: 'إعداد ExpressLRS خطوة بخطوة — FPVARABIC' },
 };
 
 const WARN_COLOR: Record<string, string> = {

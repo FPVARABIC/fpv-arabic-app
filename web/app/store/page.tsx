@@ -10,10 +10,10 @@ import { publicStoreSettings } from '@/lib/server/storeSettings';
 export const metadata: Metadata = {
   title: 'المتجر',
   description:
-    'متجر FPV بالعربي: عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها، '
+    'متجر FPVARABIC: عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها، '
     + 'ومع كل طلب خدمة الإعداد التي نشرحها في الموسوعة.',
   alternates: { canonical: '/store' },
-  openGraph: { type: 'website', title: 'متجر FPV بالعربي' },
+  openGraph: { type: 'website', title: 'متجر FPVARABIC' },
 };
 
 /** See the note on the section page: on-demand revalidation with a floor. */

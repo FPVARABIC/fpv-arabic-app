@@ -1,0 +1,110 @@
+# Deploy FPVARABIC to production.
+#
+# WHAT THIS REMOVES FROM THE OWNER'S PLATE
+# ----------------------------------------
+# Everything except one secret, pasted once. After that, deployment is a
+# consequence of merging — no dashboard, no build settings, no root-directory
+# field, no framework dropdown. All of it is declared in `vercel.json` and
+# here, in the repository, where it is reviewable and where it cannot silently
+# differ from what was tested.
+#
+# SETUP — ONE TIME, ONE VALUE
+# ---------------------------
+#   1. https://vercel.com/account/tokens  →  create a token
+#   2. This repo → Settings → Secrets and variables → Actions → New secret
+#         Name:  VERCEL_TOKEN
+#         Value: the token
+#
+# That is the whole setup. The first run creates the project, links it, and
+# prints the live URL in the job summary.
+#
+# WHY THE TOKEN CANNOT BE COMMITTED
+# ---------------------------------
+# It authorises deployment to the account. A token in the repository is a
+# token anyone with read access can deploy with — and, on a public repository,
+# anyone at all. This is the one value that must come from the account holder.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, claude/web-platform-foundation]
+  workflow_dispatch:
+    inputs:
+      production:
+        description: 'Promote to the production domain'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Without the token this job would fail on every push and turn the repo's
+    # checks red for a reason nobody can fix by changing code. Skipping when it
+    # is absent means the workflow lies dormant until it is configured.
+    if: ${{ github.repository_owner != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for the deployment token
+        id: guard
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Deployment not configured yet"
+              echo ""
+              echo "Add a repository secret named \`VERCEL_TOKEN\` and re-run."
+              echo "See \`DEPLOY.md\` for the two steps."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.configured == 'true'
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        if: steps.guard.outputs.configured == 'true'
+        run: npm install --global vercel@latest
+
+      # `--yes` accepts the project-creation prompts, so the very first run
+      # needs no interaction. The project name fixes the default URL to
+      # fpvarabic-*.vercel.app rather than a name derived from the directory.
+      - name: Pull deployment settings
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          vercel pull --yes \
+            --environment=${{ inputs.production && 'production' || 'preview' }} \
+            --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        if: steps.guard.outputs.configured == 'true'
+        run: vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy
+        if: steps.guard.outputs.configured == 'true'
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt ${{ inputs.production && '--prod' || '' }} \
+                  --token="${{ secrets.VERCEL_TOKEN }}")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          {
+            echo "### FPVARABIC deployed"
+            echo ""
+            echo "**URL:** $URL"
+            echo ""
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Branch:** \`${{ github.ref_name }}\`"
+            echo "**Kind:** ${{ inputs.production && 'production' || 'preview' }}"
+          } >> "$GITHUB_STEP_SUMMARY"

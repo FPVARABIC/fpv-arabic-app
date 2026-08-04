@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">FPV بالعربي</string>
-    <string name="title_activity_main">FPV بالعربي</string>
+    <string name="app_name">FPVARABIC</string>
+    <string name="title_activity_main">FPVARABIC</string>
     <string name="package_name">com.fpvarabic.app</string>
     <string name="custom_url_scheme">com.fpvarabic.app</string>
 </resources>

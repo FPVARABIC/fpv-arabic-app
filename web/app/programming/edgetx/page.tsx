@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     'نظام تشغيل جهاز التحكم: النموذج والوحدة الراديوية، والمدخلات والمزج والمخارج، '
     + 'والتليمتري وModel Match والحماية عند فقدان الإشارة، والصيانة وأعطال جهة الراديو.',
   alternates: { canonical: '/programming/edgetx' },
-  openGraph: { type: 'website', title: 'EdgeTX — FPV بالعربي' },
+  openGraph: { type: 'website', title: 'EdgeTX — FPVARABIC' },
 };
 
 const RISK_CLASS: Record<string, string> = {

@@ -4,6 +4,7 @@ import { NavTabs } from '@/components/NavTabs';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { CartBadge } from '@/components/store/CartControls';
 import { isStaff, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
+import { BRAND_NAME, BRAND_NAME_AR } from '@core/data/brand';
 
 /**
  * The site header — the web's counterpart to the phone app's bottom navigation.
@@ -56,7 +57,7 @@ export const SiteHeader: React.FC<{
         <Link
           href="/"
           style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}
-          aria-label="FPV بالعربي — الصفحة الرئيسية"
+          aria-label={`${BRAND_NAME} — الصفحة الرئيسية`}
         >
           <span
             aria-hidden
@@ -70,8 +71,24 @@ export const SiteHeader: React.FC<{
           >
             F
           </span>
-          <span style={{ fontWeight: 900, fontSize: 16, color: 'var(--nav-ink)' }}>
-            FPV بالعربي
+          {/* The wordmark: the official name, with the Arabic descriptor under
+              it where there is room. One brand in two scripts, not two brands. */}
+          <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05 }}>
+            <span
+              style={{
+                fontWeight: 900, fontSize: 16.5, color: 'var(--nav-ink)',
+                letterSpacing: '-0.01em',
+              }}
+              dir="ltr"
+            >
+              {BRAND_NAME}
+            </span>
+            <span
+              className="wordmark-sub"
+              style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--nav-ink-dim)' }}
+            >
+              {BRAND_NAME_AR}
+            </span>
           </span>
         </Link>
 

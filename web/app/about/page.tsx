@@ -9,7 +9,7 @@ import { AccountRail } from '@/components/AccountRail';
 export const metadata: Metadata = {
   title: 'حول المنصّة',
   description:
-    'ما هي FPV بالعربي، وما الذي تلتزم به: مصادر موثّقة، وتواريخ مراجعة، ولا ادّعاء '
+    'ما هي FPVARABIC، وما الذي تلتزم به: مصادر موثّقة، وتواريخ مراجعة، ولا ادّعاء '
     + 'انتماء لأي شركة مصنّعة.',
   alternates: { canonical: '/about' },
 };
@@ -109,7 +109,7 @@ export default async function AboutPage() {
             >
               F
             </span>
-            <h1 className="page-title" style={{ marginTop: 16 }}>FPV بالعربي</h1>
+            <h1 className="page-title" style={{ marginTop: 16 }}>FPVARABIC</h1>
             <p style={{ fontSize: 15, color: 'var(--text-dim)', margin: '12px 0 0', lineHeight: 2, maxWidth: '62ch' }}>
               منصّة عربية للطيران بالمنظور الأول: تشرح، وتشخّص، وتحسب التوافق، وتبيع
               ما راجعته. الهدف واحد — أن يفهم من يقرأ بالعربية ما يفعله، لا أن يقلّد

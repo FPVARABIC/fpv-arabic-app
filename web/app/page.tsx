@@ -21,7 +21,7 @@ import { href } from '@/lib/webRoutes';
  */
 
 export const metadata = {
-  title: 'FPV بالعربي — منصة الطيران بالمنظور الأول بالعربية',
+  title: 'FPVARABIC — منصة الطيران بالمنظور الأول بالعربية',
   alternates: { canonical: '/' },
 };
 

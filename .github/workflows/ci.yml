@@ -1,0 +1,74 @@
+# Continuous verification for FPVARABIC.
+#
+# Runs on every push and pull request, needs no secrets, and is the gate that
+# decides whether a commit is deployable. It exists because "it built on my
+# machine" is not a claim anyone can check — this is.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # The shared core lives in ../src and is imported by the web app, so both
+      # manifests have to be installed before either surface can build.
+      - name: Install (root — the shared core)
+        run: npm ci
+
+      - name: Install (web)
+        run: npm ci --prefix web
+
+      - name: Typecheck — phone app
+        run: npx tsc -b --pretty false
+
+      - name: Typecheck — web
+        run: npm run web:typecheck
+
+      - name: Lint — web
+        run: npm --prefix web run lint
+
+      # The platform's own suites. These are the ones that encode the rules a
+      # build cannot check: catalogue provenance, role capabilities, the
+      # identity parity between the two surfaces.
+      - name: Test — shared core and web
+        run: |
+          npm run test:web-core
+          npm run test:web-identity
+          npm run test:web-project
+          npm run test:web-software
+          npm run test:retrieval
+          npm run test:admin-roles
+          npm run test:store
+          npm run test:web-auth
+          npm run test:web-community
+          npm run test:platform-core
+          npm run test:project
+          npm run test:navigation-regression
+          npm run test:kb
+
+      - name: Build — web (production)
+        run: npm run web:build
+
+      # The phone bundle is built too: the two surfaces share a core, so a
+      # change that breaks the app is a change this repository must not ship.
+      - name: Build — phone app
+        run: npm run build

@@ -33,7 +33,7 @@ export async function generateMetadata(
     alternates: { canonical: webHref({ kind: 'edgetx', id: page.id }).href ?? undefined },
     openGraph: {
       type: 'article',
-      title: `${page.titleAr} — EdgeTX — FPV بالعربي`,
+      title: `${page.titleAr} — EdgeTX — FPVARABIC`,
       description: page.summaryAr.slice(0, 160),
     },
   };

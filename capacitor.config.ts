@@ -10,7 +10,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // contents are never actually loaded into the WebView.
 const config: CapacitorConfig = {
   appId: 'com.fpvarabic.app',
-  appName: 'FPV بالعربي',
+  appName: 'FPVARABIC',
   webDir: 'dist',
   server: {
     url: 'https://fpv-arabic-app.vercel.app',

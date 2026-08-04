@@ -45,7 +45,7 @@ export async function generateMetadata(
     description: t.symptomAr,
     keywords: t.aliases,
     alternates: { canonical: href({ kind: 'dx', id: t.id }) ?? undefined },
-    openGraph: { type: 'article', title: `${t.titleAr} — FPV بالعربي`, description: t.symptomAr },
+    openGraph: { type: 'article', title: `${t.titleAr} — FPVARABIC`, description: t.symptomAr },
   };
 }
 

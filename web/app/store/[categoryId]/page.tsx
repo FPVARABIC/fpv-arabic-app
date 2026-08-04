@@ -36,7 +36,7 @@ export async function generateMetadata(
     title: `${c.titleAr} — المتجر`,
     description: c.blurbAr,
     alternates: { canonical: categoryHref(c.id) },
-    openGraph: { type: 'website', title: `${c.titleAr} — متجر FPV بالعربي`, description: c.blurbAr },
+    openGraph: { type: 'website', title: `${c.titleAr} — متجر FPVARABIC`, description: c.blurbAr },
   };
 }
 

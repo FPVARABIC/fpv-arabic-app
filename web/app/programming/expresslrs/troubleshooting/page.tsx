@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     'أعطال ExpressLRS بالعرَض لا بالسبب: انعدام الطاقة، وتعذّر الربط، وضعف الإشارة، '
     + 'وأخطاء المنافذ، وفشل التحديث — بفحوص مرتّبة تبدأ من الأقل خطراً.',
   alternates: { canonical: '/programming/expresslrs/troubleshooting' },
-  openGraph: { type: 'article', title: 'تشخيص أعطال ExpressLRS — FPV بالعربي' },
+  openGraph: { type: 'article', title: 'تشخيص أعطال ExpressLRS — FPVARABIC' },
 };
 
 const APPLICABILITY_AR: Record<string, string> = {

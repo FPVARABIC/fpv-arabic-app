@@ -32,7 +32,7 @@ export async function generateMetadata(
     alternates: { canonical: webHref({ kind: 'video', id: page.id }).href ?? undefined },
     openGraph: {
       type: 'article',
-      title: `${page.titleAr} — أدوات الفيديو — FPV بالعربي`,
+      title: `${page.titleAr} — أدوات الفيديو — FPVARABIC`,
       description: page.summaryAr.slice(0, 160),
     },
   };

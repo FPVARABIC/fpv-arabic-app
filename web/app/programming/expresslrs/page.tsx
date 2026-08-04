@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     'إعداد ExpressLRS خطوة بخطوة وتشخيص أعطاله: تحديد الأجهزة، وبناء الفيرموير، والتحديث، '
     + 'والربط، والتوصيل بمتحكم الطيران، ثم التحقق النهائي قبل الطيران.',
   alternates: { canonical: '/programming/expresslrs' },
-  openGraph: { type: 'website', title: 'ExpressLRS — FPV بالعربي' },
+  openGraph: { type: 'website', title: 'ExpressLRS — FPVARABIC' },
 };
 
 /**

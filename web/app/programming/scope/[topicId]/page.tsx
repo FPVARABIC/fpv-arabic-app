@@ -23,7 +23,7 @@ export async function generateMetadata(
     alternates: { canonical: SECTION_ROUTES.scope(scope.id) },
     openGraph: {
       type: 'article',
-      title: `${scope.titleAr} — FPV بالعربي`,
+      title: `${scope.titleAr} — FPVARABIC`,
       description: scope.whatItIsAr.slice(0, 160),
     },
   };

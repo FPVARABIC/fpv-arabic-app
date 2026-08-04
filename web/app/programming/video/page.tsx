@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     'ضبط نظام الفيديو وتحديثه: المنافذ وجدول القنوات وطبقة المعلومات في Betaflight، '
     + 'وأدوات DJI وWalksnail وHDZero، والتحديث والاقتران والاسترجاع حين يتوقف في منتصفه.',
   alternates: { canonical: '/programming/video' },
-  openGraph: { type: 'website', title: 'أدوات الفيديو — FPV بالعربي' },
+  openGraph: { type: 'website', title: 'أدوات الفيديو — FPVARABIC' },
 };
 
 const RISK_CLASS: Record<string, string> = {

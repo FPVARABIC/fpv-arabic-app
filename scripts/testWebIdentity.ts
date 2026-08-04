@@ -18,7 +18,7 @@
  * Every check below is derived from a real defect found while doing this work.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -242,7 +242,7 @@ console.log('\n[7] The pages the app has, the web now has too');
   for (const [route, needle] of [
     ['web/app/settings/page.tsx', 'الإعدادات'],
     ['web/app/contact/page.tsx', 'اتصل بنا'],
-    ['web/app/about/page.tsx', 'FPV بالعربي'],
+    ['web/app/about/page.tsx', 'FPVARABIC'],
   ] as const) {
     ok(`${route} exists`, existsSync(path.join(ROOT, route)));
     ok(`…and is the page it claims to be`, read(route).includes(needle));
@@ -379,6 +379,136 @@ console.log('\n[10] The dependency rule still holds');
   });
   ok('…and the shared core does not import it, so there is no dual-instance risk',
     !coreImportsLucide);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[11] The platform has ONE official name, in one place');
+{
+  const brand = read('src/data/brand.ts');
+  ok('the official name is declared once, as a value',
+    /export const BRAND_NAME = 'FPVARABIC';/.test(brand));
+  ok('the canonical domain is declared beside it',
+    /export const BRAND_DOMAIN = 'fpvarabic\.com';/.test(brand));
+
+  // The rename's whole point: the name is no longer typed out by hand in the
+  // files that DEFINE the site's identity to a browser or a search engine.
+  for (const f of ['web/app/layout.tsx', 'web/components/SiteHeader.tsx', 'web/app/manifest.ts']) {
+    ok(`${path.basename(f)} imports the name rather than spelling it`,
+      /@core\/data\/brand/.test(read(f)));
+  }
+
+  // The previous name must be gone from everything a visitor can see.
+  const surfaces = ['web/app', 'web/components', 'web/lib'];
+  let stale = 0;
+  for (const dir of surfaces) {
+    const walk = (d: string): string[] => {
+      const out: string[] = [];
+      for (const e of readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
+        const rel = `${d}/${e.name}`;
+        if (e.isDirectory()) out.push(...walk(rel));
+        else if (/\.(ts|tsx)$/.test(e.name)) out.push(rel);
+      }
+      return out;
+    };
+    for (const f of walk(dir)) {
+      if (read(f).includes('FPV بالعربي')) { stale++; console.log(`     stale: ${f}`); }
+    }
+  }
+  ok(`no web file still carries the previous name (${stale} found)`, stale === 0);
+
+  // Android: the label may change, the identity may NOT. An application id is
+  // the permanent identity of an installed app; changing it produces a second,
+  // unrelated app that cannot update the first.
+  const strings = read('android/app/src/main/res/values/strings.xml');
+  ok('the Android label is the official name', /<string name="app_name">FPVARABIC<\/string>/.test(strings));
+  ok('the Android application id is UNCHANGED',
+    /com\.fpvarabic\.app/.test(read('android/app/build.gradle')));
+  ok('…and the shared brand file records it as read-only',
+    /ANDROID_APPLICATION_ID = 'com\.fpvarabic\.app'/.test(brand));
+  ok('Capacitor agrees with the Android label',
+    /appName: 'FPVARABIC'/.test(read('capacitor.config.ts')));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[12] A preview can never be mistaken for the official site');
+{
+  const origin = read('web/lib/siteOrigin.ts');
+
+  // The defect this locks down: `isCanonicalOrigin()` first asked whether
+  // siteOrigin() equalled the brand origin — but siteOrigin() FALLS BACK to
+  // the brand origin, so every unconfigured build claimed to be production and
+  // served `index, follow`. Localhost did exactly that.
+  ok('indexing requires an EXPLICIT declaration, not a fallback',
+    /const explicit = process\.env\.NEXT_PUBLIC_SITE_URL\?\.trim\(\);\s*\n\s*if \(!explicit\) return false;/
+      .test(origin));
+  ok('…and the function never compares against siteOrigin()\'s fallback',
+    !/return siteOrigin\(\) === BRAND_ORIGIN/.test(origin));
+
+  const robots = read('web/app/robots.ts');
+  ok('robots.txt disallows everything when not canonical',
+    /if \(!isCanonicalOrigin\(\)\)[\s\S]{0,120}disallow: '\/'/.test(robots));
+  ok('…and only publishes a sitemap when it IS canonical',
+    robots.indexOf('sitemap:') > robots.indexOf('isCanonicalOrigin'));
+
+  const sitemap = read('web/app/sitemap.ts');
+  ok('the sitemap is empty on a preview', /if \(!isCanonicalOrigin\(\)\) return \[\];/.test(sitemap));
+  ok('the sitemap is generated from the registries, not hand-written',
+    /allKbModules/.test(sitemap) && /moduleArticles/.test(sitemap));
+  ok('…and excludes routes that require an account',
+    /requiresAuth/.test(sitemap));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[13] Deployment is configured in the repository, not in a dashboard');
+{
+  ok('vercel.json exists at the repository root', existsSync(path.join(ROOT, 'vercel.json')));
+  const vercel = JSON.parse(read('vercel.json')) as Record<string, unknown>;
+  ok('…and declares the build itself, so no Root Directory must be set by hand',
+    typeof vercel.buildCommand === 'string' && (vercel.buildCommand as string).includes('web'));
+  ok('…and sets security headers', Array.isArray(vercel.headers));
+
+  const headers = JSON.stringify(vercel.headers);
+  for (const h of ['X-Content-Type-Options', 'Referrer-Policy', 'Strict-Transport-Security']) {
+    ok(`${h} is sent`, headers.includes(h));
+  }
+
+  ok('a CI workflow verifies every push', existsSync(path.join(ROOT, '.github/workflows/ci.yml')));
+  const ci = read('.github/workflows/ci.yml');
+  ok('…and it runs the identity suite', ci.includes('test:web-identity'));
+  ok('…and builds BOTH surfaces, because they share a core',
+    ci.includes('web:build') && /run: npm run build/.test(ci));
+
+  const deploy = read('.github/workflows/deploy.yml');
+  ok('the deploy workflow lies dormant until a token exists',
+    /configured=false/.test(deploy) && /secrets\.VERCEL_TOKEN/.test(deploy));
+
+  // The one rule that matters most about deployment configuration.
+  ok('no deployment token is committed anywhere',
+    !/vercel_[A-Za-z0-9]{20,}/.test(deploy + read('DEPLOY.md') + read('vercel.json')));
+  ok('DEPLOY.md tells the owner the exact two steps', read('DEPLOY.md').includes('VERCEL_TOKEN'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[14] The installable site carries the product\'s own identity');
+{
+  const mf = read('web/app/manifest.ts');
+  ok('the manifest is right-to-left and Arabic', /dir: 'rtl'/.test(mf) && /lang: 'ar'/.test(mf));
+  ok('its theme colour is the navigation bar\'s mint', /theme_color: '#5EEAD4'/.test(mf));
+  ok('its background is the page cream, so a launch shows no white flash',
+    /background_color: '#FAF8F3'/.test(mf));
+  ok('it ships a maskable icon, so a launcher does not crop the mark',
+    /purpose: 'maskable'/.test(mf));
+
+  // The mark must be the product's gradient, not a colour used nowhere else.
+  const icon = read('web/public/icon.svg');
+  ok('the icon uses the brand gradient', /#18E6E6/.test(icon) && /#00B4FF/.test(icon));
+  ok('…and not the indigo pair it shipped with before',
+    !/#818cf8/.test(icon) && !/#38bdf8/.test(icon));
+  for (const f of ['web/public/icon-192.png', 'web/public/icon-512.png',
+    'web/public/icon-maskable-512.png', 'web/public/og.png']) {
+    ok(`${path.basename(f)} exists`, existsSync(path.join(ROOT, f)));
+  }
 }
 
 console.log(`\n${failed === 0 ? '✅' : '❌'} testWebIdentity: ${passed} passed, ${failed} failed`);

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     'صفحات Betaflight Configurator بالعربية: المنافذ، والمستقبل، والأوضاع، والمحركات، '
     + 'والحماية عند فقدان الإشارة — بأسمائها الإنجليزية الأصلية ومصادرها وإصداراتها.',
   alternates: { canonical: '/betaflight' },
-  openGraph: { type: 'website', title: 'Betaflight — FPV بالعربي' },
+  openGraph: { type: 'website', title: 'Betaflight — FPVARABIC' },
 };
 
 const SAFETY_CLASS: Record<string, string> = {

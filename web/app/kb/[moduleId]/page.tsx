@@ -31,7 +31,7 @@ export async function generateMetadata(
     title: m.titleAr,
     description: m.summaryAr,
     alternates: { canonical: href({ kind: 'module', id: m.id }) ?? undefined },
-    openGraph: { title: `${m.titleAr} — FPV بالعربي`, description: m.summaryAr, type: 'article' },
+    openGraph: { title: `${m.titleAr} — FPVARABIC`, description: m.summaryAr, type: 'article' },
   };
 }
 

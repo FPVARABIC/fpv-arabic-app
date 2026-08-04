@@ -1007,3 +1007,8 @@ details.card-sm > summary:focus-visible {
   .with-rail > *:first-child { grid-column: 2; grid-row: 1; }
   .with-rail > *:last-child { grid-column: 1; grid-row: 1; }
 }
+
+/* The wordmark's Arabic descriptor. Dropped below 380px, where the header has
+   to choose between the name and the search control and the name wins. */
+.wordmark-sub { display: none; }
+@media (min-width: 380px) { .wordmark-sub { display: block; } }

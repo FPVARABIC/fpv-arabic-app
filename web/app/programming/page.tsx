@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/programming' },
   openGraph: {
     type: 'website',
-    title: 'مركز البرامج — FPV بالعربي',
+    title: 'مركز البرامج — FPVARABIC',
     description: 'البرنامج ← الإعداد ← القطعة ← مشروعك ← الاختبار ← التشخيص.',
   },
 };

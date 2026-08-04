@@ -30,7 +30,7 @@ export async function generateMetadata(
     alternates: { canonical: webHref({ kind: 'betaflight', id: entry.id }).href ?? undefined },
     openGraph: {
       type: 'article',
-      title: `${entry.officialTitle} — Betaflight — FPV بالعربي`,
+      title: `${entry.officialTitle} — Betaflight — FPVARABIC`,
       description: entry.page.summaryAr.slice(0, 160),
     },
   };

@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 import path from 'node:path';
 
 /**
- * The web surface of FPV بالعربي.
+ * The web surface of FPVARABIC.
  *
  * `outputFileTracingRoot` points at the repository root rather than `web/`
  * because the shared core lives OUTSIDE this directory, in `../src`. Without

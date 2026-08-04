@@ -38,11 +38,11 @@ export async function generateMetadata(
   const snippet = post.text.replace(/\s+/g, ' ').slice(0, 155);
   return {
     title: `${post.authorName} في المجتمع`,
-    description: snippet || 'منشور في مجتمع FPV بالعربي',
+    description: snippet || 'منشور في مجتمع FPVARABIC',
     alternates: { canonical: `/community/posts/${post.id}` },
     openGraph: {
       type: 'article',
-      title: `${post.authorName} — مجتمع FPV بالعربي`,
+      title: `${post.authorName} — مجتمع FPVARABIC`,
       description: snippet,
     },
     // Community posts are indexable, but they are user content: a search engine
@@ -85,7 +85,7 @@ export default async function PostPage(
           or promoting a fragment of it to a title it was never written as.
         */}
         <h1 className="sr-only">
-          منشور من {post.authorName} في مجتمع FPV بالعربي
+          منشور من {post.authorName} في مجتمع FPVARABIC
         </h1>
         <header style={{ display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap' }}>
           <span
