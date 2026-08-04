@@ -1,0 +1,108 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { STORE_GROUP_LABEL_AR, STORE_GROUP_BLURB_AR } from '@core/data/store/categories';
+import {
+  categoriesInGroup, categoryProductCount, publicSettings, categoryHref, STORE_CATALOGUE,
+} from '@/lib/store';
+import { StoreBanner } from '@/components/store/StorePieces';
+
+export const metadata: Metadata = {
+  title: 'المتجر',
+  description:
+    'متجر FPV بالعربي: عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها، '
+    + 'ومع كل طلب خدمة الإعداد التي نشرحها في الموسوعة.',
+  alternates: { canonical: '/store' },
+  openGraph: { type: 'website', title: 'متجر FPV بالعربي' },
+};
+
+/**
+ * The storefront.
+ *
+ * WHAT MAKES IT DIFFERENT FROM THE SHOPS IT COMPETES WITH
+ * -------------------------------------------------------
+ * Three to five products per section, chosen to span a real decision, and every
+ * section says what to READ before choosing. The large FPV shops sort by part
+ * type because that is how a supplier's spreadsheet is sorted; the result is a
+ * beginner facing four hundred motors with no way in. Curation is not a smaller
+ * catalogue — it is the shop doing the reader's first hour of work for them.
+ *
+ * WHY AIRCRAFT COME FIRST AND COMPONENTS SECOND
+ * ---------------------------------------------
+ * Someone who does not know what they need should be able to buy the right
+ * aircraft without ever opening a component section. Someone who does know
+ * should not have to scroll past aircraft to reach a receiver. Two groups, in
+ * that order, answers both.
+ */
+export default function StorePage() {
+  const settings = publicSettings();
+  const aircraft = categoriesInGroup('aircraft');
+  const components = categoriesInGroup('components');
+  const total = STORE_CATALOGUE.filter(p => p.published).length;
+
+  return (
+    <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 1100 }}>
+      <nav aria-label="مسار التنقّل" style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
+        <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> المتجر
+      </nav>
+
+      <header style={{ margin: '14px 0 18px' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>المتجر</h1>
+        <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 2, margin: '8px 0 0', maxWidth: 780 }}>
+          كل منتج هنا موجود لأننا نوصي به، لا لأنه متوفّر عند المورد. في كل قسم
+          ثلاثة إلى خمسة خيارات فقط، مرتّبة بحيث يظهر الفرق بينها من أول نظرة —
+          ومع كل واحد منها ما يجب أن تقرأه قبل أن تقرّر.
+        </p>
+      </header>
+
+      <StoreBanner settings={settings} />
+
+      <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '16px 0 0' }}>
+        <span dir="ltr">{aircraft.length + components.length}</span> قسماً،
+        و<span dir="ltr">{total}</span> منتجاً مختاراً. {settings.shippingNoteAr}
+      </p>
+
+      {([
+        ['aircraft', aircraft] as const,
+        ['components', components] as const,
+      ]).map(([group, cats]) => (
+        <section key={group} className="admin-section" aria-labelledby={`g-${group}`}>
+          <h2 id={`g-${group}`}>{STORE_GROUP_LABEL_AR[group]}</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '0 0 14px', lineHeight: 1.95 }}>
+            {STORE_GROUP_BLURB_AR[group]}
+          </p>
+
+          <div style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fit, minmax(255px, 1fr))' }}>
+            {cats.map(c => {
+              const n = categoryProductCount(c.id);
+              return (
+                <Link key={c.id} href={categoryHref(c.id)} className="card-sm"
+                  data-testid={`store-category-${c.id}`}
+                  style={{ display: 'block', padding: '14px 16px', minWidth: 0 }}>
+                  <span style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 14.5, fontWeight: 900 }}>{c.titleAr}</span>
+                    <span className="ltr" style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+                      {c.titleEn}
+                    </span>
+                  </span>
+                  <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-dim)', marginTop: 7, lineHeight: 1.9 }}>
+                    {c.blurbAr}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-dimmer)', marginTop: 9 }}>
+                    <span dir="ltr">{n}</span> {n === 1 ? 'خيار' : 'خيارات'} مختارة
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      {settings.regulatoryNoteAr && (
+        <p className="card-sm" data-testid="store-regulatory"
+          style={{ padding: '13px 15px', marginTop: 28, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+          {settings.regulatoryNoteAr}
+        </p>
+      )}
+    </div>
+  );
+}

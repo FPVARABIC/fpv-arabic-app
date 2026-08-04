@@ -890,5 +890,75 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    // ── The store ──────────────────────────────────────────────────────────
+    //
+    // THE RULE THAT SHAPES ALL OF THESE
+    // ---------------------------------
+    // Firestore allows or denies a WHOLE DOCUMENT. There is no way to return
+    // a document with a field withheld. So «the customer may see the price but
+    // not the cost» cannot be expressed as a condition — it can only be
+    // expressed as two collections, and that is what these are.
+    //
+    //   storeProducts   public. price, description, availability.
+    //   storeSupply     staff only. supplier, cost, margin override.
+    //   storeSettings   split the same way, for the same reason: publishing
+    //                   the margin alongside the price publishes the cost,
+    //                   because one divides into the other.
+    //
+    // Every write here is denied to clients outright. Products are priced from
+    // data the client cannot read, so a client-computed price would be a
+    // client-chosen price — the classic storefront hole where a browser posts
+    // its own total. Staff write through the server, which holds the admin SDK
+    // and bypasses these rules by design.
+
+    function isStoreStaff() {
+      return isSignedIn() && callerProfile().role in ['admin', 'owner'];
+    }
+
+    match /storeProducts/{productId} {
+      // Anyone may read a PUBLISHED product, signed in or not — a storefront
+      // that requires an account to browse is a storefront nobody browses.
+      // An unpublished product is invisible to everyone but staff, which is
+      // what makes «draft» a real state rather than a hidden-by-the-UI one.
+      allow read: if resource.data.published == true || isStoreStaff();
+
+      // Never from a browser. The price is computed server-side from the
+      // supply record, and a client that could write this could set it.
+      allow write: if false;
+    }
+
+    match /storeSupply/{productId} {
+      // The supplier, what we paid, and the margin. No customer, no moderator,
+      // no editor — the two roles that run the business, and nobody else.
+      allow read: if isStoreStaff();
+      allow write: if false;
+    }
+
+    match /storeSettings/{docId} {
+      // `public` carries the banner, the currency and the shipping note.
+      // `private` carries the default margin and is staff-only, because the
+      // margin plus the price is the cost.
+      allow read: if docId == 'public' || isStoreStaff();
+      allow write: if false;
+    }
+
+    match /storeOrders/{orderId} {
+      // An order is readable by the person who placed it and by staff. Orders
+      // require sign-in precisely so that this sentence can be written: a
+      // guest order has no owner, and «only the owner may read it» has no
+      // meaning without one.
+      allow read: if isSignedIn()
+                  && (resource.data.customerUid == request.auth.uid || isStoreStaff());
+
+      // Created through the server, never directly. A client-written order
+      // would carry client-written prices, and the whole point of freezing the
+      // price at order time is that it is OUR number, not the browser's.
+      //
+      // A customer cannot edit an order after placing it either: an order is a
+      // record of what was agreed, and a record both sides can rewrite is not
+      // a record. Changes go through staff, who leave an audit entry.
+      allow write: if false;
+    }
   }
 }

@@ -160,6 +160,14 @@ export const SECTION_ROUTES = {
   /** The search page, so a "search for this" link is never hand-written. */
   search: '/search',
   /**
+   * The store.
+   *
+   * A commercial section rather than content, so it has no `Destination` kind:
+   * the resolver models what the platform KNOWS, and a product for sale is not
+   * that. It lives on the web only — the phone app has no storefront.
+   */
+  store: '/store',
+  /**
    * The honest-scope page for a program this platform does not document.
    * Never linked for a program that HAS pages — those resolve as destinations.
    */

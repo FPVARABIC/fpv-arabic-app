@@ -32,7 +32,7 @@ export interface NavItem {
   status?: 'live' | 'planned';
   /** One line explaining the section, used on the home page and in menus. */
   blurbAr: string;
-  group: 'learn' | 'build' | 'software' | 'community' | 'account' | 'admin';
+  group: 'learn' | 'build' | 'software' | 'store' | 'community' | 'account' | 'admin';
   /** Signed-out users do not see it, and the server refuses it. */
   requiresAuth?: boolean;
   /** Minimum role. Enforced server-side; listed here only for menu rendering. */
@@ -68,6 +68,12 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'project', labelAr: 'مشروعي', href: '/project', group: 'build',
     blurbAr: 'قطعك وإعداداتك، وأحكام التوافق التي تُحسب منها.',
+  },
+
+  // ── Store ────────────────────────────────────────────────────────────────
+  {
+    id: 'store', labelAr: 'المتجر', href: '/store', group: 'store',
+    blurbAr: 'منتجات مختارة في كل قسم، بفارق واضح بينها، ومع كل طلب خدمة إعداد.',
   },
 
   // ── Community ────────────────────────────────────────────────────────────

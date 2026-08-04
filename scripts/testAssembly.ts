@@ -647,6 +647,19 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f !== 'src/data/kb/modules/video/articles/osd.ts' &&
     f !== 'scripts/testRetrieval.ts' &&
     f !== 'scripts/testWebSearchE2E.ts' &&
+    // ── The store ──────────────────────────────────────────────────────────
+    // A commercial section, deliberately separate from the teaching side. Its
+    // model, sections, pricing engine and catalogue live in src/data/store/;
+    // its storefront lives under web/. The one thing it touches outside itself
+    // is `src/data/auth/roles.ts`, which gained four store capabilities — kept
+    // separate from each other so a future fulfilment role can be given orders
+    // without ever seeing what we pay a supplier.
+    //
+    // It reads the encyclopedia (an article id to link to, a Betaflight page)
+    // and changes none of it. No Assembly logic: no part, no compatibility
+    // rule, no stage order, no persistence shape.
+    !f.startsWith('src/data/store/') &&
+    f !== 'scripts/testStore.ts' &&
     // The two new gates are registered as npm scripts like every gate before
     // them. `package.json` carries no product data.
     f !== 'package.json' &&

@@ -89,6 +89,11 @@ console.log('\n[2] The capability matrix — every role against every capability
       'community.hidePost', 'community.deletePost', 'community.hideComment',
       'users.list', 'users.viewDetail', 'users.ban', 'users.unban', 'users.assignRole',
       'content.edit', 'content.publish', 'audit.view',
+      // The store. An admin runs the shop, so all four — including seeing what
+      // we pay suppliers. The four stay SEPARATE capabilities so a future
+      // fulfilment role can be given orders without supply, which is the whole
+      // reason they were not written as one 'store.manage'.
+      'store.viewOrders', 'store.manageOrders', 'store.editProducts', 'store.viewSupply',
     ],
     owner: [...CAPABILITIES],
   };

@@ -104,6 +104,18 @@ export const CAPABILITIES = [
 
   // The audit trail.
   'audit.view',
+
+  // The store.
+  //
+  // Split into four rather than one «store.manage» because they are genuinely
+  // different powers: reading orders to fulfil them is a daily job, seeing what
+  // we pay suppliers is commercially sensitive, and setting the margin decides
+  // whether the shop makes money. A single capability would hand all three to
+  // whoever needs the first.
+  'store.viewOrders',
+  'store.manageOrders',
+  'store.editProducts',
+  'store.viewSupply',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -174,6 +186,13 @@ export const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
     'content.edit',
     'content.publish',
     'audit.view',
+    // The store, in full. An admin runs the business; the split between these
+    // four exists so a future fulfilment role can be given the first two
+    // without ever seeing what we pay a supplier.
+    'store.viewOrders',
+    'store.manageOrders',
+    'store.editProducts',
+    'store.viewSupply',
   ],
 
   // The only role that may create other privileged roles.
