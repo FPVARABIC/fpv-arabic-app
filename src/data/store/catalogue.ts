@@ -35,9 +35,11 @@
  */
 
 import type {
-  BuyerLevel, ChoicePosition, LinkProtocol, StoreProduct, VideoSystem,
+  Availability, BuyerLevel, ChoicePosition, LinkProtocol, PackageKind,
+  ProductVariant, StoreProduct, VideoSystem,
 } from './types';
 import { STORE_SERVICES, serviceAsProduct } from './services';
+import { LAUNCH_SPECS } from './launch';
 import type { KbLink } from '../kb/types';
 
 const REVIEWED = '2026-08-04';
@@ -49,6 +51,76 @@ const REVIEWED = '2026-08-04';
  * and burying it in twenty lines of identical scaffolding is how a catalogue
  * stops being read by the people maintaining it.
  */
+/**
+ * A variant as written in the catalogue: everything else is derived.
+ *
+ * `id` is a SUFFIX here and becomes «product-id:suffix» — so the file cannot
+ * accidentally reuse one product's variant id on another, and a reader can tell
+ * at a glance which product a variant belongs to.
+ */
+interface VariantSeed {
+  id: string;
+  nameAr: string;
+  kind: PackageKind;
+  link?: LinkProtocol;
+  video?: VideoSystem;
+  inBox: string[];
+  isDefault?: boolean;
+  /** Defaults to true for aircraft packages and false for everything else. */
+  freeSetup?: boolean;
+  availability?: Availability;
+}
+
+/**
+ * The variants, with the single-configuration case filled in.
+ *
+ * A product that names none gets exactly one, inheriting the product's own
+ * link, video and box. Free setup defaults by package kind rather than by hand:
+ * we can program something that arrives with a flight controller and a
+ * receiver, and we cannot program a propeller — and a default that has to be
+ * remembered is a default that will be wrong on the fiftieth product.
+ */
+function buildVariants(p: {
+  id: string;
+  link?: LinkProtocol;
+  video?: VideoSystem;
+  inBox: string[];
+  variants?: VariantSeed[];
+  availability?: Availability;
+}): ProductVariant[] {
+  const seeds: VariantSeed[] = p.variants ?? [{
+    id: 'standard',
+    nameAr: 'الخيار الوحيد',
+    kind: 'single',
+    inBox: p.inBox,
+    isDefault: true,
+  }];
+  return seeds.map((v, i) => ({
+    id: `${p.id}:${v.id}`,
+    nameAr: v.nameAr,
+    packageKind: v.kind,
+    linkProtocol: v.link ?? p.link ?? 'none',
+    videoSystem: v.video ?? p.video ?? 'none',
+    inTheBoxAr: v.inBox,
+    availability: v.availability ?? p.availability ?? 'needs-confirmation',
+    // No price until a cost is recorded. See the module note.
+    priceMinor: null,
+    isDefault: v.isDefault ?? i === 0,
+    freeSetupEligible: v.freeSetup ?? FREE_SETUP_BY_DEFAULT.includes(v.kind),
+  }));
+}
+
+/**
+ * The package kinds the free setup service can actually be performed on.
+ *
+ * An aircraft that arrives with a flight controller can be flashed, configured
+ * and bound before it ships. A bare frame cannot, and promising otherwise is a
+ * promise that gets explained away at the worst moment. `single` is excluded on
+ * purpose — a component MAY qualify, and when it does somebody says so on that
+ * product rather than the rule assuming it.
+ */
+const FREE_SETUP_BY_DEFAULT: readonly PackageKind[] = ['pnp', 'bnf', 'rtf', 'combo'];
+
 function product(p: {
   id: string;
   categoryId: string;
@@ -72,7 +144,19 @@ function product(p: {
   alternatives?: string[];
   completes?: string[];
   learn?: KbLink[];
+  /**
+   * How this thing is sold.
+   *
+   * Omitted means one way — a single unnamed configuration built from the
+   * product's own link, video and box. That keeps a battery from carrying
+   * ceremony it does not need, while every surface still reads `variants` and
+   * none of them needs a special case for «the simple kind».
+   */
+  variants?: VariantSeed[];
+  /** Overridden where the seed already knows better than «يُطلب من المورد». */
+  availability?: Availability;
 }): StoreProduct {
+  const variants = buildVariants(p);
   return {
     id: p.id,
     categoryId: p.categoryId,
@@ -93,11 +177,16 @@ function product(p: {
     // Empty by design — see the note on specifications at the top of this file.
     specs: [],
     images: [],
+    variants,
     priceMinor: null,
     currency: 'USD',
     compareAtMinor: null,
-    availability: 'made-to-order',
-    published: true,
+    availability: p.availability ?? 'needs-confirmation',
+    // Seeded as NOT published. Publication is an act, gated on having a
+    // licensed image, a sourced spec set and a current cost — see
+    // `publication.ts`. A catalogue that ships published-by-default is a
+    // catalogue that publishes whatever anybody adds.
+    published: false,
     relatedProductIds: p.related ?? [],
     alternativeProductIds: p.alternatives ?? [],
     completesProductIds: p.completes ?? [],
@@ -137,6 +226,23 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     inBox: ['الطائرة', 'جهاز التحكم', 'النظارة', 'بطاريات', 'شاحن', 'مراوح احتياطية'],
     alternatives: ['emax-tinyhawk-3-rtf'],
     learn: [{ kind: 'article', targetId: 'prop-damage-safety', label: 'لماذا الووب أأمن ما تتعلّم عليه' }],
+    availability: 'in-stock',
+    // BetaFPV sells the Cetus Pro as a complete kit and as the aircraft alone.
+    // Two prices, two boxes, two different customers — and the free setup
+    // applies to both because both arrive with a flight controller.
+    variants: [
+      {
+        id: 'rtf', nameAr: 'الطقم الكامل — طائرة وجهاز تحكّم ونظّارة',
+        kind: 'rtf', isDefault: true,
+        inBox: ['الطائرة', 'جهاز التحكّم LiteRadio 2 SE', 'النظّارة VR02',
+          'بطاريات 1S', 'شاحن', 'مراوح احتياطية'],
+      },
+      {
+        id: 'bnf', nameAr: 'الطائرة وحدها — لمن يملك جهازاً ونظّارة',
+        kind: 'bnf',
+        inBox: ['الطائرة', 'بطاريات 1S', 'مراوح احتياطية'],
+      },
+    ],
   }),
   product({
     id: 'betafpv-meteor75-pro',
@@ -160,6 +266,23 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     inBox: ['الطائرة', 'بطارية أو أكثر', 'مراوح احتياطية'],
     completes: ['radiomaster-pocket'],
     alternatives: ['happymodel-mobula7'],
+    availability: 'in-stock',
+    // The analog and the digital Meteor75 Pro are different aircraft in the way
+    // that matters: they show in different goggles. A buyer who owns analog
+    // goggles cannot use the digital one at all, so they are never one listing.
+    variants: [
+      {
+        id: 'elrs-analog', nameAr: 'ExpressLRS + فيديو تماثلي',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'بطارية LAVA II 1S 580mAh', 'مراوح احتياطية'],
+      },
+      {
+        id: 'elrs-hd', nameAr: 'ExpressLRS + فيديو رقمي',
+        kind: 'bnf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بوحدة فيديو رقمية', 'بطارية 1S', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
   product({
     id: 'happymodel-mobula7',
@@ -179,6 +302,19 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['انتشار واسع يعني إجابات جاهزة لكل مشكلة', 'قطع غيار رخيصة'],
     inBox: ['الطائرة', 'بطاريات', 'مراوح احتياطية'],
     alternatives: ['betafpv-meteor75-pro'],
+    availability: 'in-stock',
+    variants: [
+      {
+        id: 'elrs-bnf', nameAr: 'ExpressLRS مع مستقبِل — تماثلي',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'مراوح احتياطية', 'كابل شحن'],
+      },
+      {
+        id: 'pnp', nameAr: 'بلا مستقبِل — تركّب مستقبِلك',
+        kind: 'pnp', link: 'none', video: 'analog',
+        inBox: ['الطائرة بلا مستقبِل', 'مراوح احتياطية'],
+      },
+    ],
   }),
 
   /* ── 2" / 2.5" / 3" / 3.5" ──────────────────────────────────────────────── */
@@ -287,6 +423,25 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     completes: ['cnhl-black-series-6s', 'radiomaster-boxer'],
     alternatives: ['geprc-mark5'],
     learn: [{ kind: 'article', targetId: 'motor-selection', label: 'ما الذي يجعل محرّكاً مناسباً لهذا المقاس' }],
+    availability: 'in-stock',
+    variants: [
+      {
+        id: 'elrs-analog', nameAr: 'ExpressLRS + فيديو تماثلي',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'مراوح احتياطية', 'أدوات'],
+      },
+      {
+        id: 'crossfire-analog', nameAr: 'Crossfire + فيديو تماثلي',
+        kind: 'bnf', link: 'crossfire', video: 'analog',
+        inBox: ['الطائرة', 'مراوح احتياطية', 'أدوات'],
+        availability: 'needs-confirmation',
+      },
+      {
+        id: 'pnp', nameAr: 'بلا مستقبِل',
+        kind: 'pnp', link: 'none', video: 'analog',
+        inBox: ['الطائرة بلا مستقبِل', 'مراوح احتياطية', 'أدوات'],
+      },
+    ],
   }),
   product({
     id: 'geprc-mark5',
@@ -306,6 +461,25 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['أذرع قابلة للاستبدال وحدها', 'تخطيط داخلي يسهل الوصول إليه'],
     inBox: ['الطائرة', 'مراوح احتياطية'],
     alternatives: ['iflight-nazgul5-v3'],
+    availability: 'in-stock',
+    variants: [
+      {
+        id: 'elrs24-analog', nameAr: 'ExpressLRS 2.4 + فيديو تماثلي',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'مراوح احتياطية', 'أدوات وقطع تثبيت'],
+      },
+      {
+        id: 'elrs915-analog', nameAr: 'ExpressLRS 915 + فيديو تماثلي',
+        kind: 'bnf', link: 'elrs', video: 'analog',
+        inBox: ['الطائرة', 'مراوح احتياطية', 'أدوات وقطع تثبيت'],
+        availability: 'needs-confirmation',
+      },
+      {
+        id: 'pnp', nameAr: 'بلا مستقبِل',
+        kind: 'pnp', link: 'none', video: 'analog',
+        inBox: ['الطائرة بلا مستقبِل', 'مراوح احتياطية', 'أدوات'],
+      },
+    ],
   }),
   product({
     id: 'tbs-source-one-v5',
@@ -390,6 +564,22 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     inBox: ['الجهاز', 'كابل شحن'],
     alternatives: ['radiomaster-boxer'],
     learn: [{ kind: 'edgetx', targetId: '', label: 'مركز EdgeTX' }],
+    availability: 'in-stock',
+    // The RF module is the whole decision here: an ELRS radio does not talk to
+    // a FrSky receiver and no amount of configuration changes that. Two
+    // variants, and the picker asks in those words.
+    variants: [
+      {
+        id: 'elrs', nameAr: 'نسخة ExpressLRS',
+        kind: 'single', link: 'elrs', isDefault: true,
+        inBox: ['الجهاز', 'العصي القابلة للفكّ', 'كابل USB-C'],
+      },
+      {
+        id: 'cc2500', nameAr: 'نسخة متعدّدة البروتوكولات (CC2500)',
+        kind: 'single', link: 'frsky',
+        inBox: ['الجهاز', 'العصي القابلة للفكّ', 'كابل USB-C'],
+      },
+    ],
   }),
   product({
     id: 'radiomaster-boxer',
@@ -408,6 +598,19 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['إحساس عصي أفضل بوضوح من الفئة الاقتصادية', 'يشغّل EdgeTX'],
     inBox: ['الجهاز', 'كابل شحن'],
     alternatives: ['radiomaster-tx16s-mk2', 'radiomaster-pocket'],
+    availability: 'in-stock',
+    variants: [
+      {
+        id: 'elrs', nameAr: 'نسخة ExpressLRS',
+        kind: 'single', link: 'elrs', isDefault: true,
+        inBox: ['الجهاز', 'حامل بطاريتَي 18650', 'كابل شحن'],
+      },
+      {
+        id: 'multi', nameAr: 'نسخة متعدّدة البروتوكولات (4-in-1)',
+        kind: 'single', link: 'frsky',
+        inBox: ['الجهاز', 'حامل بطاريتَي 18650', 'كابل شحن'],
+      },
+    ],
   }),
   product({
     id: 'radiomaster-tx16s-mk2',
@@ -426,6 +629,19 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['شاشة كبيرة تسهّل الضبط', 'قابل للترقية بدل الاستبدال'],
     inBox: ['الجهاز', 'كابل شحن'],
     alternatives: ['radiomaster-boxer'],
+    availability: 'in-stock',
+    variants: [
+      {
+        id: 'elrs', nameAr: 'نسخة ExpressLRS',
+        kind: 'single', link: 'elrs', isDefault: true,
+        inBox: ['الجهاز', 'حقيبة', 'كابل USB-C'],
+      },
+      {
+        id: 'multi', nameAr: 'نسخة متعدّدة البروتوكولات (4-in-1)',
+        kind: 'single', link: 'frsky',
+        inBox: ['الجهاز', 'حقيبة', 'كابل USB-C'],
+      },
+    ],
   }),
 
   /* ── Goggles ────────────────────────────────────────────────────────────── */
@@ -451,6 +667,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     completes: ['dji-o3-air-unit'],
     alternatives: ['walksnail-avatar-hd-x', 'hdzero-goggles'],
     learn: [{ kind: 'article', targetId: 'video-analog-vs-digital', label: 'تناظري أم رقمي' }],
+    availability: 'in-stock',
   }),
   product({
     id: 'walksnail-avatar-hd-x',
@@ -623,6 +840,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['اللوحتان متوافقتان مسبقاً', 'ضبط عبر التطبيق إضافة إلى الكابل'],
     inBox: ['متحكّم الطيران', 'وحدة ESC', 'كابلات', 'دعامات مطاطية'],
     learn: [{ kind: 'betaflight', targetId: 'ports', label: 'صفحة المنافذ — أول ما ستضبطه' }],
+    availability: 'in-stock',
   }),
   product({
     id: 'speedybee-bls-50a',
@@ -713,6 +931,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     highlights: ['تسجيل داخلي بجودة أعلى من البثّ', 'صورة رقمية نظيفة'],
     inBox: ['الوحدة', 'الكاميرا', 'كابلات', 'هوائيات'],
     completes: ['dji-goggles-n3'],
+    availability: 'in-stock',
   }),
   product({
     id: 'matek-m10-gps',
@@ -1456,7 +1675,13 @@ export const STORE_CATALOGUE: StoreProduct[] = [
  * whole reason for modelling them this way.
  */
 export const STORE_PRODUCTS: StoreProduct[] = [
-  ...STORE_CATALOGUE,
+  // Specifications are attached here rather than written inline above, because
+  // they have a different lifecycle: the catalogue says what a product IS and
+  // changes when the shop's selection changes, while `launch.ts` records what a
+  // manufacturer page said on a particular day and changes when somebody
+  // re-reads it. Keeping them apart means a re-verification round touches one
+  // file and reviews as one diff.
+  ...STORE_CATALOGUE.map(p => (LAUNCH_SPECS[p.id] ? { ...p, specs: LAUNCH_SPECS[p.id] } : p)),
   ...STORE_SERVICES.map(svc => serviceAsProduct(svc, REVIEWED)),
 ];
 
@@ -1483,17 +1708,37 @@ export function storeProduct(id: string): StoreProduct | undefined {
  * zero products and every other section fell out of order. One rule, one
  * function, given whichever list the caller has.
  */
-export function selectCategory<P extends {
-  categoryId: string; collections: string[]; choicePosition: string; published: boolean;
+export function sectionMembers<P extends {
+  categoryId: string; collections: string[]; choicePosition: string;
 }>(products: readonly P[], categoryId: string): P[] {
   const order: Record<string, number> = { entry: 0, middle: 1, pro: 2, variant: 3 };
   return products
-    .filter(p => p.published && (p.categoryId === categoryId || p.collections.includes(categoryId)))
+    .filter(p => p.categoryId === categoryId || p.collections.includes(categoryId))
     .sort((a, b) => order[a.choicePosition] - order[b.choicePosition]);
 }
 
+/**
+ * A section's members that a customer may actually see.
+ *
+ * SEPARATE FROM `sectionMembers`, AND THE SEPARATION IS THE POINT
+ * ---------------------------------------------------------------
+ * Curation and publication are different questions. «Does this section offer a
+ * real choice» is about what the catalogue CONTAINS — three to five products
+ * spanning a decision — and it is answered by `sectionMembers`. «What may a
+ * customer see today» is about what has cleared the publication gate, and it is
+ * answered here. Conflating them produced a test that said the shop was
+ * well-curated because everything happened to be published, and would have said
+ * it was badly curated the moment somebody hid a product for a week.
+ */
+export function selectCategory<P extends {
+  categoryId: string; collections: string[]; choicePosition: string; published: boolean;
+}>(products: readonly P[], categoryId: string): P[] {
+  return sectionMembers(products, categoryId).filter(p => p.published);
+}
+
+/** Everything the catalogue puts in a section, published or not. */
 export function productsInCategory(categoryId: string): StoreProduct[] {
-  return selectCategory(STORE_PRODUCTS, categoryId);
+  return sectionMembers(STORE_PRODUCTS, categoryId);
 }
 
 export function categoryProductCount(categoryId: string): number {

@@ -123,35 +123,139 @@ export const CHOICE_POSITION_LABEL_AR: Record<ChoiceAxis, Record<ChoicePosition,
 };
 
 /**
+ * Where a technical claim came from, ranked.
+ *
+ * The order is the order of authority, and it is not a formality: a wheelbase
+ * from the manufacturer's own page and a wheelbase from a marketplace title are
+ * not the same claim, and a shop that treats them the same will eventually sell
+ * somebody the wrong frame. `reseller` exists for COMMERCIAL facts — what is in
+ * the box of a particular bundle, what a supplier actually ships — where the
+ * reseller is the authority and the manufacturer is not.
+ */
+export type SpecSourceKind =
+  /** The manufacturer's own product page. */
+  | 'manufacturer-page'
+  /** The manufacturer's manual or datasheet. Beats the page when they differ. */
+  | 'manufacturer-manual'
+  /** A reseller's listing. Authoritative for what a bundle contains, not for physics. */
+  | 'reseller'
+  /** A named independent review. Used only to CORROBORATE, never as the sole source. */
+  | 'independent-review';
+
+export const SPEC_SOURCE_LABEL_AR: Record<SpecSourceKind, string> = {
+  'manufacturer-page': 'صفحة الشركة الرسمية',
+  'manufacturer-manual': 'الدليل الرسمي',
+  reseller: 'المورد',
+  'independent-review': 'مراجعة مستقلة',
+};
+
+export interface SpecSource {
+  kind: SpecSourceKind;
+  /** What the page is, so a dead link is still traceable. */
+  titleAr: string;
+  url: string;
+  /** When a human last opened it. */
+  checkedAt: string;
+}
+
+/**
+ * What we know about a claim, as three states rather than a boolean.
+ *
+ * `disputed` is the one that had to exist. Sources DO disagree — a marketplace
+ * says 80mm and the manufacturer says 80.8mm — and the two ways a shop usually
+ * handles that are both wrong: pick one silently, or average them. Recording
+ * the disagreement and showing the official figure is the third option, and it
+ * is the only one that survives somebody checking.
+ */
+export type SpecStatus = 'verified' | 'pending' | 'disputed';
+
+export const SPEC_STATUS_LABEL_AR: Record<SpecStatus, string> = {
+  verified: 'مؤكَّدة',
+  pending: 'بانتظار التأكيد',
+  disputed: 'المصادر مختلفة',
+};
+
+/**
  * A specification row.
  *
- * `verified` is the field that keeps this honest. A spec the platform has
- * checked against the manufacturer's own documentation renders as a fact; one
- * that has not is rendered as «بانتظار التأكيد» and is never presented as
- * though somebody had confirmed it. Nothing here is written from memory.
+ * Nothing here is written from memory. A row is `verified` only when somebody
+ * opened the source in `source` on the date in `source.checkedAt` and read the
+ * value off it; anything else is `pending` and renders as such.
+ *
+ * WHY THE UNIT IS SEPARATE FROM THE VALUE
+ * ---------------------------------------
+ * Because «80.8» and «mm» belong to different languages. The value is a Latin
+ * numeral that must render left-to-right inside a right-to-left sentence, and
+ * the unit is Arabic prose. Concatenating them produces the bidirectional mess
+ * that every Arabic spec table has, and separating them lets the page mark each
+ * one's direction correctly.
  */
 export interface ProductSpec {
   labelAr: string;
+  /** The figure itself, as the source states it. Rendered LTR. */
   valueAr: string;
-  /** True only when checked against the manufacturer's own documentation. */
-  verified: boolean;
-  /** Where it was checked. Required whenever `verified` is true. */
-  sourceUrl?: string;
+  /** «مم», «غرام», «كيلوفولت». Rendered RTL beside the value. */
+  unitAr?: string;
+  status: SpecStatus;
+  /** Required whenever `status` is «verified». */
+  source?: SpecSource;
+  /** What the other source said. Required whenever `status` is «disputed». */
+  disagreementAr?: string;
+  /**
+   * Set when the figure differs between variants.
+   *
+   * A 1S whoop and its 2S sibling do not weigh the same, and a spec table that
+   * shows one weight for both is wrong for one of them.
+   */
+  variantId?: string;
 }
 
+/** A spec is only publishable as a fact when it says where it came from. */
+export function isSpecVerified(s: ProductSpec): boolean {
+  return s.status === 'verified' && !!s.source?.url && !!s.source?.checkedAt;
+}
+
+/**
+ * Whether we can actually get one.
+ *
+ * A supplier having a page is not stock. These seven states exist because the
+ * difference between «we have checked and it ships» and «there is a listing and
+ * we assume» is the difference between a shop and a catalogue of hopes — and
+ * the customer finds out which it was three weeks later.
+ */
 export type Availability =
   | 'in-stock'
+  /** Confirmed, but the supplier's quantity is low enough to run out mid-order. */
+  | 'limited'
+  /** Ordered from the supplier when you order it. Longer, and honest about it. */
   | 'made-to-order'
+  /**
+   * Listed, but nobody has confirmed stock recently.
+   *
+   * Orderable is a POLICY decision, not a data one — see `canOrder`. The state
+   * exists so «we are not sure» is expressible without pretending either way.
+   */
+  | 'needs-confirmation'
   | 'out-of-stock'
+  /** The manufacturer stopped making it. Not coming back; replace the listing. */
+  | 'discontinued'
   /** Listed, described, and deliberately not yet purchasable. */
   | 'coming-soon';
 
 export const AVAILABILITY_LABEL_AR: Record<Availability, string> = {
   'in-stock': 'متوفر',
+  limited: 'توفر محدود',
   'made-to-order': 'يُطلب من المورد',
+  'needs-confirmation': 'يحتاج تأكيداً',
   'out-of-stock': 'غير متوفر حالياً',
+  discontinued: 'متوقف',
   'coming-soon': 'قريباً',
 };
+
+/** The states in which a customer may actually place an order. */
+export const ORDERABLE_AVAILABILITY: readonly Availability[] = [
+  'in-stock', 'limited', 'made-to-order',
+];
 
 /**
  * Who a product is for, in one word.
@@ -210,6 +314,8 @@ export interface ProductImage {
    */
   url: string;
   altAr: string;
+  /** Position in the gallery. The first is the one a card shows. */
+  order: number;
   /**
    * Where it came from and on what terms.
    *
@@ -218,17 +324,71 @@ export interface ProductImage {
    * the model refuses to treat it as publishable rather than leaving that to
    * whoever is uploading in a hurry.
    */
-  credit?: {
-    ownerAr: string;
-    permissionAr: string;
-    sourceUrl?: string;
-    /** True when it comes from the manufacturer's own material. */
-    official: boolean;
-    /** When the permission and the link were last checked. */
-    reviewedAt: string;
-    /** Set when this is a stand-in that must be replaced with a better one. */
-    needsReplacement?: boolean;
-  };
+  credit?: ImageCredit;
+}
+
+/**
+ * The legal basis for using someone else's photograph — a CLOSED set.
+ *
+ * It used to be free text, and free text is how «من موقع الشركة» ends up
+ * recorded as permission. It is not permission; it is a description of where
+ * the file was taken from. Every value below names a thing that either exists
+ * or does not, and `evidenceUrl` is where somebody can go and see that it does.
+ *
+ * There is deliberately no «fair use», no «promotional», and no «other». A
+ * basis nobody can point at is the absence of a basis, and the honest way to
+ * record that is to have no image.
+ */
+export type ImageLicenceBasis =
+  /** The manufacturer publishes a press or media kit with a usage grant. */
+  | 'manufacturer-media-kit'
+  /** A supplier supplies images to resellers for resale listings. */
+  | 'supplier-reseller-pack'
+  /** Somebody asked and has the reply. `evidenceUrl` points at the record. */
+  | 'written-permission'
+  /** We took the photograph. The only basis that needs nobody else. */
+  | 'own-photography';
+
+export const IMAGE_BASIS_LABEL_AR: Record<ImageLicenceBasis, string> = {
+  'manufacturer-media-kit': 'ملف إعلامي رسمي من الشركة',
+  'supplier-reseller-pack': 'صور يوفّرها المورد لإعادة البيع',
+  'written-permission': 'إذن مكتوب محفوظ',
+  'own-photography': 'تصوير من عندنا',
+};
+
+export interface ImageCredit {
+  ownerAr: string;
+  basis: ImageLicenceBasis;
+  /**
+   * Where the grant itself can be read.
+   *
+   * Not where the image is — where the PERMISSION is. A link to the product
+   * page proves the photo exists, which was never in doubt.
+   */
+  evidenceUrl: string;
+  /** Where the file was obtained, when that differs from the evidence. */
+  sourceUrl?: string;
+  /** True when it comes from the manufacturer's own material. */
+  official: boolean;
+  /** When the permission and the link were last checked. */
+  reviewedAt: string;
+  /** Set when this is a stand-in that must be replaced with a better one. */
+  needsReplacement?: boolean;
+}
+
+/**
+ * Whether an image may be shown to the public.
+ *
+ * The whole gate is here, in four lines, so that every surface asks the same
+ * question. A stand-in marked `needsReplacement` still publishes — it is a real
+ * licensed image that we would rather improve — but one with no basis and no
+ * evidence never does, however urgently somebody wants the page to look
+ * finished.
+ */
+export function isImagePublishable(img: ProductImage): boolean {
+  const c = img.credit;
+  return !!c && !!c.ownerAr && !!c.evidenceUrl && !!c.reviewedAt
+    && (IMAGE_BASIS_LABEL_AR as Record<string, string>)[c.basis] !== undefined;
 }
 
 /**
@@ -237,6 +397,83 @@ export interface ProductImage {
  * `priceMinor` is a stored number, computed by the pricing engine from inputs
  * this document does not contain and cannot be used to recover.
  */
+/**
+ * How a thing is sold — which is not the same question as what it is.
+ *
+ * The same aircraft ships in four or five packages at four or five prices, and
+ * a shop that flattens them into one listing is a shop where somebody expecting
+ * a radio in the box receives a bare quadcopter. These are the names the
+ * industry actually uses, kept in English on the badge because that is how they
+ * appear on every supplier's listing the buyer will cross-check against.
+ */
+export type PackageKind =
+  /** The aircraft, no receiver, no radio, no goggles. */
+  | 'drone-only'
+  /** Plug and Play: no receiver — you fit your own. */
+  | 'pnp'
+  /** Bind and Fly: a receiver is fitted; you bring the radio. */
+  | 'bnf'
+  /** Ready to Fly: radio and usually goggles included. */
+  | 'rtf'
+  /** A deliberate bundle of separate products sold together. */
+  | 'combo'
+  /** Not an aircraft — a component, a service, an accessory. */
+  | 'single';
+
+export const PACKAGE_LABEL_AR: Record<PackageKind, string> = {
+  'drone-only': 'الطائرة فقط',
+  pnp: 'بلا مستقبِل (PNP)',
+  bnf: 'مع مستقبِل (BNF)',
+  rtf: 'طقم كامل (RTF)',
+  combo: 'حزمة كاملة',
+  single: 'قطعة مفردة',
+};
+
+/**
+ * One buyable configuration of a product.
+ *
+ * WHY THIS IS NOT JUST «OPTIONS»
+ * ------------------------------
+ * Because the differences are not cosmetic. An ELRS variant and a Crossfire
+ * variant have different receivers, different prices, different suppliers, and
+ * bind to different radios — they are different things that happen to share a
+ * frame. Modelling them as one product with a dropdown means one price and one
+ * supply record for two products, and the price will be wrong for one of them.
+ *
+ * WHAT A BUYER IS ASKED, AND WHAT THEY ARE NOT
+ * --------------------------------------------
+ * Package, control link, video system. Three questions a buyer can answer
+ * about equipment they already own. Never a Target, never a firmware version,
+ * never a build option — those are setup decisions, they belong to the free
+ * setup service, and putting them in a checkout is how a shop loses a customer
+ * who was ready to buy.
+ */
+export interface ProductVariant {
+  /** Stable and globally unique — «product-id:elrs-analog». Never regenerated. */
+  id: string;
+  /** What the buyer picks, in their terms. «ExpressLRS + تماثلي». */
+  nameAr: string;
+  packageKind: PackageKind;
+  linkProtocol: LinkProtocol;
+  videoSystem: VideoSystem;
+  /** What this specific package contains. The commonest bad surprise. */
+  inTheBoxAr: string[];
+  availability: Availability;
+  /** Priced independently: see the note above. */
+  priceMinor: Minor | null;
+  /** The one shown first. Exactly one variant per product must set it. */
+  isDefault: boolean;
+  /**
+   * Whether buying this earns the free setup service.
+   *
+   * Per VARIANT, not per product, because it genuinely differs: we can program
+   * a BNF aircraft before it ships and we cannot program a spare frame. A shop
+   * that promises «برمجة مجانية» on a battery has made a promise it will have
+   * to explain its way out of.
+   */
+  freeSetupEligible: boolean;
+}
+
 export interface StoreProduct {
   id: string;
   /** The one section it lives in — its size or its part type. */
@@ -286,6 +523,16 @@ export interface StoreProduct {
   images: ProductImage[];
 
   /**
+   * The ways this product can be bought.
+   *
+   * Never empty. A product sold exactly one way still has one variant — which
+   * means every surface reads variants and none of them needs a special case
+   * for «the simple kind». The alternative, an optional array, produces two
+   * code paths for pricing and two for the basket, and they drift.
+   */
+  variants: ProductVariant[];
+
+  /**
    * The selling price, in minor units of `currency`.
    *
    * `null` means no price has been set, which is a real state and not an
@@ -299,8 +546,22 @@ export interface StoreProduct {
   compareAtMinor?: Minor | null;
 
   availability: Availability;
-  /** Hidden from the storefront entirely when false. */
+  /**
+   * Hidden from the storefront entirely when false.
+   *
+   * Set only by an admin, and only when `publicationBlockers` is empty — see
+   * `publicationGate`. This is the stored fact; the STAGE is derived, because a
+   * stored stage is a label somebody typed and a derived one is what is true.
+   */
   published: boolean;
+  /**
+   * Taken down deliberately, for a reason.
+   *
+   * Distinct from «not yet published»: a suspended product had everything and
+   * was pulled anyway — a safety recall, a supplier that stopped answering — and
+   * it must not silently return to «ready» when the blockers clear.
+   */
+  suspendedReasonAr?: string;
 
   /** Other products in this catalogue. Resolved, never free text. */
   relatedProductIds: string[];
@@ -398,9 +659,23 @@ export interface StorePrivateSettings {
    * a number inside the code.
    */
   defaultMarginPercent: number;
+  /**
+   * How many days a recorded cost stays trustworthy.
+   *
+   * An admin setting rather than a constant, because the right number depends
+   * on the supplier: a manufacturer's own price moves twice a year and a
+   * marketplace listing moves weekly. Past it, the product stops accepting
+   * orders and the panel says why — selling from a cost nobody has looked at
+   * since spring is how a shop discovers its margin went negative by reading
+   * its bank statement.
+   */
+  priceReviewDays: number;
 }
 
 export const INITIAL_DEFAULT_MARGIN_PERCENT = 10;
+
+/** Thirty days. Long enough not to be busywork, short enough to catch a move. */
+export const INITIAL_PRICE_REVIEW_DAYS = 30;
 
 /* ── Orders ───────────────────────────────────────────────────────────────── */
 
@@ -466,7 +741,7 @@ export interface OrderItem {
  * the order it computed.
  */
 export interface OrderSubmission {
-  items: { productId: string; quantity: number }[];
+  items: { variantId: string; quantity: number }[];
   contact: {
     fullNameAr: string;
     phone: string;

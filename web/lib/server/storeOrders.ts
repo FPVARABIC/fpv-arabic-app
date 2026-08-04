@@ -1,9 +1,10 @@
 import 'server-only';
 import { adminDb, isAdminConfigured } from './firebaseAdmin';
 import { getSession } from './session';
-import { storeProduct } from '@core/data/store/catalogue';
 import { readCart, resolveCart } from '@core/data/store/cart';
 import { freeWithPurchaseService } from '@core/data/store/services';
+import { cartProductViews } from './storeCatalogue';
+import { CART_SCHEMA_VERSION } from '@core/data/store/cart';
 import { ORDER_STATUS_NEXT } from '@core/data/store/types';
 import type { OrderStatus, OrderSubmission, StoreOrder } from '@core/data/store/types';
 
@@ -34,6 +35,19 @@ import type { OrderStatus, OrderSubmission, StoreOrder } from '@core/data/store/
 
 const ORDERS = 'storeOrders';
 
+/**
+ * The free service's variant id.
+ *
+ * Services carry exactly one variant, named by the same rule as everything
+ * else. Derived rather than written down so a rename of the service cannot
+ * leave a literal here pointing at nothing — which would silently stop the
+ * promise being added and nobody would notice until a customer asked.
+ */
+function freeServiceVariantId(): string | undefined {
+  const svc = freeWithPurchaseService();
+  return svc ? `${svc.id}:standard` : undefined;
+}
+
 export type PlaceOrderResult =
   | { ok: true; orderId: string }
   | { ok: false; errorAr: string };
@@ -57,21 +71,33 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
 
   // Prices come from the catalogue, never from the request.
   const cart = readCart({
-    v: 1,
+    v: CART_SCHEMA_VERSION,
     items: Array.isArray(submission.items) ? submission.items : [],
     updatedAt: '',
   });
-  const freeId = freeWithPurchaseService()?.id;
-  const hasPayable = cart.items.some(i => i.productId !== freeId);
+
+  // The merged, live catalogue — the same rows the browser priced from, read
+  // again here so a basket assembled against yesterday's prices is repriced
+  // against today's before anything is written.
+  const views = await cartProductViews();
+  const byId = new Map(views.map(v => [v.id, v]));
+
+  const freeVariantId = freeServiceVariantId();
+  const hasPayable = cart.items.some(i => i.variantId !== freeVariantId);
   if (!hasPayable) return { ok: false, errorAr: 'سلّتك فارغة.' };
 
-  // The shop's own promise, applied server-side so it does not depend on the
-  // customer's basket having kept it.
-  const withService = freeId && !cart.items.some(i => i.productId === freeId)
-    ? { ...cart, items: [...cart.items, { productId: freeId, quantity: 1 }] }
-    : cart;
+  // THE PROMISE, DECIDED HERE AND NOWHERE ELSE
+  // ------------------------------------------
+  // The browser adds the free service optimistically so the customer sees it
+  // while deciding. The server decides whether it was ever earned — and it is
+  // earned by an ELIGIBLE line, not by any line. A basket of propellers does
+  // not qualify, and a basket that arrives claiming the service without one
+  // gets it removed rather than honoured.
+  const earnsFreeSetup = cart.items.some(i => byId.get(i.variantId)?.freeSetupEligible === true);
+  const items = cart.items.filter(i => i.variantId !== freeVariantId);
+  if (earnsFreeSetup && freeVariantId) items.push({ variantId: freeVariantId, quantity: 1 });
 
-  const resolved = resolveCart(withService, storeProduct, 0);
+  const resolved = resolveCart({ ...cart, items }, id => byId.get(id), 0);
   if (resolved.lines.length === 0) {
     return { ok: false, errorAr: 'لم يعد أي منتج في سلّتك متاحاً للطلب.' };
   }
@@ -88,9 +114,11 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   const order: Omit<StoreOrder, 'id'> = {
     customerUid: session.uid,
     items: resolved.lines.map(l => ({
-      productId: l.product.id,
+      variantId: l.product.id,
+      productId: l.product.productId,
       nameEn: l.product.nameEn,
       titleAr: l.product.titleAr,
+      variantNameAr: l.product.variantNameAr,
       quantity: l.quantity,
       unitPriceMinor: l.unitPriceMinor,
       lineTotalMinor: l.lineTotalMinor,
@@ -102,7 +130,7 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
     totalMinor: resolved.totals.totalMinor,
     currency: 'USD',
     contact: contact.value,
-    includesFreeSetup: !!freeId && resolved.lines.some(l => l.product.id === freeId),
+    includesFreeSetup: !!freeVariantId && resolved.lines.some(l => l.product.id === freeVariantId),
     status: 'received',
     createdAt: now,
     updatedAt: now,

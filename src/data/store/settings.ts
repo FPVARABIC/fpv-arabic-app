@@ -26,7 +26,7 @@
  */
 
 import type { StorePrivateSettings, StorePublicSettings } from './types';
-import { INITIAL_DEFAULT_MARGIN_PERCENT } from './types';
+import { INITIAL_DEFAULT_MARGIN_PERCENT, INITIAL_PRICE_REVIEW_DAYS } from './types';
 
 export const SETTINGS_DOC_PUBLIC = 'public';
 export const SETTINGS_DOC_PRIVATE = 'private';
@@ -49,6 +49,7 @@ export const INITIAL_PUBLIC_SETTINGS: StorePublicSettings = {
 
 export const INITIAL_PRIVATE_SETTINGS: StorePrivateSettings = {
   defaultMarginPercent: INITIAL_DEFAULT_MARGIN_PERCENT,
+  priceReviewDays: INITIAL_PRICE_REVIEW_DAYS,
 };
 
 /**
@@ -100,9 +101,16 @@ export function validatePrivateSettings(raw: unknown): StorePrivateSettings {
   const m = r.defaultMarginPercent;
   // A negative margin sells at a loss on every product at once. It is refused
   // rather than clamped, because a clamp hides the fact that somebody typed it.
+  const d = r.priceReviewDays;
   return {
     defaultMarginPercent: typeof m === 'number' && Number.isFinite(m) && m >= 0 && m <= 500
       ? m
       : INITIAL_PRIVATE_SETTINGS.defaultMarginPercent,
+    // Bounded at both ends. Zero would mark every price stale the moment it was
+    // entered and stop the shop selling anything; a thousand is the setting
+    // switched off while looking as though it is on, which is worse than off.
+    priceReviewDays: typeof d === 'number' && Number.isInteger(d) && d >= 1 && d <= 365
+      ? d
+      : INITIAL_PRIVATE_SETTINGS.priceReviewDays,
   };
 }

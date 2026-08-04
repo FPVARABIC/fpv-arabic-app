@@ -6,6 +6,7 @@ import {
 } from '@core/data/store/catalogue';
 import { mergeCatalogue, applyOverride, type ProductOverride } from '@core/data/store/overrides';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
+import type { PricedProduct } from '@core/data/store/cart';
 import type { StoreProduct } from '@core/data/store/types';
 
 /**
@@ -97,28 +98,35 @@ export async function sectionCounts(): Promise<Record<string, number>> {
 /**
  * The lean projection the browser needs to price a basket.
  *
- * The cart runs in the browser, so it needs prices — but it does not need forty
- * products' worth of Arabic prose, spec tables and image credits to compute a
- * total. This sends the seven fields `resolveCart` reads and nothing else,
- * which keeps the payload small and keeps everything editorial on the server
- * where it is rendered.
+ * One row per BUYABLE VARIANT, not per product — because a basket line names a
+ * variant and a lookup that answered per product could not price it. The cart
+ * runs in the browser, so it needs prices; it does not need Arabic prose, spec
+ * tables and image credits to multiply two numbers. This sends the nine fields
+ * `resolveCart` reads and nothing else.
  *
  * It is not a security boundary — every field here is on the public product
  * page already. It is a size boundary.
  */
-export type CartProductView = Pick<
-  StoreProduct,
-  'id' | 'nameEn' | 'titleAr' | 'priceMinor' | 'currency' | 'availability' | 'published'
->;
+export type CartProductView = PricedProduct;
 
 export async function cartProductViews(): Promise<CartProductView[]> {
-  return (await resolvedProducts()).map(p => ({
-    id: p.id,
+  return (await resolvedProducts()).flatMap(p => p.variants.map(v => ({
+    id: v.id,
+    productId: p.id,
     nameEn: p.nameEn,
     titleAr: p.titleAr,
-    priceMinor: p.priceMinor,
+    variantNameAr: p.variants.length > 1 ? v.nameAr : '',
+    priceMinor: v.priceMinor,
     currency: p.currency,
-    availability: p.availability,
-    published: p.published,
-  }));
+    availability: v.availability,
+    // A variant of an unpublished product is not buyable, whatever its own
+    // stock says. This is what stops a guessed variant id from selling a draft.
+    published: p.published && !p.suspendedReasonAr,
+    freeSetupEligible: v.freeSetupEligible,
+  })));
+}
+
+/** One variant, resolved. The server's own lookup when it re-prices a basket. */
+export async function variantView(variantId: string): Promise<CartProductView | undefined> {
+  return (await cartProductViews()).find(v => v.id === variantId);
 }

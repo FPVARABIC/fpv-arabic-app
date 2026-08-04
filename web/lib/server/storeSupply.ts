@@ -15,6 +15,24 @@ import type { StoreSupply } from '@core/data/store/types';
 
 const SUPPLY = 'storeSupply';
 
+/**
+ * One product's supply record, or null.
+ *
+ * Used by the publication gate, which asks about one product at a time. Reading
+ * the whole collection to answer that would work and would cost the whole
+ * collection on every publish.
+ */
+export async function supplyFor(productId: string): Promise<StoreSupply | null> {
+  if (!isAdminConfigured()) return null;
+  try {
+    const doc = await adminDb().collection(SUPPLY).doc(productId).get();
+    if (!doc.exists) return null;
+    return { productId, ...(doc.data() as Omit<StoreSupply, 'productId'>) };
+  } catch {
+    return null;
+  }
+}
+
 export async function readAllSupply(): Promise<Record<string, StoreSupply>> {
   if (!isAdminConfigured()) return {};
   try {

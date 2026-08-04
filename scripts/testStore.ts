@@ -43,6 +43,13 @@ import {
 } from '../src/data/store/overrides';
 import { INITIAL_DEFAULT_MARGIN_PERCENT, ORDER_STATUS_NEXT } from '../src/data/store/types';
 import type { OrderStatus, StoreProduct } from '../src/data/store/types';
+import {
+  publicationBlockers, publicationStage, canOrder, isPriceStale, daysBetween,
+  MIN_VERIFIED_SPECS, DEFAULT_PRICE_REVIEW_DAYS,
+} from '../src/data/store/publication';
+import { CATALOGUE_AUDIT, auditFor, launchSetIds, auditSummary } from '../src/data/store/audit';
+import { LAUNCH_SPECS, CHECKED } from '../src/data/store/launch';
+import { isSpecVerified, isImagePublishable } from '../src/data/store/types';
 import { ROLE_CAPABILITIES } from '../src/data/auth/roles';
 import { getArticle } from '../src/data/kb/registry';
 import { kbTerms } from '../src/data/kb/glossary/terms';
@@ -621,55 +628,80 @@ console.log('\n[11] Services are products, and one of them is free');
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n[12] The cart cannot be talked into a wrong total');
 {
-  const lookup = (id: string) => storeProduct(id);
+  /**
+   * The lookup the surfaces actually use: one row per BUYABLE VARIANT.
+   *
+   * Built here from the catalogue exactly as `cartProductViews` builds it on
+   * the server, so this section tests the same join the shop performs rather
+   * than a simplified stand-in.
+   */
+  const views = STORE_PRODUCTS.flatMap(p => p.variants.map(v => ({
+    id: v.id,
+    productId: p.id,
+    nameEn: p.nameEn,
+    titleAr: p.titleAr,
+    variantNameAr: p.variants.length > 1 ? v.nameAr : '',
+    priceMinor: v.priceMinor,
+    currency: p.currency,
+    availability: v.availability,
+    published: p.published && !p.suspendedReasonAr,
+    freeSetupEligible: v.freeSetupEligible,
+  })));
+  const byId = new Map(views.map(v => [v.id, v]));
+  const lookup = (id: string) => byId.get(id);
 
   // A hand-edited basket is the threat model. Prices are never read from
   // storage — they come from the catalogue when the total is computed.
   const forged = readCart({
     v: CART_SCHEMA_VERSION,
-    items: [{ productId: 'betafpv-cetus-pro', quantity: 1, unitPriceMinor: 1 }],
+    items: [{ variantId: 'betafpv-cetus-pro:rtf', quantity: 1, unitPriceMinor: 1 }],
     updatedAt: '',
   });
   ok('a forged price in storage is not carried into the cart',
-    !('unitPriceMinor' in (forged.items[0] as object)));
+    forged.items.length === 1 && !('unitPriceMinor' in (forged.items[0] as object)));
+
+  // A version-1 basket names products, not variants. Guessing which variant
+  // somebody meant is how the wrong aircraft ends up in a box.
+  ok('a version-1 basket is discarded rather than guessed at',
+    readCart({ v: 1, items: [{ productId: 'betafpv-cetus-pro', quantity: 1 }] }).items.length === 0);
 
   // Malformed storage produces an empty cart rather than a crash.
   ok('nonsense storage is an empty cart', readCart(null).items.length === 0);
   ok('a wrong schema version is an empty cart',
-    readCart({ v: 99, items: [{ productId: 'x', quantity: 1 }] }).items.length === 0);
+    readCart({ v: 99, items: [{ variantId: 'x', quantity: 1 }] }).items.length === 0);
 
   // Bad lines are dropped, good ones kept: a customer who spent ten minutes
   // choosing should not lose the basket over one withdrawn product.
   const mixed = readCart({
     v: CART_SCHEMA_VERSION,
     items: [
-      { productId: 'a', quantity: 0 },
-      { productId: 'b', quantity: -3 },
-      { productId: 'c', quantity: 1.5 },
-      { productId: '', quantity: 1 },
-      { productId: 'd', quantity: 2 },
+      { variantId: 'a', quantity: 0 },
+      { variantId: 'b', quantity: -3 },
+      { variantId: 'c', quantity: 1.5 },
+      { variantId: '', quantity: 1 },
+      { variantId: 'd', quantity: 2 },
     ],
     updatedAt: '',
   });
   ok('malformed lines are dropped and good ones survive',
-    mixed.items.length === 1 && mixed.items[0].productId === 'd');
+    mixed.items.length === 1 && mixed.items[0].variantId === 'd');
 
   // Duplicates merge rather than double-count.
   const dupd = readCart({
     v: CART_SCHEMA_VERSION,
-    items: [{ productId: 'a', quantity: 2 }, { productId: 'a', quantity: 3 }],
+    items: [{ variantId: 'a', quantity: 2 }, { variantId: 'a', quantity: 3 }],
     updatedAt: '',
   });
   ok('a duplicated line merges', dupd.items.length === 1 && dupd.items[0].quantity === 5);
 
   // Quantities are clamped — forty flight controllers is a typo.
   const huge = readCart({
-    v: CART_SCHEMA_VERSION, items: [{ productId: 'a', quantity: 9999 }], updatedAt: '',
+    v: CART_SCHEMA_VERSION, items: [{ variantId: 'a', quantity: 9999 }], updatedAt: '',
   });
   ok('an absurd quantity is clamped', huge.items[0].quantity === MAX_QUANTITY_PER_LINE);
   const manyLines = readCart({
     v: CART_SCHEMA_VERSION,
-    items: Array.from({ length: 200 }, (_, i) => ({ productId: `p${i}`, quantity: 1 })),
+    items: Array.from({ length: 200 }, (_, i) => ({ variantId: `p${i}`, quantity: 1 })),
     updatedAt: '',
   });
   ok('the number of lines is bounded', manyLines.items.length <= MAX_LINES);
@@ -677,37 +709,61 @@ console.log('\n[12] The cart cannot be talked into a wrong total');
   // Mutations behave.
   let c = addToCart(EMPTY_CART, 'x', 2);
   c = addToCart(c, 'x', 3);
-  ok('adding the same product accumulates', c.items[0].quantity === 5);
+  ok('adding the same variant accumulates', c.items[0].quantity === 5);
   c = setQuantity(c, 'x', 1);
   ok('setting a quantity replaces it', c.items[0].quantity === 1);
   c = setQuantity(c, 'x', 0);
   ok('setting a quantity to zero removes the line', c.items.length === 0);
-  ok('removing an absent product is harmless', removeFromCart(EMPTY_CART, 'y').items.length === 0);
+  ok('removing an absent variant is harmless', removeFromCart(EMPTY_CART, 'y').items.length === 0);
 
   // Resolution against the live catalogue.
-  const unpriced = STORE_CATALOGUE.find(p => p.priceMinor === null)!;
+  const unpricedVariant = views.find(v => v.priceMinor === null)!;
   const resolvedUnpriced = resolveCart(
-    { v: CART_SCHEMA_VERSION, items: [{ productId: unpriced.id, quantity: 1 }], updatedAt: '' },
+    { v: CART_SCHEMA_VERSION, items: [{ variantId: unpricedVariant.id, quantity: 1 }], updatedAt: '' },
     lookup, 0,
   );
-  ok('an unpriced product cannot be ordered', !resolvedUnpriced.orderable);
+  ok('an unpriced variant cannot be ordered', !resolvedUnpriced.orderable);
   ok('…and the customer is told why', resolvedUnpriced.dropped.length === 1);
 
   const ghost = resolveCart(
-    { v: CART_SCHEMA_VERSION, items: [{ productId: 'no-such-product', quantity: 1 }], updatedAt: '' },
+    { v: CART_SCHEMA_VERSION, items: [{ variantId: 'no-such-variant', quantity: 1 }], updatedAt: '' },
     lookup, 0,
   );
-  ok('a withdrawn product is dropped with a reason', ghost.dropped.length === 1 && !ghost.orderable);
+  ok('a withdrawn variant is dropped with a reason', ghost.dropped.length === 1 && !ghost.orderable);
 
-  // The free service is added when there is something to give it with, and
-  // removed when the basket empties — so the promise can never appear on an
-  // order that bought nothing.
-  const freeId = freeWithPurchaseService()!.id;
-  const withOther = withIncludedService(addToCart(EMPTY_CART, 'betafpv-cetus-pro', 1), freeId);
-  ok('the free service joins a non-empty basket',
-    withOther.items.some(i => i.productId === freeId));
-  const onlyService = withIncludedService(addToCart(EMPTY_CART, freeId, 1), freeId);
-  ok('and leaves when nothing else is there', onlyService.items.length === 0);
+  // A variant of an UNPUBLISHED product is not buyable however its own stock
+  // reads. This is what stops a guessed id from selling a draft.
+  const draft = STORE_PRODUCTS.find(p => !p.published)!;
+  const draftView = views.find(v => v.productId === draft.id)!;
+  ok('the catalogue really does contain a draft to test with', !!draftView);
+  ok('a draft product\u2019s variant is not published in the cart view',
+    draftView.published === false);
+
+  // The free service is added when there is something ELIGIBLE to give it with
+  // — not merely when the basket is non-empty.
+  const freeId = `${freeWithPurchaseService()!.id}:standard`;
+  const eligibleId = views.find(v => v.freeSetupEligible)!.id;
+  const ineligibleId = views.find(v => !v.freeSetupEligible && v.id !== freeId)!.id;
+
+  const withEligible = withIncludedService(
+    addToCart(EMPTY_CART, eligibleId, 1), freeId, '',
+    id => byId.get(id)?.freeSetupEligible === true,
+  );
+  ok('the free service joins a basket that earned it',
+    withEligible.items.some(i => i.variantId === freeId));
+
+  const withIneligible = withIncludedService(
+    addToCart(EMPTY_CART, ineligibleId, 1), freeId, '',
+    id => byId.get(id)?.freeSetupEligible === true,
+  );
+  ok('a basket of ineligible items does NOT earn it',
+    !withIneligible.items.some(i => i.variantId === freeId));
+
+  const onlyService = withIncludedService(
+    addToCart(EMPTY_CART, freeId, 1), freeId, '',
+    id => byId.get(id)?.freeSetupEligible === true,
+  );
+  ok('and it leaves when nothing else is there', onlyService.items.length === 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -726,7 +782,7 @@ console.log('\n[13] Orders are computed on the server, never submitted');
   ok('the checkout payload carries no price',
     !/Minor|price|total/i.test(payload));
   ok('the checkout payload carries ids and quantities',
-    /productId/.test(payload) && /quantity/.test(payload));
+    /variantId/.test(payload) && /quantity/.test(payload));
   // The extraction is real, not an empty string that passes by default.
   ok('the payload was actually extracted', payload.includes('contact') && payload.length > 80);
   // And the file it came from does render prices — so the check above is
@@ -920,15 +976,32 @@ console.log('\n[15] The admin panel and the storefront are the same catalogue');
   const withCredit = applyOverride(seed, {
     productId: seed.id,
     images: [{
-      url: '/x.jpg', altAr: 'صورة المنتج',
+      url: '/x.jpg', altAr: 'صورة المنتج', order: 0,
       credit: {
-        ownerAr: 'الشركة المصنّعة', permissionAr: 'مواد رسمية',
+        ownerAr: 'الشركة المصنّعة',
+        basis: 'manufacturer-media-kit',
+        evidenceUrl: 'https://example.com/press',
         official: true, reviewedAt: '2026-08-04',
       },
     }],
   });
-  ok('an image with full credit does reach the page',
+  ok('an image with a real licence basis does reach the page',
     withCredit.images.some(i => i.url === '/x.jpg'));
+
+  // The basis is a CLOSED set. «I found it online» is not one of the values,
+  // and a document that invents one is refused rather than believed.
+  const inventedBasis = applyOverride(seed, {
+    productId: seed.id,
+    images: [{
+      url: '/y.jpg', altAr: 'صورة', order: 0,
+      credit: {
+        ownerAr: 'مجهول', basis: 'found-it-online',
+        evidenceUrl: 'https://example.com', official: false, reviewedAt: '2026-08-04',
+      },
+    }],
+  } as unknown as ProductOverride);
+  ok('an invented licence basis is refused',
+    !inventedBasis.images.some(i => i.url === '/y.jpg'));
 
   // The whole catalogue merges in seed order — the deliberate one.
   const merged = mergeCatalogue(STORE_PRODUCTS, {
@@ -1052,19 +1125,33 @@ console.log('\n[17] The product editor refuses what it cannot stand behind');
 
   // The rule from the brief, made mechanical: a confirmed spec must say where.
   ok('a spec marked confirmed without a source is refused',
-    actions.includes('s.verified && !sourceUrl'));
+    actions.includes("s.status === 'verified'") && actions.includes('!/^https:\\/\\//.test(sourceUrl)'));
+  ok('a confirmed spec must also carry the date it was checked',
+    actions.includes('!/^\\d{4}-\\d{2}-\\d{2}$/.test(checkedAt)'));
+  // A review corroborates and never carries a claim alone, or «someone on
+  // YouTube said 80mm» becomes a specification.
+  ok('an independent review cannot be the sole source of a confirmed spec',
+    actions.includes("s.sourceKind === 'independent-review'"));
+  ok('«the sources disagree» must say how',
+    actions.includes("s.status === 'disputed' && !s.disagreementAr.trim()"));
   ok('…and the refusal names the spec so it can be fixed',
     /errorAr: `المواصفة «\$\{labelAr\}»/.test(actions));
 
   // Images carry their provenance or they are not saved.
   for (const [what, needle] of [
-    ['an owner and terms', '!ownerAr || !permissionAr'],
+    ['a named owner', '!ownerAr'],
+    ['a licence basis from the closed list', 'isBasis(img.basis)'],
+    ['a link to the permission itself', 'evidenceUrl'],
     ['a review date in a fixed format', '/^\\d{4}-\\d{2}-\\d{2}$/'],
     ['an alt text', 'altAr.length < 3'],
     ['a safe URL scheme', "/^(\\/|https:\\/\\/)/"],
   ] as const) {
     ok(`an image is refused without ${what}`, actions.includes(needle));
   }
+  // The distinction the whole basis model exists for: the evidence link points
+  // at the grant, not at the picture.
+  ok('the evidence link is required to be a permission, not a product page',
+    actions.includes('رابط الإذن نفسه'));
 
   // «لا يناسبك إن كنت» is required on the model. It must stay required here,
   // because it is the section that earns the page its credibility.
@@ -1109,6 +1196,257 @@ console.log('\n[17] The product editor refuses what it cannot stand behind');
   const messages = [...actions.matchAll(/errorAr: ['`]([^'`]+)['`]/g)].map(m => m[1]);
   ok(`every refusal explains itself (${messages.length})`, messages.length >= 10);
   ok('no refusal is «حدث خطأ»', !messages.some(m => m.trim() === 'حدث خطأ'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[18] Nothing publishes that the shop cannot stand behind');
+{
+  const NOW = '2026-08-04T00:00:00.000Z';
+  const fresh = { updatedAt: '2026-08-01T00:00:00.000Z', verified: true };
+  const complete = STORE_PRODUCTS.find(p => p.id === 'dji-o3-air-unit')!;
+
+  /** The product as it would look with everything the gate asks for. */
+  const licensed = {
+    ...complete,
+    published: false,
+    // A supply record produces a price; the price lands on the variants. The
+    // fixture carries both because the shop does — a fixture that cleared the
+    // price gate with null prices would be testing a gate that is not there.
+    variants: complete.variants.map(v => ({ ...v, priceMinor: 19900, availability: 'in-stock' as const })),
+    images: [{
+      url: '/x.jpg', altAr: 'صورة المنتج', order: 0,
+      credit: {
+        ownerAr: 'الشركة', basis: 'manufacturer-media-kit' as const,
+        evidenceUrl: 'https://example.com/press', official: true, reviewedAt: '2026-08-01',
+      },
+    }],
+  };
+  ok('the fixture clears every gate', publicationBlockers({ product: licensed, supply: fresh, now: NOW }).length === 0);
+  ok('…and reads as «جاهز للنشر» rather than published',
+    publicationStage({ product: licensed, supply: fresh, now: NOW }) === 'ready');
+  ok('…and as «منشور» once an admin says so',
+    publicationStage({ product: { ...licensed, published: true }, supply: fresh, now: NOW }) === 'published');
+
+  // Each gate, removed one at a time. A gate that never fires is a gate that
+  // is not there, and the only way to know is to break each one deliberately.
+  const cases: [string, Partial<typeof licensed>, string][] = [
+    ['no licensed image', { images: [] }, 'images'],
+    ['an image with no basis', {
+      images: [{ url: '/x.jpg', altAr: 'صورة', order: 0 }],
+    }, 'images'],
+    ['no «لا يناسبك»', { notForAr: [] }, 'identity'],
+    ['a stub description', { summaryAr: 'قصير' }, 'identity'],
+    ['no variants at all', { variants: [] }, 'identity'],
+    ['two default variants', {
+      variants: [
+        { ...licensed.variants[0], id: 'a:one', isDefault: true },
+        { ...licensed.variants[0], id: 'a:two', isDefault: true },
+      ],
+    }, 'identity'],
+    ['no default variant at all', {
+      variants: licensed.variants.map(v => ({ ...v, isDefault: false })),
+    }, 'identity'],
+    ['two variants sharing an id', {
+      variants: [
+        { ...licensed.variants[0], id: 'a:same', isDefault: true },
+        { ...licensed.variants[0], id: 'a:same', isDefault: false },
+      ],
+    }, 'identity'],
+    ['a variant with an empty box', {
+      variants: licensed.variants.map(v => ({ ...v, inTheBoxAr: [] })),
+    }, 'identity'],
+    ['no price on any variant', {
+      variants: licensed.variants.map(v => ({ ...v, priceMinor: null })),
+    }, 'price'],
+    ['too few sourced specs', { specs: licensed.specs.slice(0, MIN_VERIFIED_SPECS - 1) }, 'specs'],
+    ['a spec claiming «مؤكَّدة» with no source', {
+      specs: [...licensed.specs, { labelAr: 'مخترعة', valueAr: '9', status: 'verified' as const }],
+    }, 'specs'],
+    ['a disputed spec that does not say how', {
+      specs: [...licensed.specs, { labelAr: 'خلاف', valueAr: '9', status: 'disputed' as const }],
+    }, 'specs'],
+  ];
+  for (const [what, patch, gate] of cases) {
+    const blockers = publicationBlockers({
+      product: { ...licensed, ...patch } as typeof licensed, supply: fresh, now: NOW,
+    });
+    ok(`${what} blocks publication at the «${gate}» gate`,
+      blockers.length > 0 && blockers.some(b => b.gate === gate));
+  }
+
+  // Supply is its own gate, and staleness is part of it.
+  ok('no supply record blocks publication',
+    publicationBlockers({ product: licensed, supply: null, now: NOW })
+      .some(b => b.gate === 'price'));
+  ok('an unverified cost blocks publication',
+    publicationBlockers({ product: licensed, supply: { ...fresh, verified: false }, now: NOW })
+      .some(b => b.gate === 'price'));
+  const stale = { updatedAt: '2026-01-01T00:00:00.000Z', verified: true };
+  ok('a cost nobody has checked for months blocks publication',
+    publicationBlockers({ product: licensed, supply: stale, now: NOW })
+      .some(b => b.gate === 'price'));
+  ok('…and says how many days it has been',
+    publicationBlockers({ product: licensed, supply: stale, now: NOW })
+      .some(b => /\d+ يوماً/.test(b.messageAr)));
+
+  // The review window is a SETTING, not a constant. A shop whose supplier moves
+  // weekly needs a different number from one buying direct.
+  ok('the review window is honoured when it is shortened',
+    publicationBlockers({ product: licensed, supply: fresh, now: NOW, priceReviewDays: 1 })
+      .some(b => b.gate === 'price'));
+  ok('and the default is the documented thirty days', DEFAULT_PRICE_REVIEW_DAYS === 30);
+
+  // Staleness answers the same question for the storefront, which has to stop
+  // selling without waiting for anybody to unpublish.
+  ok('a fresh cost is not stale', !isPriceStale(fresh, NOW));
+  ok('an old cost is stale', isPriceStale(stale, NOW));
+  ok('a missing cost is stale', isPriceStale(null, NOW));
+  ok('an unreadable date is stale, not «today»', isPriceStale({ updatedAt: 'yesterday' }, NOW));
+  ok('a malformed date measures as unknown rather than zero',
+    daysBetween('not-a-date', NOW) === null);
+
+  // Suspension outranks everything, including having no blockers left.
+  const suspended = { ...licensed, published: true, suspendedReasonAr: 'استدعاء من الشركة' };
+  ok('a suspended product reads as «موقوف» even with nothing missing',
+    publicationStage({ product: suspended, supply: fresh, now: NOW }) === 'suspended');
+  ok('…and none of its variants can be ordered',
+    suspended.variants.every(v => !canOrder(suspended, { ...v, priceMinor: 5000, availability: 'in-stock' })));
+
+  // The stage names the EARLIEST failing gate, so the panel shows one next
+  // action rather than a list of seven.
+  const everythingWrong = {
+    ...licensed, images: [], specs: [], notForAr: [],
+  } as typeof licensed;
+  ok('the stage names the earliest gate, not the last',
+    publicationStage({ product: everythingWrong, supply: null, now: NOW }) === 'draft');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[19] A variant is a thing you can buy');
+{
+  for (const p of STORE_PRODUCTS) {
+    if (p.variants.length === 0) { ok(`${p.id} has at least one variant`, false); continue; }
+  }
+  ok('every product has at least one variant',
+    STORE_PRODUCTS.every(p => p.variants.length > 0));
+  ok('every product has exactly one default variant',
+    STORE_PRODUCTS.every(p => p.variants.filter(v => v.isDefault).length === 1));
+
+  // Ids are globally unique and prefixed by their product, so a basket line
+  // can never be ambiguous and a reader can tell what it belongs to.
+  const allVariantIds = STORE_PRODUCTS.flatMap(p => p.variants.map(v => v.id));
+  ok(`variant ids are unique (${allVariantIds.length})`,
+    new Set(allVariantIds).size === allVariantIds.length);
+  ok('every variant id is prefixed by its product id',
+    STORE_PRODUCTS.every(p => p.variants.every(v => v.id.startsWith(`${p.id}:`))));
+  ok('no variant id collides with a product id',
+    allVariantIds.every(id => !STORE_PRODUCTS.some(p => p.id === id)));
+
+  // Every variant says what is in its box. The difference between a BNF and an
+  // RTF IS the box, so a variant that does not say is not a variant.
+  ok('every variant says what comes in it',
+    STORE_PRODUCTS.every(p => p.variants.every(v => v.inTheBoxAr.length > 0)));
+
+  // The free service applies where it can be performed, and nowhere else.
+  const freeSvcId = freeWithPurchaseService()!.id;
+  ok('the free service does not qualify for itself',
+    STORE_PRODUCTS.find(p => p.id === freeSvcId)!.variants.every(v => !v.freeSetupEligible));
+  const aircraftPackages = STORE_PRODUCTS.flatMap(p => p.variants)
+    .filter(v => ['bnf', 'rtf', 'pnp', 'combo'].includes(v.packageKind));
+  ok(`aircraft packages qualify for free setup (${aircraftPackages.length})`,
+    aircraftPackages.length > 0 && aircraftPackages.every(v => v.freeSetupEligible));
+  const consumables = STORE_PRODUCTS
+    .filter(p => ['accessories', 'antennas', 'batteries'].includes(p.categoryId))
+    .flatMap(p => p.variants);
+  ok(`a propeller earns no free programming (${consumables.length})`,
+    consumables.length > 0 && consumables.every(v => !v.freeSetupEligible));
+
+  // A buyer is asked three questions they can answer, and never a Target.
+  const picker = readFileSync(join(ROOT, 'web/components/store/VariantPicker.tsx'), 'utf8');
+  for (const forbidden of ['Target', 'firmware', 'Firmware', 'bind phrase']) {
+    ok(`the picker never asks about «${forbidden}»`,
+      !stripComments(picker).includes(forbidden));
+  }
+  ok('the picker asks which radio it binds to', picker.includes('يبِنّ مع'));
+  ok('the picker asks which goggles it shows in', picker.includes('يظهر في نظّارة'));
+  ok('an unavailable variant stays visible rather than disappearing',
+    picker.includes('AVAILABILITY_LABEL_AR[v.availability]'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[20] The audit covers the catalogue, and the launch set is real');
+{
+  const catalogueIds = STORE_CATALOGUE.map(p => p.id);
+  const audited = CATALOGUE_AUDIT.map(r => r.productId);
+
+  const unaudited = catalogueIds.filter(id => !audited.includes(id));
+  if (unaudited.length) console.error('   UNAUDITED:', unaudited);
+  ok(`every catalogue product has a recorded decision (${catalogueIds.length})`,
+    unaudited.length === 0);
+
+  const ghosts = audited.filter(id => !catalogueIds.includes(id));
+  if (ghosts.length) console.error('   AUDIT GHOSTS:', ghosts);
+  ok('every audited id names a real product', ghosts.length === 0);
+  ok('no product is audited twice', new Set(audited).size === audited.length);
+
+  // A decision with no reason is a decision nobody can revisit.
+  ok('every decision explains itself',
+    CATALOGUE_AUDIT.every(r => r.noteAr.trim().length >= 20));
+
+  // The launch set: approved, documented, and actually carrying the specs.
+  const launch = launchSetIds();
+  ok(`the launch set is between 10 and 18 products (${launch.length})`,
+    launch.length >= 10 && launch.length <= 18);
+  ok('every launch product was approved', launch.every(id => auditFor(id)!.decision === 'approve'));
+  ok('every launch product has official sources recorded',
+    launch.every(id => auditFor(id)!.sources === 'official'));
+  ok('every launch product carries specifications',
+    launch.every(id => (LAUNCH_SPECS[id] ?? []).length > 0));
+
+  // …and the specifications carry their provenance, which is the whole point.
+  const allSpecs = Object.values(LAUNCH_SPECS).flat();
+  ok(`the launch set records specifications (${allSpecs.length})`, allSpecs.length >= 60);
+  const verified = allSpecs.filter(sp => sp.status === 'verified');
+  ok('every confirmed figure names its source and the date it was read',
+    verified.length > 0 && verified.every(isSpecVerified));
+  ok('every source is a manufacturer document, never a marketplace',
+    verified.every(sp => sp.source!.kind === 'manufacturer-page'
+      || sp.source!.kind === 'manufacturer-manual'));
+  ok('every source url is a real https link',
+    verified.every(sp => /^https:\/\/\S+$/.test(sp.source!.url)));
+  ok('every check date is the recorded review date',
+    verified.every(sp => sp.source!.checkedAt === CHECKED));
+
+  // Where sources disagreed, the disagreement was recorded rather than resolved
+  // by picking. There is at least one, because there always is.
+  const disputed = allSpecs.filter(sp => sp.status === 'disputed');
+  ok('a real disagreement between sources was recorded, not averaged away',
+    disputed.length > 0 && disputed.every(sp => (sp.disagreementAr ?? '').length > 20));
+
+  // Nothing in the launch data invents a price. Prices come from recorded cost.
+  const launchSrc = readFileSync(join(ROOT, 'src/data/store/launch.ts'), 'utf8');
+  ok('the launch data contains no price',
+    !/priceMinor|السعر\s*[:=]|\$\d/.test(stripComments(launchSrc)));
+
+  // Every launch product clears identity and specs, and stops at the gates
+  // that need a human: a licensed image and a verified cost.
+  const NOW = '2026-08-04T00:00:00.000Z';
+  for (const id of launch) {
+    const product = STORE_PRODUCTS.find(p => p.id === id)!;
+    const blockers = publicationBlockers({ product, supply: null, now: NOW });
+    ok(`${id} clears the identity and specification gates`,
+      !blockers.some(b => b.gate === 'identity' || b.gate === 'specs'));
+  }
+
+  // And NOTHING is published, because nothing has a licensed image. That is the
+  // honest state of the shop and the test says so out loud rather than
+  // pretending the catalogue is live.
+  const published = STORE_PRODUCTS.filter(p => p.published && p.categoryId !== SERVICES_CATEGORY_ID);
+  ok('no product ships published — every one is a draft awaiting a licensed image',
+    published.length === 0);
+  const summary = auditSummary();
+  ok('the audit reports that every product still needs image rights',
+    summary.imagesPending === summary.total);
 }
 
 console.log(`\n${failed === 0 ? '✅' : '❌'} testStore: ${passed} passed, ${failed} failed`);

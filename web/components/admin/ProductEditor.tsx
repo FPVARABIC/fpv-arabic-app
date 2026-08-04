@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   AVAILABILITY_LABEL_AR, BUYER_LEVEL_LABEL_AR,
   LINK_PROTOCOL_LABEL_AR, VIDEO_SYSTEM_LABEL_AR,
+  IMAGE_BASIS_LABEL_AR, SPEC_STATUS_LABEL_AR, SPEC_SOURCE_LABEL_AR,
 } from '@core/data/store/types';
 import type { StoreProduct } from '@core/data/store/types';
 import { saveProduct, type SaveProductInput } from '@/app/admin/store/products/actions';
@@ -39,7 +40,8 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
       ? product.images.map(i => ({
         url: i.url, altAr: i.altAr,
         ownerAr: i.credit?.ownerAr ?? '',
-        permissionAr: i.credit?.permissionAr ?? '',
+        basis: i.credit?.basis ?? '',
+        evidenceUrl: i.credit?.evidenceUrl ?? '',
         sourceUrl: i.credit?.sourceUrl ?? '',
         official: i.credit?.official ?? false,
         reviewedAt: i.credit?.reviewedAt ?? '',
@@ -50,8 +52,13 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
   const [specs, setSpecs] = useState<SaveProductInput['specs']>(
     product.specs.length > 0
       ? product.specs.map(s => ({
-        labelAr: s.labelAr, valueAr: s.valueAr,
-        verified: s.verified, sourceUrl: s.sourceUrl ?? '',
+        labelAr: s.labelAr, valueAr: s.valueAr, unitAr: s.unitAr ?? '',
+        status: s.status,
+        sourceKind: s.source?.kind ?? '',
+        sourceTitleAr: s.source?.titleAr ?? '',
+        sourceUrl: s.source?.url ?? '',
+        checkedAt: s.source?.checkedAt ?? '',
+        disagreementAr: s.disagreementAr ?? '',
       }))
       : [blankSpec()],
   );
@@ -144,8 +151,9 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
       <section className="admin-section" aria-labelledby="pe-images">
         <h2 id="pe-images">الصور</h2>
         <p style={{ margin: '0 0 12px', fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-          صور المنتج الحقيقية من المصنّع أو المورد. لكل صورة صاحبها وشروط
-          استخدامها وتاريخ آخر مراجعة — صورة بلا مصدر لا تُحفظ.
+          صور المنتج الحقيقية من المصنّع أو المورد. لكل صورة صاحبها وأساس
+          استخدامها ورابط الإذن نفسه وتاريخ مراجعته. وجود الصورة على الإنترنت
+          ليس إذناً — وصورة بلا أساس لا تُحفظ ولا يُنشر المنتج بها.
         </p>
         <div style={{ display: 'grid', gap: 12 }}>
           {images.map((img, i) => (
@@ -163,9 +171,18 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
                 <div style={{ display: 'grid', gap: 9, gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
                   <Row labelAr="صاحب الصورة" value={img.ownerAr}
                     onChange={v => patchImage(setImages, i, { ownerAr: v })} />
-                  <Row labelAr="شروط الاستخدام" value={img.permissionAr}
-                    onChange={v => patchImage(setImages, i, { permissionAr: v })} />
-                  <Row labelAr="رابط المصدر" value={img.sourceUrl} ltr
+                  {/* A closed list, not a text box. «وجدتها على موقع الشركة»
+                      describes where the file came from; it is not a permission
+                      to use it, and free text is how the two get confused. */}
+                  <Pick labelAr="أساس الاستخدام" value={img.basis}
+                    testId={`image-basis-${i}`}
+                    placeholderAr="اختر الأساس"
+                    options={Object.entries(IMAGE_BASIS_LABEL_AR)}
+                    onChange={v => patchImage(setImages, i, { basis: v })} />
+                  <Row labelAr="رابط الإذن نفسه" value={img.evidenceUrl} ltr
+                    testId={`image-evidence-${i}`}
+                    onChange={v => patchImage(setImages, i, { evidenceUrl: v })} />
+                  <Row labelAr="رابط الصورة الأصلي" value={img.sourceUrl} ltr
                     onChange={v => patchImage(setImages, i, { sourceUrl: v })} />
                   <Row labelAr="تاريخ المراجعة" value={img.reviewedAt} ltr placeholder="2026-08-04"
                     onChange={v => patchImage(setImages, i, { reviewedAt: v })} />
@@ -198,26 +215,52 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
       <section className="admin-section" aria-labelledby="pe-specs">
         <h2 id="pe-specs">المواصفات</h2>
         <p style={{ margin: '0 0 12px', fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-          لا تكتب مواصفة لم تتأكّد منها. «مؤكَّدة» تتطلّب رابط وثيقة الشركة —
-          وبدونه تظهر في المتجر موسومة «بانتظار التأكيد».
+          لا تكتب مواصفة لم تتأكّد منها. «مؤكَّدة» تتطلّب نوع المصدر ورابطه وتاريخ
+          التحقّق. المراجعة المستقلّة تُعضِّد ولا تُثبت وحدها. وإن اختلفت المصادر
+          فاختر «المصادر مختلفة» واكتب الاختلاف بدل أن تنتقي رقماً.
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
           {specs.map((s, i) => (
             <div key={i} data-testid={`spec-row-${i}`} className="card-sm" style={{ padding: '11px 13px', display: 'grid', gap: 9 }}>
-              <div style={{ display: 'grid', gap: 9, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+              <div style={{ display: 'grid', gap: 9, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                 <Row labelAr="الاسم" value={s.labelAr}
                   testId={`spec-label-${i}`}
                   onChange={v => patchSpec(setSpecs, i, { labelAr: v })} />
                 <Row labelAr="القيمة" value={s.valueAr} ltr
                   testId={`spec-value-${i}`}
                   onChange={v => patchSpec(setSpecs, i, { valueAr: v })} />
-                <Row labelAr="رابط المصدر" value={s.sourceUrl} ltr
-                  onChange={v => patchSpec(setSpecs, i, { sourceUrl: v })} />
+                {/* Separate, because «80.8» reads left to right and «مم» reads
+                    right to left, and joining them is how every Arabic spec
+                    table ends up scrambled. */}
+                <Row labelAr="الوحدة" value={s.unitAr} placeholder="مم"
+                  onChange={v => patchSpec(setSpecs, i, { unitAr: v })} />
+                <Pick labelAr="الحالة" value={s.status}
+                  testId={`spec-status-${i}`}
+                  options={Object.entries(SPEC_STATUS_LABEL_AR)}
+                  onChange={v => patchSpec(setSpecs, i, { status: v })} />
               </div>
+              {s.status === 'verified' && (
+                <div style={{ display: 'grid', gap: 9, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                  <Pick labelAr="نوع المصدر" value={s.sourceKind}
+                    testId={`spec-source-kind-${i}`}
+                    options={Object.entries(SPEC_SOURCE_LABEL_AR)}
+                    onChange={v => patchSpec(setSpecs, i, { sourceKind: v })} />
+                  <Row labelAr="عنوان المصدر" value={s.sourceTitleAr}
+                    onChange={v => patchSpec(setSpecs, i, { sourceTitleAr: v })} />
+                  <Row labelAr="رابط المصدر" value={s.sourceUrl} ltr
+                    testId={`spec-source-url-${i}`}
+                    onChange={v => patchSpec(setSpecs, i, { sourceUrl: v })} />
+                  <Row labelAr="تاريخ التحقّق" value={s.checkedAt} ltr placeholder="2026-08-04"
+                    testId={`spec-checked-${i}`}
+                    onChange={v => patchSpec(setSpecs, i, { checkedAt: v })} />
+                </div>
+              )}
+              {s.status === 'disputed' && (
+                <Row labelAr="ما الذي اختلفت فيه المصادر؟" value={s.disagreementAr}
+                  testId={`spec-dispute-${i}`}
+                  onChange={v => patchSpec(setSpecs, i, { disagreementAr: v })} />
+              )}
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Check labelAr="مؤكَّدة من وثيقة الشركة" checked={s.verified}
-                  testId={`spec-verified-${i}`}
-                  onChange={v => patchSpec(setSpecs, i, { verified: v })} />
                 <button type="button" className="admin-danger" data-testid={`spec-remove-${i}`}
                   onClick={() => setSpecs(prev => prev.filter((_, j) => j !== i))}
                   style={{ fontSize: 11.5, marginInlineStart: 'auto' }}>
@@ -260,12 +303,16 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
 
 function blankImage(): SaveProductInput['images'][number] {
   return {
-    url: '', altAr: '', ownerAr: '', permissionAr: '', sourceUrl: '',
+    url: '', altAr: '', ownerAr: '', basis: '', evidenceUrl: '', sourceUrl: '',
     official: false, reviewedAt: '', needsReplacement: false,
   };
 }
 function blankSpec(): SaveProductInput['specs'][number] {
-  return { labelAr: '', valueAr: '', verified: false, sourceUrl: '' };
+  return {
+    labelAr: '', valueAr: '', unitAr: '', status: 'pending',
+    sourceKind: 'manufacturer-page', sourceTitleAr: '', sourceUrl: '', checkedAt: '',
+    disagreementAr: '',
+  };
 }
 
 function patchImage(
@@ -332,6 +379,21 @@ const Row: React.FC<{
     <input value={value} onChange={e => onChange(e.target.value)}
       className={ltr ? 'ltr' : undefined} placeholder={placeholder}
       {...(testId ? { 'data-testid': testId } : {})} style={inputStyle} />
+  </label>
+);
+
+/** A controlled select, for the rows held in state rather than in the form. */
+const Pick: React.FC<{
+  labelAr: string; value: string; options: [string, string][];
+  onChange: (v: string) => void; placeholderAr?: string; testId?: string;
+}> = ({ labelAr, value, options, onChange, placeholderAr, testId }) => (
+  <label style={{ display: 'grid', gap: 5 }}>
+    <span style={labelStyle}>{labelAr}</span>
+    <select value={value} onChange={e => onChange(e.target.value)}
+      {...(testId ? { 'data-testid': testId } : {})} style={inputStyle}>
+      {placeholderAr && <option value="">{placeholderAr}</option>}
+      {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+    </select>
   </label>
 );
 

@@ -2,8 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  AVAILABILITY_LABEL_AR, CHOICE_POSITION_LABEL_AR, BUYER_LEVEL_LABEL_AR,
-  LINK_PROTOCOL_LABEL_AR, VIDEO_SYSTEM_LABEL_AR,
+  CHOICE_POSITION_LABEL_AR, BUYER_LEVEL_LABEL_AR, SPEC_SOURCE_LABEL_AR,
 } from '@core/data/store/types';
 import type { StoreProduct } from '@core/data/store/types';
 import {
@@ -11,8 +10,8 @@ import {
 } from '@/lib/store';
 import { resolvedProduct, publishedProducts } from '@/lib/server/storeCatalogue';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
-import { Price, ProductImage, StoreBanner } from '@/components/store/StorePieces';
-import { AddToCart } from '@/components/store/CartControls';
+import { ProductGallery, StoreBanner } from '@/components/store/StorePieces';
+import { VariantPicker } from '@/components/store/VariantPicker';
 
 export const dynamicParams = false;
 
@@ -97,7 +96,7 @@ export default async function ProductPage(
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
       }}>
         <div style={{ minWidth: 0 }}>
-          <ProductImage product={product} height={300} />
+          <ProductGallery product={product} />
         </div>
 
         <div style={{ minWidth: 0 }}>
@@ -117,33 +116,16 @@ export default async function ProductPage(
                 {CHOICE_POSITION_LABEL_AR[category.choiceAxis][product.choicePosition]}
               </span>
             )}
-            <span className="admin-badge" data-testid="product-availability">
-              {AVAILABILITY_LABEL_AR[product.availability]}
-            </span>
             <span className="admin-badge" data-testid="product-level">
               {BUYER_LEVEL_LABEL_AR[product.level]}
             </span>
-            {product.linkProtocol !== 'none' && (
-              <span className="admin-badge" data-testid="product-protocol">
-                البروتوكول: {LINK_PROTOCOL_LABEL_AR[product.linkProtocol]}
-              </span>
-            )}
-            {product.videoSystem !== 'none' && (
-              <span className="admin-badge" data-testid="product-video-system">
-                الفيديو: {VIDEO_SYSTEM_LABEL_AR[product.videoSystem]}
-              </span>
-            )}
           </div>
 
-          <div style={{ marginTop: 4 }}><Price product={product} large /></div>
-          <p style={{ margin: '7px 0 0', fontSize: 12, color: 'var(--text-dimmer)', lineHeight: 1.85 }}>
-            {settings.shippingNoteAr}
-          </p>
-
-          {/* The control decides for itself whether it can take an order —
-              see `AddToCart`, which renders an explanation rather than a
-              button when the product has no price yet. */}
-          <AddToCart product={product} />
+          {/* Package, control link, video system, price, stock and the basket —
+              all of it per variant, because all of it differs per variant. The
+              badges above are what is true of the product whichever one you
+              pick. */}
+          <VariantPicker product={product} shippingNoteAr={settings.shippingNoteAr} />
         </div>
       </div>
 
@@ -180,23 +162,46 @@ export default async function ProductPage(
         </dl>
       )}
 
-      {/* Specs render only once verified — see the note in the catalogue. */}
+      {/*
+        The specification table, with where every figure came from.
+        A buyer who wants to check one can; a buyer who does not is not made to
+        read a citation — the source is a small link, not a paragraph.
+      */}
       {product.specs.length > 0 && (
         <section className="admin-section" aria-labelledby="specs-h">
           <h2 id="specs-h">المواصفات</h2>
           <dl className="admin-kv" data-testid="product-specs">
-            {product.specs.map((s, i) => (
+            {product.specs.map((sp, i) => (
               <div key={i}>
-                <dt>{s.labelAr}</dt>
-                <dd className="ltr">
-                  {s.valueAr}
-                  {!s.verified && (
+                <dt>{sp.labelAr}</dt>
+                <dd>
+                  {/* The figure is Latin and reads left to right; the unit is
+                      Arabic. Marked separately or the line scrambles. */}
+                  <span className="ltr">{sp.valueAr}</span>
+                  {sp.unitAr && <span> {sp.unitAr}</span>}
+                  {sp.status === 'verified' && sp.source && (
+                    <a href={sp.source.url} target="_blank" rel="noopener noreferrer nofollow"
+                      data-testid={`spec-source-${i}`}
+                      style={{ fontSize: 10.5, marginInlineStart: 8, color: 'var(--text-dimmer)' }}>
+                      {SPEC_SOURCE_LABEL_AR[sp.source.kind]} ↗
+                    </a>
+                  )}
+                  {sp.status === 'pending' && (
                     <span style={{ color: '#fcd34d', fontSize: 11 }}> · بانتظار التأكيد</span>
+                  )}
+                  {sp.status === 'disputed' && (
+                    <span style={{ color: '#fcd34d', fontSize: 11 }} data-testid={`spec-disputed-${i}`}>
+                      {' '}· المصادر مختلفة: {sp.disagreementAr}
+                    </span>
                   )}
                 </dd>
               </div>
             ))}
           </dl>
+          <p style={{ margin: '11px 0 0', fontSize: 11, color: 'var(--text-dimmer)', lineHeight: 1.85 }}>
+            المواصفات منقولة عن وثائق الشركة الصانعة بتاريخ التحقّق المذكور في كل
+            مصدر. زمن الطيران وما شابهه تقديري ويختلف باختلاف البطارية وأسلوب الطيران.
+          </p>
         </section>
       )}
 
@@ -228,7 +233,12 @@ export default async function ProductPage(
       <Related titleAr="وتحتاج معه" products={completes} testId="product-completes" />
       <Related titleAr="مرتبط" products={related} testId="product-related" />
 
-      <StoreBanner settings={settings} compact />
+      {/* The promise, only where it is true. A banner offering free setup on a
+          spare propeller is a promise somebody has to explain their way out of
+          later — see `freeSetupEligible` on the variant. */}
+      {product.variants.some(v => v.freeSetupEligible) && (
+        <StoreBanner settings={settings} compact />
+      )}
 
       {category && (
         <p style={{ marginTop: 26, fontSize: 13 }}>

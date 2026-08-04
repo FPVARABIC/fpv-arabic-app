@@ -1,6 +1,10 @@
 import Link from 'next/link';
-import type { StoreProduct, StorePublicSettings, ChoiceAxis } from '@core/data/store/types';
-import { AVAILABILITY_LABEL_AR, CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
+import type {
+  ProductImage as ProductImageData, StoreProduct, StorePublicSettings, ChoiceAxis,
+} from '@core/data/store/types';
+import {
+  AVAILABILITY_LABEL_AR, CHOICE_POSITION_LABEL_AR, isImagePublishable,
+} from '@core/data/store/types';
 import { webHref } from '@/lib/webRoutes';
 import { priceState, productHref, isOrderable } from '@/lib/store';
 
@@ -108,7 +112,11 @@ export const Price: React.FC<{ product: StoreProduct; large?: boolean }> = ({ pr
 export const ProductImage: React.FC<{ product: StoreProduct; height?: number }> = ({
   product, height = 170,
 }) => {
-  const img = product.images[0];
+  // Only a licensed image is ever shown. Not «the first image» — the first
+  // image somebody can defend. An unlicensed file sitting in the database
+  // renders as the placeholder, which is the honest answer and also the one
+  // that keeps it from being published by accident.
+  const img = publishableImages(product)[0];
   if (!img) {
     return (
       <div
@@ -190,3 +198,88 @@ export const ProductCard: React.FC<{ product: StoreProduct; axis: ChoiceAxis }> 
     )}
   </Link>
 );
+
+
+/**
+ * Every image we may actually show, in gallery order.
+ *
+ * One function, used by the card, the gallery and the admin count, so «has an
+ * image» means the same thing in all three. The card and the page disagreeing
+ * about that is how an unlicensed photo ends up on a listing page while the
+ * product page correctly refuses it.
+ */
+export function publishableImages(product: StoreProduct): ProductImageData[] {
+  return product.images
+    .filter(isImagePublishable)
+    .slice()
+    .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * The product gallery.
+ *
+ * A server component with no JavaScript: the first image is large, the rest are
+ * thumbnails that are also anchors into the same page. Somebody on a slow
+ * connection sees the main photograph and can reach the others; nobody waits
+ * for a carousel library to decide.
+ *
+ * `loading="lazy"` on everything but the first. The first is what the page is
+ * about and lazy-loading it is how a product page renders empty for a moment;
+ * the rest are below the fold by construction.
+ */
+export const ProductGallery: React.FC<{ product: StoreProduct }> = ({ product }) => {
+  const images = publishableImages(product);
+  if (images.length === 0) return <ProductImage product={product} height={300} />;
+
+  return (
+    <div data-testid="product-gallery">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        id={`img-${product.id}-0`}
+        src={images[0].url}
+        alt={images[0].altAr}
+        width={600}
+        height={450}
+        /* Explicit dimensions and a fixed aspect box: the browser reserves the
+           space before the bytes arrive, so nothing below jumps when they do. */
+        style={{
+          width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover',
+          borderRadius: 'var(--radius-sm)', background: 'var(--surface-2)',
+        }}
+      />
+      {images.length > 1 && (
+        <div data-testid="product-thumbs" style={{
+          display: 'flex', gap: 8, marginTop: 9, flexWrap: 'wrap',
+        }}>
+          {images.map((img, i) => (
+            <a key={i} href={`#img-${product.id}-${i}`} data-testid={`product-thumb-${i}`}
+              aria-label={`صورة ${i + 1}: ${img.altAr}`}
+              style={{ display: 'block', lineHeight: 0 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                id={i === 0 ? undefined : `img-${product.id}-${i}`}
+                src={img.url}
+                alt=""
+                width={68}
+                height={51}
+                loading="lazy"
+                style={{
+                  width: 68, height: 51, objectFit: 'cover',
+                  borderRadius: 8, border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                }}
+              />
+            </a>
+          ))}
+        </div>
+      )}
+      {/* Attribution, quietly. The manufacturer owns the photograph and saying
+          so costs one line and settles the question before it is asked. */}
+      {images[0].credit && (
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-dimmer)' }}>
+          الصور: {images[0].credit.ownerAr}
+        </p>
+      )}
+    </div>
+  );
+};

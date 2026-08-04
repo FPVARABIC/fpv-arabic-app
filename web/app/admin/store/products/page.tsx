@@ -101,7 +101,7 @@ export default async function AdminProducts() {
                     {p.images.some(i => i.credit?.needsReplacement) && (
                       <span className="admin-badge" style={{ color: '#fcd34d' }}>صورة مؤقّتة</span>
                     )}
-                    {p.specs.some(s => !s.verified) && (
+                    {p.specs.some(sp => sp.status !== 'verified') && (
                       <span className="admin-badge">مواصفة بانتظار التأكيد</span>
                     )}
                     <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 7, flexWrap: 'wrap' }}>

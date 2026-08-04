@@ -31,9 +31,10 @@
  * explain. It arrives in this document, but it arrives from the server.
  */
 
+import { isImagePublishable, IMAGE_BASIS_LABEL_AR } from './types';
 import type {
   Availability, BuyerLevel, LinkProtocol, Minor, ProductImage, ProductSpec,
-  StoreProduct, VideoSystem,
+  ProductVariant, SpecStatus, StoreProduct, VideoSystem,
 } from './types';
 
 /** The Firestore document behind a product. Every field optional but the id. */
@@ -50,6 +51,16 @@ export interface ProductOverride {
 
   images?: ProductImage[];
   specs?: ProductSpec[];
+  /**
+   * Availability and price per variant.
+   *
+   * A whole `ProductVariant[]` is deliberately NOT overridable: which packages
+   * exist is a catalogue decision made in a reviewed commit, because a variant
+   * appearing from a database row would be a buyable thing nobody chose. What
+   * an admin changes daily is whether one is in stock and what it costs.
+   */
+  variantState?: Record<string, { availability?: Availability; priceMinor?: Minor | null }>;
+  suspendedReasonAr?: string | null;
 
   summaryAr?: string;
   highlightsAr?: string[];
@@ -83,12 +94,16 @@ export const OVERRIDABLE_FIELDS = [
   'summaryAr', 'highlightsAr', 'suitsAr', 'notForAr', 'inTheBoxAr',
   'level', 'linkProtocol', 'videoSystem',
   'weightGrams', 'dimensionsMm',
+  'variantState', 'suspendedReasonAr',
 ] as const;
 
 /** Fields no document may touch, because a route or a section is built from them. */
 export const IMMUTABLE_FIELDS = [
   'id', 'categoryId', 'choicePosition', 'nameEn', 'brandAr',
   'alternativeProductIds', 'completesProductIds', 'relatedProductIds',
+  // Which packages a product is sold in is a catalogue decision. Their STOCK
+  // and PRICE are admin decisions and arrive through `variantState`.
+  'variants',
 ] as const;
 
 /**
@@ -124,6 +139,12 @@ export function applyOverride(seed: StoreProduct, doc: ProductOverride | undefin
   }
 
   if (typeof doc.published === 'boolean') out.published = doc.published;
+  if (typeof doc.suspendedReasonAr === 'string' && doc.suspendedReasonAr.trim()) {
+    out.suspendedReasonAr = doc.suspendedReasonAr.trim().slice(0, 300);
+  } else if (doc.suspendedReasonAr === null) {
+    delete out.suspendedReasonAr;
+  }
+  out.variants = applyVariantState(seed.variants, doc.variantState);
   if (isAvailability(doc.availability)) out.availability = doc.availability;
   if (isLevel(doc.level)) out.level = doc.level;
   if (isProtocol(doc.linkProtocol)) out.linkProtocol = doc.linkProtocol;
@@ -166,8 +187,36 @@ export function mergeCatalogue(
   return seeds.map(s => applyOverride(s, docs[s.id]));
 }
 
+/**
+ * Per-variant stock and price, applied over the catalogue's variants.
+ *
+ * Keys that name no variant are ignored rather than creating one — a database
+ * row must never invent a buyable configuration, which is the same reason
+ * `variants` is on the immutable list.
+ */
+function applyVariantState(
+  variants: ProductVariant[],
+  state: Record<string, { availability?: Availability; priceMinor?: Minor | null }> | undefined,
+): ProductVariant[] {
+  if (!state || typeof state !== 'object') return variants;
+  return variants.map(v => {
+    const patch = state[v.id];
+    if (!patch || typeof patch !== 'object') return v;
+    const next = { ...v };
+    if (isAvailability(patch.availability)) next.availability = patch.availability;
+    if (typeof patch.priceMinor === 'number'
+      && Number.isInteger(patch.priceMinor) && patch.priceMinor >= 0) {
+      next.priceMinor = patch.priceMinor;
+    } else if (patch.priceMinor === null) {
+      next.priceMinor = null;
+    }
+    return next;
+  });
+}
+
 function isAvailability(v: unknown): v is Availability {
-  return v === 'in-stock' || v === 'made-to-order' || v === 'out-of-stock' || v === 'coming-soon';
+  return ['in-stock', 'limited', 'made-to-order', 'needs-confirmation',
+    'out-of-stock', 'discontinued', 'coming-soon'].includes(v as string);
 }
 function isLevel(v: unknown): v is BuyerLevel {
   return v === 'beginner' || v === 'intermediate' || v === 'advanced';
@@ -194,16 +243,14 @@ function validImages(v: unknown): ProductImage[] | undefined {
     const i = img as ProductImage;
     if (typeof i.url !== 'string' || !i.url) return false;
     if (typeof i.altAr !== 'string' || !i.altAr) return false;
-    // No credit, no publication. The model treats provenance as part of the
-    // image, so an entry that lost it on the way into the database is dropped
-    // rather than rendered.
-    const c = i.credit;
-    return !!c
-      && typeof c.ownerAr === 'string' && !!c.ownerAr
-      && typeof c.permissionAr === 'string' && !!c.permissionAr
-      && typeof c.official === 'boolean'
-      && typeof c.reviewedAt === 'string' && !!c.reviewedAt;
-  }).slice(0, 8);
+    if (typeof i.order !== 'number' || !Number.isFinite(i.order)) return false;
+    // No basis, no publication. The licence basis is a closed set precisely so
+    // that a document cannot claim permission in free text, and this is where
+    // that guarantee is enforced against whatever is actually in the database —
+    // including rows written before the set existed.
+    return isImagePublishable(i)
+      && (IMAGE_BASIS_LABEL_AR as Record<string, string>)[i.credit!.basis] !== undefined;
+  }).slice(0, 8).sort((a, b) => a.order - b.order);
   // An empty result from a non-empty write means every image failed the credit
   // check — falling back to the seed's images is the safe reading, because the
   // alternative is a product page that silently lost its photography.
@@ -220,10 +267,11 @@ function validImages(v: unknown): ProductImage[] | undefined {
  */
 function validSpecs(v: unknown): ProductSpec[] | undefined {
   if (!Array.isArray(v)) return undefined;
+  const STATUSES: SpecStatus[] = ['verified', 'pending', 'disputed'];
   return v.filter((s): s is ProductSpec =>
     !!s && typeof s === 'object'
     && typeof (s as ProductSpec).labelAr === 'string' && !!(s as ProductSpec).labelAr
     && typeof (s as ProductSpec).valueAr === 'string' && !!(s as ProductSpec).valueAr
-    && typeof (s as ProductSpec).verified === 'boolean',
+    && STATUSES.includes((s as ProductSpec).status),
   ).slice(0, 24);
 }

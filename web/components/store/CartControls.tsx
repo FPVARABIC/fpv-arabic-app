@@ -5,12 +5,12 @@ import { useSyncExternalStore } from 'react';
 import { formatPrice } from '@core/data/store/pricing';
 import { MAX_QUANTITY_PER_LINE, storedItemCount } from '@core/data/store/cart';
 import type { PricedProduct } from '@core/data/store/cart';
-import type { StoreProduct } from '@core/data/store/types';
+import type { ProductVariant, StoreProduct } from '@core/data/store/types';
 import {
   subscribeCart, cartSnapshot, cartServerSnapshot, resolve,
   cartAdd, cartSetQuantity, cartRemove,
 } from '@/lib/cart';
-import { cartHref, productHref, isOrderable } from '@/lib/store';
+import { cartHref, productHref } from '@/lib/store';
 
 /**
  * The cart's interactive parts.
@@ -40,19 +40,26 @@ function useStoredCart() {
  * that says why up front, and in a shop it wastes a decision the customer has
  * already made.
  */
-export const AddToCart: React.FC<{ product: StoreProduct }> = ({ product }) => {
+export const AddVariantToCart: React.FC<{
+  product: StoreProduct;
+  variant: ProductVariant;
+  /** Decided by `canOrder` on the server's data — see `VariantPicker`. */
+  orderable: boolean;
+}> = ({ product, variant, orderable }) => {
   // The stored cart, not a resolved one: this button needs to know whether the
-  // customer already added THIS product, and the server already told it the
-  // price by handing over the resolved product itself.
-  const inCart = useStoredCart().items.find(i => i.productId === product.id);
+  // customer already added THIS VARIANT, and the server already told it the
+  // price by handing over the resolved variant itself.
+  const inCart = useStoredCart().items.find(i => i.variantId === variant.id);
 
-  if (!isOrderable(product)) {
+  if (!orderable) {
     return (
       <p data-testid="add-to-cart-unavailable" className="card-sm"
         style={{ padding: '12px 14px', marginTop: 14, fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-        {product.priceMinor === null
-          ? 'سعر هذا المنتج قيد التحديث، فلا يمكن طلبه بعد. نعرضه لأنه من الخيارات التي نوصي بها.'
-          : 'غير متاح للطلب حالياً.'}
+        {variant.priceMinor === null
+          ? 'سعر هذه النسخة قيد التحديث، فلا يمكن طلبها بعد. نعرضها لأنها من الخيارات التي نوصي بها.'
+          : product.suspendedReasonAr
+            ? 'أوقفنا بيع هذا المنتج مؤقّتاً.'
+            : 'هذه النسخة غير متاحة للطلب حالياً.'}
       </p>
     );
   }
@@ -60,7 +67,7 @@ export const AddToCart: React.FC<{ product: StoreProduct }> = ({ product }) => {
   if (inCart) {
     return (
       <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <QuantityStepper productId={product.id} quantity={inCart.quantity} />
+        <QuantityStepper variantId={variant.id} quantity={inCart.quantity} />
         <Link href={cartHref()} className="btn-ghost" data-testid="go-to-cart">
           في السلة — افتحها ←
         </Link>
@@ -73,7 +80,7 @@ export const AddToCart: React.FC<{ product: StoreProduct }> = ({ product }) => {
       type="button"
       className="btn-primary"
       data-testid="add-to-cart"
-      onClick={() => cartAdd(product.id, 1)}
+      onClick={() => cartAdd(variant.id, 1)}
       style={{ marginTop: 14, width: '100%', padding: '12px 16px', fontSize: 14.5 }}
     >
       أضف إلى السلة
@@ -82,22 +89,22 @@ export const AddToCart: React.FC<{ product: StoreProduct }> = ({ product }) => {
 };
 
 /** A quantity control that can also remove the line, because zero means gone. */
-export const QuantityStepper: React.FC<{ productId: string; quantity: number }> = ({
-  productId, quantity,
+export const QuantityStepper: React.FC<{ variantId: string; quantity: number }> = ({
+  variantId, quantity,
 }) => (
   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
     <button type="button" className="btn-ghost" aria-label="أنقص الكمية"
-      data-testid={`qty-down-${productId}`}
-      onClick={() => cartSetQuantity(productId, quantity - 1)}
+      data-testid={`qty-down-${variantId}`}
+      onClick={() => cartSetQuantity(variantId, quantity - 1)}
       style={{ padding: '6px 12px', fontSize: 15 }}>−</button>
-    <span data-testid={`qty-${productId}`} aria-live="polite"
+    <span data-testid={`qty-${variantId}`} aria-live="polite"
       style={{ minWidth: 34, textAlign: 'center', fontSize: 14, fontWeight: 800 }}>
       <span dir="ltr">{quantity}</span>
     </span>
     <button type="button" className="btn-ghost" aria-label="زد الكمية"
-      data-testid={`qty-up-${productId}`}
+      data-testid={`qty-up-${variantId}`}
       disabled={quantity >= MAX_QUANTITY_PER_LINE}
-      onClick={() => cartSetQuantity(productId, quantity + 1)}
+      onClick={() => cartSetQuantity(variantId, quantity + 1)}
       style={{ padding: '6px 12px', fontSize: 15 }}>+</button>
   </span>
 );
@@ -158,7 +165,7 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
           </p>
           <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
             {dropped.map(d => (
-              <li key={d.productId} style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+              <li key={d.variantId} style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
                 {d.reasonAr}
               </li>
             ))}
@@ -173,12 +180,12 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
             style={{ padding: '14px 16px', display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0 }}>
-                <Link href={productHref(l.product.id)} className="ltr"
+                <Link href={productHref(l.product.productId)} className="ltr"
                   style={{ fontSize: 13.5, fontWeight: 900 }}>
                   {l.product.nameEn}
                 </Link>
                 <p style={{ margin: '3px 0 0', fontSize: 12.5, color: 'var(--text-dim)' }}>
-                  {l.product.titleAr}
+                  {l.product.variantNameAr || l.product.titleAr}
                 </p>
               </div>
               <span data-testid={`cart-line-total-${l.product.id}`}
@@ -199,7 +206,7 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
                 </span>
               ) : (
                 <>
-                  <QuantityStepper productId={l.product.id} quantity={l.quantity} />
+                  <QuantityStepper variantId={l.product.id} quantity={l.quantity} />
                   <button type="button" className="btn-ghost"
                     data-testid={`cart-remove-${l.product.id}`}
                     onClick={() => cartRemove(l.product.id)}

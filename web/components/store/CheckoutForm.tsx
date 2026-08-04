@@ -79,7 +79,7 @@ export const CheckoutForm: React.FC<{ catalogue: readonly PricedProduct[] }> = (
         const fd = new FormData(e.currentTarget);
         const result = await submitOrder({
           // Ids and quantities only. See the note above.
-          items: cart.items.map(i => ({ productId: i.productId, quantity: i.quantity })),
+          items: cart.items.map(i => ({ variantId: i.variantId, quantity: i.quantity })),
           contact: {
             fullNameAr: String(fd.get('fullName') ?? ''),
             phone: String(fd.get('phone') ?? ''),
@@ -104,8 +104,12 @@ export const CheckoutForm: React.FC<{ catalogue: readonly PricedProduct[] }> = (
               display: 'flex', gap: 10, justifyContent: 'space-between',
               fontSize: 12.5, flexWrap: 'wrap',
             }}>
-              <span className="ltr" style={{ minWidth: 0 }}>
-                {l.product.nameEn} <span dir="ltr">× {l.quantity}</span>
+              <span style={{ minWidth: 0 }}>
+                <span className="ltr">{l.product.nameEn}</span>
+                {l.product.variantNameAr && (
+                  <span style={{ color: 'var(--text-dimmer)' }}> — {l.product.variantNameAr}</span>
+                )}{' '}
+                <span dir="ltr">× {l.quantity}</span>
               </span>
               <span style={{ whiteSpace: 'nowrap' }}>
                 {l.unitPriceMinor === 0

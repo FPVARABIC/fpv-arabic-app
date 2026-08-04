@@ -5,9 +5,15 @@ import { getSession, sessionCan } from '@/lib/server/session';
 import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { storeProduct } from '@core/data/store/catalogue';
+import { publicationBlockers } from '@core/data/store/publication';
+import { INITIAL_PRIVATE_SETTINGS } from '@core/data/store/settings';
+import { resolvedProduct } from '@/lib/server/storeCatalogue';
+import { supplyFor } from '@/lib/server/storeSupply';
 import type { ProductOverride } from '@core/data/store/overrides';
+import { IMAGE_BASIS_LABEL_AR } from '@core/data/store/types';
 import type {
-  Availability, BuyerLevel, LinkProtocol, ProductImage, ProductSpec, VideoSystem,
+  Availability, BuyerLevel, ImageLicenceBasis, LinkProtocol, ProductImage,
+  ProductSpec, SpecSourceKind, SpecStatus, VideoSystem,
 } from '@core/data/store/types';
 
 /**
@@ -55,10 +61,15 @@ export interface SaveProductInput {
   inTheBoxText: string;
   weightGrams: string;
   dimensionsMm: { length: string; width: string; height: string };
-  specs: { labelAr: string; valueAr: string; verified: boolean; sourceUrl: string }[];
+  specs: {
+    labelAr: string; valueAr: string; unitAr: string;
+    status: string;
+    sourceKind: string; sourceTitleAr: string; sourceUrl: string; checkedAt: string;
+    disagreementAr: string;
+  }[];
   images: {
     url: string; altAr: string;
-    ownerAr: string; permissionAr: string; sourceUrl: string;
+    ownerAr: string; basis: string; evidenceUrl: string; sourceUrl: string;
     official: boolean; reviewedAt: string; needsReplacement: boolean;
   }[];
 }
@@ -166,6 +177,40 @@ export async function setProductPublished(
   const seed = storeProduct(productId);
   if (!seed) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
 
+  // THE GATE. Everything else in this batch exists to make this line possible.
+  //
+  // Checked on the SERVER against the merged product, not against whatever the
+  // panel was showing. The panel disables the button when there are blockers;
+  // that is a courtesy. This is the boundary, and it is the reason a product
+  // cannot be published by a stale tab, a replayed request, or a colleague who
+  // was sure the images were fine.
+  //
+  // Unpublishing is never gated. The moment you need something off the shop is
+  // not the moment to be told it is incomplete.
+  if (published) {
+    const product = await resolvedProduct(productId);
+    if (!product) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
+    if (product.suspendedReasonAr) {
+      return {
+        ok: false,
+        errorAr: 'هذا المنتج موقوف بقرار. ارفع الإيقاف أولاً، لأن سببه لا يزول بإكمال البيانات.',
+      };
+    }
+    const supply = await supplyFor(productId);
+    const blockers = publicationBlockers({
+      product,
+      supply,
+      priceReviewDays: INITIAL_PRIVATE_SETTINGS.priceReviewDays,
+      now: new Date().toISOString(),
+    });
+    if (blockers.length > 0) {
+      return {
+        ok: false,
+        errorAr: `لا يمكن نشره بعد: ${blockers.map(b => b.messageAr).join(' ')}`,
+      };
+    }
+  }
+
   const entryId = await logAudit(actorFromSession(gate.session), newRequestId(), {
     action: 'store.product.publish',
     targetType: 'product',
@@ -176,6 +221,59 @@ export async function setProductPublished(
   try {
     await adminDb().collection(PRODUCTS).doc(productId).set({
       published,
+      updatedAt: new Date().toISOString(),
+      updatedBy: gate.session.uid,
+    }, { merge: true });
+    await markAuditResult(entryId, 'ok');
+  } catch {
+    await markAuditResult(entryId, 'error', 'write failed');
+    return { ok: false, errorAr: 'تعذّر الحفظ. حاول مرة أخرى.' };
+  }
+
+  refresh(productId, seed.categoryId);
+  return { ok: true };
+}
+
+/**
+ * Taking a product off the shop for a reason, or putting the reason away.
+ *
+ * Distinct from unpublishing, and the difference matters operationally: an
+ * unpublished product is one that is not ready, and it becomes ready when
+ * somebody finishes it. A suspended product had everything and was pulled
+ * anyway — a recall, a supplier that stopped answering — and it must not drift
+ * back into «جاهز للنشر» because a spec got filled in.
+ *
+ * The reason is required. «Suspended» with no reason is a mystery for whoever
+ * finds it in three months, and they will either publish it blindly or leave it
+ * forever.
+ */
+export async function setProductSuspension(
+  productId: string, reasonAr: string | null,
+): Promise<ProductActionResult> {
+  const gate = await authorise();
+  if ('errorAr' in gate) return { ok: false, errorAr: gate.errorAr };
+
+  const seed = storeProduct(productId);
+  if (!seed) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
+
+  const reason = reasonAr === null ? null : reasonAr.trim().slice(0, 300);
+  if (reason !== null && reason.length < 10) {
+    return { ok: false, errorAr: 'اكتب سبب الإيقاف. «موقوف» بلا سبب لغز لمن يجده لاحقاً.' };
+  }
+
+  const entryId = await logAudit(actorFromSession(gate.session), newRequestId(), {
+    action: 'store.product.publish',
+    targetType: 'product',
+    targetId: productId,
+    after: reason === null ? 'unsuspended' : `suspended: ${reason}`,
+  });
+
+  try {
+    await adminDb().collection(PRODUCTS).doc(productId).set({
+      suspendedReasonAr: reason,
+      // Suspending takes it off the shop in the same write. Two writes means a
+      // window in which it is suspended and still selling.
+      ...(reason === null ? {} : { published: false }),
       updatedAt: new Date().toISOString(),
       updatedBy: gate.session.uid,
     }, { merge: true });
@@ -260,9 +358,21 @@ function validateImages(raw: SaveProductInput['images']): Validated<ProductImage
       return { errorAr: `الصورة ${i + 1}: اكتب وصفاً بديلاً — من لا يرى الصورة يحتاجه.` };
     }
     const ownerAr = img.ownerAr.trim();
-    const permissionAr = img.permissionAr.trim();
-    if (!ownerAr || !permissionAr) {
-      return { errorAr: `الصورة ${i + 1}: اكتب صاحب الصورة وشروط استخدامها. صورة بلا مصدر لا تُنشر.` };
+    if (!ownerAr) {
+      return { errorAr: `الصورة ${i + 1}: اكتب صاحب الصورة.` };
+    }
+    if (!isBasis(img.basis)) {
+      return {
+        errorAr: `الصورة ${i + 1}: اختر أساس الاستخدام من القائمة. «وجدتها على الإنترنت» ليس أساساً.`,
+      };
+    }
+    // The link to the grant, not to the picture. A product page proves the
+    // photo exists, which was never the question.
+    const evidenceUrl = img.evidenceUrl.trim();
+    if (!/^https:\/\//.test(evidenceUrl)) {
+      return {
+        errorAr: `الصورة ${i + 1}: ضع رابط الإذن نفسه — الصفحة التي يُقرأ فيها التصريح، لا صفحة المنتج.`,
+      };
     }
     const reviewedAt = img.reviewedAt.trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt)) {
@@ -271,9 +381,11 @@ function validateImages(raw: SaveProductInput['images']): Validated<ProductImage
     out.push({
       url: url.slice(0, 500),
       altAr: altAr.slice(0, 200),
+      order: out.length,
       credit: {
         ownerAr: ownerAr.slice(0, 120),
-        permissionAr: permissionAr.slice(0, 200),
+        basis: img.basis,
+        evidenceUrl: evidenceUrl.slice(0, 500),
         ...(img.sourceUrl.trim() ? { sourceUrl: img.sourceUrl.trim().slice(0, 500) } : {}),
         official: img.official,
         reviewedAt,
@@ -302,21 +414,69 @@ function validateSpecs(raw: SaveProductInput['specs']): Validated<ProductSpec[]>
     if (!labelAr || !valueAr) {
       return { errorAr: `المواصفة ${i + 1}: اكتب الاسم والقيمة معاً، أو اترك السطر فارغاً.` };
     }
+    if (!isSpecStatus(s.status)) {
+      return { errorAr: `المواصفة «${labelAr}»: اختر حالة تحقّق صحيحة.` };
+    }
+
     const sourceUrl = s.sourceUrl.trim();
-    if (s.verified && !sourceUrl) {
+    const checkedAt = s.checkedAt.trim();
+    if (s.status === 'verified') {
+      if (!isSourceKind(s.sourceKind)) {
+        return { errorAr: `المواصفة «${labelAr}»: اختر نوع المصدر.` };
+      }
+      if (!/^https:\/\//.test(sourceUrl)) {
+        return {
+          errorAr: `المواصفة «${labelAr}»: علّمتها مؤكَّدة بلا مصدر. ضع رابط وثيقة الشركة، أو غيّر الحالة إلى «بانتظار التأكيد».`,
+        };
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(checkedAt)) {
+        return { errorAr: `المواصفة «${labelAr}»: اكتب تاريخ التحقّق بصيغة YYYY-MM-DD.` };
+      }
+      // A review corroborates; it never carries a claim on its own. Otherwise
+      // «someone on YouTube said 80mm» becomes a specification.
+      if (s.sourceKind === 'independent-review') {
+        return {
+          errorAr: `المواصفة «${labelAr}»: المراجعة المستقلّة تُعضِّد ولا تُثبت وحدها. استعمل صفحة الشركة أو دليلها.`,
+        };
+      }
+    }
+    // «The sources disagree» is only useful if it says how.
+    if (s.status === 'disputed' && !s.disagreementAr.trim()) {
       return {
-        errorAr: `المواصفة «${labelAr}»: علّمتها مؤكَّدة بلا مصدر. ضع رابط وثيقة الشركة، أو أزل التأكيد.`,
+        errorAr: `المواصفة «${labelAr}»: اكتب ما قالته المصادر المختلفة. «مختلف عليها» وحدها لا تفيد القارئ.`,
       };
     }
+
     out.push({
       labelAr: labelAr.slice(0, 80),
       valueAr: valueAr.slice(0, 160),
-      verified: s.verified,
-      ...(sourceUrl ? { sourceUrl: sourceUrl.slice(0, 500) } : {}),
+      ...(s.unitAr.trim() ? { unitAr: s.unitAr.trim().slice(0, 24) } : {}),
+      status: s.status,
+      ...(s.status === 'verified' && isSourceKind(s.sourceKind)
+        ? {
+          source: {
+            kind: s.sourceKind,
+            titleAr: (s.sourceTitleAr.trim() || 'صفحة المصدر').slice(0, 160),
+            url: sourceUrl.slice(0, 500),
+            checkedAt,
+          },
+        }
+        : {}),
+      ...(s.disagreementAr.trim() ? { disagreementAr: s.disagreementAr.trim().slice(0, 300) } : {}),
     });
     if (out.length >= 24) break;
   }
   return { value: out };
+}
+
+function isBasis(v: string): v is ImageLicenceBasis {
+  return (IMAGE_BASIS_LABEL_AR as Record<string, string>)[v] !== undefined;
+}
+function isSpecStatus(v: string): v is SpecStatus {
+  return v === 'verified' || v === 'pending' || v === 'disputed';
+}
+function isSourceKind(v: string): v is SpecSourceKind {
+  return ['manufacturer-page', 'manufacturer-manual', 'reseller', 'independent-review'].includes(v);
 }
 
 function validateDimensions(
@@ -335,7 +495,8 @@ function validateDimensions(
 }
 
 function isAvailability(v: string): v is Availability {
-  return ['in-stock', 'made-to-order', 'out-of-stock', 'coming-soon'].includes(v);
+  return ['in-stock', 'limited', 'made-to-order', 'needs-confirmation',
+    'out-of-stock', 'discontinued', 'coming-soon'].includes(v);
 }
 function isLevel(v: string): v is BuyerLevel {
   return ['beginner', 'intermediate', 'advanced'].includes(v);

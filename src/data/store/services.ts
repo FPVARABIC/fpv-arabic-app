@@ -192,10 +192,30 @@ export function serviceAsProduct(svc: StoreService, reviewedAt: string): StorePr
     inTheBoxAr: ['خدمة تُنفَّذ على عتادك — لا يُشحن معها شيء.'],
     specs: [],
     images: [],
+    // One variant, like everything else, so no surface needs a special case.
+    // A service is never itself «eligible for free setup» — it IS the setup,
+    // and a service that qualified for its own free version would add itself to
+    // every basket forever.
+    variants: [{
+      id: `${svc.id}:standard`,
+      nameAr: 'الخدمة',
+      packageKind: 'single',
+      linkProtocol: 'none',
+      videoSystem: 'none',
+      inTheBoxAr: ['خدمة تُنفَّذ على عتادك — لا يُشحن معها شيء.'],
+      availability: 'made-to-order',
+      priceMinor: svc.includedWithPurchase ? 0 : null,
+      isDefault: true,
+      freeSetupEligible: false,
+    }],
     priceMinor: svc.includedWithPurchase ? 0 : null,
     currency: 'USD',
     compareAtMinor: null,
     availability: 'made-to-order',
+    // Services are ours. There is no manufacturer page to source, no licensed
+    // photograph to obtain and no supplier to pay, so the publication gate that
+    // holds a drone back has nothing to hold here — and a shop whose own
+    // services are invisible cannot offer them.
     published: true,
     relatedProductIds: [],
     alternativeProductIds: [],
