@@ -32,6 +32,7 @@
     "test:video": "npx tsx scripts/testVideo.ts",
     "test:video-ui": "npx tsx scripts/testVideoUI.ts",
     "test:web-core": "npx tsx scripts/testWebCore.ts",
+    "test:web-identity": "npx tsx scripts/testWebIdentity.ts",
     "test:web-auth": "npx tsx scripts/testWebAuth.ts",
     "test:web-community": "npx tsx scripts/testWebCommunity.ts",
     "test:orphan-media": "npx tsx scripts/testOrphanMedia.ts",

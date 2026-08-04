@@ -80,8 +80,8 @@ export const HeaderSearch: React.FC = () => {
       aria-label="ابحث في المنصة"
       style={{
         flexShrink: 0, alignItems: 'center', justifyContent: 'center',
-        width: 34, height: 34, borderRadius: 9, border: '1px solid var(--border)',
-        color: 'var(--text-dim)', fontSize: 15,
+        width: 34, height: 34, borderRadius: 9, border: '1px solid rgba(18,34,42,0.18)',
+        background: 'var(--surface)', color: 'var(--nav-ink)', fontSize: 15,
       }}
     >
       <span aria-hidden>⌕</span>
@@ -112,7 +112,7 @@ export const HeaderSearch: React.FC = () => {
         style={{
           width: 'clamp(90px, 18vw, 200px)', minWidth: 0,
           padding: '7px 11px', borderRadius: 9,
-          border: '1px solid var(--border)', background: 'var(--surface-2)',
+          border: '1px solid rgba(18,34,42,0.18)', background: 'var(--surface)',
           color: 'var(--text)', fontSize: 13, fontFamily: 'inherit',
         }}
       />
