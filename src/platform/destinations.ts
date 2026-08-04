@@ -71,6 +71,28 @@ export interface DestinationChecks {
   dxExists?(id: string): boolean;
   /** Article ids do not encode their module, so the route needs a lookup. */
   moduleIdOfArticle?(id: string): string | undefined;
+
+  /**
+   * The software centres, where an id becomes a PATH SEGMENT.
+   *
+   * These exist because a surface may publish a page for only SOME registry
+   * entries. The web builds `/betaflight/:id` exclusively for entries that have
+   * content — an entry with `contentStatus: 'not-started'` is named on the index
+   * as undocumented and given no URL — while the phone renders every entry. So
+   * the same destination is live on one surface and absent on the other, and
+   * only the surface can say which.
+   *
+   * Without this, `/betaflight/blackbox` rendered as an ordinary link from an
+   * encyclopedia article and 404'd. The site-wide dead-link audit found it.
+   *
+   * Optional, so a surface that publishes everything passes nothing and behaves
+   * exactly as before. Only `elrs-setup` and `elrs-issue` are absent from this
+   * list, deliberately: their ids are query parameters on a page that always
+   * exists, so an unknown id selects nothing rather than 404ing.
+   */
+  betaflightPageExists?(id: string): boolean;
+  edgeTxPageExists?(id: string): boolean;
+  videoPageExists?(id: string): boolean;
 }
 
 /**
@@ -105,7 +127,9 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
     case 'lesson':
       return d.id ? `/lessons/${d.id}` : null;
     case 'betaflight':
-      return d.id ? `/betaflight/${d.id}` : '/betaflight';
+      if (!d.id) return '/betaflight';
+      if (checks.betaflightPageExists && !checks.betaflightPageExists(d.id)) return null;
+      return `/betaflight/${d.id}`;
     // The software-centre pages are single screens that select an entry from a
     // query parameter, so an id is optional: without one the destination is the
     // page, with one it is the exact step or issue. That difference is the whole
@@ -119,9 +143,13 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
         ? `/programming/expresslrs/troubleshooting?issue=${encodeURIComponent(d.id)}`
         : '/programming/expresslrs/troubleshooting';
     case 'edgetx':
-      return d.id ? `/programming/edgetx/${d.id}` : '/programming/edgetx';
+      if (!d.id) return '/programming/edgetx';
+      if (checks.edgeTxPageExists && !checks.edgeTxPageExists(d.id)) return null;
+      return `/programming/edgetx/${d.id}`;
     case 'video':
-      return d.id ? `/programming/video/${d.id}` : '/programming/video';
+      if (!d.id) return '/programming/video';
+      if (checks.videoPageExists && !checks.videoPageExists(d.id)) return null;
+      return `/programming/video/${d.id}`;
     case 'roadmap':
       return d.id ? `/roadmap/${d.id}` : null;
     case 'project': {

@@ -128,12 +128,44 @@ export default async function CommunityPage(
           </nav>
 
           {/* ── The three honest states ─────────────────────────────────── */}
+          {/*
+            The feed is absent for exactly one reason — there are no server
+            credentials to read Firestore with — but WHO is looking decides
+            what that sentence should say. In the static review copy the
+            reader is the owner checking the design, and «راجع web/.env.example»
+            tells them nothing except that something is broken. On a live
+            deployment the reader is whoever configured it, and the file name is
+            precisely what they need.
+
+            `NEXT_PUBLIC_REVIEW_COPY` is set only by `scripts/buildReviewSite.mjs`.
+            Neither branch invents a feed, and neither pretends the community is
+            working.
+          */}
           {!configured && (
             <div className="card" data-testid="community-unconfigured" style={{ padding: '18px 20px' }}>
-              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
-                المجتمع غير مهيّأ في هذه البيئة: لا توجد بيانات اعتماد خادم لقراءة Firestore.
-                راجع <span className="ltr">web/.env.example</span>.
-              </p>
+              {process.env.NEXT_PUBLIC_REVIEW_COPY === '1' ? (
+                <>
+                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 900 }}>
+                    المنشورات لا تظهر في نسخة المراجعة
+                  </h2>
+                  <p style={{ margin: '9px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+                    هذه نسخة ساكنة للمراجعة: صفحاتها مبنية مسبقاً بلا خادم، والمجتمع
+                    يحتاج قراءة حيّة من قاعدة البيانات عند كل فتح. لذلك تظهر هنا
+                    الواجهة والتصميم والتصنيفات دون المنشورات نفسها.
+                  </p>
+                  <p style={{ margin: '10px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+                    <strong style={{ color: 'var(--text)' }}>لا يوجد مجتمع منفصل للويب.</strong>{' '}
+                    هذه الصفحة تقرأ مجموعة <span className="ltr">posts</span> نفسها التي
+                    يقرأها التطبيق، بنفس شرط الحالة النشطة، فتظهر فيها المنشورات
+                    والتعليقات والحسابات نفسها فور تشغيل النسخة الحيّة.
+                  </p>
+                </>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
+                  المجتمع غير مهيّأ في هذه البيئة: لا توجد بيانات اعتماد خادم لقراءة Firestore.
+                  راجع <span className="ltr">web/.env.example</span>.
+                </p>
+              )}
             </div>
           )}
 

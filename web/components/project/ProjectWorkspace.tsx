@@ -291,15 +291,77 @@ const EmptyProject: React.FC<{ onCreated: () => void }> = ({ onCreated }) => {
   const [size, setSize] = useState('');
   const [cells, setCells] = useState('');
   const [busy, setBusy] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   return (
     <section className="card" data-testid="project-empty" style={{ padding: '20px 22px' }}>
       <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>لا مشروع بعد</h2>
-      <p style={{ margin: '8px 0 18px', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+      <p style={{ margin: '8px 0 4px', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
         ابدأ بتحديد نوع الدرون. الحجم والفولتية اختياريان الآن — اتركهما فارغين
         إن لم تكن متأكداً، فالمنصة تعرض «بيانات ناقصة» بدل أن تفترض قيمة تبني
         عليها أحكاماً خاطئة.
       </p>
+
+      {/*
+        The escape hatch that was missing.
+
+        Import used to live in `DataControls`, which renders only once a project
+        EXISTS — so the one person who most needs it, somebody whose project is
+        on their phone or in another browser and who is therefore looking at
+        exactly this empty screen, could not reach it. The owner hit this
+        directly: «قد يكون السبب أن المشروع محفوظ محلياً في متصفح أو جهاز آخر».
+      */}
+      <p style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+        عندك مشروع على جهاز آخر أو في تطبيق الهاتف؟{' '}
+        <label
+          data-testid="project-import-empty-label"
+          style={{ color: 'var(--accent-ink)', fontWeight: 800, cursor: 'pointer' }}
+        >
+          {importing ? 'جارٍ الاستيراد…' : 'استورد ملفه'}
+          <input
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            data-testid="project-import-empty"
+            disabled={importing}
+            onChange={async e => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setImporting(true);
+              setImportError(null);
+              try {
+                // `importAssemblyProject` takes the PARSED payload, not the
+                // file's text — the same call `DataControls` makes. It
+                // validates against the live part catalogue and refuses
+                // anything it would not itself have written, so an edited or
+                // foreign file cannot install a shape the app rejects on read.
+                const parsed = JSON.parse(await file.text());
+                const restored = importAssemblyProject(parsed);
+                if (!restored) setImportError('الملف غير صالح أو يحمل إصداراً لا نعرفه.');
+                else onCreated();
+              } catch {
+                setImportError('تعذّر قراءة الملف.');
+              } finally {
+                setImporting(false);
+                e.target.value = '';
+              }
+            }}
+          />
+        </label>
+        {' '}— نفس الملف الذي يصدّره التطبيق.
+      </p>
+
+      {importError && (
+        <p
+          role="alert"
+          data-testid="project-import-empty-error"
+          className="admin-badge admin-badge-bad"
+          style={{ display: 'block', padding: '10px 14px', marginBottom: 16 }}
+        >
+          {importError}
+        </p>
+      )}
 
       <form
         data-testid="project-create-form"

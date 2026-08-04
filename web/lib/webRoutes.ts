@@ -4,6 +4,9 @@ import {
 import { getArticle, getModule } from '@core/data/kb/registry';
 import { getDxTree } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
+import { bfPageRegistry } from '@core/data/betaflight/pageRegistry';
+import { allEdgeTxPages } from '@core/data/edgetx/registry';
+import { allVideoToolPages } from '@core/data/video/software/registry';
 
 /**
  * The ONE place a destination becomes a web URL.
@@ -47,6 +50,21 @@ const WEB_CHECKS: DestinationChecks = {
   moduleIdOfArticle: id => getArticle(id)?.moduleId,
   dxExists: id => !!getDxTree(id),
   glossaryExists: id => kbTerms.some(t => t.id === id),
+
+  /*
+   * These three MUST mirror the `generateStaticParams` of the routes they
+   * describe, which all filter on «does this registry entry actually have a
+   * page». A registry entry with no content is named on its index as
+   * undocumented and given no URL — so resolving a destination to that URL
+   * produces a link that 404s.
+   *
+   * That is not hypothetical: `/betaflight/blackbox` shipped as a live link
+   * from an encyclopedia article, because the resolver built the path from the
+   * id without ever asking whether the page existed.
+   */
+  betaflightPageExists: id => bfPageRegistry.some(p => p.id === id && !!p.page),
+  edgeTxPageExists: id => allEdgeTxPages.some(p => p.id === id),
+  videoPageExists: id => allVideoToolPages.some(p => p.id === id),
 };
 
 /**

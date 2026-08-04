@@ -450,22 +450,51 @@ async function main() {
 
       await ctx.close();
 
-      // On a phone the field becomes a link, because a field there pushed the
-      // whole page into horizontal scrolling. It must still be reachable and
-      // still be named for a screen reader.
+      // A PHONE GETS THE REAL FIELD NOW.
+      //
+      // It used to get a magnifier icon instead, because a field on the header's
+      // single row pushed the page into horizontal scrolling. That icon was one
+      // of three doors to one room — with the «البحث» navigation tab and this
+      // field — and when the duplication was removed, the icon went too: a glyph
+      // is not «حقل بحث واضح», and a phone is where searching matters most.
+      //
+      // The width problem is solved by letting the field wrap onto its own row
+      // rather than by degrading it, so this asserts BOTH halves: the field is
+      // really there and really usable, AND the page still does not scroll
+      // sideways — which is the regression that produced the icon in the first
+      // place.
       const narrow = await browser.newContext({ viewport: { width: 390, height: 844 } });
       const small = await narrow.newPage();
       await goto(small, `${BASE}/kb`, 'header');
-      const compact = small.locator('[data-testid="header-search-compact"]');
-      ok('a phone gets a compact search control', await compact.count() === 1);
-      ok('…which is named for a screen reader',
-        (await compact.getAttribute('aria-label'))?.includes('ابحث') ?? false);
-      const compactVisible = await compact.isVisible();
-      const fullVisible = await small.locator('[data-testid="header-search"]').isVisible();
-      ok('exactly one of the two is shown at 390px', compactVisible && !fullVisible);
-      await compact.click();
-      await small.waitForURL(/\/search/, { timeout: 20_000 });
-      ok('and it opens the search page', true);
+
+      ok('the magnifier-icon stand-in is gone',
+        await small.locator('[data-testid="header-search-compact"]').count() === 0);
+
+      const phoneField = small.locator('[data-testid="header-search-input"]');
+      ok('a phone gets the real search field', await phoneField.isVisible());
+
+      const phoneLabelled = await small.evaluate(() => {
+        const input = document.querySelector('[data-testid="header-search-input"]');
+        const id = input?.getAttribute('id');
+        return !!id && !!document.querySelector(`label[for="${id}"]`);
+      });
+      ok('…still labelled for a screen reader at 390px', phoneLabelled);
+
+      const noSideScroll = await small.evaluate(() =>
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+      ok('…and the page still does not scroll sideways', noSideScroll);
+
+      // Typing and submitting must reach the results with the query in the URL.
+      await phoneField.fill('failsafe');
+      await small.locator('[data-testid="header-search-go"]').click();
+      await small.waitForURL(/\/search\?q=failsafe/, { timeout: 20_000 });
+      ok('typing on a phone reaches the results, query in the URL', true);
+
+      // The navigation bar must NOT offer a second way in.
+      await goto(small, `${BASE}/kb`, 'header');
+      ok('no search tab duplicates the field',
+        await small.locator('[data-testid="nav-search"]').count() === 0);
+
       await narrow.close();
     }
 

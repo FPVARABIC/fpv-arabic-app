@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  allKbModules, getArticle, getModule, articleNeighbours, resolveLinkRoute,
+  allKbModules, getArticle, getModule, articleNeighbours,
 } from '@core/data/kb/registry';
 import { KB_LAYER_ORDER, KB_LAYER_LABEL_AR, type KbLayerId } from '@core/data/kb/types';
 import { kbTerms } from '@core/data/kb/glossary/terms';
 import { BlockRenderer } from '@/components/kb/BlockRenderer';
 import { href, isSafeExternalUrl } from '@/lib/webRoutes';
+import { ContentLink } from '@/components/ContentLink';
 
 /**
  * One article — the deepest public page on the site, and the one SEO cares
@@ -190,30 +191,13 @@ export default async function ArticlePage(
                 اذهب من هنا
               </h2>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-                {a.links.map((l, i) => {
-                  // Content never carries a path. The route is derived from the
-                  // shared resolver, so a link that no longer resolves renders
-                  // as plain text instead of a dead anchor.
-                  const to = l.kind === 'external'
-                    ? (l.url && isSafeExternalUrl(l.url) ? l.url : null)
-                    : resolveLinkRoute(l);
-                  if (!to) return null;
-                  const external = l.kind === 'external';
-                  return (
-                    <li key={`${l.kind}-${l.targetId ?? i}`}>
-                      <Link
-                        href={to}
-                        className="card-sm"
-                        data-testid={`article-link-${l.kind}-${l.targetId ?? i}`}
-                        style={{ display: 'block', padding: '11px 14px', fontSize: 13.5, color: 'var(--text-dim)' }}
-                        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                      >
-                        {l.label}
-                        {external && <span className="sr-only"> (يفتح في نافذة جديدة)</span>}
-                      </Link>
-                    </li>
-                  );
-                })}
+                {/* Content never carries a path. The route is derived — but by
+                    the WEB adapter, which knows that lessons, the assembly flow,
+                    the roadmap and the checklists exist only in the app and says
+                    so, instead of linking to routes this surface lacks. */}
+                {a.links.map((l, i) => (
+                  <ContentLink key={`${l.kind}-${l.targetId ?? i}`} link={l} testIdPrefix="article-link" index={i} />
+                ))}
               </ul>
             </section>
           )}

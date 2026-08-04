@@ -5,8 +5,8 @@ import { allDxTrees, getDxTree } from '@core/data/kb/diagnostics/trees';
 import {
   DX_RISK_LABEL_AR, DX_CHECK_CLASS_LABEL_AR, type DxRisk,
 } from '@core/data/kb/diagnostics/types';
-import { resolveLinkRoute } from '@core/data/kb/registry';
-import { href, isSafeExternalUrl } from '@/lib/webRoutes';
+import { href } from '@/lib/webRoutes';
+import { ContentLink } from '@/components/ContentLink';
 
 /**
  * One diagnostic tree, rendered whole.
@@ -241,25 +241,13 @@ export default async function DiagnoseTreePage(
         <section aria-labelledby="dx-links-h" style={{ marginTop: 34 }}>
           <h2 id="dx-links-h" style={{ fontSize: 20, fontWeight: 900, margin: '0 0 14px' }}>اذهب من هنا</h2>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-            {t.links.map((l, i) => {
-              const to = l.kind === 'external'
-                ? (l.url && isSafeExternalUrl(l.url) ? l.url : null)
-                : resolveLinkRoute(l);
-              if (!to) return null;
-              return (
-                <li key={`${l.kind}-${l.targetId ?? i}`}>
-                  <Link
-                    href={to}
-                    className="card-sm"
-                    data-testid={`dx-link-${l.kind}-${l.targetId ?? i}`}
-                    style={{ display: 'block', padding: '11px 14px', fontSize: 13.5, color: 'var(--text-dim)' }}
-                    {...(l.kind === 'external' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              );
-            })}
+            {/* Resolved through the WEB adapter, not the shared resolver — see
+                the note in ContentLink. Calling `resolveLinkRoute` here is what
+                produced live links to `/lessons/:id`, a route this surface has
+                never had. */}
+            {t.links.map((l, i) => (
+              <ContentLink key={`${l.kind}-${l.targetId ?? i}`} link={l} testIdPrefix="dx-link" index={i} />
+            ))}
           </ul>
         </section>
       )}

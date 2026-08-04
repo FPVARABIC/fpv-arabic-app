@@ -237,6 +237,20 @@ const runtime = `
     location.hash = route;
   }, false);
 
+  // The search field is a real GET form. Left alone it would try to navigate to
+  // a path this file has no server for, and the copy would appear to break at
+  // the one control the reviewer is most likely to try. Routed through the same
+  // hash router it lands on the search page — which cannot show RESULTS here,
+  // because ranking them needs the index that only the live server holds.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    var action = form.getAttribute('action') || '';
+    if (action.charAt(0) !== '/') return;
+    e.preventDefault();
+    location.hash = norm(action);
+  }, false);
+
   window.addEventListener('hashchange', function () { render(current()); });
 
   function inflate(b64) {

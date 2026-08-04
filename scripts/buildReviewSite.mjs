@@ -165,7 +165,20 @@ export default nextConfig;
 writeFileSync(join(OUT, 'public', 'robots.txt'), 'User-agent: *\nDisallow: /\n');
 
 execSync('npm install --no-save --prefer-offline', { cwd: OUT, stdio: 'inherit' });
-execSync('npx next build', { cwd: OUT, stdio: 'inherit', env: { ...process.env } });
+/*
+ * Tells the pages they are being built for review rather than for a live
+ * deployment. Exactly one thing reads it today: the community feed, which is
+ * absent here for a structural reason (no server, so no live database read)
+ * and says so in the reviewer's terms instead of pointing at an env file.
+ *
+ * `NEXT_PUBLIC_` because it has to survive into the rendered output — and it
+ * is safe to: it carries no secret, only the fact that this is a review copy.
+ */
+execSync('npx next build', {
+  cwd: OUT,
+  stdio: 'inherit',
+  env: { ...process.env, NEXT_PUBLIC_REVIEW_COPY: '1' },
+});
 
 const dist = join(OUT, 'out');
 const count = (d) => readdirSync(d).reduce((n, e) => {

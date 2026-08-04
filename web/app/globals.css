@@ -546,21 +546,94 @@ details.card-sm > summary:focus-visible {
 /* ── Header search ────────────────────────────────────────────────────────── */
 
 /*
- * At 390px the header already carries a logo, five nav links and an account
- * control. Adding a text field pushed the row past the viewport and the whole
- * page scrolled sideways — caught by the community end-to-end run, not by
- * looking at it on a laptop.
+ * Search is now the ONLY search control on the site — the navigation tab and the
+ * narrow-screen icon that used to duplicate it are gone. That raises the bar for
+ * this element: it has to be a clear, obvious field at every width, including
+ * the one where the old design gave up and showed a magnifier glyph.
  *
- * So the field is a field where there is room, and a labelled icon link where
- * there is not. Both reach the same page and both are keyboard-reachable; the
- * narrow one is simply a link, which needs no ARIA to be announced correctly.
+ * The width problem that glyph solved was real. At 390px the first header row
+ * carries the wordmark and the account control, and a field alongside them
+ * pushed the page into horizontal scrolling. The fix is to stop competing for
+ * that row: `flex-basis: 100%` with `order: 10` sends the field onto its own
+ * full-width line beneath the wordmark. There is room for it there precisely
+ * because the tabs are NOT in the header at this size — they are in the fixed
+ * bottom bar — so the second row would otherwise be empty.
+ *
+ * From 620px up it returns to the first row at its natural width.
  */
-.header-search-full { display: none; }
-.header-search-compact { display: inline-flex; }
+.header-search-full {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 100%;
+  order: 10;
+  margin-bottom: 10px;
+  padding: 0 11px;
+  background: var(--surface);
+  border: 1px solid rgba(18, 34, 42, 0.2);
+  border-radius: 10px;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+/* The whole control reacts to focus, not just the bare input, so the target the
+   eye tracks is the one the keyboard is actually in. */
+.header-search-full:focus-within {
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px rgba(11, 110, 125, 0.16);
+}
+
+.header-search-icon {
+  color: var(--text-dimmer);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.header-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.header-search-input:focus { outline: none; }
+
+/* `appearance: none` removes Safari's own clear button, which draws on the
+   wrong side in a right-to-left field and overlaps the submit control. */
+.header-search-input::-webkit-search-cancel-button { appearance: none; }
+
+.header-search-go {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent-ink);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.header-search-go:hover { opacity: 0.88; }
+
+.header-search-go:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
 
 @media (min-width: 620px) {
-  .header-search-full { display: flex; }
-  .header-search-compact { display: none; }
+  .header-search-full {
+    flex: 0 1 auto;
+    order: 0;
+    width: clamp(190px, 24vw, 300px);
+    margin-bottom: 0;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1012,3 +1085,96 @@ details.card-sm > summary:focus-visible {
    to choose between the name and the search control and the name wins. */
 .wordmark-sub { display: none; }
 @media (min-width: 380px) { .wordmark-sub { display: block; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE HOME PAGE'S PILLARS
+ *
+ * Four sections that must read as EQUAL. The brief was «أعطِ المجتمع والمتجر
+ * ومركز البرامج والموسوعة وزناً متقارباً», and equality here is structural, not
+ * a matter of my restraint: the four render from one array through one class,
+ * so there is no per-pillar styling hook to accidentally make one louder.
+ *
+ * `align-items: stretch` with a column flex inside is what keeps the call to
+ * action pinned to the bottom of every card regardless of how long its
+ * paragraph runs. Without it the four CTAs sit at four different heights and
+ * the shortest card reads as the least important one — the exact hierarchy the
+ * grid exists to avoid.
+ *
+ * The breakpoints are 1 / 2 / 4 columns. Not `auto-fit`: at some widths it
+ * yields three columns and a lone orphan on the second row, which again reads
+ * as one pillar being singled out.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.pillar-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  .pillar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1100px) {
+  .pillar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.pillar {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 21px 18px;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.pillar:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* A pointer-only lift. On a touch screen `:hover` sticks after a tap, leaving
+   a card raised for no reason until something else is touched. */
+@media (hover: none) {
+  .pillar:hover { transform: none; }
+}
+
+.pillar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--accent-ink);
+  flex-shrink: 0;
+}
+
+.pillar-cta {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-ink);
+}
+
+/* The project band: prose and its action side by side where there is room,
+   stacked where there is not. */
+.project-band {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+@media (min-width: 820px) {
+  .project-band {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillar, .pillar:hover { transition: none; transform: none; }
+}

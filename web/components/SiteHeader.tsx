@@ -50,9 +50,15 @@ export const SiteHeader: React.FC<{
         boxShadow: '0 2px 14px -8px rgba(21,34,50,0.25)',
       }}
     >
+      {/* `flexWrap` is what lets the search field take its own full-width row on
+          a phone instead of squeezing the wordmark — see `.header-search-full`.
+          At 620px and up nothing wraps, because the field returns to this row. */}
       <div
         className="shell"
-        style={{ display: 'flex', alignItems: 'center', gap: 14, minHeight: 60 }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14, minHeight: 60,
+          flexWrap: 'wrap',
+        }}
       >
         <Link
           href="/"

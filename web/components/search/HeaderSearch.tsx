@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SECTION_ROUTES } from '@/lib/webRoutes';
@@ -33,13 +32,22 @@ import { SECTION_ROUTES } from '@/lib/webRoutes';
  * ignored while focus is in any field, and `/` is only a shortcut when it is
  * not being typed INTO something.
  *
- * AND IT SHRINKS TO A LINK
- * ------------------------
- * At 390px the header already carries a logo, five nav links and an account
- * control; a text field on top of that pushed the page into horizontal
- * scrolling. Below 620px it becomes a labelled icon link to the search page
- * instead — same destination, no width pressure, and a plain anchor needs no
- * ARIA to be announced properly.
+ * IT IS NOW THE ONLY WAY IN, SO IT IS A FIELD EVERYWHERE
+ * ------------------------------------------------------
+ * There used to be three doors to one room: this field, an icon that replaced
+ * it below 620px, and a «البحث» tab in the navigation bar. The tab is gone and
+ * the icon with it — a magnifier glyph is not «حقل بحث واضح», and on a phone,
+ * where searching matters most, the clear control was the one that got dropped.
+ *
+ * The width problem that icon solved was real, so it is solved differently: on
+ * a narrow screen the field wraps onto its OWN full-width row under the
+ * wordmark instead of competing for the first row. The tabs are not in the
+ * header at that size — they are in the bottom bar — so the row is free. See
+ * `.header-search-full` in globals.css.
+ *
+ * A GET form, not a router push, so it works before hydration and in a static
+ * copy: the query lands in the URL either way, which is what makes a result
+ * page shareable.
  */
 export const HeaderSearch: React.FC = () => {
   const router = useRouter();
@@ -72,33 +80,23 @@ export const HeaderSearch: React.FC = () => {
   }, []);
 
   return (
-    <>
-    <Link
-      href={SECTION_ROUTES.search}
-      className="header-search-compact"
-      data-testid="header-search-compact"
-      aria-label="ابحث في المنصة"
-      style={{
-        flexShrink: 0, alignItems: 'center', justifyContent: 'center',
-        width: 34, height: 34, borderRadius: 9, border: '1px solid rgba(18,34,42,0.18)',
-        background: 'var(--surface)', color: 'var(--nav-ink)', fontSize: 15,
-      }}
-    >
-      <span aria-hidden>⌕</span>
-    </Link>
-
     <form
       role="search"
+      // A real action + method, so submitting works with no JavaScript at all —
+      // the handler below is an enhancement, not the mechanism.
+      action={SECTION_ROUTES.search}
+      method="get"
       className="header-search-full"
       data-testid="header-search"
       onSubmit={e => {
-        e.preventDefault();
         const q = value.trim();
-        if (q.length >= 2) router.push(`${SECTION_ROUTES.search}?q=${encodeURIComponent(q)}`);
+        if (q.length < 2) return; // let the browser's own submit do nothing useful
+        e.preventDefault();
+        router.push(`${SECTION_ROUTES.search}?q=${encodeURIComponent(q)}`);
       }}
-      style={{ flexShrink: 0, alignItems: 'center' }}
     >
       <label htmlFor="header-q" className="sr-only">ابحث في المنصة</label>
+      <span aria-hidden className="header-search-icon">⌕</span>
       <input
         id="header-q"
         ref={inputRef}
@@ -106,18 +104,14 @@ export const HeaderSearch: React.FC = () => {
         name="q"
         value={value}
         onChange={e => setValue(e.target.value)}
-        placeholder="ابحث…"
+        placeholder="ابحث في المنصّة…"
         data-testid="header-search-input"
         autoComplete="off"
-        style={{
-          width: 'clamp(90px, 18vw, 200px)', minWidth: 0,
-          padding: '7px 11px', borderRadius: 9,
-          border: '1px solid rgba(18,34,42,0.18)', background: 'var(--surface)',
-          color: 'var(--text)', fontSize: 13, fontFamily: 'inherit',
-        }}
+        className="header-search-input"
       />
-      <button type="submit" className="sr-only">ابحث</button>
+      <button type="submit" className="header-search-go" data-testid="header-search-go">
+        ابحث
+      </button>
     </form>
-    </>
   );
 };

@@ -459,8 +459,42 @@ console.log('\n[23] Secure image uploads for Community posts (Phase 9)');
   // useWebWorker:true Worker creation. useWebWorker:false runs compression on
   // the main thread instead of widening the CSP to admit blob: workers.
   ok('MediaUploader.tsx compresses on the main thread (useWebWorker: false), not a CSP-blocked blob: Worker', /const IMAGE_COMPRESSION_OPTIONS = \{ useWebWorker: false \} as const;/.test(mediaUploaderTsx));
-  ok('both the full-image and thumbnail imageCompression calls share the same useWebWorker setting via IMAGE_COMPRESSION_OPTIONS, not two independently-drifting literals', (mediaUploaderTsx.match(/\.\.\.IMAGE_COMPRESSION_OPTIONS/g) ?? []).length === 2);
-  ok('a hard timeout wraps the combined compress+upload flow so a stalled network (or the pre-fix CSP deadlock) cannot leave submitting stuck true forever', /MEDIA_UPLOAD_TIMEOUT_MS = 40_000;/.test(mediaUploaderTsx) && /uploadMediaInner\(storage, file, uid, postId, onProgress, control\),\s*\n?\s*MEDIA_UPLOAD_TIMEOUT_MS/.test(mediaUploaderTsx));
+  // THE RULE, NOT A COUNT.
+  //
+  // This used to assert `=== 2`, which was true when there was one compression
+  // path. There are now two (`compressForUpload` and the upload flow), so four
+  // calls — and the assertion failed while the code was entirely correct. A
+  // literal count turns "every call shares the setting" into "there are exactly
+  // two calls", and the second is not the property worth protecting.
+  //
+  // Stated as a rule it cannot go stale when a call site is added, and it still
+  // catches the thing that matters: a call that sets useWebWorker on its own.
+  {
+    const calls = (mediaUploaderTsx.match(/imageCompression\(/g) ?? []).length;
+    const spreads = (mediaUploaderTsx.match(/\.\.\.IMAGE_COMPRESSION_OPTIONS/g) ?? []).length;
+    // Comments mention `useWebWorker` when explaining the CSP problem, so only
+    // real property assignments count as a drifting literal.
+    const stray = (mediaUploaderTsx
+      .split('\n')
+      .filter(l => !l.trim().startsWith('//'))
+      .join('\n')
+      .match(/useWebWorker\s*:/g) ?? []).length;
+
+    ok('there is at least one compression call to govern', calls >= 2);
+    ok('every imageCompression call takes its useWebWorker setting from the shared IMAGE_COMPRESSION_OPTIONS',
+      spreads === calls);
+    ok('…and exactly one place sets useWebWorker, so the two paths cannot drift apart',
+      stray === 1);
+  }
+  // Pinned to the BEHAVIOUR, not to the parameter list. The previous version
+  // spelled out `(storage, file, uid, postId, onProgress, control)`; the upload
+  // was later refactored to take a `folder` instead of `uid, postId`, and the
+  // assertion failed even though the timeout was still wrapping the flow
+  // exactly as intended. A regex over an argument list tests the refactor, not
+  // the guarantee.
+  ok('a hard timeout wraps the combined compress+upload flow so a stalled network (or the pre-fix CSP deadlock) cannot leave submitting stuck true forever',
+    /MEDIA_UPLOAD_TIMEOUT_MS = 40_000;/.test(mediaUploaderTsx)
+    && /uploadMediaInner\([^)]*\),\s*\n?\s*MEDIA_UPLOAD_TIMEOUT_MS/.test(mediaUploaderTsx));
   ok('the timeout race clears its own timer on settle either way (Promise.race + finally), leaving no dangling timer after a normal fast upload', /Promise\.race\(\[promise, timeout\]\)\.finally\(\(\) => clearTimeout\(timer\)\)/.test(mediaUploaderTsx));
   ok('MediaUploadTimeoutError is exported as a distinguishable type, not a plain Error a catch block would have to string-match', /export class MediaUploadTimeoutError extends Error/.test(mediaUploaderTsx));
   ok('useComposer.ts imports MediaUploadTimeoutError and shows a distinct, honest Arabic message for an upload timeout specifically (not the generic post-publish-failed message)', /import \{ uploadMedia, deleteMedia, MediaUploadTimeoutError, type UploadedMedia \} from '\.\.\/Composer\/MediaUploader';/.test(useComposerTs) && /err instanceof MediaUploadTimeoutError \? 'تعذّر رفع الصورة، حاول مرة أخرى' : 'تعذر نشر المنشور\. حاول مرة أخرى\.'/.test(useComposerTs));

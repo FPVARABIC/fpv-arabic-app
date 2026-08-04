@@ -1,171 +1,383 @@
 import Link from 'next/link';
+import { Wrench, Store, CircuitBoard, Library, Hammer, type LucideIcon } from 'lucide-react';
 import { allKbModules } from '@core/data/kb/registry';
 import { allDxTrees } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
-import { allVideoToolPages } from '@core/data/video/software/registry';
-import { allEdgeTxPages } from '@core/data/edgetx/registry';
-import { NAV_ITEMS } from '@/lib/siteNav';
+import { STORE_PRODUCTS } from '@core/data/store/catalogue';
+import { STORE_CATEGORIES } from '@core/data/store/categories';
+import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
+import { navItem } from '@/lib/siteNav';
+import { BRAND_NAME } from '@core/data/brand';
 
 /**
- * The home page.
+ * A section's own path, from the site map rather than typed here.
  *
- * The requirement was explicit: «لا تجعلها صفحة دعائية فارغة». So every number
- * on this page is COUNTED from the shared core at build time, not written by
- * hand — seven modules because `allKbModules.length` is seven, twenty-eight
- * trees because that is how many exist. A hand-written figure is a promise that
- * rots the first time content changes; a counted one cannot be wrong.
+ * Throwing on a miss is the point: a mistyped id becomes a BUILD failure rather
+ * than a card on the front page that leads nowhere. The alternative — `?.href ??
+ * '/'` — turns a typo into a link that silently sends every visitor home.
+ */
+function sectionHref(id: string): string {
+  const item = navItem(id);
+  if (!item) throw new Error(`[home] unknown nav id: ${id}`);
+  return item.href;
+}
+
+/**
+ * The home page — the entrance to the whole platform.
  *
- * It is a server component with no client JavaScript, so it is fully indexable
+ * WHAT WAS WRONG WITH THE OLD ONE
+ * -------------------------------
+ * It read as the encyclopedia's front page rather than the platform's. The
+ * owner's words: «الصفحة الرئيسية الآن تشبه الموسوعة أكثر من كونها واجهة للمنصة
+ * كاملة». And it was true by measurement, not taste — of the two largest blocks
+ * on the page, one was a six-cell grid whose every figure counted encyclopedia
+ * content, and the other was a card per encyclopedia module. The store, the
+ * community and the software centre appeared once each, as small equal cells in
+ * a list of «أقسام المنصة» that also contained the glossary and the contact
+ * form. A visitor could read the whole page and not learn there was a shop.
+ *
+ * HOW THIS ONE IS BUILT INSTEAD
+ * -----------------------------
+ * Four pillars, rendered from ONE array through ONE component, so they are
+ * equal by construction rather than by my remembering to keep them equal. Same
+ * card, same icon size, same number treatment, same call to action. If a future
+ * edit makes one of them louder, it makes all four louder — which is the only
+ * way «وزناً متقارباً» survives contact with later changes.
+ *
+ * The order of the four follows the navigation bar, so the page and the bar
+ * teach the same shape: المجتمع · المتجر · البرامج · الموسوعة.
+ *
+ * EVERY NUMBER IS COUNTED, NONE IS WRITTEN
+ * ----------------------------------------
+ * `STORE_PRODUCTS.length`, `allDxTrees.length`, `HUB_TOTALS` — all read from the
+ * shared core at build time. This was the rule the old page followed and it is
+ * kept: a hand-written figure is a promise that rots the first time content
+ * changes, and here it would rot into a lie about the size of the platform.
+ *
+ * Still a server component with no client JavaScript, so it is fully indexable
  * and its first paint needs no hydration.
  */
 
 export const metadata = {
-  title: 'FPVARABIC — منصة الطيران بالمنظور الأول بالعربية',
+  title: `${BRAND_NAME} — منصة الطيران بالمنظور الأول بالعربية`,
   alternates: { canonical: '/' },
 };
+
+interface Pillar {
+  id: string;
+  labelAr: string;
+  href: string;
+  Icon: LucideIcon;
+  /** What a person does here, in their words rather than the system's. */
+  blurbAr: string;
+  /** Counted from the core. `null` when there is no honest figure to give. */
+  count: number | null;
+  countLabelAr: string;
+  ctaAr: string;
+}
 
 export default function HomePage() {
   const modules = allKbModules;
   const articleCount = modules.reduce((n, m) => n + m.articles.length, 0);
-  const pathCount = modules.reduce((n, m) => n + (m.paths?.length ?? 0), 0);
 
-  const stats = [
-    { n: modules.length, labelAr: 'منظومة مشروحة' },
-    { n: articleCount, labelAr: 'مقالاً' },
-    { n: allDxTrees.length, labelAr: 'شجرة تشخيص' },
-    { n: kbTerms.length, labelAr: 'مصطلحاً في القاموس' },
-    { n: pathCount, labelAr: 'مسار تعلّم' },
-    { n: allEdgeTxPages.length + allVideoToolPages.length, labelAr: 'صفحة برامج' },
+  const softwarePages =
+    HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
+
+  /* The four load-bearing sections, in navigation order. One array, one
+     renderer — see the note above on why that matters more than it looks. */
+  const pillars: Pillar[] = [
+    {
+      id: 'community',
+      labelAr: 'المجتمع',
+      href: sectionHref('community'),
+      Icon: Wrench,
+      blurbAr:
+        'اسأل طيّارين آخرين عن قطعة أو عطل، واعرض بناءك، واقرأ تجارب حقيقية. '
+        + 'نفس المجتمع الموجود في التطبيق — نفس الحسابات ونفس المنشورات.',
+      count: null,
+      countLabelAr: 'أسئلة · مشاريع · تجارب',
+      ctaAr: 'ادخل المجتمع',
+    },
+    {
+      id: 'store',
+      labelAr: 'المتجر',
+      href: sectionHref('store'),
+      Icon: Store,
+      blurbAr:
+        'عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها ومواصفات '
+        + 'موثّقة من الشركة الصانعة. ومع كل طلب خدمة الإعداد التي نشرحها هنا.',
+      count: STORE_PRODUCTS.length,
+      countLabelAr: `منتجاً في ${STORE_CATEGORIES.length} قسماً`,
+      ctaAr: 'تصفّح المتجر',
+    },
+    {
+      id: 'programming',
+      labelAr: 'مركز البرامج',
+      href: sectionHref('programming'),
+      Icon: CircuitBoard,
+      blurbAr:
+        'Betaflight وExpressLRS وEdgeTX وأدوات الفيديو — أين كل إعداد، وماذا '
+        + 'يفعل، وعلى أي قطعة ينطبق، وما الذي يتغيّر بعده.',
+      count: softwarePages,
+      countLabelAr: 'صفحة إعداد وشرح',
+      ctaAr: 'افتح مركز البرامج',
+    },
+    {
+      id: 'kb',
+      labelAr: 'الموسوعة',
+      href: sectionHref('kb'),
+      Icon: Library,
+      blurbAr:
+        'المبدأ قبل الخطوة: كيف يعمل النظام، ولماذا يفشل، وكيف تفحصه — بمصادر '
+        + 'وإصدارات وتواريخ مراجعة مذكورة في كل مقال.',
+      count: articleCount,
+      countLabelAr: `مقالاً في ${modules.length} منظومات`,
+      ctaAr: 'افتح الموسوعة',
+    },
+  ];
+
+  /* Real content, sorted by the review date the articles already carry. Not a
+     «latest» list invented for the home page — these are the most recently
+     re-checked articles on the platform, which is a fact it can prove. */
+  const recentlyReviewed = modules
+    .flatMap(m => m.articles.map(a => ({ article: a, module: m })))
+    .filter(x => !!x.article.lastReviewed)
+    .sort((a, b) => b.article.lastReviewed.localeCompare(a.article.lastReviewed))
+    .slice(0, 6);
+
+  /* Three ways in, by what the visitor came to do rather than by section name.
+     Somebody with a drone that will not arm does not think «الموسوعة». */
+  const entryPoints = [
+    {
+      href: sectionHref('diagnose'),
+      titleAr: 'عندي عطل الآن',
+      bodyAr: 'ابدأ من العرَض الذي تراه. ترتيب الفحص يبدأ دائماً من الأقل خطراً، والمراوح منزوعة.',
+      metaAr: `${allDxTrees.length} شجرة تشخيص`,
+    },
+    {
+      href: sectionHref('kb'),
+      titleAr: 'أنا جديد تماماً',
+      bodyAr: 'ابدأ من المنظومات: ماذا يفعل كل جزء في الطائرة، وبأي ترتيب تتعلّمه.',
+      metaAr: `${modules.length} منظومات مشروحة`,
+    },
+    {
+      href: sectionHref('glossary'),
+      titleAr: 'قرأت مصطلحاً ولم أفهمه',
+      bodyAr: 'المصطلح بالعربية، واسمه الإنجليزي كما يظهر تماماً داخل البرامج.',
+      metaAr: `${kbTerms.length} مصطلحاً`,
+    },
   ];
 
   return (
-    <div className="shell" style={{ paddingTop: 44, paddingBottom: 20 }}>
-      {/* ── What this is ─────────────────────────────────────────────────── */}
-      <section style={{ maxWidth: 760 }}>
-        <h1 style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.4, margin: 0 }}>
-          الطيران بالمنظور الأول،{' '}
-          <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>، بمصادر وتواريخ مراجعة
+    <div className="shell" style={{ paddingTop: 40, paddingBottom: 24 }}>
+      {/* ── Who we are, and the one control that reaches everything ──────── */}
+      <section style={{ maxWidth: 780 }}>
+        <p
+          style={{
+            fontSize: 12.5, fontWeight: 800, letterSpacing: '0.08em',
+            color: 'var(--accent-ink)', margin: 0,
+          }}
+          dir="ltr"
+        >
+          {BRAND_NAME}
+        </p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.4, margin: '10px 0 0' }}>
+          كل ما تحتاجه للطيران بالمنظور الأول،{' '}
+          <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.95 }}>
-          منصة واحدة على الهاتف والويب: موسوعة تشرح المبدأ قبل الخطوة، وتشخيص يبدأ من العرَض
-          الذي تراه بترتيب فحص يبدأ من الأقل خطراً، ومراكز برامج مربوطة بقطعك أنت، ومجتمع
-          يسأل فيه الطيارون. الحساب نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
+          منصّة واحدة على الهاتف والويب: مجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات
+          موثّقة، ومركز برامج يشرح كل إعداد، وموسوعة تشرح المبدأ قبل الخطوة. الحساب
+          نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
         </p>
-        <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
-          <Link href="/kb" className="btn-primary">ابدأ من الموسوعة</Link>
-          <Link href="/diagnose" className="btn-ghost">عندي مشكلة الآن</Link>
-          <Link href="/search" className="btn-ghost">ابحث</Link>
-        </div>
+
+        {/* The site's search, repeated here at full size. The header field is
+            the global entry; on the page a visitor is looking AT, a wide field
+            is the fastest answer to «where do I even start». Same GET form,
+            same destination, same engine — no second search anywhere. */}
+        <form
+          action={sectionHref('search')}
+          method="get"
+          role="search"
+          style={{ marginTop: 24 }}
+        >
+          <label htmlFor="home-q" className="sr-only">ابحث في المنصّة</label>
+          <div className="search-bar">
+            <span aria-hidden className="search-bar-icon" style={{ fontSize: 19 }}>⌕</span>
+            <input
+              id="home-q"
+              type="search"
+              name="q"
+              className="search-bar-input"
+              data-testid="home-search-input"
+              placeholder="ابحث: «الريسيفر لا يشتغل»، «UART»، «اختيار كاميرا»…"
+            />
+            <button type="submit" className="btn-primary search-bar-submit">ابحث</button>
+          </div>
+        </form>
       </section>
 
-      {/* ── Counted, not claimed ─────────────────────────────────────────── */}
-      <section aria-label="حجم المحتوى" style={{ marginTop: 40 }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: 12,
-          }}
-        >
-          {stats.map(s => (
-            <div key={s.labelAr} className="card-sm" style={{ padding: '16px 18px' }}>
-              <div
-                style={{ fontSize: 26, fontWeight: 900, color: 'var(--accent-ink)' }}
-                dir="ltr"
+      {/* ── The four pillars, equal by construction ──────────────────────── */}
+      <section aria-labelledby="pillars-h" style={{ marginTop: 46 }}>
+        <h2 id="pillars-h" style={{ fontSize: 22, fontWeight: 900, margin: '0 0 16px' }}>
+          أركان المنصّة
+        </h2>
+        <div className="pillar-grid">
+          {pillars.map(p => (
+            <Link
+              key={p.id}
+              href={p.href}
+              className="card pillar"
+              data-testid={`home-pillar-${p.id}`}
+            >
+              <span aria-hidden className="pillar-icon">
+                <p.Icon size={22} strokeWidth={2} />
+              </span>
+              <h3 style={{ fontSize: 17, fontWeight: 900, margin: '12px 0 0' }}>{p.labelAr}</h3>
+              <p
+                style={{
+                  fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9,
+                  margin: '8px 0 0', flex: 1,
+                }}
               >
-                {s.n}
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 2 }}>
-                {s.labelAr}
-              </div>
-            </div>
+                {p.blurbAr}
+              </p>
+              <p style={{ margin: '14px 0 0', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                {p.count !== null && (
+                  <span
+                    style={{ fontSize: 21, fontWeight: 900, color: 'var(--accent-ink)' }}
+                    dir="ltr"
+                  >
+                    {p.count}
+                  </span>
+                )}
+                <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+                  {p.countLabelAr}
+                </span>
+              </p>
+              <span className="pillar-cta">{p.ctaAr} ←</span>
+            </Link>
           ))}
         </div>
       </section>
 
-      {/* ── The systems, straight from the registry ──────────────────────── */}
-      <section style={{ marginTop: 52 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>المنظومات</h2>
-          <Link href="/kb" style={{ fontSize: 13, color: 'var(--accent-ink)' }}>
-            كل الموسوعة ←
-          </Link>
-        </div>
+      {/* ── Where do I start ─────────────────────────────────────────────── */}
+      <section aria-labelledby="start-h" style={{ marginTop: 52 }}>
+        <h2 id="start-h" style={{ fontSize: 22, fontWeight: 900, margin: '0 0 6px' }}>
+          من أين تبدأ؟
+        </h2>
+        <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '0 0 16px' }}>
+          اختر ما ينطبق عليك الآن.
+        </p>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: 14,
-          }}
-        >
-          {modules.map(m => {
-            const to = href({ kind: 'module', id: m.id });
-            if (!to) return null;
-            return (
-              <Link
-                key={m.id}
-                href={to}
-                className="card"
-                data-testid={`home-module-${m.id}`}
-                style={{ padding: '18px 20px', display: 'block' }}
-              >
-                <h3 style={{ fontSize: 16, fontWeight: 900, margin: 0 }}>{m.titleAr}</h3>
-                <p
-                  className="ltr"
-                  style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '3px 0 0' }}
-                >
-                  {m.titleEn}
-                </p>
-                <p
-                  style={{
-                    fontSize: 13, color: 'var(--text-dim)', margin: '10px 0 0',
-                    lineHeight: 1.85,
-                  }}
-                >
-                  {m.summaryAr}
-                </p>
-                <p style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '10px 0 0' }}>
-                  {m.articles.length} مقالاً · روجعت {m.lastReviewed}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── Where to go ──────────────────────────────────────────────────── */}
-      <section style={{ marginTop: 52 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 16 }}>أقسام المنصة</h2>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: 12,
           }}
         >
-          {/* `status !== 'planned'` — a card for a route that does not exist is a
-              dead click and a prefetched 404. The entries return here when
-              their batch ships them. */}
-          {NAV_ITEMS.filter(i => !i.requiresAuth && !i.requiresRole && i.status !== 'planned').map(i => (
+          {entryPoints.map(e => (
             <Link
-              key={i.id}
-              href={i.href}
+              key={e.href}
+              href={e.href}
               className="card-sm"
-              data-testid={`home-nav-${i.id}`}
-              style={{ padding: '15px 17px', display: 'block' }}
+              data-testid={`home-start-${e.href.replace(/\//g, '')}`}
+              style={{ padding: '17px 19px', display: 'block' }}
             >
-              <h3 style={{ fontSize: 14.5, fontWeight: 800, margin: 0 }}>{i.labelAr}</h3>
-              <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.8 }}>
-                {i.blurbAr}
+              <h3 style={{ fontSize: 15, fontWeight: 900, margin: 0 }}>{e.titleAr}</h3>
+              <p
+                style={{
+                  fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.85,
+                  margin: '8px 0 0',
+                }}
+              >
+                {e.bodyAr}
+              </p>
+              <p style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '10px 0 0' }}>
+                {e.metaAr}
               </p>
             </Link>
           ))}
         </div>
       </section>
 
+      {/* ── The personal workspace ───────────────────────────────────────── */}
+      <section aria-labelledby="project-h" style={{ marginTop: 52 }}>
+        <div className="card project-band">
+          <div style={{ minWidth: 0 }}>
+            <span aria-hidden className="pillar-icon">
+              <Hammer size={20} strokeWidth={2} />
+            </span>
+            <h2 id="project-h" style={{ fontSize: 19, fontWeight: 900, margin: '12px 0 0' }}>
+              مشروعي
+            </h2>
+            <p
+              style={{
+                fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95,
+                margin: '9px 0 0', maxWidth: 620,
+              }}
+            >
+              سجّل قطعك مرّة واحدة، فتقرأ المنصّة منها أحكام التوافق نفسها التي يحسبها
+              التطبيق — بالسبب، والدليل، ودرجة الثقة، وما ينقص للحكم. وتصبح صفحات
+              الإعداد والتشخيص مربوطة بقطعك أنت لا بقطع عامة.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Link href={sectionHref('project')} className="btn-primary" data-testid="home-project">
+              افتح مشروعي
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Real content, with the dates it already carries ──────────────── */}
+      {recentlyReviewed.length > 0 && (
+        <section aria-labelledby="recent-h" style={{ marginTop: 52 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
+            <h2 id="recent-h" style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>
+              أحدث ما رُوجع
+            </h2>
+            <Link href={sectionHref('kb')} style={{ fontSize: 13, color: 'var(--accent-ink)' }}>
+              كل الموسوعة ←
+            </Link>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))',
+              gap: 12,
+            }}
+          >
+            {recentlyReviewed.map(({ article, module }) => {
+              const to = href({ kind: 'article', id: article.id });
+              if (!to) return null;
+              return (
+                <Link
+                  key={`${module.id}/${article.id}`}
+                  href={to}
+                  className="card-sm"
+                  data-testid={`home-recent-${article.id}`}
+                  style={{ padding: '15px 17px', display: 'block' }}
+                >
+                  <p style={{ fontSize: 11, color: 'var(--text-dimmer)', margin: 0 }}>
+                    {module.titleAr}
+                  </p>
+                  <h3 style={{ fontSize: 14.5, fontWeight: 800, margin: '5px 0 0', lineHeight: 1.6 }}>
+                    {article.titleAr}
+                  </h3>
+                  <p style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '9px 0 0' }} dir="ltr">
+                    {article.lastReviewed}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Honest about what this is ────────────────────────────────────── */}
-      <section style={{ marginTop: 52, maxWidth: 760 }}>
+      <section style={{ marginTop: 52, maxWidth: 780 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <h2 style={{ fontSize: 16, fontWeight: 900, margin: 0 }}>كيف يُكتب المحتوى هنا</h2>
           <ul
@@ -178,7 +390,7 @@ export default function HomePage() {
               'كل مقال يذكر مصادره وإصداراتها وتاريخ مراجعتها — لا معلومة بلا أصل.',
               'ما لا نعرفه يُقال صراحةً: لا نخترع Pinout ولا جدول قنوات ولا توافق أجيال.',
               'إجراءات التشخيص تبدأ دائماً بالفحص الأقل خطراً، والمراوح منزوعة.',
-              'الأحكام تمتنع عن الحكم حين تنقص البيانات، بدل أن تخمّن.',
+              'منشورات المجتمع تجارب شخصية، لا مرجع — وعند التعارض تُقدَّم الموسوعة ودليل الشركة.',
             ].map(t => (
               <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
                 <span
@@ -192,6 +404,11 @@ export default function HomePage() {
               </li>
             ))}
           </ul>
+          <p style={{ margin: '14px 0 0' }}>
+            <Link href="/about" style={{ fontSize: 12.5, color: 'var(--accent-ink)', fontWeight: 700 }}>
+              حول المنصّة ←
+            </Link>
+          </p>
         </div>
       </section>
     </div>
