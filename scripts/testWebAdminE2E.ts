@@ -25,6 +25,7 @@ const PORT = 3150;
 const BASE = `http://localhost:${PORT}`;
 const PROJECT_ID = process.env.GCLOUD_PROJECT || 'demo-community-rules-test';
 const AUTH_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
+const STORAGE_HOST = process.env.FIREBASE_STORAGE_EMULATOR_HOST || 'localhost:9199';
 const FIRESTORE_HOST = process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080';
 
 let passed = 0;
@@ -70,6 +71,19 @@ async function idTokenFor(user: EmulatorUser): Promise<string> {
   return b.idToken;
 }
 
+/**
+ * A real, decodable 1×1 PNG.
+ *
+ * The upload pipeline decodes every image before accepting it — a file that
+ * merely claims to be a PNG is rejected, which is the point. Bytes rather than
+ * a fixture file so the test carries its own input and cannot fail because
+ * somebody tidied an assets folder.
+ */
+const PNG_1PX = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 const docUrl = (path: string) =>
   `http://${FIRESTORE_HOST}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`;
 
@@ -106,10 +120,11 @@ async function seedProfile(uid: string, displayName: string, role: string, statu
  * to make impossible.
  */
 async function seedSellableProduct(productId: string, variantId: string, priceMinor: number) {
-  const supply = await fetch(docUrl(`storeSupply/${productId}`), {
+  const supply = await fetch(docUrl(`storeSupply/${variantId}`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
     body: JSON.stringify({ fields: {
+      variantId: { stringValue: variantId },
       supplierId: { stringValue: 'getfpv' },
       supplierUrl: { stringValue: 'https://www.getfpv.com/example.html' },
       unitCostMinor: { integerValue: String(Math.round(priceMinor / 1.1)) },
@@ -220,6 +235,9 @@ const WEB_ENV = {
   NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
   FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
   FIRESTORE_EMULATOR_HOST: FIRESTORE_HOST,
+  // The Admin SDK writes product photographs; without this it would try the
+  // real bucket and the run would either fail or, worse, succeed.
+  FIREBASE_STORAGE_EMULATOR_HOST: STORAGE_HOST,
   GCLOUD_PROJECT: PROJECT_ID,
 };
 
@@ -358,20 +376,23 @@ async function main() {
         'input[name*="price" i], input[name*="Minor" i]').count();
       ok('the product editor has no price field at all', priceFields === 0);
 
-      // Images and specs can be added, and the provenance fields are present
-      // rather than optional extras somebody has to know to ask for.
-      await page.click('[data-testid="image-add"]');
-      ok('an image row can be added', (await page.locator('[data-testid^="image-row-"]').count()) >= 1);
+      // Specs can be added, and the provenance fields appear exactly when a
+      // claim is being made.
       await page.click('[data-testid="spec-add"]');
       ok('a spec row can be added', (await page.locator('[data-testid^="spec-row-"]').count()) >= 1);
+
+      // The gallery is its own screen with its own action — which is what stops
+      // saving a typo in the description from wiping an hour of uploads.
+      ok('the gallery is a separate panel, not a row on this form',
+        (await page.locator('[data-testid="product-images"]').count()) === 1);
+      ok('…and the product form carries no image fields at all',
+        (await page.locator('[data-testid^="image-url-"]').count()) === 0);
 
       // The rule from the brief, proven through the real form: a spec marked
       // confirmed with no source is refused, and the refusal names it.
       await page.fill('[data-testid="spec-label-0"]', 'اختبار');
       await page.fill('[data-testid="spec-value-0"]', '1234');
       await page.selectOption('[data-testid="spec-status-0"]', 'verified');
-      // Choosing «مؤكَّدة» reveals the source fields, which is the point: the
-      // form asks for provenance exactly when a claim is being made.
       ok('marking a spec confirmed asks where it came from',
         (await page.locator('[data-testid="spec-source-url-0"]').count()) === 1
         && (await page.locator('[data-testid="spec-checked-0"]').count()) === 1);
@@ -389,26 +410,10 @@ async function main() {
         (await page.locator('[data-testid="product-editor-error"]').innerText())
           .includes('المصادر المختلفة'));
 
-      // An image with no licence basis cannot be saved, whatever else it has.
-      await page.selectOption('[data-testid="spec-status-0"]', 'pending');
-      await page.click('[data-testid="spec-remove-0"]');
-      // Everything an image needs EXCEPT the licence basis, so the refusal that
-      // surfaces is the one under test and not a missing alt text.
-      await page.fill('[data-testid="image-url-0"]', 'https://example.com/photo.jpg');
-      await page.fill('[data-testid="image-row-0"] input >> nth=1', 'صورة المنتج');
-      await page.fill('[data-testid="image-row-0"] input >> nth=2', 'الشركة المصنّعة');
-      await page.click('[data-testid="product-editor-save"]');
-      await page.waitForTimeout(1500);
-      ok('an image with everything but a licence basis is still refused',
-        (await page.locator('[data-testid="product-editor-error"]').innerText())
-          .includes('أساس الاستخدام'));
-
       // The queue is the panel's real job: what each product is waiting for.
       await goto(page, `${BASE}/admin/store/products?q=no-images`, 'h1');
-      ok('the panel can list everything waiting on a licensed image',
+      ok('the panel can list everything waiting on a photograph',
         (await page.locator('[data-testid="queue-rows"] > li').count()) > 20);
-      ok('…and says so in words rather than marking them invalid',
-        (await page.locator('body').innerText()).includes('صورة مرخّصة'));
       await goto(page, `${BASE}/admin/store/products?q=needs-decision`, 'h1');
       ok('…and separates the ones that need a decision, not data entry',
         (await page.locator('[data-testid="queue-rows"] > li').count()) >= 3);
@@ -431,6 +436,129 @@ async function main() {
       await ctx.close();
     }
 
+
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[0a] The hand-off: upload a photograph, set a price, press publish');
+    {
+      // THE POINT OF THIS SECTION
+      // -------------------------
+      // Everything the shop's owner has to do, done through the panel and
+      // nothing else — no seeding, no file editing, no deployment. If this
+      // passes, «open the admin panel, add images and prices, press publish»
+      // is a true description of what is left.
+      const PRODUCT = 'happymodel-mobula7';
+      const VARIANT = 'happymodel-mobula7:elrs-bnf';
+
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await ctx.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      await signIn(page, admin);
+
+      // 1. It starts as a draft that cannot be published, and says why.
+      await goto(page, `${BASE}/admin/store/products/${PRODUCT}`, 'h1');
+      ok('a fresh product cannot be published yet',
+        await page.locator('[data-testid="publish-now"]').isDisabled());
+      ok('…and the blocking reason is stated, not implied',
+        (await page.locator('[data-testid="publish-blocking"]').innerText()).includes('سعر'));
+
+      // 2. Upload a photograph — the real pipeline, into the real bucket.
+      await page.setInputFiles('[data-testid="image-upload"]', {
+        name: 'product.png',
+        mimeType: 'image/png',
+        buffer: PNG_1PX,
+      });
+      // Wait for EITHER outcome: a refusal reported as a sentence beats a
+      // selector timeout that says nothing about what went wrong.
+      await page.waitForSelector(
+        '[data-testid="image-row-0"], [data-testid="product-images-error"]',
+        { timeout: 60_000 },
+      );
+      const uploadFailed = await page.locator('[data-testid="product-images-error"]').count();
+      if (uploadFailed) {
+        console.log('   UPLOAD REFUSED:',
+          await page.locator('[data-testid="product-images-error"]').innerText());
+      }
+      ok('the photograph uploaded and appears in the gallery', uploadFailed === 0);
+      ok('…marked as not yet showable, because nobody has said where it came from',
+        (await page.locator('[data-testid="image-incomplete-0"]').count()) === 1);
+      ok('…and the first one is the main image',
+        (await page.locator('[data-testid="image-primary-0"]').count()) === 1);
+
+      // 3. Record where it came from — and it becomes showable.
+      await page.fill('[data-testid="image-alt-0"]', 'صورة المنتج');
+      await page.fill('[data-testid="image-owner-0"]', 'الشركة المصنّعة');
+      await page.selectOption('[data-testid="image-basis-0"]', 'supplier-reseller-pack');
+      await page.fill('[data-testid="image-evidence-0"]', 'https://example.com/reseller-pack');
+      await page.fill('[data-testid="image-reviewed-0"]', '2026-08-04');
+      await page.click('[data-testid="image-save-0"]');
+      await page.waitForTimeout(2000);
+      await goto(page, `${BASE}/admin/store/products/${PRODUCT}`, 'h1');
+      ok('once its source is recorded, the photograph is showable',
+        (await page.locator('[data-testid="image-incomplete-0"]').count()) === 0);
+
+      // 4. Set the margin from the settings screen — no code, no deployment.
+      await goto(page, `${BASE}/admin/store/settings`, 'h1');
+      await page.fill('[data-testid="settings-margin"]', '25');
+      ok('the margin screen shows what the number MEANS on a worked example',
+        (await page.locator('[data-testid="settings-worked-example"]').innerText()).includes('125'));
+      await page.click('[data-testid="settings-save"]');
+      await page.waitForSelector('[data-testid="settings-saved"]', { timeout: 20_000 });
+
+      // 5. Enter what the supplier charges. The price is computed from it.
+      await goto(page, `${BASE}/admin/store/supply`, 'h1');
+      await page.click(`[data-testid="supply-edit-${VARIANT}"]`);
+      await page.selectOption(`[data-testid="supply-form-${VARIANT}"] select[name="supplierId"]`, 'getfpv');
+      await page.fill(`[data-testid="supply-form-${VARIANT}"] input[name="unitCost"]`, '40.00');
+      await page.fill(`[data-testid="supply-form-${VARIANT}"] input[name="shipping"]`, '0.00');
+      await page.check(`[data-testid="supply-form-${VARIANT}"] input[name="verified"]`);
+      await page.click(`[data-testid="supply-form-${VARIANT}"] button[type="submit"]`);
+      await page.waitForTimeout(2500);
+      await goto(page, `${BASE}/admin/store/supply`, 'h1');
+      // $40 landed at 25% is $50 before rounding. The number on the screen is
+      // the arithmetic, and nobody typed it.
+      ok('the price is computed from the cost and the margin just set',
+        (await page.locator('body').innerText()).includes('50'));
+
+      // 6. Press publish. Advisories remain — no sourced specs on this one —
+      //    so the acknowledgement is required, which is the whole design.
+      await goto(page, `${BASE}/admin/store/products/${PRODUCT}`, 'h1');
+      ok('the blocking reasons are gone once there is a price',
+        (await page.locator('[data-testid="publish-blocking"]').count()) === 0);
+      const stillMissing = await page.locator('[data-testid="publish-advisory"]').count();
+      if (stillMissing) {
+        ok('publishing is refused until the remaining gaps are acknowledged',
+          await page.locator('[data-testid="publish-now"]').isDisabled());
+        await page.check('[data-testid="publish-acknowledge"]');
+      }
+      ok('…and allowed once they are',
+        !(await page.locator('[data-testid="publish-now"]').isDisabled()));
+      await page.click('[data-testid="publish-now"]');
+      await page.waitForTimeout(2500);
+
+      // 7. It is in the shop, with the photograph and the computed price.
+      await goto(page, `${BASE}/store/p/${PRODUCT}`, 'h1');
+      const shopText = await page.locator('body').innerText();
+      ok('the product is live in the shop', shopText.includes('HappyModel Mobula7'));
+      ok('…showing the uploaded photograph rather than the placeholder',
+        (await page.locator('[data-testid="product-gallery"]').count()) === 1
+        && (await page.locator('[data-testid="product-image-placeholder"]').count()) === 0);
+      ok('…at the computed price', shopText.includes('50'));
+      ok('…and it can be ordered',
+        (await page.locator('[data-testid="add-to-cart"]').count()) === 1);
+
+      // 8. And the record says who published something with gaps in it.
+      await goto(page, `${BASE}/admin/audit`, 'h1');
+      const audited = await page.locator('body').innerText();
+      ok('the publication is in the audit log', audited.includes('store.product.publish'));
+      ok('the photograph upload is in the audit log too', audited.includes('store.product.images'));
+      ok('the margin change is in the audit log', audited.includes('store.settings'));
+
+      ok('no page error anywhere in the hand-off', errors.length === 0);
+      if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
+      await ctx.close();
+    }
 
     /* ─────────────────────────────────────────────────────────────────── */
     console.log('\n[0b] A whole purchase, from the section page to the audit log');
@@ -456,11 +584,27 @@ async function main() {
         (await page.locator(`[data-testid="product-card-${PRODUCT}"]`).count()) === 1);
       ok('the section renders a comparison rather than only cards',
         (await page.locator('[data-testid="compare-table"]').count()) === 1);
-      // The badge is computed, not typed: it lands on the lower of two real
-      // prices, and it would land elsewhere if the prices changed.
-      ok('«الأرخص» is on the cheaper of the two, decided by the numbers',
-        (await page.locator('[data-testid="compare-cheapest-betafpv-meteor75-pro"]').count()) === 1
-        && (await page.locator(`[data-testid="compare-cheapest-${PRODUCT}"]`).count()) === 0);
+      // The badge is COMPUTED, not typed. Section [0a] published a third
+      // product into this same section at a lower price, so the assertion reads
+      // the prices off the table and checks the badge landed on the minimum —
+      // rather than naming a winner the test decided in advance.
+      const cheapestId = await page.evaluate(() => {
+        const heads = [...document.querySelectorAll('[data-testid^="compare-head-"]')]
+          .map(el => el.getAttribute('data-testid')!.replace('compare-head-', ''));
+        const rows = [...document.querySelectorAll('[data-testid="compare-table"] tbody tr')];
+        const priceRow = rows.find(r => r.querySelector('th')?.textContent?.includes('السعر'));
+        if (!priceRow) return null;
+        const cells = [...priceRow.querySelectorAll('td')]
+          .map(td => Number((td.textContent ?? '').replace(/[^\d.]/g, '')) || Infinity);
+        const min = Math.min(...cells);
+        return heads[cells.indexOf(min)] ?? null;
+      });
+      ok(`«الأرخص» is on the cheapest row, decided by the numbers (${cheapestId})`,
+        !!cheapestId
+        && (await page.locator(`[data-testid="compare-cheapest-${cheapestId}"]`).count()) === 1);
+      // …and on exactly one row, or it is decoration rather than a comparison.
+      ok('…and on exactly one row',
+        (await page.locator('[data-testid^="compare-cheapest-"]').count()) === 1);
 
       await goto(page, `${BASE}/store/p/${PRODUCT}`, 'h1');
 
@@ -638,8 +782,10 @@ async function main() {
 
       // A DRAFT product is invisible even to a signed-in customer, which is
       // what makes «مسودة» a real state rather than a hidden-by-the-UI one.
+      // A product NOTHING in this run publishes. Using one that a later
+      // section publishes would make this pass or fail by test ordering.
       const draftRead = await fetch(
-        `${docUrl('storeProducts/happymodel-mobula7')}`, { headers: asCustomer },
+        `${docUrl('storeProducts/betafpv-pavo-pico')}`, { headers: asCustomer },
       );
       ok(`an unpublished product is not readable (${draftRead.status})`,
         draftRead.status === 403 || draftRead.status === 404);
@@ -656,7 +802,7 @@ async function main() {
       await signIn(draftPage, plain);
       await draftPage.goto(`${BASE}/store`, { waitUntil: 'domcontentloaded' });
       await draftPage.evaluate(() => localStorage.setItem('fpv-store-cart-v2', JSON.stringify({
-        v: 2, items: [{ variantId: 'happymodel-mobula7:elrs-bnf', quantity: 1 }], updatedAt: '',
+        v: 2, items: [{ variantId: 'betafpv-pavo-pico:standard', quantity: 1 }], updatedAt: '',
       })));
       await draftPage.goto(`${BASE}/store/cart/checkout`, { waitUntil: 'domcontentloaded' });
       await draftPage.waitForLoadState('load');

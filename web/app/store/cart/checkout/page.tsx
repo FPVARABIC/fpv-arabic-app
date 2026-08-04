@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getSession } from '@/lib/server/session';
+import { publicStoreSettings } from '@/lib/server/storeSettings';
 import { SECTION_ROUTES } from '@/lib/webRoutes';
-import { publicSettings, cartHref } from '@/lib/store';
+import { cartHref } from '@/lib/store';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { cartProductViews } from '@/lib/server/storeCatalogue';
 import { StoreBanner } from '@/components/store/StorePieces';
@@ -31,7 +32,7 @@ export default async function CheckoutPage() {
     redirect(`/signin?next=${encodeURIComponent(`${SECTION_ROUTES.store}/cart/checkout`)}`);
   }
 
-  const catalogue = await cartProductViews();
+  const [catalogue, settings] = await Promise.all([cartProductViews(), publicStoreSettings()]);
 
   return (
     <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 720 }}>
@@ -48,7 +49,7 @@ export default async function CheckoutPage() {
 
       <CheckoutForm catalogue={catalogue} />
 
-      <StoreBanner settings={publicSettings()} compact />
+      <StoreBanner settings={settings} compact />
     </div>
   );
 }

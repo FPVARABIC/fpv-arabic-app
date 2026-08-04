@@ -44,8 +44,8 @@ import {
 import { INITIAL_DEFAULT_MARGIN_PERCENT, ORDER_STATUS_NEXT } from '../src/data/store/types';
 import type { OrderStatus, StoreProduct } from '../src/data/store/types';
 import {
-  publicationBlockers, publicationStage, canOrder, isPriceStale, daysBetween,
-  MIN_VERIFIED_SPECS, DEFAULT_PRICE_REVIEW_DAYS,
+  publicationBlockers, publicationStage, publishability, canOrder,
+  isPriceStale, daysBetween, MIN_VERIFIED_SPECS, DEFAULT_PRICE_REVIEW_DAYS,
 } from '../src/data/store/publication';
 import { CATALOGUE_AUDIT, auditFor, launchSetIds, auditSummary } from '../src/data/store/audit';
 import { LAUNCH_SPECS, CHECKED } from '../src/data/store/launch';
@@ -1154,21 +1154,75 @@ console.log('\n[17] The product editor refuses what it cannot stand behind');
   ok('…and the refusal names the spec so it can be fixed',
     /errorAr: `المواصفة «\$\{labelAr\}»/.test(actions));
 
-  // Images carry their provenance or they are not saved.
-  for (const [what, needle] of [
-    ['a named owner', '!ownerAr'],
-    ['a licence basis from the closed list', 'isBasis(img.basis)'],
-    ['a link to the permission itself', 'evidenceUrl'],
-    ['a review date in a fixed format', '/^\\d{4}-\\d{2}-\\d{2}$/'],
-    ['an alt text', 'altAr.length < 3'],
-    ['a safe URL scheme', "/^(\\/|https:\\/\\/)/"],
-  ] as const) {
-    ok(`an image is refused without ${what}`, actions.includes(needle));
-  }
-  // The distinction the whole basis model exists for: the evidence link points
-  // at the grant, not at the picture.
-  ok('the evidence link is required to be a permission, not a product page',
-    actions.includes('رابط الإذن نفسه'));
+  // Images live on their own screen and their own action now — which is what
+  // stops saving a typo in the description from wiping an hour of uploads.
+  const imageActions = readFileSync(
+    join(ROOT, 'web/app/admin/store/products/imageActions.ts'), 'utf8');
+  ok('the product form no longer writes images',
+    !/images:\s*images\.value/.test(actions) && !actions.includes('validateImages'));
+  ok('the gallery has an action of its own', imageActions.includes('saveProductImages'));
+  ok('…gated on the same capability', imageActions.includes("sessionCan(session, 'store.editProducts')"));
+  ok('…and audited separately, so «who put that photo up» has an answer',
+    imageActions.includes("action: 'store.product.images'"));
+
+  // AN INCOMPLETE IMAGE IS SAVED ON PURPOSE.
+  //
+  // Refusing it stops the work: somebody with fifteen photographs should be
+  // able to upload fifteen photographs and come back to the paperwork. The
+  // licensing question is answered by whether the shop may SHOW it, which is a
+  // different question asked by `isImagePublishable`.
+  // Proven by the CODE PATH: the basis check runs only when a basis was given,
+  // so an empty one falls through to the write rather than to a return.
+  ok('an image with no licence basis is stored rather than refused',
+    imageActions.includes('if (basis && !isBasis(basis))'));
+  ok('…but an unknown basis IS refused — the set is closed',
+    imageActions.includes('أساس استخدام غير معروف'));
+  ok('a malformed review date is refused', imageActions.includes('YYYY-MM-DD'));
+
+  // The gallery may only point at storage this shop controls. A gallery that
+  // accepts any host is a tracking pixel on every product page.
+  ok('an external image host is refused',
+    imageActions.includes('isAcceptableImageUrl')
+    && imageActions.includes('firebasestorage'));
+  ok('…and the refusal tells the operator to upload instead',
+    imageActions.includes('ارفع الصورة بدل لصق رابط خارجي'));
+
+  // Order is position in the array, so a reorder cannot half-apply.
+  ok('image order is the array, not a separate field to disagree with',
+    imageActions.includes('order: images.length'));
+
+  // The compression goes through the SHARED pipeline. A second one would be a
+  // second answer to «what may be uploaded», and there is only one right one.
+  const upload = readFileSync(join(ROOT, 'web/lib/mediaUpload.ts'), 'utf8');
+  ok('product images use the shared compression pipeline',
+    upload.includes('compressForUpload')
+    && upload.includes("from '@core/community/Composer/mediaPipeline'"));
+  ok('…and declare no size or format limits of their own',
+    !/MAX_\w*BYTES\s*=|image\/jpeg/.test(stripComments(upload).replace(/export \{[\s\S]*?\}/, '')));
+
+  // THE WRITE IS THE SERVER'S.
+  //
+  // The panel's authority is a session holding `store.editProducts`. A Storage
+  // rule re-deriving that as a role check would be a second answer that drifts
+  // the day somebody adds a role — and it also breaks the moment the browser's
+  // Firebase auth state and the server's session disagree, which is exactly
+  // what happened when this was tried the other way round.
+  const uploadAction = readFileSync(
+    join(ROOT, 'web/app/admin/store/products/uploadAction.ts'), 'utf8');
+  ok('the photograph is written by the server, holding the capability',
+    uploadAction.includes("sessionCan(session, 'store.editProducts')")
+    && uploadAction.includes('adminStorage()'));
+  ok('…which re-checks the size rather than believing the browser',
+    uploadAction.includes('MAX_MEDIA_SIZE_BYTES'));
+  ok('…and that the bytes really are the JPEG the pipeline produces',
+    uploadAction.includes('0xff') && uploadAction.includes('0xd8'));
+
+  const storageRules = readFileSync(join(ROOT, 'storage.rules'), 'utf8');
+  ok('no browser may write a product photograph',
+    /match \/store\/products\/\{[^}]+\}\/\{[^}]+\} \{[\s\S]{0,900}?allow write: if false;/.test(storageRules));
+  ok('…nor delete one', /match \/store\/products[\s\S]{0,900}?allow delete: if false;/.test(storageRules));
+  ok('…while a product photograph is publicly readable, as a shop\u2019s photo must be',
+    /match \/store\/products[\s\S]{0,600}?allow read: if true;/.test(storageRules));
 
   // «لا يناسبك إن كنت» is required on the model. It must stay required here,
   // because it is the section that earns the page its credibility.
@@ -1329,13 +1383,64 @@ console.log('\n[18] Nothing publishes that the shop cannot stand behind');
   ok('…and none of its variants can be ordered',
     suspended.variants.every(v => !canOrder(suspended, { ...v, priceMinor: 5000, availability: 'in-stock' })));
 
-  // The stage names the EARLIEST failing gate, so the panel shows one next
+  // The stage names the earliest BLOCKING gate, so the panel shows one next
   // action rather than a list of seven.
   const everythingWrong = {
-    ...licensed, images: [], specs: [], notForAr: [],
+    ...licensed, summaryAr: 'قصير', images: [], specs: [], notForAr: [],
   } as typeof licensed;
-  ok('the stage names the earliest gate, not the last',
+  ok('the stage names the earliest blocking gate, not the last',
     publicationStage({ product: everythingWrong, supply: null, now: NOW }) === 'draft');
+
+  // ── the severity split, which is the whole design ──────────────────────
+  //
+  // Blocking means the shop CANNOT sell it. Advisory means somebody has to
+  // judge — and a system that refuses a judgement is a system deciding the
+  // catalogue for the person who owns it.
+  const noImage = { ...licensed, images: [] } as typeof licensed;
+  const g1 = publishability({ product: noImage, supply: fresh, now: NOW });
+  ok('a missing photograph does not block publication', g1.allowed);
+  ok('…but it is stated as an outstanding advisory',
+    g1.advisory.some(b => b.gate === 'images'));
+  ok('…and the product still reads as «جاهز للنشر»',
+    publicationStage({ product: noImage, supply: fresh, now: NOW }) === 'ready');
+
+  const noPrice = {
+    ...licensed, variants: licensed.variants.map(v => ({ ...v, priceMinor: null })),
+  } as typeof licensed;
+  const g2 = publishability({ product: noPrice, supply: fresh, now: NOW });
+  ok('no price DOES block publication', !g2.allowed);
+  ok('…because a basket would drop the line whatever anybody decided',
+    g2.blocking.some(b => b.gate === 'price'));
+
+  const thinSpecs = { ...licensed, specs: [] } as typeof licensed;
+  ok('too few sourced specifications is advisory, not blocking',
+    publishability({ product: thinSpecs, supply: fresh, now: NOW }).allowed);
+  const lyingSpec = {
+    ...licensed,
+    specs: [...licensed.specs, { labelAr: 'مخترعة', valueAr: '9', status: 'verified' as const }],
+  } as typeof licensed;
+  ok('a spec CLAIMING to be confirmed with no source is blocking — that is a lie on the page',
+    !publishability({ product: lyingSpec, supply: fresh, now: NOW }).allowed);
+
+  // Every finding carries a severity, or the split means nothing.
+  const all = publicationBlockers({ product: everythingWrong, supply: null, now: NOW });
+  ok('every finding declares its severity',
+    all.length > 0 && all.every(b => b.severity === 'blocking' || b.severity === 'advisory'));
+  ok('both severities actually occur',
+    all.some(b => b.severity === 'blocking') && all.some(b => b.severity === 'advisory'));
+
+  // And the server enforces the acknowledgement rather than trusting the panel.
+  const publishAction = readFileSync(
+    join(ROOT, 'web/app/admin/store/products/actions.ts'), 'utf8');
+  ok('publishing over an advisory requires an explicit acknowledgement',
+    publishAction.includes('acknowledgeAdvisories'));
+  ok('…checked on the server, not in the component',
+    publishAction.includes('gate.advisory.length > 0 && !acknowledgeAdvisories'));
+  ok('…and blocking findings have no override at all',
+    /gate\.blocking\.length > 0[\s\S]{0,200}?return \{/.test(publishAction)
+    && !/blocking[\s\S]{0,80}acknowledge/.test(publishAction));
+  ok('what was outstanding is written into the audit log',
+    publishAction.includes('مع إقرار بنواقص'));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

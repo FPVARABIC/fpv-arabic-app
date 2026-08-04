@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   AVAILABILITY_LABEL_AR, BUYER_LEVEL_LABEL_AR,
   LINK_PROTOCOL_LABEL_AR, VIDEO_SYSTEM_LABEL_AR,
-  IMAGE_BASIS_LABEL_AR, SPEC_STATUS_LABEL_AR, SPEC_SOURCE_LABEL_AR,
+  SPEC_STATUS_LABEL_AR, SPEC_SOURCE_LABEL_AR,
 } from '@core/data/store/types';
 import type { StoreProduct } from '@core/data/store/types';
 import { saveProduct, type SaveProductInput } from '@/app/admin/store/products/actions';
@@ -12,13 +12,13 @@ import { saveProduct, type SaveProductInput } from '@/app/admin/store/products/a
 /**
  * Editing one product.
  *
- * WHY THE IMAGE ROWS ASK FOR SO MUCH
- * ----------------------------------
- * Owner, terms, source, whether it is the manufacturer's own material, and the
- * date somebody last checked. It is more than a shop usually asks, and it is
- * the difference between a catalogue that can answer «where did this photo come
- * from» and one that cannot. The «تحتاج استبدالاً» box is for the honest middle
- * state: a stand-in that works today and should not still be there in a month.
+ * WHAT IS NOT HERE
+ * ----------------
+ * The gallery. It has its own screen — `ProductImages` — because uploading and
+ * ordering photographs is a different job from writing copy, done at a
+ * different time and often by a different person. It also has its own action,
+ * which is what stops saving a typo in the description from wiping an hour of
+ * uploads.
  *
  * WHY A SPEC CANNOT BE MARKED CONFIRMED WITHOUT A LINK
  * ----------------------------------------------------
@@ -35,20 +35,6 @@ import { saveProduct, type SaveProductInput } from '@/app/admin/store/products/a
  * what a customer pays.
  */
 export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) => {
-  const [images, setImages] = useState<SaveProductInput['images']>(
-    product.images.length > 0
-      ? product.images.map(i => ({
-        url: i.url, altAr: i.altAr,
-        ownerAr: i.credit?.ownerAr ?? '',
-        basis: i.credit?.basis ?? '',
-        evidenceUrl: i.credit?.evidenceUrl ?? '',
-        sourceUrl: i.credit?.sourceUrl ?? '',
-        official: i.credit?.official ?? false,
-        reviewedAt: i.credit?.reviewedAt ?? '',
-        needsReplacement: i.credit?.needsReplacement ?? false,
-      }))
-      : [blankImage()],
-  );
   const [specs, setSpecs] = useState<SaveProductInput['specs']>(
     product.specs.length > 0
       ? product.specs.map(s => ({
@@ -93,7 +79,6 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
             height: String(fd.get('dimHeight') ?? ''),
           },
           specs,
-          images,
         });
         setPending(false);
         if (r.ok) setSaved(true);
@@ -145,70 +130,6 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
         </div>
         <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
           اتركها فارغة إن لم تتأكّد. رقم مخترَع أسوأ من خانة فارغة.
-        </p>
-      </section>
-
-      <section className="admin-section" aria-labelledby="pe-images">
-        <h2 id="pe-images">الصور</h2>
-        <p style={{ margin: '0 0 12px', fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-          صور المنتج الحقيقية من المصنّع أو المورد. لكل صورة صاحبها وأساس
-          استخدامها ورابط الإذن نفسه وتاريخ مراجعته. وجود الصورة على الإنترنت
-          ليس إذناً — وصورة بلا أساس لا تُحفظ ولا يُنشر المنتج بها.
-        </p>
-        <div style={{ display: 'grid', gap: 12 }}>
-          {images.map((img, i) => (
-            <fieldset key={i} data-testid={`image-row-${i}`}
-              style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', margin: 0 }}>
-              <legend style={{ fontSize: 11.5, padding: '0 6px', color: 'var(--text-dimmer)' }}>
-                صورة {i + 1}
-              </legend>
-              <div style={{ display: 'grid', gap: 9 }}>
-                <Row labelAr="الرابط" value={img.url} ltr
-                  testId={`image-url-${i}`}
-                  onChange={v => patchImage(setImages, i, { url: v })} />
-                <Row labelAr="الوصف البديل" value={img.altAr}
-                  onChange={v => patchImage(setImages, i, { altAr: v })} />
-                <div style={{ display: 'grid', gap: 9, gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
-                  <Row labelAr="صاحب الصورة" value={img.ownerAr}
-                    onChange={v => patchImage(setImages, i, { ownerAr: v })} />
-                  {/* A closed list, not a text box. «وجدتها على موقع الشركة»
-                      describes where the file came from; it is not a permission
-                      to use it, and free text is how the two get confused. */}
-                  <Pick labelAr="أساس الاستخدام" value={img.basis}
-                    testId={`image-basis-${i}`}
-                    placeholderAr="اختر الأساس"
-                    options={Object.entries(IMAGE_BASIS_LABEL_AR)}
-                    onChange={v => patchImage(setImages, i, { basis: v })} />
-                  <Row labelAr="رابط الإذن نفسه" value={img.evidenceUrl} ltr
-                    testId={`image-evidence-${i}`}
-                    onChange={v => patchImage(setImages, i, { evidenceUrl: v })} />
-                  <Row labelAr="رابط الصورة الأصلي" value={img.sourceUrl} ltr
-                    onChange={v => patchImage(setImages, i, { sourceUrl: v })} />
-                  <Row labelAr="تاريخ المراجعة" value={img.reviewedAt} ltr placeholder="2026-08-04"
-                    onChange={v => patchImage(setImages, i, { reviewedAt: v })} />
-                </div>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  <Check labelAr="من مادة الشركة الرسمية" checked={img.official}
-                    testId={`image-official-${i}`}
-                    onChange={v => patchImage(setImages, i, { official: v })} />
-                  <Check labelAr="مؤقّتة — تحتاج استبدالاً" checked={img.needsReplacement}
-                    testId={`image-replace-${i}`}
-                    onChange={v => patchImage(setImages, i, { needsReplacement: v })} />
-                  <button type="button" className="admin-danger" data-testid={`image-remove-${i}`}
-                    onClick={() => setImages(prev => prev.filter((_, j) => j !== i))}
-                    style={{ fontSize: 11.5, marginInlineStart: 'auto' }}>
-                    احذف الصورة
-                  </button>
-                </div>
-              </div>
-            </fieldset>
-          ))}
-        </div>
-        <p style={{ margin: '12px 0 0' }}>
-          <button type="button" className="btn-ghost" data-testid="image-add"
-            onClick={() => setImages(prev => [...prev, blankImage()])} style={{ fontSize: 12 }}>
-            أضف صورة
-          </button>
         </p>
       </section>
 
@@ -301,12 +222,6 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
   );
 };
 
-function blankImage(): SaveProductInput['images'][number] {
-  return {
-    url: '', altAr: '', ownerAr: '', basis: '', evidenceUrl: '', sourceUrl: '',
-    official: false, reviewedAt: '', needsReplacement: false,
-  };
-}
 function blankSpec(): SaveProductInput['specs'][number] {
   return {
     labelAr: '', valueAr: '', unitAr: '', status: 'pending',
@@ -315,12 +230,6 @@ function blankSpec(): SaveProductInput['specs'][number] {
   };
 }
 
-function patchImage(
-  set: React.Dispatch<React.SetStateAction<SaveProductInput['images']>>,
-  i: number, patch: Partial<SaveProductInput['images'][number]>,
-): void {
-  set(prev => prev.map((row, j) => (j === i ? { ...row, ...patch } : row)));
-}
 function patchSpec(
   set: React.Dispatch<React.SetStateAction<SaveProductInput['specs']>>,
   i: number, patch: Partial<SaveProductInput['specs'][number]>,
@@ -394,15 +303,5 @@ const Pick: React.FC<{
       {placeholderAr && <option value="">{placeholderAr}</option>}
       {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
     </select>
-  </label>
-);
-
-const Check: React.FC<{
-  labelAr: string; checked: boolean; onChange: (v: boolean) => void; testId?: string;
-}> = ({ labelAr, checked, onChange, testId }) => (
-  <label style={{ display: 'inline-flex', gap: 7, alignItems: 'center', fontSize: 12 }}>
-    <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
-      {...(testId ? { 'data-testid': testId } : {})} />
-    <span>{labelAr}</span>
   </label>
 );

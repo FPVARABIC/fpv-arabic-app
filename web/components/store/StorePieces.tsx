@@ -148,9 +148,14 @@ export const ProductImage: React.FC<{ product: StoreProduct; height?: number }> 
      */
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={img.url}
+      /* The thumbnail where there is one. A section grid shows eight of these,
+         and eight full-size photographs is the difference between a shop that
+         opens on a phone and one that is still opening. */
+      src={img.thumbnailUrl || img.url}
       alt={img.altAr}
       loading="lazy"
+      width={320}
+      height={height}
       style={{ width: '100%', height, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
     />
   );

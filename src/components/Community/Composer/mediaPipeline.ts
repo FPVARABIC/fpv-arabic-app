@@ -305,13 +305,39 @@ export const uploadMediaWith = async (
   postId: string,
   onProgress?: (fullPct: number, thumbPct: number) => void,
   control?: UploadControl,
+): Promise<UploadedMedia | null> =>
+  uploadMediaToFolderWith(storage, file, mediaFolderPath(uid, postId), onProgress, control);
+
+/**
+ * The same upload, into a folder the caller names.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The store needs product photographs, and they do not live under
+ * `community/posts/{uid}/{postId}` — they belong to a product, not to a person
+ * who posted them. The obvious move is a second uploader for the shop, and it
+ * is the wrong one: a second uploader is a second answer to «what may be
+ * uploaded», and `storage.rules` only has one. The MIME allow-list, the size
+ * ceiling, the compression targets, the `{uuid}.jpg` / `{uuid}_thumb.jpg`
+ * naming that the rules match on, the decode verification and the cancel
+ * semantics all stay here and stay shared.
+ *
+ * All that varies is the folder — which is exactly the thing `storage.rules`
+ * uses to decide who may write, so varying it is the point.
+ */
+export const uploadMediaToFolderWith = async (
+  storage: FirebaseStorage,
+  file: File,
+  folder: string,
+  onProgress?: (fullPct: number, thumbPct: number) => void,
+  control?: UploadControl,
 ): Promise<UploadedMedia | null> => {
   if (!isAllowedImageMimeType(file.type)) {
     throw new Error('NOT_AN_ALLOWED_IMAGE_TYPE');
   }
 
   return withTimeout(
-    uploadMediaInner(storage, file, uid, postId, onProgress, control),
+    uploadMediaInner(storage, file, folder, onProgress, control),
     MEDIA_UPLOAD_TIMEOUT_MS,
   );
 };
@@ -345,11 +371,50 @@ const runUpload = (
     );
   });
 
+/**
+ * Compress, verify, and hand back the bytes — without uploading them.
+ *
+ * WHY THIS IS SEPARATE FROM THE UPLOAD
+ * ------------------------------------
+ * Because the shop's photographs are written by the SERVER, not by the browser.
+ * The admin panel's authority is a verified session holding
+ * `store.editProducts`; making Storage Rules re-derive that as a role lookup
+ * would be a second answer to «who may upload a product photograph», and two
+ * answers drift. So the browser does what only the browser can do — resize and
+ * re-encode a file the user just picked — and the server does the write.
+ *
+ * Everything that makes an upload safe stays here and stays shared: the MIME
+ * allow-list, the 1600px/400px targets, the 300KB/40KB budgets, the size
+ * verification, and the decode check that also guarantees no EXIF survives
+ * (canvas re-encoding never carries it forward).
+ */
+export interface CompressedImage {
+  full: Blob;
+  thumb: Blob;
+  width: number;
+  height: number;
+}
+
+export const compressForUpload = async (file: File): Promise<CompressedImage | null> => {
+  if (!isAllowedImageMimeType(file.type)) {
+    throw new Error('NOT_AN_ALLOWED_IMAGE_TYPE');
+  }
+  const [full, thumb] = await Promise.all([
+    imageCompression(file, { maxWidthOrHeight: 1600, maxSizeMB: 0.3, fileType: 'image/jpeg', ...IMAGE_COMPRESSION_OPTIONS }),
+    imageCompression(file, { maxWidthOrHeight: 400, maxSizeMB: 0.04, fileType: 'image/jpeg', ...IMAGE_COMPRESSION_OPTIONS }),
+  ]);
+  // Best-effort library target, not a mathematical guarantee — verify the real
+  // result before handing it to anything that will store it.
+  if (full.size > MAX_MEDIA_SIZE_BYTES) return null;
+  const dims = await verifyImageDecodable(full);
+  if (!dims) return null;
+  return { full, thumb, width: dims.width, height: dims.height };
+};
+
 const uploadMediaInner = async (
   storage: FirebaseStorage,
   file: File,
-  uid: string,
-  postId: string,
+  folder: string,
   onProgress?: (fullPct: number, thumbPct: number) => void,
   control?: UploadControl,
 ): Promise<UploadedMedia | null> => {
@@ -376,7 +441,6 @@ const uploadMediaInner = async (
   if (!dims) return null;
 
   const uuid = crypto.randomUUID();
-  const folder = mediaFolderPath(uid, postId);
   const fullRef = ref(storage, `${folder}/${uuid}.jpg`);
   const thumbRef = ref(storage, `${folder}/${uuid}_thumb.jpg`);
 

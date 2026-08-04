@@ -73,7 +73,14 @@ export type AuditAction =
   | 'store.product.publish'
   // Availability, images, specs and the editorial copy. One action rather than
   // five, because they are saved together by one screen.
-  | 'store.product.edit';
+  | 'store.product.edit'
+  // The gallery. Separate from an edit because it is a different job done at a
+  // different time, and because «who put that photograph on the site» is a
+  // question somebody eventually asks.
+  | 'store.product.images'
+  // The margin, the review window and the shop-wide notices. One action for
+  // the settings screen — a margin change moves every price it touches.
+  | 'store.settings';
 
 export type AuditResult = 'ok' | 'denied' | 'error';
 

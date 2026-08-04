@@ -5,14 +5,13 @@ import { getSession, sessionCan } from '@/lib/server/session';
 import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { storeProduct } from '@core/data/store/catalogue';
-import { publicationBlockers } from '@core/data/store/publication';
-import { INITIAL_PRIVATE_SETTINGS } from '@core/data/store/settings';
+import { publishability } from '@core/data/store/publication';
+import { privateStoreSettings } from '@/lib/server/storeSettings';
 import { resolvedProduct } from '@/lib/server/storeCatalogue';
 import { supplyFor } from '@/lib/server/storeSupply';
 import type { ProductOverride } from '@core/data/store/overrides';
-import { IMAGE_BASIS_LABEL_AR } from '@core/data/store/types';
 import type {
-  Availability, BuyerLevel, ImageLicenceBasis, LinkProtocol, ProductImage,
+  Availability, BuyerLevel, LinkProtocol,
   ProductSpec, SpecSourceKind, SpecStatus, VideoSystem,
 } from '@core/data/store/types';
 
@@ -67,11 +66,6 @@ export interface SaveProductInput {
     sourceKind: string; sourceTitleAr: string; sourceUrl: string; checkedAt: string;
     disagreementAr: string;
   }[];
-  images: {
-    url: string; altAr: string;
-    ownerAr: string; basis: string; evidenceUrl: string; sourceUrl: string;
-    official: boolean; reviewedAt: string; needsReplacement: boolean;
-  }[];
 }
 
 export async function saveProduct(input: SaveProductInput): Promise<ProductActionResult> {
@@ -99,8 +93,6 @@ export async function saveProduct(input: SaveProductInput): Promise<ProductActio
     return { ok: false, errorAr: 'اكتب سطراً واحداً على الأقل في «لا يناسبك إن كنت».' };
   }
 
-  const images = validateImages(input.images);
-  if ('errorAr' in images) return { ok: false, errorAr: images.errorAr };
   const specs = validateSpecs(input.specs);
   if ('errorAr' in specs) return { ok: false, errorAr: specs.errorAr };
 
@@ -134,7 +126,9 @@ export async function saveProduct(input: SaveProductInput): Promise<ProductActio
     suitsAr: lines(input.suitsText, 8),
     notForAr,
     inTheBoxAr: lines(input.inTheBoxText, 20),
-    images: images.value,
+    // NOT images. They have their own screen and their own action — see
+    // `imageActions.ts`. Writing them from this form too would mean saving a
+    // typo in the description wiped a gallery somebody spent an hour uploading.
     specs: specs.value,
     weightGrams,
     dimensionsMm: dims.value,
@@ -146,7 +140,7 @@ export async function saveProduct(input: SaveProductInput): Promise<ProductActio
     action: 'store.product.edit',
     targetType: 'product',
     targetId: input.productId,
-    after: `availability=${doc.availability} images=${doc.images?.length ?? 0} specs=${doc.specs?.length ?? 0}`,
+    after: `availability=${doc.availability} specs=${doc.specs?.length ?? 0}`,
   });
 
   try {
@@ -169,13 +163,27 @@ export async function saveProduct(input: SaveProductInput): Promise<ProductActio
  * should not require filling in a form to make it.
  */
 export async function setProductPublished(
-  productId: string, published: boolean,
+  productId: string,
+  published: boolean,
+  /**
+   * Whether the admin explicitly accepted the outstanding advisories.
+   *
+   * Required only when there ARE advisories. It is a separate argument rather
+   * than something inferred from the request because the whole point is that
+   * somebody said yes on purpose — and because it is what gets written into the
+   * audit log beside their name.
+   */
+  acknowledgeAdvisories = false,
 ): Promise<ProductActionResult> {
   const gate = await authorise();
   if ('errorAr' in gate) return { ok: false, errorAr: gate.errorAr };
 
   const seed = storeProduct(productId);
   if (!seed) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
+
+  // What was still missing when they said yes. Recorded, so «who published the
+  // one with no photograph» has an answer.
+  let outstanding: string[] = [];
 
   // THE GATE. Everything else in this batch exists to make this line possible.
   //
@@ -197,25 +205,38 @@ export async function setProductPublished(
       };
     }
     const supply = await supplyFor(productId);
-    const blockers = publicationBlockers({
+    const gate = publishability({
       product,
       supply,
-      priceReviewDays: INITIAL_PRIVATE_SETTINGS.priceReviewDays,
+      priceReviewDays: (await privateStoreSettings()).priceReviewDays,
       now: new Date().toISOString(),
     });
-    if (blockers.length > 0) {
+    // Blocking findings have no override, because there is nothing to agree
+    // to: a product with no price cannot take an order whatever anybody says.
+    if (gate.blocking.length > 0) {
       return {
         ok: false,
-        errorAr: `لا يمكن نشره بعد: ${blockers.map(b => b.messageAr).join(' ')}`,
+        errorAr: `لا يمكن نشره بعد: ${gate.blocking.map(b => b.messageAr).join(' ')}`,
       };
     }
+    // Advisories can be published over — once, deliberately, and on the record.
+    if (gate.advisory.length > 0 && !acknowledgeAdvisories) {
+      return {
+        ok: false,
+        errorAr: `هذا المنتج ناقص: ${gate.advisory.map(b => b.messageAr).join(' ')} `
+          + 'أقرّ بذلك من مربّع الموافقة إن أردت نشره كما هو.',
+      };
+    }
+    outstanding = gate.advisory.map(b => b.messageAr);
   }
 
   const entryId = await logAudit(actorFromSession(gate.session), newRequestId(), {
     action: 'store.product.publish',
     targetType: 'product',
     targetId: productId,
-    after: published ? 'published' : 'hidden',
+    after: published
+      ? `published${outstanding.length ? ` (مع إقرار بنواقص: ${outstanding.join(' · ')})` : ''}`
+      : 'hidden',
   });
 
   try {
@@ -336,68 +357,6 @@ function lines(text: string, max: number): string[] {
 type Validated<T> = { value: T } | { errorAr: string };
 
 /**
- * Images, refused rather than saved when the provenance is missing.
- *
- * The brief was specific and it is the correct instinct: real product
- * photography, not AI, not scraped. This cannot verify that an image is real —
- * no code can — so it enforces the thing that actually protects the shop, which
- * is that every image carries a named owner, the terms it is used under, and
- * the date somebody last checked both. An image nobody can account for is
- * refused at the point of saving, where there is still somebody to ask.
- */
-function validateImages(raw: SaveProductInput['images']): Validated<ProductImage[]> {
-  const out: ProductImage[] = [];
-  for (const [i, img] of raw.entries()) {
-    const url = img.url.trim();
-    if (!url) continue;
-    if (!/^(\/|https:\/\/)/.test(url)) {
-      return { errorAr: `الصورة ${i + 1}: الرابط يجب أن يبدأ بـ https:// أو بمسار داخلي.` };
-    }
-    const altAr = img.altAr.trim();
-    if (altAr.length < 3) {
-      return { errorAr: `الصورة ${i + 1}: اكتب وصفاً بديلاً — من لا يرى الصورة يحتاجه.` };
-    }
-    const ownerAr = img.ownerAr.trim();
-    if (!ownerAr) {
-      return { errorAr: `الصورة ${i + 1}: اكتب صاحب الصورة.` };
-    }
-    if (!isBasis(img.basis)) {
-      return {
-        errorAr: `الصورة ${i + 1}: اختر أساس الاستخدام من القائمة. «وجدتها على الإنترنت» ليس أساساً.`,
-      };
-    }
-    // The link to the grant, not to the picture. A product page proves the
-    // photo exists, which was never the question.
-    const evidenceUrl = img.evidenceUrl.trim();
-    if (!/^https:\/\//.test(evidenceUrl)) {
-      return {
-        errorAr: `الصورة ${i + 1}: ضع رابط الإذن نفسه — الصفحة التي يُقرأ فيها التصريح، لا صفحة المنتج.`,
-      };
-    }
-    const reviewedAt = img.reviewedAt.trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt)) {
-      return { errorAr: `الصورة ${i + 1}: تاريخ المراجعة بصيغة YYYY-MM-DD.` };
-    }
-    out.push({
-      url: url.slice(0, 500),
-      altAr: altAr.slice(0, 200),
-      order: out.length,
-      credit: {
-        ownerAr: ownerAr.slice(0, 120),
-        basis: img.basis,
-        evidenceUrl: evidenceUrl.slice(0, 500),
-        ...(img.sourceUrl.trim() ? { sourceUrl: img.sourceUrl.trim().slice(0, 500) } : {}),
-        official: img.official,
-        reviewedAt,
-        ...(img.needsReplacement ? { needsReplacement: true } : {}),
-      },
-    });
-    if (out.length >= 8) break;
-  }
-  return { value: out };
-}
-
-/**
  * Specs, with the source required whenever «مؤكَّد» is ticked.
  *
  * The rule from the brief — «لا تخترع أي مواصفة» — is not enforceable by code
@@ -469,9 +428,6 @@ function validateSpecs(raw: SaveProductInput['specs']): Validated<ProductSpec[]>
   return { value: out };
 }
 
-function isBasis(v: string): v is ImageLicenceBasis {
-  return (IMAGE_BASIS_LABEL_AR as Record<string, string>)[v] !== undefined;
-}
 function isSpecStatus(v: string): v is SpecStatus {
   return v === 'verified' || v === 'pending' || v === 'disputed';
 }

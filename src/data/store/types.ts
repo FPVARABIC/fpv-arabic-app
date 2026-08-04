@@ -313,6 +313,15 @@ export interface ProductImage {
    * than a broken frame.
    */
   url: string;
+  /**
+   * A smaller copy, produced by the same upload.
+   *
+   * The section page shows eight of these; the product page shows one full
+   * image. Without it a grid of eight cards downloads eight full-size
+   * photographs, which on a phone is the difference between a shop that opens
+   * and one that is still opening.
+   */
+  thumbnailUrl?: string;
   altAr: string;
   /** Position in the gallery. The first is the one a card shows. */
   order: number;
@@ -375,6 +384,16 @@ export interface ImageCredit {
   /** Set when this is a stand-in that must be replaced with a better one. */
   needsReplacement?: boolean;
 }
+
+/**
+ * How many photographs one product may carry.
+ *
+ * Eight is more than any product page usefully shows and few enough that a
+ * section grid of eight products never loads sixty-four files. On the model
+ * rather than in the action because it is a fact about a product, and because
+ * a `'use server'` module may export nothing but async functions.
+ */
+export const MAX_PRODUCT_IMAGES = 8;
 
 /**
  * Whether an image may be shown to the public.
@@ -585,8 +604,15 @@ export interface StoreProduct {
  * the customer may read.
  */
 export interface StoreSupply {
-  /** Same id as the product it belongs to. */
-  productId: string;
+  /**
+   * The VARIANT this cost is for — and the document's own id.
+   *
+   * Per variant rather than per product because an RTF kit and the bare
+   * aircraft come from the same supplier at different prices; one cost for both
+   * produces a margin that is wrong for at least one of them. The product id is
+   * this id's prefix, so a product's records are still one prefix scan away.
+   */
+  variantId: string;
   /**
    * Which supplier, by id, from `suppliers.ts`.
    *

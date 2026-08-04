@@ -34,6 +34,7 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: '/admin/store/orders', labelAr: 'الطلبات', capability: 'store.viewOrders' },
   { href: '/admin/store/products', labelAr: 'المنتجات', capability: 'store.viewProducts' },
   { href: '/admin/store/supply', labelAr: 'التسعير والموردون', capability: 'store.viewSupply' },
+  { href: '/admin/store/settings', labelAr: 'إعدادات المتجر', capability: 'store.viewSupply' },
   { href: '/admin/audit', labelAr: 'سجل التدقيق', capability: 'audit.view' },
 ];
 

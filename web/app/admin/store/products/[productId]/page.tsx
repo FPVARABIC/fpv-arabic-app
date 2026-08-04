@@ -7,8 +7,12 @@ import { CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
 import { formatPrice } from '@core/data/store/pricing';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { ProductEditor } from '@/components/admin/ProductEditor';
-import { PublishToggle } from '@/components/admin/PublishToggle';
+import { ProductImages } from '@/components/admin/ProductImages';
+import { PublishPanel } from '@/components/admin/PublishPanel';
 import { resolvedProduct } from '@/lib/server/storeCatalogue';
+import { supplyFor } from '@/lib/server/storeSupply';
+import { publishability } from '@core/data/store/publication';
+import { privateStoreSettings } from '@/lib/server/storeSettings';
 import { productHref } from '@/lib/store';
 
 export const metadata: Metadata = {
@@ -45,6 +49,17 @@ export default async function AdminProductEdit(
   const category = storeCategory(product.categoryId);
   const canEdit = sessionCan(session, 'store.editProducts');
 
+  // What stands between this product and the shop, computed by the same
+  // function the publish action calls — so the panel can never offer something
+  // the server refuses, nor refuse something it would allow.
+  const supply = await supplyFor(productId);
+  const gate = publishability({
+    product,
+    supply,
+    priceReviewDays: (await privateStoreSettings()).priceReviewDays,
+    now: new Date().toISOString(),
+  });
+
   return (
     <AdminShell role={session.role} actorName={session.displayName}
       current="/admin/store/products" titleAr="تعديل منتج" ownTitle>
@@ -71,15 +86,14 @@ export default async function AdminProductEdit(
           </>
         )}
         <span className="admin-badge" data-testid="admin-product-price">
-          {product.priceMinor === null
-            ? 'بلا سعر — أدخل التكلفة في «التسعير والموردون»'
-            : formatPrice(product.priceMinor, product.currency)}
+          {product.variants[0]?.priceMinor == null
+            ? 'ينتظر إدخال الإدارة — أدخل التكلفة في «التسعير والموردون»'
+            : formatPrice(product.variants[0].priceMinor, product.currency)}
         </span>
         {!product.published && (
           <span className="admin-badge" style={{ color: '#fcd34d' }}>مخفي من المتجر</span>
         )}
         <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {canEdit && <PublishToggle productId={product.id} published={product.published} />}
           {product.published && (
             <Link href={productHref(product.id)} className="btn-ghost" style={{ fontSize: 12 }}
               data-testid="admin-product-view">
@@ -91,6 +105,19 @@ export default async function AdminProductEdit(
           </Link>
         </span>
       </div>
+
+      {/* The decision, with everything outstanding stated on it. */}
+      {canEdit && (
+        <PublishPanel
+          productId={product.id}
+          published={product.published}
+          suspendedReasonAr={product.suspendedReasonAr ?? null}
+          blocking={gate.blocking}
+          advisory={gate.advisory}
+        />
+      )}
+
+      {canEdit && <ProductImages productId={product.id} initial={product.images} />}
 
       {canEdit
         ? <ProductEditor product={product} />

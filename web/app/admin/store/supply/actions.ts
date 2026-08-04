@@ -7,10 +7,18 @@ import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib
 import { supplier } from '@core/data/store/suppliers';
 import { storeProduct } from '@core/data/store/catalogue';
 import { priceFrom } from '@core/data/store/pricing';
-import { INITIAL_PRIVATE_SETTINGS } from '@core/data/store/settings';
+import { privateStoreSettings } from '@/lib/server/storeSettings';
 
 export interface SaveSupplyInput {
-  productId: string;
+  /**
+   * The VARIANT being costed.
+   *
+   * Supply is recorded per buyable thing, not per product — an RTF kit and the
+   * bare aircraft come from the same supplier at different prices, and one cost
+   * for both produces a margin that is wrong for at least one of them. The
+   * product id is the variant id's prefix, so nothing is lost.
+   */
+  variantId: string;
   supplierId: string;
   supplierUrl: string;
   /** Major units as typed — «29.99». Converted here, and only here. */
@@ -44,8 +52,10 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
   }
   if (!isAdminConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
 
-  const product = storeProduct(input.productId);
-  if (!product) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
+  const productId = input.variantId.split(':')[0];
+  const product = storeProduct(productId);
+  const variant = product?.variants.find(v => v.id === input.variantId);
+  if (!product || !variant) return { ok: false, errorAr: 'لا يوجد خيار شراء بهذا المعرّف.' };
   if (!supplier(input.supplierId)) return { ok: false, errorAr: 'اختر مورداً من القائمة.' };
 
   const unitCostMinor = toMinor(input.unitCostMajor);
@@ -68,6 +78,7 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
   }
 
   const supply = {
+    variantId: input.variantId,
     supplierId: input.supplierId,
     supplierUrl: input.supplierUrl.trim().slice(0, 500),
     unitCostMinor,
@@ -79,22 +90,31 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
     updatedAt: new Date().toISOString(),
   };
 
-  const breakdown = priceFrom(supply, INITIAL_PRIVATE_SETTINGS);
+  const breakdown = priceFrom(supply, await privateStoreSettings());
   if (!breakdown) return { ok: false, errorAr: 'تعذّر حساب السعر من هذه القيم.' };
 
   const entryId = await logAudit(actorFromSession(session), newRequestId(), {
     action: 'store.supply.set',
     targetType: 'product',
-    targetId: input.productId,
+    targetId: input.variantId,
     // The resulting PRICE is recorded, not the cost: the audit log is readable
     // by anyone with `audit.view`, which is a wider set than `store.viewSupply`.
     after: String(breakdown.sellMinor),
   });
 
   try {
-    await adminDb().collection('storeSupply').doc(input.productId).set(supply);
-    await adminDb().collection('storeProducts').doc(input.productId).set({
-      priceMinor: breakdown.sellMinor,
+    await adminDb().collection('storeSupply').doc(input.variantId).set(supply);
+    // The price lands on the VARIANT, because that is what a basket line names
+    // and what the publication gate reads. Writing a product-level price left
+    // every variant unpriced and every product unpublishable — with the panel
+    // cheerfully reporting a price nothing could use.
+    await adminDb().collection('storeProducts').doc(productId).set({
+      variantState: {
+        [input.variantId]: {
+          priceMinor: breakdown.sellMinor,
+          availability: variant.availability,
+        },
+      },
       currency: breakdown.currency,
       published: product.published,
       updatedAt: supply.updatedAt,

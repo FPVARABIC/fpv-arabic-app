@@ -22,15 +22,30 @@ const SUPPLY = 'storeSupply';
  * the whole collection to answer that would work and would cost the whole
  * collection on every publish.
  */
-export async function supplyFor(productId: string): Promise<StoreSupply | null> {
+export async function supplyForVariant(variantId: string): Promise<StoreSupply | null> {
   if (!isAdminConfigured()) return null;
   try {
-    const doc = await adminDb().collection(SUPPLY).doc(productId).get();
+    const doc = await adminDb().collection(SUPPLY).doc(variantId).get();
     if (!doc.exists) return null;
-    return { productId, ...(doc.data() as Omit<StoreSupply, 'productId'>) };
+    return { variantId, ...(doc.data() as Omit<StoreSupply, 'variantId'>) };
   } catch {
     return null;
   }
+}
+
+/**
+ * The freshest supply record among a product's variants.
+ *
+ * The publication gate asks one question per product — «is there a current
+ * cost behind this listing» — and a product with three variants has up to three
+ * records. The newest is the right answer: it is the one that says how recently
+ * anybody looked at this product's economics at all.
+ */
+export async function supplyFor(productId: string): Promise<StoreSupply | null> {
+  const all = await readAllSupply();
+  const mine = Object.values(all).filter(s => s.variantId.startsWith(`${productId}:`));
+  if (mine.length === 0) return null;
+  return mine.reduce((a, b) => (a.updatedAt >= b.updatedAt ? a : b));
 }
 
 export async function readAllSupply(): Promise<Record<string, StoreSupply>> {
@@ -38,7 +53,7 @@ export async function readAllSupply(): Promise<Record<string, StoreSupply>> {
   try {
     const snap = await adminDb().collection(SUPPLY).get();
     const out: Record<string, StoreSupply> = {};
-    for (const d of snap.docs) out[d.id] = { productId: d.id, ...(d.data() as Omit<StoreSupply, 'productId'>) };
+    for (const d of snap.docs) out[d.id] = { variantId: d.id, ...(d.data() as Omit<StoreSupply, 'variantId'>) };
     return out;
   } catch {
     return {};

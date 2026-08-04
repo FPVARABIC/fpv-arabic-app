@@ -1,10 +1,10 @@
 import 'server-only';
 import { resolvedProducts } from './storeCatalogue';
 import { readAllSupply } from './storeSupply';
-import { INITIAL_PRIVATE_SETTINGS } from '@core/data/store/settings';
+import { privateStoreSettings } from './storeSettings';
 import { auditFor } from '@core/data/store/audit';
 import {
-  publicationBlockers, publicationStage,
+  publicationBlockers, publicationStage, isPriceStale,
   type PublicationBlocker, type PublicationStage,
 } from '@core/data/store/publication';
 import { isImagePublishable, isSpecVerified } from '@core/data/store/types';
@@ -45,11 +45,22 @@ export interface QueueRow {
   hasSupply: boolean;
   /** Days since the cost was last checked, or null when there is no record. */
   supplyAgeDays: number | null;
+  /**
+   * Whether the cost is older than the SHOP'S OWN review window.
+   *
+   * Computed on the row rather than in the filter, because the window is an
+   * admin setting read from the database — a filter that compared against the
+   * seed constant would keep answering «30 days» after somebody changed it to
+   * seven, which is the exact class of bug this store has had before.
+   */
+  priceStale: boolean;
 }
 
 export async function catalogueQueue(nowIso = new Date().toISOString()): Promise<QueueRow[]> {
-  const [products, supply] = await Promise.all([resolvedProducts(), readAllSupply()]);
-  const reviewDays = INITIAL_PRIVATE_SETTINGS.priceReviewDays;
+  const [products, supply, settings] = await Promise.all([
+    resolvedProducts(), readAllSupply(), privateStoreSettings(),
+  ]);
+  const reviewDays = settings.priceReviewDays;
 
   return products.map(product => {
     const record = supply[product.id] ?? null;
@@ -63,6 +74,7 @@ export async function catalogueQueue(nowIso = new Date().toISOString()): Promise
       sourcedSpecs: product.specs.filter(isSpecVerified).length,
       hasSupply: !!record,
       supplyAgeDays: record ? ageInDays(record.updatedAt, nowIso) : null,
+      priceStale: !!record && isPriceStale(record, nowIso, reviewDays),
     };
   });
 }
@@ -114,10 +126,7 @@ export function applyQueueFilter(rows: QueueRow[], filter: QueueFilter): QueueRo
     case 'no-price': return rows.filter(r => r.product.variants.every(v => v.priceMinor === null));
     // Has a record, and it is older than the window. A product with NO record
     // belongs to «بلا مورد» — putting it here too would make both counts wrong.
-    case 'stale-price':
-      return rows.filter(r => r.hasSupply
-        && r.supplyAgeDays !== null
-        && r.supplyAgeDays > INITIAL_PRIVATE_SETTINGS.priceReviewDays);
+    case 'stale-price': return rows.filter(r => r.priceStale);
     case 'unpublished': return rows.filter(r => !r.product.published && !r.product.suspendedReasonAr);
     case 'ready': return rows.filter(r => r.stage === 'ready');
     case 'published': return rows.filter(r => r.stage === 'published');

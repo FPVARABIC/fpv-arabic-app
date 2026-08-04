@@ -2,9 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { STORE_GROUP_LABEL_AR, STORE_GROUP_BLURB_AR } from '@core/data/store/categories';
 import { SERVICES_CATEGORY_ID } from '@core/data/store/services';
-import { categoriesInGroup, publicSettings, categoryHref } from '@/lib/store';
+import { categoriesInGroup, categoryHref } from '@/lib/store';
 import { publishedProducts, sectionCounts } from '@/lib/server/storeCatalogue';
 import { StoreBanner } from '@/components/store/StorePieces';
+import { publicStoreSettings } from '@/lib/server/storeSettings';
 
 export const metadata: Metadata = {
   title: 'المتجر',
@@ -37,7 +38,7 @@ export const revalidate = 300;
  * that order, answers both.
  */
 export default async function StorePage() {
-  const settings = publicSettings();
+  const settings = await publicStoreSettings();
   const aircraft = categoriesInGroup('aircraft');
   const components = categoriesInGroup('components');
 

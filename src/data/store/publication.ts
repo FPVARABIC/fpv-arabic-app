@@ -53,18 +53,48 @@ export const STAGE_LABEL_AR: Record<PublicationStage, string> = {
 };
 
 /**
- * Which gate a blocker belongs to.
+ * Which gate a finding belongs to.
  *
  * Used to decide the stage: a product sits at the earliest gate it fails, so
  * the panel shows one thing to do next rather than a list of seven.
  */
 export type BlockerGate = 'identity' | 'specs' | 'images' | 'price';
 
+/**
+ * How hard a finding is, and this distinction is the whole design.
+ *
+ * `blocking` means the shop CANNOT sell it — there is no price, or no buyable
+ * configuration, or nothing on the page to read. No amount of willingness makes
+ * an order for it fulfillable, so no override exists and none should.
+ *
+ * `advisory` means somebody has to JUDGE. A product with no photograph sells
+ * badly and sells; one with two sourced specifications instead of three is
+ * thinner than we would like. These are commercial decisions, and a system that
+ * refuses them is a system that decides for the person running the shop —
+ * which is not its job. It says so clearly, requires an explicit
+ * acknowledgement, and records who overrode what.
+ *
+ * The line between the two is: could a competent shopkeeper reasonably choose
+ * to sell this today? If yes, it is advisory.
+ */
+export type FindingSeverity = 'blocking' | 'advisory';
+
 export interface PublicationBlocker {
   gate: BlockerGate;
+  severity: FindingSeverity;
   messageAr: string;
   /** Where to go and fix it. */
   fixHref?: string;
+}
+
+/** Only the findings that make selling impossible. */
+export function hardBlockers(findings: PublicationBlocker[]): PublicationBlocker[] {
+  return findings.filter(f => f.severity === 'blocking');
+}
+
+/** Findings an admin may publish over, having been told. */
+export function advisories(findings: PublicationBlocker[]): PublicationBlocker[] {
+  return findings.filter(f => f.severity === 'advisory');
 }
 
 /** How old a supply record may be before its price needs looking at again. */
@@ -97,26 +127,33 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
   // A real manufacturer name is what a buyer cross-checks against every other
   // shop. A placeholder here means the product was never actually chosen.
   if (!product.nameEn.trim()) {
-    out.push({ gate: 'identity', messageAr: 'لا اسم حقيقي للمنتج.', fixHref: editHref });
+    out.push({
+      gate: 'identity', severity: 'blocking',
+      messageAr: 'لا اسم حقيقي للمنتج.', fixHref: editHref,
+    });
   }
   if (!product.brandAr.trim() || product.brandAr === 'عام') {
     // «عام» is legitimate for a strap and never for an aircraft — but the model
     // cannot tell those apart, so this is a warning-shaped blocker only where a
     // variant claims to be an aircraft package.
     if (product.variants.some(v => v.packageKind !== 'single')) {
-      out.push({ gate: 'identity', messageAr: 'لا شركة مصنّعة محدَّدة.', fixHref: editHref });
+      out.push({
+        gate: 'identity', severity: 'advisory',
+        messageAr: 'لا شركة مصنّعة محدَّدة.', fixHref: editHref,
+      });
     }
   }
+  // A product page with nothing on it is broken, not thin. Blocking.
   if (product.summaryAr.trim().length < 40) {
     out.push({
-      gate: 'identity',
+      gate: 'identity', severity: 'blocking',
       messageAr: 'الوصف العربي قصير جداً — اكتب ما يكفي ليقرّر المشتري.',
       fixHref: editHref,
     });
   }
   if (product.notForAr.length === 0) {
     out.push({
-      gate: 'identity',
+      gate: 'identity', severity: 'advisory',
       messageAr: 'لا يوجد «لا يناسبك إن كنت» — وهو القسم الذي تُصدَّق به بقية الصفحة.',
       fixHref: editHref,
     });
@@ -129,18 +166,24 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
   // ── specs ─────────────────────────────────────────────────────────────────
   const verified = product.specs.filter(isSpecVerified);
   if (verified.length < MIN_VERIFIED_SPECS) {
+    // Thin, not broken. A shop may sell a battery strap on its description
+    // alone, and refusing to would be this system deciding the catalogue.
     out.push({
-      gate: 'specs',
-      messageAr: `مواصفات موثّقة: ${verified.length} من ${MIN_VERIFIED_SPECS} المطلوبة، ولكل واحدة مصدر وتاريخ تحقّق.`,
+      gate: 'specs', severity: 'advisory',
+      messageAr: `مواصفات موثّقة: ${verified.length} من ${MIN_VERIFIED_SPECS} الموصى بها، ولكل واحدة مصدر وتاريخ تحقّق.`,
       fixHref: editHref,
     });
   }
+  // A claim of «مؤكَّدة» with nothing behind it is a lie on the page, and no
+  // commercial judgement makes it acceptable. Blocking — and note that the
+  // editor refuses to save it in the first place, so this catches documents
+  // written before that rule existed.
   const claimedNoSource = product.specs.filter(
     sp => sp.status === 'verified' && !isSpecVerified(sp),
   );
   if (claimedNoSource.length > 0) {
     out.push({
-      gate: 'specs',
+      gate: 'specs', severity: 'blocking',
       messageAr: `${claimedNoSource.length} مواصفة معلَّمة «مؤكَّدة» بلا مصدر أو تاريخ.`,
       fixHref: editHref,
     });
@@ -148,7 +191,7 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
   const disputedNoNote = product.specs.filter(sp => sp.status === 'disputed' && !sp.disagreementAr);
   if (disputedNoNote.length > 0) {
     out.push({
-      gate: 'specs',
+      gate: 'specs', severity: 'blocking',
       messageAr: `${disputedNoNote.length} مواصفة مختلَف عليها بلا بيان للاختلاف.`,
       fixHref: editHref,
     });
@@ -157,26 +200,36 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
   // ── images ────────────────────────────────────────────────────────────────
   const usable = product.images.filter(isImagePublishable);
   if (usable.length === 0) {
+    // ADVISORY, deliberately.
+    //
+    // It was blocking, and blocking was wrong — it made a legal question the
+    // code cannot answer into a wall the shop's owner could not pass. Whether a
+    // photograph may be used is their call and their risk, and a product listed
+    // with a drawn placeholder is a product that sells badly rather than one
+    // that cannot be sold. The check stays, the warning is loud, publishing
+    // over it takes a deliberate acknowledgement, and the audit log records it.
     out.push({
-      gate: 'images',
+      gate: 'images', severity: 'advisory',
       messageAr: product.images.length === 0
-        ? 'لا صورة. المتجر لا ينشر منتجاً بلا صورة مرخّصة.'
-        : 'لا صورة مرخّصة — الصور الموجودة بلا أساس استخدام موثّق.',
-      fixHref: editHref,
+        ? 'لا صورة. سيظهر المنتج بمربّع بديل بدل الصورة.'
+        : 'لا صورة مرخّصة — الصور الموجودة بلا أساس استخدام موثّق، ولن تُعرض.',
+      fixHref: `${editHref}/images`,
     });
   }
 
   // ── price and supply ──────────────────────────────────────────────────────
   if (!supply) {
+    // Advisory: a shop owner may know what a thing costs without having typed
+    // it in. What they cannot do is sell at no price — that is the next check.
     out.push({
-      gate: 'price',
-      messageAr: 'لا مورد ولا تكلفة. لا يمكن حساب سعر.',
+      gate: 'price', severity: 'advisory',
+      messageAr: 'لا سجلّ توريد — لا مورد ولا تكلفة مسجَّلة، فلا يمكن تتبّع الربح على هذا المنتج.',
       fixHref: '/admin/store/supply',
     });
   } else {
     if (!supply.verified) {
       out.push({
-        gate: 'price',
+        gate: 'price', severity: 'advisory',
         messageAr: 'التكلفة غير مُتحقَّق منها عند المورد.',
         fixHref: '/admin/store/supply',
       });
@@ -184,22 +237,27 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
     const age = daysBetween(supply.updatedAt, now);
     if (age === null) {
       out.push({
-        gate: 'price',
+        gate: 'price', severity: 'advisory',
         messageAr: 'تاريخ آخر مراجعة للتكلفة غير صالح.',
         fixHref: '/admin/store/supply',
       });
     } else if (age > reviewDays) {
       out.push({
-        gate: 'price',
+        gate: 'price', severity: 'advisory',
         messageAr: `مضى ${age} يوماً على آخر مراجعة للتكلفة (الحد ${reviewDays}). أسعار الموردين تتحرّك.`,
         fixHref: '/admin/store/supply',
       });
     }
   }
+  // BLOCKING, and the only price rule that is.
+  //
+  // A shop with no price is not a shop with a thin listing; it is a shop that
+  // cannot take the order. There is nothing to acknowledge and nothing to
+  // override — the basket would drop the line anyway.
   if (product.variants.every(v => v.priceMinor === null)) {
     out.push({
-      gate: 'price',
-      messageAr: 'لا سعر على أي خيار.',
+      gate: 'price', severity: 'blocking',
+      messageAr: 'لا سعر على أي خيار — لا يمكن طلب المنتج بلا سعر.',
       fixHref: '/admin/store/supply',
     });
   }
@@ -217,16 +275,38 @@ export function publicationBlockers(input: GateInput): PublicationBlocker[] {
  */
 export const MIN_VERIFIED_SPECS = 3;
 
+/**
+ * Whether an admin may publish this, and what they are agreeing to if they do.
+ *
+ * One function, called by the button and by the server action, so the panel
+ * cannot offer something the server refuses — and, just as importantly, cannot
+ * refuse something the server would allow.
+ */
+export function publishability(input: GateInput): {
+  allowed: boolean;
+  blocking: PublicationBlocker[];
+  advisory: PublicationBlocker[];
+} {
+  const findings = publicationBlockers(input);
+  const blocking = hardBlockers(findings);
+  return { allowed: blocking.length === 0, blocking, advisory: advisories(findings) };
+}
+
 function variantBlockers(variants: ProductVariant[], editHref: string): PublicationBlocker[] {
   const out: PublicationBlocker[] = [];
+  // All of these are structural: the page cannot render, or the basket cannot
+  // name a line. None of them is a judgement anybody could make differently.
   if (variants.length === 0) {
-    out.push({ gate: 'identity', messageAr: 'لا خيار شراء واحد معرَّف.', fixHref: editHref });
+    out.push({
+      gate: 'identity', severity: 'blocking',
+      messageAr: 'لا خيار شراء واحد معرَّف.', fixHref: editHref,
+    });
     return out;
   }
   const defaults = variants.filter(v => v.isDefault);
   if (defaults.length !== 1) {
     out.push({
-      gate: 'identity',
+      gate: 'identity', severity: 'blocking',
       messageAr: defaults.length === 0
         ? 'لا خيار افتراضي — الصفحة لن تعرف أيّها تعرض.'
         : `${defaults.length} خيارات معلَّمة افتراضية. واحد فقط.`,
@@ -236,12 +316,15 @@ function variantBlockers(variants: ProductVariant[], editHref: string): Publicat
   const ids = new Set<string>();
   for (const v of variants) {
     if (ids.has(v.id)) {
-      out.push({ gate: 'identity', messageAr: `معرّف الخيار «${v.id}» مكرَّر.`, fixHref: editHref });
+      out.push({
+        gate: 'identity', severity: 'blocking',
+        messageAr: `معرّف الخيار «${v.id}» مكرَّر.`, fixHref: editHref,
+      });
     }
     ids.add(v.id);
     if (v.inTheBoxAr.length === 0) {
       out.push({
-        gate: 'identity',
+        gate: 'identity', severity: 'advisory',
         messageAr: `الخيار «${v.nameAr}» لا يقول ما يأتي في صندوقه.`,
         fixHref: editHref,
       });
@@ -260,11 +343,17 @@ function variantBlockers(variants: ProductVariant[], editHref: string): Publicat
  */
 export function publicationStage(input: GateInput): PublicationStage {
   if (input.product.suspendedReasonAr) return 'suspended';
-  const blockers = publicationBlockers(input);
-  if (blockers.length === 0) return input.product.published ? 'published' : 'ready';
-  if (blockers.some(b => b.gate === 'identity')) return 'draft';
-  if (blockers.some(b => b.gate === 'specs')) return 'specs-review';
-  if (blockers.some(b => b.gate === 'images')) return 'images-review';
+  if (input.product.published) return 'published';
+
+  const findings = publicationBlockers(input);
+  const hard = hardBlockers(findings);
+  // Ready means «an admin may press publish», which is true the moment nothing
+  // blocking remains. Outstanding advisories are shown on the button, not
+  // hidden behind it.
+  if (hard.length === 0) return 'ready';
+  if (hard.some(b => b.gate === 'identity')) return 'draft';
+  if (hard.some(b => b.gate === 'specs')) return 'specs-review';
+  if (hard.some(b => b.gate === 'images')) return 'images-review';
   return 'price-review';
 }
 

@@ -3,11 +3,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
-import { storeCategory, publicSettings, categoryHref } from '@/lib/store';
+import { storeCategory, categoryHref } from '@/lib/store';
 import { publishedInCategory, sectionSize } from '@/lib/server/storeCatalogue';
 import { CompareTable } from '@/components/store/CompareTable';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { ProductCard, StoreBanner } from '@/components/store/StorePieces';
+import { publicStoreSettings } from '@/lib/server/storeSettings';
 
 export const dynamicParams = false;
 
@@ -67,7 +68,7 @@ export default async function StoreCategoryPage(
   // lets the page say «four are being prepared» instead of showing nothing and
   // letting the reader conclude the section is abandoned.
   const inCatalogue = sectionSize(category.id);
-  const settings = publicSettings();
+  const settings = await publicStoreSettings();
   const learn = category.learnLink
     ? webHref({ kind: category.learnLink.kind, id: category.learnLink.targetId } as Parameters<typeof webHref>[0])
     : null;

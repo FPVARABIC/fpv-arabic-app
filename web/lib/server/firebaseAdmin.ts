@@ -3,6 +3,7 @@ import 'server-only';
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 /**
  * The Firebase Admin SDK — server only, always.
@@ -69,6 +70,23 @@ export function adminAuth() {
 
 export function adminDb() {
   return getFirestore(adminApp());
+}
+
+/**
+ * The Storage bucket, for the one thing that writes to it: product photographs.
+ *
+ * The bucket name comes from the same public env var the browser client uses,
+ * so both halves of the application agree about which bucket they are talking
+ * about without a second setting to keep in step.
+ */
+export function adminStorage() {
+  return getStorage(adminApp());
+}
+
+/** The bucket product images are written to. */
+export function storageBucketName(): string {
+  return process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    ?? `${process.env.GCLOUD_PROJECT ?? process.env.FIREBASE_PROJECT_ID ?? ''}.appspot.com`;
 }
 
 /**

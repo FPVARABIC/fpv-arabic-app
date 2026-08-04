@@ -6,12 +6,13 @@ import {
 } from '@core/data/store/types';
 import type { StoreProduct } from '@core/data/store/types';
 import {
-  STORE_PRODUCTS, storeCategory, publicSettings, productHref, categoryHref,
+  STORE_PRODUCTS, storeCategory, productHref, categoryHref,
 } from '@/lib/store';
 import { resolvedProduct, publishedProducts } from '@/lib/server/storeCatalogue';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { ProductGallery, StoreBanner } from '@/components/store/StorePieces';
 import { VariantPicker } from '@/components/store/VariantPicker';
+import { publicStoreSettings } from '@/lib/server/storeSettings';
 
 export const dynamicParams = false;
 
@@ -68,7 +69,7 @@ export default async function ProductPage(
   if (!product || !product.published) notFound();
 
   const category = storeCategory(product.categoryId);
-  const settings = publicSettings();
+  const settings = await publicStoreSettings();
 
   // The related strips resolve against the merged catalogue too, so a product
   // the admin hid this morning stops being recommended by its neighbours —

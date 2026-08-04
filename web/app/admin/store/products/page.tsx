@@ -5,7 +5,7 @@ import { getSession, sessionCan } from '@/lib/server/session';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { AVAILABILITY_LABEL_AR } from '@core/data/store/types';
 import { formatPrice } from '@core/data/store/pricing';
-import { STAGE_LABEL_AR } from '@core/data/store/publication';
+import { STAGE_LABEL_AR, hardBlockers, advisories } from '@core/data/store/publication';
 import {
   AUDIT_DECISION_LABEL_AR, AUDIT_KIND_LABEL_AR, auditSummary,
 } from '@core/data/store/audit';
@@ -166,7 +166,10 @@ export default async function AdminProducts(
                     {/* The button only appears when the gate would allow it.
                         A control that is always there and always refuses
                         teaches whoever uses it to stop reading the refusal. */}
-                    {canEdit && row.blockers.length === 0 && (
+                    {/* Offered when nothing BLOCKING remains. Outstanding
+                        advisories are shown below and acknowledged on the
+                        product's own screen, not waved through from a list. */}
+                    {canEdit && hardBlockers(row.blockers).length === 0 && (
                       <PublishToggle productId={p.id} published={p.published} />
                     )}
                     <Link href={`/admin/store/products/${encodeURIComponent(p.id)}`}
@@ -182,8 +185,13 @@ export default async function AdminProducts(
                 {row.blockers.length > 0 && (
                   <ul data-testid={`blockers-${p.id}`}
                     style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
-                    {row.blockers.map((b, i) => (
-                      <li key={i} style={{ fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.85 }}>
+                    {/* Blocking first, then advisory. The colour says which is
+                        which without anybody reading a legend. */}
+                    {[...hardBlockers(row.blockers), ...advisories(row.blockers)].map((b, i) => (
+                      <li key={i} style={{
+                        fontSize: 11.5, lineHeight: 1.85,
+                        color: b.severity === 'blocking' ? '#fca5a5' : 'var(--text-dimmer)',
+                      }}>
                         {b.messageAr}
                         {b.fixHref && (
                           <> <Link href={b.fixHref} style={{ fontSize: 11 }}>افتح ←</Link></>

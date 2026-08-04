@@ -45,13 +45,16 @@ export function cartHref(): string {
 }
 
 /**
- * The settings the storefront renders with.
+ * The settings the storefront renders with — the SEED ones.
  *
- * Reads the seed for now; the admin panel writes `storeSettings/public` and
- * this becomes a read of that document. Callers already treat it as async-ready
- * data rather than a constant, so that change is one function body.
+ * Kept for the two places that legitimately need a synchronous answer and
+ * cannot await: nothing today. Every page reads `publicStoreSettings()` from
+ * `lib/server/storeSettings.ts`, which returns what the admin panel wrote and
+ * falls back to this. A page that called this directly would render a banner
+ * the settings screen cannot change, which is the bug the whole seed/override
+ * arrangement exists to prevent.
  */
-export function publicSettings(): StorePublicSettings {
+export function seedPublicSettings(): StorePublicSettings {
   return INITIAL_PUBLIC_SETTINGS;
 }
 

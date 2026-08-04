@@ -13,24 +13,25 @@ import { SupplyEditor } from './SupplyEditor';
  * the person who already has permission to see it.
  */
 export const SupplyRow: React.FC<{
-  productId: string;
+  variantId: string;
   nameEn: string;
-  titleAr: string;
+  /** The variant's own name — «الطقم الكامل», «الطائرة وحدها». */
+  variantNameAr: string;
   categoryAr: string;
   supply: StoreSupply | null;
   defaultMarginPercent: number;
   canEdit: boolean;
-}> = ({ productId, nameEn, titleAr, categoryAr, supply, defaultMarginPercent, canEdit }) => {
+}> = ({ variantId, nameEn, variantNameAr, categoryAr, supply, defaultMarginPercent, canEdit }) => {
   const breakdown = supply ? breakdownFor(supply, defaultMarginPercent) : null;
   const src = supply ? supplier(supply.supplierId) : undefined;
 
   return (
-    <li className="card-sm" data-testid={`supply-${productId}`} style={{ padding: '14px 16px', minWidth: 0 }}>
+    <li className="card-sm" data-testid={`supply-${variantId}`} style={{ padding: '14px 16px', minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <span className="ltr" style={{ fontSize: 13.5, fontWeight: 900 }}>{nameEn}</span>
         <span className="admin-badge">{categoryAr}</span>
         {!supply && (
-          <span className="admin-badge admin-badge-warn" data-testid={`supply-missing-${productId}`}>
+          <span className="admin-badge admin-badge-warn" data-testid={`supply-missing-${variantId}`}>
             بلا سجلّ توريد
           </span>
         )}
@@ -38,10 +39,10 @@ export const SupplyRow: React.FC<{
           <span className="admin-badge admin-badge-warn">التكلفة غير مؤكَّدة</span>
         )}
       </div>
-      <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-dimmer)' }}>{titleAr}</p>
+      <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-dim)' }}>{variantNameAr}</p>
 
       {breakdown ? (
-        <dl className="admin-kv" data-testid={`supply-breakdown-${productId}`} style={{ marginTop: 11 }}>
+        <dl className="admin-kv" data-testid={`supply-breakdown-${variantId}`} style={{ marginTop: 11 }}>
           <div><dt>المورد</dt><dd>{src?.nameAr ?? supply?.supplierId}</dd></div>
           <div>
             <dt>التكلفة الواصلة</dt>
@@ -76,7 +77,7 @@ export const SupplyRow: React.FC<{
         </p>
       )}
 
-      {canEdit && <SupplyEditor productId={productId} supply={supply} />}
+      {canEdit && <SupplyEditor variantId={variantId} supply={supply} />}
     </li>
   );
 };

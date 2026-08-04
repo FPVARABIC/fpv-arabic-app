@@ -94,5 +94,35 @@ service firebase.storage {
       // files under any path.
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+
+    // ── Store product photography ────────────────────────────────────────
+    //
+    // Written by the SERVER and by nothing else — the same arrangement as
+    // `storeProducts`, `storeSupply` and `storeOrders` in `firestore.rules`.
+    //
+    // WHY NOT A ROLE CHECK LIKE THE COMMUNITY'S OWNER CHECK
+    // -----------------------------------------------------
+    // Because the panel's authority is a verified session holding
+    // `store.editProducts`, and that capability lives in the platform's role
+    // model. Restating it here as `role in ['admin','owner']` would be a
+    // SECOND answer to «who may upload a product photograph» — and the day
+    // somebody adds a catalogue-editor role, the two answers disagree and the
+    // panel is the one that looks broken.
+    //
+    // The browser still does the compression (see `compressForUpload`), so
+    // every size and format constraint is unchanged; it just hands the bytes
+    // to a server action that holds the Admin SDK, which bypasses these rules
+    // by design.
+    match /store/products/{productId}/{fileName} {
+      // Public, because a product photograph is the most public thing in the
+      // shop. An unpublished product's images are reachable by direct URL —
+      // the same tradeoff the community accepts above, for the same reason: a
+      // URL nobody has been given is not a listing.
+      allow read: if true;
+
+      // No browser writes here. Ever.
+      allow write: if false;
+      allow delete: if false;
+    }
   }
 }

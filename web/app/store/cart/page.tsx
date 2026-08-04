@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { publicSettings } from '@/lib/store';
+import { publicStoreSettings } from '@/lib/server/storeSettings';
 import { SECTION_ROUTES } from '@/lib/webRoutes';
 import { CartContents } from '@/components/store/CartControls';
 import { cartProductViews } from '@/lib/server/storeCatalogue';
@@ -28,7 +28,7 @@ export default async function CartPage() {
   // Live prices, read once here and handed to the client island. The basket
   // itself never leaves the browser; only the catalogue travels, and it travels
   // the other way.
-  const catalogue = await cartProductViews();
+  const [catalogue, settings] = await Promise.all([cartProductViews(), publicStoreSettings()]);
   return (
     <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 760 }}>
       <nav aria-label="مسار التنقّل" style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
@@ -40,7 +40,7 @@ export default async function CartPage() {
 
       <CartContents catalogue={catalogue} />
 
-      <StoreBanner settings={publicSettings()} compact />
+      <StoreBanner settings={settings} compact />
     </div>
   );
 }
