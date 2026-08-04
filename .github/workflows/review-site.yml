@@ -1,0 +1,94 @@
+# The FPVARABIC review site.
+#
+# WHAT THIS IS FOR
+# ----------------
+# A real, browsable copy of the site on the internet, so the platform's design
+# can be reviewed on a phone and on a laptop before launch. It is NOT the
+# official launch: it is static, it carries no database, and it tells search
+# engines to stay away.
+#
+# WHY IT RUNS HERE AND NOT ON MY MACHINE
+# --------------------------------------
+# The environment this repository is developed in refuses outbound connections
+# to every hosting provider by policy. A GitHub Actions runner does not — and
+# it already holds a token scoped to this repository, so no account credential
+# has to be created, pasted or stored anywhere.
+#
+# `configure-pages` with `enablement: true` turns GitHub Pages on through the
+# API using that same token, so even the one-time settings toggle is automated.
+
+name: Review site
+
+on:
+  push:
+    branches: [claude/web-platform-foundation]
+    paths:
+      - 'web/**'
+      - 'src/**'
+      - 'scripts/buildReviewSite.mjs'
+      - '.github/workflows/review-site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: review-site
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the static copy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Turns Pages on if it is off, and reports the base path this site will
+      # be served from — which the build needs, because every internal link and
+      # every asset URL has to carry it.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Install the shared core
+        run: npm ci
+
+      - name: Build the review site
+        env:
+          REVIEW_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: node scripts/buildReviewSite.mjs
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .review-site/out
+
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Report the address
+        run: |
+          {
+            echo "## FPVARABIC — review site"
+            echo ""
+            echo "**Open it here:** ${{ steps.deployment.outputs.page_url }}"
+            echo ""
+            echo "Static review copy. No database, no sign-in, not indexed."
+          } >> "$GITHUB_STEP_SUMMARY"
