@@ -114,7 +114,7 @@ export default async function ProductPage(
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '13px 0' }}>
             {category && (
-              <span className="admin-badge" style={{ color: 'var(--accent)' }}>
+              <span className="admin-badge" style={{ color: 'var(--accent-ink)' }}>
                 {CHOICE_POSITION_LABEL_AR[category.choiceAxis][product.choicePosition]}
               </span>
             )}

@@ -178,7 +178,7 @@ export default async function EdgeTxTopic(
                   {/* The English label is the anchor: it is what is printed on
                       the reader's own screen, and translating it away would make
                       the setting unfindable. */}
-                  <span className="ltr" style={{ fontSize: 14, fontWeight: 900, color: 'var(--accent)' }}>
+                  <span className="ltr" style={{ fontSize: 14, fontWeight: 900, color: 'var(--accent-ink)' }}>
                     {setting.labelEn}
                   </span>
                   <span style={{ fontSize: 13.5, fontWeight: 800 }}>{setting.labelAr}</span>

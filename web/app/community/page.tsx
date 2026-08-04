@@ -100,7 +100,7 @@ export default async function CommunityPage(
                   className="card-sm"
                   style={{
                     display: 'inline-block', padding: '6px 14px', fontSize: 12.5,
-                    color: !activeCategory ? 'var(--accent)' : 'var(--text-dim)',
+                    color: !activeCategory ? 'var(--accent-ink)' : 'var(--text-dim)',
                     borderColor: !activeCategory ? 'var(--border)' : undefined,
                   }}
                 >
@@ -116,7 +116,7 @@ export default async function CommunityPage(
                     className="card-sm"
                     style={{
                       display: 'inline-block', padding: '6px 14px', fontSize: 12.5,
-                      color: activeCategory === c ? 'var(--accent)' : 'var(--text-dim)',
+                      color: activeCategory === c ? 'var(--accent-ink)' : 'var(--text-dim)',
                       borderColor: activeCategory === c ? 'var(--border)' : undefined,
                     }}
                   >

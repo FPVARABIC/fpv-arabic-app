@@ -103,7 +103,7 @@ export default function ExpressLrsSetup() {
           data-testid={`elrs-step-${step.id}`}
           style={{ padding: '4px 18px 4px', marginTop: 14, scrollMarginTop: 18 }}>
           <summary style={{ cursor: 'pointer', padding: '14px 0', fontSize: 15, fontWeight: 900 }}>
-            <span style={{ color: 'var(--accent)' }}>
+            <span style={{ color: 'var(--accent-ink)' }}>
               <span dir="ltr">{step.order}</span>.
             </span>{' '}
             {step.title}

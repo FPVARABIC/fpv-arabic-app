@@ -90,7 +90,7 @@ export default function VideoToolsHub() {
                     <span className="admin-badge">{VIDEO_TOOL_KIND_LABEL_AR[p.kind]}</span>
                     <span className="admin-badge">{VIDEO_TOOL_LEVEL_LABEL_AR[p.level]}</span>
                   </span>
-                  <span style={{ display: 'block', fontSize: 12, color: 'var(--accent)', marginTop: 5 }}>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--accent-ink)', marginTop: 5 }}>
                     {VIDEO_TOOL_SCOPE_LABEL_AR[p.scope]}
                   </span>
                   <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-dim)', marginTop: 7, lineHeight: 1.9 }}>
@@ -105,11 +105,11 @@ export default function VideoToolsHub() {
 
       <p style={{ marginTop: 26, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
         وصف حقول الفيديو داخل Betaflight نفسه في{' '}
-        <Link href={webHref({ kind: 'betaflight', id: 'vtx' }).href ?? '#'} style={{ color: 'var(--accent)' }}>
+        <Link href={webHref({ kind: 'betaflight', id: 'vtx' }).href ?? '#'} style={{ color: 'var(--accent-ink)' }}>
           صفحة VTX
         </Link>
         {' '}و
-        <Link href={webHref({ kind: 'betaflight', id: 'osd' }).href ?? '#'} style={{ color: 'var(--accent)' }}>
+        <Link href={webHref({ kind: 'betaflight', id: 'osd' }).href ?? '#'} style={{ color: 'var(--accent-ink)' }}>
           صفحة OSD
         </Link>.
       </p>

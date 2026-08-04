@@ -177,7 +177,7 @@ export const PostMedia: React.FC<PostMediaProps> = ({
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               background: 'rgba(2,8,15,0.82)', border: '1px solid var(--border)',
-              color: 'var(--accent)', borderRadius: 999, padding: '10px 18px',
+              color: 'var(--accent-ink)', borderRadius: 999, padding: '10px 18px',
               fontSize: 13.5, fontWeight: 800,
             }}>
               ▶ شغّل الفيديو

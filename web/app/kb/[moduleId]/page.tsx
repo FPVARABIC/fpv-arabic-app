@@ -53,24 +53,21 @@ export default async function ModulePage(
         <Link href="/kb">الموسوعة</Link> <span aria-hidden>/</span> {m.titleAr}
       </nav>
 
-      <header style={{ marginTop: 14, maxWidth: 800 }}>
-        <h1 style={{ fontSize: 30, fontWeight: 900, margin: 0 }}>{m.titleAr}</h1>
+      <header style={{ marginTop: 14 }} className="prose">
+        <h1 className="page-title" style={{ fontSize: 30 }}>{m.titleAr}</h1>
         <p className="ltr" style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '5px 0 0' }}>
           {m.titleEn}
         </p>
-        <p style={{ fontSize: 15, color: 'var(--text-dim)', margin: '14px 0 0', lineHeight: 1.95 }}>
+        <p style={{ fontSize: 15.5, color: 'var(--text-dim)', margin: '14px 0 0', lineHeight: 2 }}>
           {m.summaryAr}
         </p>
       </header>
 
-      {/* Two columns on desktop: the articles, and the paths beside them. */}
-      <div
-        style={{
-          display: 'grid', gap: 28, marginTop: 34,
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-          alignItems: 'start',
-        }}
-      >
+      {/* Two columns on desktop: the articles, and the paths beside them.
+          `kb-cols` rather than an inline grid — the inline version had no
+          breakpoint, so on a 390px phone the article list and the sidebar were
+          squeezed side by side into two unreadable columns. */}
+      <div className="kb-cols">
         <section aria-labelledby="articles-h">
           <h2 id="articles-h" style={{ fontSize: 19, fontWeight: 900, margin: '0 0 14px' }}>
             المقالات <span style={{ color: 'var(--text-dimmer)', fontWeight: 700 }} dir="ltr">({articles.length})</span>

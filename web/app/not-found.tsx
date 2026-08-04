@@ -12,7 +12,7 @@ import Link from 'next/link';
 export default function NotFound() {
   return (
     <div className="shell" style={{ paddingTop: 80, paddingBottom: 80, maxWidth: 620 }}>
-      <p style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 800, margin: 0 }} dir="ltr">404</p>
+      <p style={{ fontSize: 13, color: 'var(--accent-ink)', fontWeight: 800, margin: 0 }} dir="ltr">404</p>
       <h1 style={{ fontSize: 30, fontWeight: 900, margin: '10px 0 0' }}>هذه الصفحة غير موجودة</h1>
       <p style={{ fontSize: 15, color: 'var(--text-dim)', margin: '14px 0 0', lineHeight: 1.95 }}>
         الرابط الذي وصلت منه قد يكون قديماً، أو يشير إلى محتوى انتقل. المحتوى نفسه غالباً

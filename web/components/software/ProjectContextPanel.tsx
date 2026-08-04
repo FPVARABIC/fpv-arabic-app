@@ -105,7 +105,7 @@ export const ProjectContextPanel: React.FC<ProjectContextProps> = ({ kind, entry
     return (
       <aside className="card-sm" data-testid="project-context-none" style={{ padding: '13px 15px', marginTop: 18 }}>
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-          لو سجّلت <Link href="/project" style={{ color: 'var(--accent)' }}>مشروعك</Link>،
+          لو سجّلت <Link href="/project" style={{ color: 'var(--accent-ink)' }}>مشروعك</Link>،
           ستظهر هنا قيمك أنت على هذه الصفحة تحديداً — لا المشروع كله.
         </p>
       </aside>

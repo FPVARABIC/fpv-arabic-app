@@ -71,7 +71,7 @@ export const CompareTable: React.FC<{
             <span className="ltr">{formatPrice(v.priceMinor, p.currency)}</span>
             {cheapest !== null && v.priceMinor === cheapest && (
               <span className="admin-badge" data-testid={`compare-cheapest-${p.id}`}
-                style={{ marginInlineStart: 6, fontSize: 10, color: 'var(--accent)' }}>
+                style={{ marginInlineStart: 6, fontSize: 10, color: 'var(--accent-ink)' }}>
                 الأرخص
               </span>
             )}

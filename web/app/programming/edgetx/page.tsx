@@ -147,7 +147,7 @@ export default function EdgeTxHub() {
 
       <p style={{ marginTop: 26, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
         الجهة المقابلة — المستقبل على الطائرة — في{' '}
-        <Link href={SECTION_ROUTES.expresslrs} style={{ color: 'var(--accent)' }}>
+        <Link href={SECTION_ROUTES.expresslrs} style={{ color: 'var(--accent-ink)' }}>
           مركز ExpressLRS
         </Link>.
       </p>

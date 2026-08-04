@@ -174,9 +174,9 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
             style={{
               flex: 1, padding: '9px 12px', borderRadius: 'var(--radius-sm)',
               fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-              border: mode === t.id ? '1px solid var(--accent)' : '1px solid var(--border-soft)',
+              border: mode === t.id ? '1px solid var(--border-accent)' : '1px solid var(--border-soft)',
               background: mode === t.id ? 'rgba(56,224,224,0.10)' : 'transparent',
-              color: mode === t.id ? 'var(--accent)' : 'var(--text-dim)',
+              color: mode === t.id ? 'var(--accent-ink)' : 'var(--text-dim)',
             }}
           >
             {t.labelAr}

@@ -170,7 +170,7 @@ export const ProductImages: React.FC<{
                   <span style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
                     {i === 0
                       ? <span className="admin-badge" data-testid={`image-primary-${i}`}
-                        style={{ color: 'var(--accent)' }}>الصورة الرئيسية</span>
+                        style={{ color: 'var(--accent-ink)' }}>الصورة الرئيسية</span>
                       : <span className="admin-badge">صورة {i + 1}</span>}
                     {!isComplete(img) && (
                       <span className="admin-badge" data-testid={`image-incomplete-${i}`}

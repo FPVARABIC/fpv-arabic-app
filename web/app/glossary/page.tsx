@@ -113,7 +113,7 @@ export default function GlossaryPage() {
                 >
                   <h3 style={{ fontSize: 15, fontWeight: 900, margin: 0 }}>
                     {t.ar}
-                    <span className="ltr" style={{ fontSize: 12, color: 'var(--accent)', marginInlineStart: 9, fontWeight: 700 }}>
+                    <span className="ltr" style={{ fontSize: 12, color: 'var(--accent-ink)', marginInlineStart: 9, fontWeight: 700 }}>
                       {t.en}
                     </span>
                     {t.abbr && (
@@ -141,7 +141,7 @@ export default function GlossaryPage() {
                         const to = href({ kind: 'article', id });
                         return to ? (
                           <li key={id}>
-                            <Link href={to} style={{ fontSize: 11.5, color: 'var(--accent)' }}>
+                            <Link href={to} style={{ fontSize: 11.5, color: 'var(--accent-ink)' }}>
                               اقرأ أكثر ←
                             </Link>
                           </li>

@@ -177,7 +177,7 @@ export const ProductCard: React.FC<{ product: StoreProduct; axis: ChoiceAxis }> 
       {/* Where it sits on the section's axis — the thing that makes three
           products read as a choice instead of as a list. */}
       <span className="admin-badge" data-testid={`product-position-${product.id}`}
-        style={{ color: 'var(--accent)' }}>
+        style={{ color: 'var(--accent-ink)' }}>
         {CHOICE_POSITION_LABEL_AR[axis][product.choicePosition]}
       </span>
       <span className="admin-badge">{AVAILABILITY_LABEL_AR[product.availability]}</span>

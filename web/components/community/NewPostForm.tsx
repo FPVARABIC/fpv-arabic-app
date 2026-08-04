@@ -200,7 +200,7 @@ export const NewPostForm: React.FC = () => {
           data-testid="new-post-preview-toggle"
           style={{
             background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-            fontSize: 12.5, color: 'var(--accent)', textDecoration: 'underline',
+            fontSize: 12.5, color: 'var(--accent-ink)', textDecoration: 'underline',
           }}
         >
           {showPreview ? 'أخفِ المعاينة' : 'معاينة'}

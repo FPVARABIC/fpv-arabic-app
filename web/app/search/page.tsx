@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 import type { Metadata } from 'next';
 import { retrieve, INTENT_LABEL_AR, type RetrievalResult } from '@core/platform/retrieval';
 import type { SearchDocType } from '@core/data/kb/search/buildIndex';
@@ -99,13 +100,23 @@ export default async function SearchPage({
 
   return (
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 30, maxWidth: 900 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>البحث</h1>
+      <h1 className="page-title">البحث</h1>
+      <p className="page-lede">
+        محرّك واحد يصل إلى الموسوعة والمصطلحات وصفحات البرامج والتشخيص. اكتب المصطلح
+        كما تعرفه — بالعربية أو كما يظهر داخل البرنامج.
+      </p>
 
       {/* A plain GET form: works with no JavaScript, and the query lands in the
-          URL so a result set can be shared, bookmarked, and reached with Back. */}
-      <form action={SECTION_ROUTES.search} method="get" style={{ marginTop: 18 }} role="search">
+          URL so a result set can be shared, bookmarked, and reached with Back.
+
+          The field is deliberately the largest control on the page. Search is
+          the platform's spine — it is how somebody who does not know the name
+          of what they are looking for finds it — and a field sized like every
+          other input reads as a filter rather than as the way in. */}
+      <form action={SECTION_ROUTES.search} method="get" style={{ marginTop: 22 }} role="search">
         <label htmlFor="q" className="sr-only">ابحث في المنصة</label>
-        <div style={{ display: 'flex', gap: 9 }}>
+        <div className="search-bar">
+          <Search size={19} className="search-bar-icon" aria-hidden />
           <input
             id="q"
             name="q"
@@ -114,15 +125,33 @@ export default async function SearchPage({
             placeholder="اكتب مصطلحاً أو عرَضاً: «الريسيفر لا يشتغل»، «أين أجد Ports»، «UART»…"
             data-testid="search-input"
             autoComplete="off"
-            style={{
-              flex: 1, minWidth: 0, padding: '12px 15px', borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border)', background: 'var(--surface-2)',
-              color: 'var(--text)', fontSize: 14.5, fontFamily: 'inherit',
-            }}
+            className="search-bar-input"
           />
-          <button type="submit" className="btn-primary">ابحث</button>
+          <button type="submit" className="btn-primary search-bar-submit">ابحث</button>
         </div>
       </form>
+
+      {/* Somebody arriving with nothing typed needs a way in, not a blank box. */}
+      {!active && (
+        <div style={{ marginTop: 24 }} data-testid="search-examples">
+          <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '0 0 9px', fontWeight: 700 }}>
+            جرّب مثلاً
+          </p>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['الطائرة لا تقلع', 'معنى KV', 'ExpressLRS binding', 'صورة الفيديو مشوّشة', 'PID tuning'].map(ex => (
+              <li key={ex}>
+                <Link
+                  href={`${SECTION_ROUTES.search}?q=${encodeURIComponent(ex)}`}
+                  className="btn-ghost"
+                  style={{ fontSize: 12.5 }}
+                >
+                  {ex}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {active && result && (
         <>
@@ -131,7 +160,7 @@ export default async function SearchPage({
               whether the results below make sense. */}
           {result.intents.length > 0 && (
             <p data-testid="search-intent"
-              style={{ margin: '16px 0 0', fontSize: 12.5, color: 'var(--accent)' }}>
+              style={{ margin: '16px 0 0', fontSize: 12.5, color: 'var(--accent-ink)', fontWeight: 700 }}>
               {result.intents.map(i => INTENT_LABEL_AR[i]).join(' · ')}
             </p>
           )}
@@ -148,7 +177,7 @@ export default async function SearchPage({
             <p data-testid="search-didyoumean" style={{ margin: '9px 0 0', fontSize: 13.5 }}>
               هل تقصد{' '}
               <Link href={`${SECTION_ROUTES.search}?q=${encodeURIComponent(result.didYouMean)}`}
-                style={{ color: 'var(--accent)', fontWeight: 800 }}>
+                style={{ color: 'var(--accent-ink)', fontWeight: 800 }}>
                 {result.didYouMean}
               </Link>
               ؟
@@ -273,7 +302,7 @@ const ResultCard: React.FC<{ result: RetrievalResult & { route?: string; postId?
           data-testid={`result-badge-${result.type}`}
           style={{
             fontSize: 10.5, fontWeight: 800,
-            color: isCommunity ? 'var(--text-dimmer)' : 'var(--accent)',
+            color: isCommunity ? 'var(--text-dimmer)' : 'var(--accent-ink)',
             border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px',
           }}
         >
@@ -359,7 +388,7 @@ const EmptyState: React.FC<{ query: string }> = ({ query }) => (
         <span className="ltr">Ports</span>.
       </li>
       <li style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-        أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent)' }}>فهرس التشخيص</Link>{' '}
+        أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent-ink)' }}>فهرس التشخيص</Link>{' '}
         إن كان شيء لا يعمل.
       </li>
     </ul>

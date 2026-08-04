@@ -196,7 +196,7 @@ const PartPicker: React.FC<{
                 style={{
                   width: '100%', textAlign: 'start', padding: '11px 13px', cursor: 'pointer',
                   fontFamily: 'inherit', color: 'inherit',
-                  borderColor: p.id === current ? 'var(--accent)' : undefined,
+                  borderColor: p.id === current ? 'var(--border-accent)' : undefined,
                 }}
               >
                 <span style={{ display: 'block', fontSize: 13.5, fontWeight: 800 }}>{p.nameAr}</span>
@@ -287,8 +287,8 @@ const DeclaredGaps: React.FC = () => (
     </ul>
     <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.9, margin: '10px 0 0' }}>
       لمعرفة ما تعنيه أي من هذه المكوّنات، افتح{' '}
-      <Link href="/kb" style={{ color: 'var(--accent)' }}>الموسوعة</Link> أو{' '}
-      <Link href="/glossary" style={{ color: 'var(--accent)' }}>القاموس</Link>.
+      <Link href="/kb" style={{ color: 'var(--accent-ink)' }}>الموسوعة</Link> أو{' '}
+      <Link href="/glossary" style={{ color: 'var(--accent-ink)' }}>القاموس</Link>.
     </p>
   </section>
 );

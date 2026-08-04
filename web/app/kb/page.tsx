@@ -43,7 +43,7 @@ export default function KbIndexPage() {
           const to = href({ kind: 'module', id: m.id });
           if (!to) return null;
           return (
-            <article key={m.id} className="card" style={{ padding: '20px 22px' }}>
+            <article key={m.id} className="card card-link" style={{ padding: '20px 22px' }}>
               <h2 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>
                 <Link href={to} data-testid={`kb-module-${m.id}`}>{m.titleAr}</Link>
               </h2>
@@ -66,7 +66,7 @@ export default function KbIndexPage() {
                     <li key={a.id}>
                       <Link
                         href={at}
-                        className="card-sm"
+                        className="card-sm card-link"
                         style={{ display: 'inline-block', padding: '5px 11px', fontSize: 12, color: 'var(--text-dim)' }}
                       >
                         {a.titleAr}

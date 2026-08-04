@@ -41,7 +41,7 @@ export const PostCard: React.FC<{ post: PostSummary; compact?: boolean }> = ({ p
             width: 32, height: 32, borderRadius: 999, flexShrink: 0,
             background: 'linear-gradient(135deg, rgba(56,224,224,0.25), rgba(0,180,255,0.18))',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, fontWeight: 900, color: 'var(--accent)',
+            fontSize: 13, fontWeight: 900, color: 'var(--accent-ink)',
           }}
         >
           {post.authorName.slice(0, 1)}
@@ -68,7 +68,7 @@ export const PostCard: React.FC<{ post: PostSummary; compact?: boolean }> = ({ p
         <p style={{ margin: '10px 0 0' }}>
           <span
             style={{
-              fontSize: 11, fontWeight: 800, color: 'var(--accent)',
+              fontSize: 11, fontWeight: 800, color: 'var(--accent-ink)',
               background: 'rgba(56,224,224,0.10)', borderRadius: 999, padding: '3px 10px',
             }}
           >
@@ -142,7 +142,7 @@ export const PostCard: React.FC<{ post: PostSummary; compact?: boolean }> = ({ p
         <Link
           href={`/community/posts/${post.id}`}
           data-testid={`post-open-${post.id}`}
-          style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}
+          style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent-ink)' }}
         >
           افتح المنشور ←
         </Link>

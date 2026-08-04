@@ -74,7 +74,7 @@ export const DecisionCard: React.FC<{
                     style={{
                       width: '100%', textAlign: 'start', padding: '12px 14px',
                       borderRadius: 'var(--radius-sm)', font: 'inherit', cursor: 'pointer',
-                      border: `1px solid ${isPick ? 'var(--accent)' : 'var(--border)'}`,
+                      border: `1px solid `,
                       background: isPick ? 'rgba(56,189,248,0.07)' : 'var(--surface-2)',
                       color: 'var(--text)', display: 'grid', gap: 6,
                     }}
@@ -89,7 +89,7 @@ export const DecisionCard: React.FC<{
                         {DECISION_EFFECT_LABEL_AR[o.effect]}
                       </span>
                       {isRec && (
-                        <span className="admin-badge" style={{ fontSize: 10.5, color: 'var(--accent)' }}>
+                        <span className="admin-badge" style={{ fontSize: 10.5, color: 'var(--accent-ink)' }}>
                           الموصى به
                         </span>
                       )}

@@ -89,7 +89,7 @@ export default async function VideoToolTopic(
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
         {/* Scope first: applying another ecosystem's procedure is how units die. */}
         <span className="admin-badge" data-testid="video-scope"
-          style={{ color: 'var(--accent)', fontWeight: 800 }}>
+          style={{ color: 'var(--accent-ink)', fontWeight: 800 }}>
           {VIDEO_TOOL_SCOPE_LABEL_AR[page.scope]}
         </span>
         <span className={RISK_CLASS[page.risk]}>{VIDEO_TOOL_RISK_LABEL_AR[page.risk]}</span>

@@ -76,7 +76,7 @@ const Block: React.FC<{ block: KbBlock }> = ({ block: b }) => {
                     aria-hidden
                     style={{
                       display: 'inline-block', width: 5, height: 5, borderRadius: 999,
-                      background: 'var(--accent)', marginInlineEnd: 10, verticalAlign: 'middle',
+                      background: 'var(--accent-ink)', marginInlineEnd: 10, verticalAlign: 'middle',
                     }}
                   />
                 )}
@@ -100,7 +100,7 @@ const Block: React.FC<{ block: KbBlock }> = ({ block: b }) => {
                   aria-hidden
                   style={{
                     width: 24, height: 24, borderRadius: 999, flexShrink: 0, marginTop: 2,
-                    background: 'rgba(56,224,224,0.14)', color: 'var(--accent)',
+                    background: 'rgba(56,224,224,0.14)', color: 'var(--accent-ink)',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 12, fontWeight: 900,
                   }}
@@ -153,7 +153,7 @@ const Block: React.FC<{ block: KbBlock }> = ({ block: b }) => {
                       scope="col"
                       style={{
                         textAlign: 'start', padding: '10px 13px', fontSize: 12.5,
-                        fontWeight: 900, color: 'var(--accent)',
+                        fontWeight: 900, color: 'var(--accent-ink)',
                         borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
                       }}
                     >
@@ -277,7 +277,7 @@ const Block: React.FC<{ block: KbBlock }> = ({ block: b }) => {
                       scope="col"
                       style={{
                         textAlign: 'start', padding: '10px 13px', fontSize: 12.5,
-                        fontWeight: 900, color: 'var(--accent)',
+                        fontWeight: 900, color: 'var(--accent-ink)',
                         borderBottom: '1px solid var(--border)',
                       }}
                     >

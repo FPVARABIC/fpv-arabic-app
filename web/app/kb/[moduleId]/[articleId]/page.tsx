@@ -154,7 +154,7 @@ export default async function ArticlePage(
                     <span
                       aria-hidden
                       style={{
-                        width: 5, height: 5, borderRadius: 999, background: 'var(--accent)',
+                        width: 5, height: 5, borderRadius: 999, background: 'var(--accent-ink)',
                         marginTop: 10, flexShrink: 0,
                       }}
                     />
@@ -235,7 +235,7 @@ export default async function ArticlePage(
                       target="_blank"
                       rel="noopener noreferrer nofollow"
                       className="ltr"
-                      style={{ fontSize: 11.5, color: 'var(--accent)', marginTop: 4 }}
+                      style={{ fontSize: 11.5, color: 'var(--accent-ink)', marginTop: 4 }}
                     >
                       {s.url}
                     </a>

@@ -86,11 +86,11 @@ export default function ExpressLrsHub() {
 
       <p style={{ marginTop: 26, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
         الجهة الأخرى من الرابط — جهاز التحكم نفسه — في{' '}
-        <Link href={webHref({ kind: 'edgetx' }).href ?? '#'} style={{ color: 'var(--accent)' }}>
+        <Link href={webHref({ kind: 'edgetx' }).href ?? '#'} style={{ color: 'var(--accent-ink)' }}>
           مركز EdgeTX
         </Link>
         ، وتوصيل المستقبل بمتحكم الطيران في{' '}
-        <Link href={webHref({ kind: 'betaflight', id: 'ports' }).href ?? '#'} style={{ color: 'var(--accent)' }}>
+        <Link href={webHref({ kind: 'betaflight', id: 'ports' }).href ?? '#'} style={{ color: 'var(--accent-ink)' }}>
           صفحة Ports
         </Link>.
       </p>

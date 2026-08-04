@@ -45,7 +45,7 @@ export default function HomePage() {
       <section style={{ maxWidth: 760 }}>
         <h1 style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.4, margin: 0 }}>
           الطيران بالمنظور الأول،{' '}
-          <span style={{ color: 'var(--accent)' }}>بالعربية</span>، بمصادر وتواريخ مراجعة
+          <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>، بمصادر وتواريخ مراجعة
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.95 }}>
           منصة واحدة على الهاتف والويب: موسوعة تشرح المبدأ قبل الخطوة، وتشخيص يبدأ من العرَض
@@ -71,7 +71,7 @@ export default function HomePage() {
           {stats.map(s => (
             <div key={s.labelAr} className="card-sm" style={{ padding: '16px 18px' }}>
               <div
-                style={{ fontSize: 26, fontWeight: 900, color: 'var(--accent)' }}
+                style={{ fontSize: 26, fontWeight: 900, color: 'var(--accent-ink)' }}
                 dir="ltr"
               >
                 {s.n}
@@ -88,7 +88,7 @@ export default function HomePage() {
       <section style={{ marginTop: 52 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
           <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>المنظومات</h2>
-          <Link href="/kb" style={{ fontSize: 13, color: 'var(--accent)' }}>
+          <Link href="/kb" style={{ fontSize: 13, color: 'var(--accent-ink)' }}>
             كل الموسوعة ←
           </Link>
         </div>
@@ -184,7 +184,7 @@ export default function HomePage() {
                 <span
                   aria-hidden
                   style={{
-                    width: 5, height: 5, borderRadius: 999, background: 'var(--accent)',
+                    width: 5, height: 5, borderRadius: 999, background: 'var(--accent-ink)',
                     marginTop: 10, flexShrink: 0,
                   }}
                 />

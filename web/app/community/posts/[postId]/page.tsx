@@ -94,7 +94,7 @@ export default async function PostPage(
               width: 38, height: 38, borderRadius: 999, flexShrink: 0,
               background: 'linear-gradient(135deg, rgba(56,224,224,0.25), rgba(0,180,255,0.18))',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 15, fontWeight: 900, color: 'var(--accent)',
+              fontSize: 15, fontWeight: 900, color: 'var(--accent-ink)',
             }}
           >
             {post.authorName.slice(0, 1)}
@@ -120,7 +120,7 @@ export default async function PostPage(
         {post.category && CATEGORY_LABELS[post.category] && (
           <p style={{ margin: '14px 0 0' }}>
             <span style={{
-              fontSize: 11.5, fontWeight: 800, color: 'var(--accent)',
+              fontSize: 11.5, fontWeight: 800, color: 'var(--accent-ink)',
               background: 'rgba(56,224,224,0.10)', borderRadius: 999, padding: '3px 11px',
             }}>
               {CATEGORY_LABELS[post.category]}
@@ -230,7 +230,7 @@ export default async function PostPage(
           <p className="card-sm" style={{ padding: '14px 16px', marginTop: 16, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
             {session
               ? 'حسابك موقوف، فلا يمكنك التعليق.'
-              : <>سجّل الدخول للتعليق. <Link href={`/signin?next=${encodeURIComponent(`/community/posts/${post.id}`)}`} style={{ color: 'var(--accent)' }}>تسجيل الدخول ←</Link></>}
+              : <>سجّل الدخول للتعليق. <Link href={`/signin?next=${encodeURIComponent(`/community/posts/${post.id}`)}`} style={{ color: 'var(--accent-ink)' }}>تسجيل الدخول ←</Link></>}
           </p>
         )}
       </section>

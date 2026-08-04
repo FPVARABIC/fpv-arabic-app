@@ -146,7 +146,7 @@ export default async function BetaflightPage(
                 <header style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
                   {/* Direction-isolated so the Arabic around it cannot reorder
                       the exact string the reader must look for. */}
-                  <span className="ltr" style={{ fontSize: 14, fontWeight: 900, color: 'var(--accent)' }}>
+                  <span className="ltr" style={{ fontSize: 14, fontWeight: 900, color: 'var(--accent-ink)' }}>
                     {field.englishLabel}
                   </span>
                   <span className={SAFETY_CLASS[field.safetyLevel]}>{SAFETY_AR[field.safetyLevel]}</span>

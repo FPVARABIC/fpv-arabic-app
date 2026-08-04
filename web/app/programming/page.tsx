@@ -128,9 +128,9 @@ export default function ProgrammingHub() {
       ))}
 
       <p style={{ marginTop: 30, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
-        لا تعرف من أين تبدأ؟ افتح <Link href="/project" style={{ color: 'var(--accent)' }}>مشروعك</Link>{' '}
+        لا تعرف من أين تبدأ؟ افتح <Link href="/project" style={{ color: 'var(--accent-ink)' }}>مشروعك</Link>{' '}
         — الأحكام هناك تدلّك على الصفحة التي تخصّك،
-        أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent)' }}>التشخيص</Link> إن كان شيء لا يعمل.
+        أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent-ink)' }}>التشخيص</Link> إن كان شيء لا يعمل.
       </p>
     </div>
   );

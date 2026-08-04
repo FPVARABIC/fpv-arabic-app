@@ -33,7 +33,13 @@ export function middleware(request: NextRequest) {
 
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const isAdminApi = pathname.startsWith('/api/admin/');
-  const isPrivate = pathname.startsWith('/profile') || pathname.startsWith('/settings');
+  // `/profile` is account data and stays closed. `/settings` used to be listed
+  // here too, written before the page existed — and it was the wrong guess:
+  // what that page actually controls is data stored in THIS BROWSER (lesson
+  // progress, checklists), which a signed-out reader owns and must be able to
+  // clear. The phone app agrees — its profile sheet shows «الإعدادات» to a
+  // guest and gates only sign-out and the avatar picker.
+  const isPrivate = pathname.startsWith('/profile');
 
   if (!isAdmin && !isAdminApi && !isPrivate) return NextResponse.next();
 
@@ -59,5 +65,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/profile/:path*', '/settings/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/profile/:path*'],
 };

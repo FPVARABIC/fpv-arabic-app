@@ -71,7 +71,7 @@ export const VariantPicker: React.FC<{
                   onClick={() => setChosenId(v.id)}
                   style={{
                     textAlign: 'start', padding: '11px 13px', borderRadius: 'var(--radius-sm)',
-                    border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                    border: `1px solid `,
                     background: active ? 'rgba(56,189,248,0.07)' : 'var(--surface-2)',
                     color: 'var(--text)', font: 'inherit', cursor: 'pointer',
                     display: 'grid', gap: 5,

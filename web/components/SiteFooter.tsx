@@ -14,6 +14,12 @@ export const SiteFooter: React.FC = () => {
     { id: 'software', titleAr: 'البرامج' },
     { id: 'build', titleAr: 'البناء' },
     { id: 'community', titleAr: 'المجتمع' },
+    { id: 'store', titleAr: 'المتجر' },
+    // The app's own «about / contact / settings» rows, reachable from the
+    // bottom of every page as well as from the account rail. Two routes to the
+    // same three pages is deliberate: one for a reader scrolling, one for a
+    // reader looking.
+    { id: 'account', titleAr: 'المنصّة' },
   ];
 
   return (
@@ -32,11 +38,12 @@ export const SiteFooter: React.FC = () => {
           }}
         >
           {groups.map(g => {
-            const items = NAV_ITEMS.filter(i => i.group === g.id && !i.requiresRole && i.status !== 'planned');
+            const items = NAV_ITEMS.filter(i =>
+              i.group === g.id && !i.requiresRole && !i.requiresAuth && i.status !== 'planned');
             if (items.length === 0) return null;
             return (
               <nav key={g.id} aria-label={g.titleAr}>
-                <h2 style={{ fontSize: 12, fontWeight: 900, color: 'var(--accent)', margin: '0 0 10px' }}>
+                <h2 style={{ fontSize: 12, fontWeight: 900, color: 'var(--accent-ink)', margin: '0 0 10px' }}>
                   {g.titleAr}
                 </h2>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 7 }}>

@@ -116,7 +116,7 @@ export default async function AdminProducts(
             </ul>
           </div>
           <div data-testid="platform-work">
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--accent)' }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--accent-ink)' }}>
               أنجزه النظام
             </p>
             <ul style={{ margin: '9px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
@@ -189,7 +189,7 @@ export default async function AdminProducts(
                   <span className="admin-badge" data-testid={`stage-${p.id}`}
                     style={{
                       color: row.stage === 'published' ? 'var(--sev-ok)'
-                        : row.stage === 'ready' ? 'var(--accent)' : 'var(--sev-warning)',
+                        : row.stage === 'ready' ? 'var(--accent-ink)' : 'var(--sev-warning)',
                     }}>
                     {STAGE_LABEL_AR[row.stage]}
                   </span>

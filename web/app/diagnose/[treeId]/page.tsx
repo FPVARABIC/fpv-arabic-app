@@ -137,7 +137,7 @@ export default async function DiagnoseTreePage(
                 <span
                   dir="ltr"
                   style={{
-                    fontSize: 11, fontWeight: 900, color: 'var(--accent)',
+                    fontSize: 11, fontWeight: 900, color: 'var(--accent-ink)',
                     background: 'rgba(56,224,224,0.12)', borderRadius: 999, padding: '2px 10px',
                   }}
                 >
@@ -192,7 +192,7 @@ export default async function DiagnoseTreePage(
                     </p>
                     {o.next && (
                       <p style={{ margin: '8px 0 0', fontSize: 12.5 }}>
-                        <a href={`#node-${o.next}`} style={{ color: 'var(--accent)' }}>
+                        <a href={`#node-${o.next}`} style={{ color: 'var(--accent-ink)' }}>
                           انتقل إلى الفحص التالي ←
                         </a>
                       </p>
@@ -206,7 +206,7 @@ export default async function DiagnoseTreePage(
                           <ul style={{ margin: '8px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
                             {o.actions.map((act, ai) => (
                               <li key={ai} style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85, display: 'flex', gap: 8 }}>
-                                <span aria-hidden style={{ color: 'var(--accent)' }}>←</span>
+                                <span aria-hidden style={{ color: 'var(--accent-ink)' }}>←</span>
                                 <span>{act}</span>
                               </li>
                             ))}

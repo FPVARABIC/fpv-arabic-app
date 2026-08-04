@@ -87,6 +87,22 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'profile', labelAr: 'ملفي', href: '/profile', group: 'account',
     blurbAr: 'حسابك ومنشوراتك وتقدّمك.', requiresAuth: true,
   },
+  // These three exist in the phone app and did not exist on the web at all,
+  // which is why a reader had nowhere to go for «كيف أوقف هذا» or «من أنتم».
+  // They are `account`-group but NOT `requiresAuth`: a signed-out visitor has
+  // every reason to read the about page and to write to us.
+  {
+    id: 'settings', labelAr: 'الإعدادات', href: '/settings', group: 'account',
+    blurbAr: 'البيانات المحفوظة في متصفّحك، وما يخصّ حسابك.',
+  },
+  {
+    id: 'contact', labelAr: 'اتصل بنا', href: '/contact', group: 'account',
+    blurbAr: 'اقتراح أو مشكلة أو سؤال أو تعاون.',
+  },
+  {
+    id: 'about', labelAr: 'حول المنصّة', href: '/about', group: 'account',
+    blurbAr: 'ما هي المنصّة، وما تلتزم به، وما لا تدّعيه.',
+  },
 
   // ── Admin ────────────────────────────────────────────────────────────────
   {

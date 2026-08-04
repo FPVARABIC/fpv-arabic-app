@@ -461,9 +461,9 @@ const ProjectData: React.FC<{
       </div>
 
       <p style={{ margin: '16px 0 0', fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-        <Link href="/kb" style={{ color: 'var(--accent)' }}>الموسوعة</Link>
+        <Link href="/kb" style={{ color: 'var(--accent-ink)' }}>الموسوعة</Link>
         {' · '}
-        <Link href="/diagnose" style={{ color: 'var(--accent)' }}>التشخيص</Link>
+        <Link href="/diagnose" style={{ color: 'var(--accent-ink)' }}>التشخيص</Link>
       </p>
     </section>
   );

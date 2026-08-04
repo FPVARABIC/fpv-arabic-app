@@ -100,7 +100,7 @@
   /* Per-system accents. Darkened from the phone app's on-dark values so they
    * stay legible on cream; the hue — which is what identifies the system — is
    * unchanged. */
-  --sys-betaflight: #9A6B00;
+  --sys-betaflight: #855C00;
   --sys-expresslrs: #6D45D9;
   --sys-edgetx: #0B6E7D;
   --sys-video: #6D45D9;
@@ -917,4 +917,93 @@ details.card-sm > summary:focus-visible {
 @media (min-width: 1000px) {
   .community-side { position: sticky; top: 88px; align-self: start; }
   .community-side .rail { position: static; }
+}
+
+/* ── The search bar ───────────────────────────────────────────────────────
+ *
+ * Search is the platform's spine — it is how somebody who cannot name what
+ * they are looking for finds it — so on its own page the field is the largest
+ * control there is, with the magnifier inside it rather than beside it.
+ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 6px 8px 6px 6px;
+  padding-inline-start: 16px;
+  box-shadow: var(--shadow);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.search-bar:focus-within {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-lg);
+}
+.search-bar-icon { color: var(--accent-ink); flex-shrink: 0; }
+.search-bar-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  padding: 12px 0;
+  outline: none;
+}
+/* The ring belongs to the whole bar, drawn by :focus-within above — a second
+   ring around the bare input inside it reads as two controls. */
+.search-bar-input:focus-visible { outline: none; }
+.search-bar-submit { flex-shrink: 0; }
+
+@media (max-width: 520px) {
+  .search-bar { flex-wrap: wrap; padding-inline-end: 10px; }
+  .search-bar-submit { width: 100%; justify-content: center; margin-bottom: 6px; }
+}
+
+/* ── Encyclopedia ─────────────────────────────────────────────────────────
+ *
+ * The article list and the learning paths beside it. Below 1000px they stack,
+ * because two columns inside a 390px screen is two unreadable columns — which
+ * is what the inline grid this replaces actually produced.
+ */
+.kb-cols {
+  display: grid;
+  gap: 26px;
+  margin-top: 32px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .kb-cols { grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr); gap: 36px; }
+  /* The paths column follows the reader down a long article list. */
+  .kb-cols > *:last-child { position: sticky; top: 92px; }
+}
+
+/* Long-form reading: a measured column and generous leading. Applied to the
+   article body wherever prose runs more than a few lines. */
+.kb-cols .card-sm h3 { line-height: 1.6; }
+
+/* ── Which side the rail sits on ──────────────────────────────────────────
+ *
+ * The DOM order is content-then-rail, deliberately: that is the order a screen
+ * reader announces, and it is the order the columns stack in on a phone — the
+ * posts a reader came for must not be pushed below a profile card.
+ *
+ * Visually, though, the shop's owner asked for the account panel on the RIGHT,
+ * which in a right-to-left grid is the FIRST column. `grid-column` places them
+ * explicitly so the reading order and the visual order can differ, which is
+ * exactly what this property is for. Below the breakpoint both revert to
+ * `auto` and the stack is content-first again.
+ */
+@media (min-width: 1000px) {
+  .with-rail { grid-template-columns: 296px minmax(0, 1fr); }
+  /* `grid-row` as well as `grid-column`, and this is not optional: placing an
+     item in column 2 without naming its row makes auto-placement treat column 1
+     of that row as consumed, so the next item lands on a NEW row and the two
+     columns become two stacked blocks. Naming the row pins both to row one. */
+  .with-rail > *:first-child { grid-column: 2; grid-row: 1; }
+  .with-rail > *:last-child { grid-column: 1; grid-row: 1; }
 }
