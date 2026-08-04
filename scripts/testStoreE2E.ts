@@ -26,8 +26,10 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Browser, type Page } from 'playwright';
 import { STORE_CATEGORIES } from '../src/data/store/categories';
 import { STORE_PRODUCTS } from '../src/data/store/catalogue';
-import { CART_STORAGE_KEY } from '../src/data/store/cart';
-import { freeWithPurchaseService, SERVICES_CATEGORY_ID } from '../src/data/store/services';
+import { CART_STORAGE_KEY, CART_SCHEMA_VERSION } from '../src/data/store/cart';
+import {
+  freeWithPurchaseService, freeSetupVariantId, SERVICES_CATEGORY_ID,
+} from '../src/data/store/services';
 
 const PORT = 3164;
 const BASE = `http://localhost:${PORT}`;
@@ -131,21 +133,37 @@ async function main() {
       const homeText = await page.locator('body').innerText();
       ok('the free-setup promise is on the storefront', homeText.includes('مجاناً'));
 
-      // Three to five per section is the shop's whole proposition, and this
-      // counts RENDERED CARDS rather than catalogue entries — which is what
-      // caught the section page filtering by `categoryId` alone and losing
-      // every product that belongs to a section as a use case.
-      //
-      // Services are exempt for the reason recorded in testStore.ts: a menu of
-      // what we DO is not a choice between competing products.
-      let worst = '';
+      // NOTHING IS PUBLISHED, AND THE SHOP SAYS SO
+      // ------------------------------------------
+      // This build has no database behind it, so no product has cleared the
+      // publication gate — which is also the shop's real state today, because
+      // no product has a licensed photograph yet. The thing being tested is
+      // that the storefront is HONEST about that rather than rendering a wall
+      // of empty sections and letting the reader conclude the shop is dead.
+      ok('the storefront says plainly that it is being stocked',
+        (await page.locator('[data-testid="store-stocking"]').count()) === 1);
+      ok('…and does not claim products it cannot sell',
+        !homeText.includes('0 خيارات'));
+
+      // Every section says the same thing, and says how many it is holding.
+      let wrong = '';
       for (const c of STORE_CATEGORIES) {
         if (c.id === SERVICES_CATEGORY_ID) continue;
         await goto(page, `${BASE}/store/${c.id}`, 'h1');
-        const n = await page.locator('[data-testid^="product-card-"]').count();
-        if (n < 3 || n > 5) worst = worst || `${c.id}=${n}`;
+        const preparing = await page.locator('[data-testid="store-category-preparing"]').count();
+        const cards = await page.locator('[data-testid^="product-card-"]').count();
+        // Either it shows products, or it explains why it does not. Never both,
+        // and never neither.
+        if ((preparing === 1) === (cards > 0)) wrong = wrong || `${c.id}: preparing=${preparing} cards=${cards}`;
       }
-      ok(`every section shows three to five options${worst ? ` — ${worst}` : ''}`, worst === '');
+      ok(`every section either shows options or explains its absence${wrong ? ` — ${wrong}` : ''}`,
+        wrong === '');
+
+      // And the explanation states the real number the catalogue holds, so a
+      // reader knows the section was curated rather than forgotten.
+      await goto(page, `${BASE}/store/tiny-whoop`, 'h1');
+      ok('the empty section says how many products are being prepared',
+        /\d+/.test(await page.locator('[data-testid="store-category-preparing"]').innerText()));
 
       ok('no console errors browsing the shop', errors.length === 0);
       if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
@@ -188,15 +206,25 @@ async function main() {
       const page = await ctx.newPage();
       ok('there is a free service to test the basket with', !!freeService);
 
-      // No Firebase behind this build, so no product has a price — every one
-      // renders «السعر قيد التحديث» and refuses the basket, which is exactly
-      // the behaviour section [1] of testStore proves and this confirms in a
-      // real page.
-      const anyProduct = STORE_PRODUCTS.find(p => p.published && p.priceMinor === null)!;
-      await goto(page, `${BASE}/store/p/${anyProduct.id}`, 'h1');
+      // The services are the only published products in a build with no
+      // database — they are ours, so there is no photograph to license and no
+      // supplier to pay, and the gate that holds a drone back has nothing to
+      // hold. A paid service is unpriced until somebody prices it, so its page
+      // must refuse the basket and say why.
+      const paidService = STORE_PRODUCTS.find(
+        p => p.categoryId === SERVICES_CATEGORY_ID && p.published
+          && p.variants[0]?.priceMinor === null,
+      )!;
+      await goto(page, `${BASE}/store/p/${paidService.id}`, 'h1');
       ok('an unpriced product offers no basket button, and says why',
         (await page.locator('[data-testid="add-to-cart"]').count()) === 0
         && (await page.locator('[data-testid="add-to-cart-unavailable"]').count()) === 1);
+
+      // A DRAFT product has no page at all. Not an empty one, not a teaser —
+      // the route does not exist, which is what «مسودة» has to mean.
+      const draft = STORE_PRODUCTS.find(p => !p.published)!;
+      const draftRes = await fetch(`${BASE}/store/p/${draft.id}`, { redirect: 'manual' });
+      ok(`a draft product has no public page (${draftRes.status})`, draftRes.status === 404);
 
       // The free service is never bought on its own — it arrives with a
       // purchase. Its page must therefore refuse too, for its own reason.
@@ -204,15 +232,18 @@ async function main() {
         await goto(page, `${BASE}/store/p/${freeService.id}`, 'h1');
         ok('the free service cannot be bought by itself',
           (await page.locator('[data-testid="add-to-cart"]').count()) === 0);
+        ok('…and no free-setup promise is shown on something that is the setup',
+          (await page.locator('[data-testid="variant-free-setup"]').count()) === 0);
       }
 
       // So the basket is seeded the way a returning customer's browser seeds
       // it — from storage — and the assertions are about what the shop then
       // does with it.
-      if (freeService) {
-        await page.evaluate(([k, id]) => localStorage.setItem(k, JSON.stringify({
-          v: 1, items: [{ productId: id, quantity: 1 }], updatedAt: '',
-        })), [CART_STORAGE_KEY, freeService.id] as const);
+      const freeVariant = freeSetupVariantId();
+      if (freeVariant) {
+        await page.evaluate(([k, id, v]) => localStorage.setItem(k, JSON.stringify({
+          v: Number(v), items: [{ variantId: id, quantity: 1 }], updatedAt: '',
+        })), [CART_STORAGE_KEY, freeVariant, String(CART_SCHEMA_VERSION)] as const);
 
         await goto(page, `${BASE}/store`, 'h1');
         ok('the header badge picks up a basket written by a previous visit',
@@ -220,16 +251,16 @@ async function main() {
 
         await goto(page, `${BASE}/store/cart`, 'h1');
         ok('the basket page shows the stored line',
-          (await page.locator(`[data-testid="cart-line-${freeService.id}"]`).count()) === 1);
+          (await page.locator(`[data-testid="cart-line-${freeVariant}"]`).count()) === 1);
         const cartText = await page.locator('body').innerText();
         ok('a given line reads «مجاناً» rather than «$0.00»', cartText.includes('مجاناً'));
         ok('shipping is «not yet known» rather than zero',
           cartText.includes('يُحتسب بعد العنوان'));
 
         // A basket edited by hand cannot invent a product or a quantity.
-        await page.evaluate(k => localStorage.setItem(k, JSON.stringify({
-          v: 1, items: [{ productId: 'no-such-product', quantity: 9999 }], updatedAt: '',
-        })), CART_STORAGE_KEY);
+        await page.evaluate(([k, v]) => localStorage.setItem(k, JSON.stringify({
+          v: Number(v), items: [{ variantId: 'no-such-variant', quantity: 9999 }], updatedAt: '',
+        })), [CART_STORAGE_KEY, String(CART_SCHEMA_VERSION)] as const);
         await goto(page, `${BASE}/store/cart`, 'h1');
         const tamperedText = await page.locator('body').innerText();
         ok('a hand-edited basket is refused and explained, not honoured',
@@ -287,7 +318,8 @@ async function main() {
 
       await goto(page, `${BASE}/store/${STORE_CATEGORIES[0].id}`);
       const text = await page.locator('body').innerText();
-      ok('a section renders its products server-side', text.length > 200);
+      ok('a section renders server-side', text.length > 200);
+      ok('…including the honest reason it is empty', text.includes('قيد التجهيز'));
 
       const p = STORE_PRODUCTS.find(x => x.published && x.notForAr.length > 0)!;
       await goto(page, `${BASE}/store/p/${p.id}`);
@@ -296,7 +328,10 @@ async function main() {
       // The section no competitor writes has to be in the HTML, not behind a
       // click — it is the reason to believe the rest of the page.
       ok('«لا يناسبك إن كنت» is in the served HTML', productText.includes('لا يناسبك'));
-      ok('the free-setup promise is on the product page', productText.includes('مجاناً'));
+      // The variant picker is a client island, but what it renders first must
+      // be in the HTML — a buyer with no JavaScript still needs to know what
+      // is in the box.
+      ok('what comes in the box is in the served HTML', productText.includes('ما يأتي في هذه النسخة'));
       await ctx.close();
     }
   } finally {

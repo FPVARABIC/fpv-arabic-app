@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { STORE_GROUP_LABEL_AR, STORE_GROUP_BLURB_AR } from '@core/data/store/categories';
+import { SERVICES_CATEGORY_ID } from '@core/data/store/services';
 import { categoriesInGroup, publicSettings, categoryHref } from '@/lib/store';
 import { publishedProducts, sectionCounts } from '@/lib/server/storeCatalogue';
 import { StoreBanner } from '@/components/store/StorePieces';
@@ -46,8 +47,16 @@ export default async function StorePage() {
   // of cards the section actually renders — including the products that belong
   // to it as a use case rather than by their own categoryId.
   const [published, counts] = await Promise.all([publishedProducts(), sectionCounts()]);
-  const total = published.length;
+  // PRODUCTS, not everything published. The services are ours and are always
+  // live — counting them here would have the storefront announce «7 منتجاً
+  // مختاراً» while every product section stood empty, which is a true number
+  // answering a question nobody asked.
+  const total = published.filter(p => p.categoryId !== SERVICES_CATEGORY_ID).length;
   const countIn = (categoryId: string) => counts[categoryId] ?? 0;
+  // Nothing published yet is a real state and the page says so rather than
+  // rendering a grid of «0 خيارات». See the note on the section page: we would
+  // rather look unfinished than look finished and not be.
+  const stocking = total === 0;
 
   return (
     <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 1100 }}>
@@ -63,6 +72,25 @@ export default async function StorePage() {
           ومع كل واحد منها ما يجب أن تقرأه قبل أن تقرّر.
         </p>
       </header>
+
+      {/* The truthful state of the shop, before anything else on the page.
+          Every product is chosen and described; none has cleared the licensing
+          gate yet, and pretending otherwise is the one thing this shop will not
+          do. A reader who is told plainly comes back. */}
+      {stocking && (
+        <div className="card-sm" data-testid="store-stocking"
+          style={{ padding: '17px 19px', marginBottom: 18, borderColor: 'rgba(252,211,77,0.35)' }}>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: '#fcd34d' }}>
+            المتجر قيد التجهيز
+          </p>
+          <p style={{ margin: '9px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 2 }}>
+            الأقسام والمنتجات مختارة، والمواصفات تُنقل الآن عن وثائق الشركات الصانعة
+            مع تسجيل مصدر كل رقم وتاريخ التحقّق منه. لا يُعرَض منتج للبيع قبل أن تكتمل
+            له صورة نملك حق استخدامها، ومواصفات موثّقة، وسعر محسوب من تكلفة مسجَّلة
+            لدى مورد. تصفّح الأقسام لترى ما اخترناه.
+          </p>
+        </div>
+      )}
 
       <StoreBanner settings={settings} />
 
@@ -98,7 +126,15 @@ export default async function StorePage() {
                     {c.blurbAr}
                   </span>
                   <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-dimmer)', marginTop: 9 }}>
-                    <span dir="ltr">{n}</span> {n === 1 ? 'خيار' : 'خيارات'} مختارة
+                    {/* «0 خيارات مختارة» is a sentence that tells a reader the
+                        section was abandoned. It was not — the products are
+                        chosen and waiting on image rights, and the card says
+                        that instead. */}
+                    {n === 0
+                      ? <span style={{ color: '#fcd34d' }}>قيد التجهيز</span>
+                      : <>
+                        <span dir="ltr">{n}</span> {n === 1 ? 'خيار' : 'خيارات'} مختارة
+                      </>}
                   </span>
                 </Link>
               );

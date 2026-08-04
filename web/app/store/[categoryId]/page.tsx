@@ -4,7 +4,8 @@ import type { Metadata } from 'next';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { CHOICE_POSITION_LABEL_AR } from '@core/data/store/types';
 import { storeCategory, publicSettings, categoryHref } from '@/lib/store';
-import { publishedInCategory } from '@/lib/server/storeCatalogue';
+import { publishedInCategory, sectionSize } from '@/lib/server/storeCatalogue';
+import { CompareTable } from '@/components/store/CompareTable';
 import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { ProductCard, StoreBanner } from '@/components/store/StorePieces';
 
@@ -62,6 +63,10 @@ export default async function StoreCategoryPage(
 
   // The merged catalogue: seeds with whatever the admin has changed since.
   const products = await publishedInCategory(category.id);
+  // How many the catalogue HOLDS, published or not. The difference is what
+  // lets the page say «four are being prepared» instead of showing nothing and
+  // letting the reader conclude the section is abandoned.
+  const inCatalogue = sectionSize(category.id);
   const settings = publicSettings();
   const learn = category.learnLink
     ? webHref({ kind: category.learnLink.kind, id: category.learnLink.targetId } as Parameters<typeof webHref>[0])
@@ -102,10 +107,38 @@ export default async function StoreCategoryPage(
         <strong>{CHOICE_POSITION_LABEL_AR[category.choiceAxis].pro}</strong>.
       </p>
 
-      <div data-testid="store-products"
-        style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-        {products.map(p => <ProductCard key={p.id} product={p} axis={category.choiceAxis} />)}
-      </div>
+      {products.length === 0 ? (
+        /*
+         * The honest empty state.
+         *
+         * The catalogue holds these products; none has cleared the publication
+         * gate — which today means none has a licensed photograph. Saying so is
+         * better than an empty grid, and much better than publishing them
+         * anyway. A reader who knows the section is being stocked comes back; a
+         * reader who sees nothing concludes there is nothing.
+         */
+        <div className="card-sm" data-testid="store-category-preparing"
+          style={{ padding: '18px 20px', marginTop: 12 }}>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 800 }}>هذا القسم قيد التجهيز.</p>
+          <p style={{ margin: '9px 0 0', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+            اخترنا <span dir="ltr">{inCatalogue}</span>{' '}
+            {inCatalogue === 1 ? 'منتجاً' : 'منتجات'} لهذا القسم، ولا نعرض منتجاً
+            قبل أن تكتمل صوره المرخّصة ومواصفاته الموثّقة بمصادرها وسعره المحسوب من
+            تكلفة مسجَّلة. نفضّل قسماً فارغاً على صفحة تبدو مكتملة وليست كذلك.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div data-testid="store-products"
+            style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+            {products.map(p => <ProductCard key={p.id} product={p} axis={category.choiceAxis} />)}
+          </div>
+
+          {/* The comparison. Built from the products' own fields, so a badge
+              cannot say «الأكثر توازناً» because somebody typed it. */}
+          <CompareTable products={products} axis={category.choiceAxis} />
+        </>
+      )}
 
       <StoreBanner settings={settings} compact />
 

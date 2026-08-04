@@ -49,7 +49,7 @@ import {
 } from '../src/data/store/publication';
 import { CATALOGUE_AUDIT, auditFor, launchSetIds, auditSummary } from '../src/data/store/audit';
 import { LAUNCH_SPECS, CHECKED } from '../src/data/store/launch';
-import { isSpecVerified, isImagePublishable } from '../src/data/store/types';
+import { isSpecVerified } from '../src/data/store/types';
 import { ROLE_CAPABILITIES } from '../src/data/auth/roles';
 import { getArticle } from '../src/data/kb/registry';
 import { kbTerms } from '../src/data/kb/glossary/terms';
@@ -798,7 +798,24 @@ console.log('\n[13] Orders are computed on the server, never submitted');
   ok('the server prices the basket itself', orderServer.includes('resolveCart('));
   ok('the server re-checks the session', orderServer.includes('getSession()'));
   ok('the free service is added server-side too, not trusted from the basket',
-    orderServer.includes('freeWithPurchaseService()'));
+    orderServer.includes('freeSetupVariantId()'));
+  // …and it is EARNED, not merely present. A basket of propellers that arrives
+  // claiming the service gets it removed rather than honoured.
+  ok('the server decides eligibility rather than believing the basket',
+    orderServer.includes('freeSetupEligible === true'));
+  // One derivation of the id, used by both halves. Two derivations is how the
+  // browser added the service by product id, the server looked for it by
+  // variant id, and every order was refused with «تغيّر توفّر بعض ما في سلّتك».
+  const cartLib = readFileSync(join(ROOT, 'web/lib/cart.ts'), 'utf8');
+  ok('the browser and the server derive the free service id the same way',
+    cartLib.includes('freeSetupVariantId()') && orderServer.includes('freeSetupVariantId()'));
+  ok('neither side spells the id out by hand',
+    !/['`]svc-setup-free:standard['`]/.test(stripComments(cartLib) + stripComments(orderServer)));
+
+  // A refusal names what changed. «Something in your basket changed» sends
+  // somebody back to a list of four items to work out which.
+  ok('a refused basket says which line caused it',
+    orderServer.includes('resolved.dropped') && orderServer.includes('d.variantId'));
 
   // A basket that changed under the customer is refused, not trimmed: someone
   // who ordered four things and receives three did not agree to that.

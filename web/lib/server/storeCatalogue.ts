@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { adminDb, isAdminConfigured } from './firebaseAdmin';
 import {
-  STORE_PRODUCTS, storeProduct as seedProduct, selectCategory,
+  STORE_PRODUCTS, storeProduct as seedProduct, selectCategory, sectionMembers,
 } from '@core/data/store/catalogue';
 import { mergeCatalogue, applyOverride, type ProductOverride } from '@core/data/store/overrides';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
@@ -88,6 +88,18 @@ export async function publishedInCategory(categoryId: string): Promise<StoreProd
  * at all: a page that imports the catalogue for its selection rule is one
  * keystroke away from importing it for its data.
  */
+/**
+ * How many products the CATALOGUE puts in a section, published or not.
+ *
+ * Synchronous and seed-only on purpose: it answers «how many did we choose for
+ * this section», which is a curation fact decided in a reviewed commit and does
+ * not change when somebody marks one out of stock. The section page uses it to
+ * say «four are being prepared» rather than rendering an empty grid.
+ */
+export function sectionSize(categoryId: string): number {
+  return sectionMembers(STORE_PRODUCTS, categoryId).length;
+}
+
 export async function sectionCounts(): Promise<Record<string, number>> {
   const products = await resolvedProducts();
   const out: Record<string, number> = {};

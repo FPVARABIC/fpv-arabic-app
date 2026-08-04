@@ -163,6 +163,20 @@ export function freeWithPurchaseService(): StoreService | undefined {
   return STORE_SERVICES.find(s => s.includedWithPurchase);
 }
 
+/**
+ * The free service's VARIANT id — what a basket line actually names.
+ *
+ * Exists because both halves of the shop need it and they were deriving it
+ * separately: the browser added the service by its product id and the server
+ * looked for it by its variant id, so the server saw a line naming nothing,
+ * refused the whole basket, and told the customer their availability had
+ * changed. Two derivations of one id is one derivation too many.
+ */
+export function freeSetupVariantId(): string | undefined {
+  const svc = freeWithPurchaseService();
+  return svc ? `${svc.id}:standard` : undefined;
+}
+
 export const SERVICES_CATEGORY_ID = 'services';
 
 /**

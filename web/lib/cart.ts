@@ -5,7 +5,7 @@ import {
   removeFromCart, clearCart, withIncludedService, resolveCart,
   type StoredCart, type ResolvedCart, type PricedProduct,
 } from '@core/data/store/cart';
-import { freeWithPurchaseService } from '@core/data/store/services';
+import { freeSetupVariantId } from '@core/data/store/services';
 
 /**
  * The browser's half of the cart.
@@ -43,8 +43,11 @@ function load(): StoredCart {
 }
 
 function persist(next: StoredCart): void {
+  // The VARIANT id, which is what a basket line names. Adding it by product id
+  // produced a line the server could not resolve, so it refused the whole
+  // basket and blamed the customer's availability.
   const withService = withIncludedService(
-    next, freeWithPurchaseService()?.id, new Date().toISOString(),
+    next, freeSetupVariantId(), new Date().toISOString(),
   );
   try {
     const raw = JSON.stringify(withService);
@@ -73,14 +76,14 @@ export function cartSnapshot(): StoredCart { return load(); }
 /** The server renders an empty cart — the real one lives in the browser. */
 export function cartServerSnapshot(): StoredCart { return EMPTY_CART; }
 
-export function cartAdd(productId: string, quantity = 1): void {
-  persist(addToCart(load(), productId, quantity));
+export function cartAdd(variantId: string, quantity = 1): void {
+  persist(addToCart(load(), variantId, quantity));
 }
-export function cartSetQuantity(productId: string, quantity: number): void {
-  persist(setQuantity(load(), productId, quantity));
+export function cartSetQuantity(variantId: string, quantity: number): void {
+  persist(setQuantity(load(), variantId, quantity));
 }
-export function cartRemove(productId: string): void {
-  persist(removeFromCart(load(), productId));
+export function cartRemove(variantId: string): void {
+  persist(removeFromCart(load(), variantId));
 }
 export function cartClear(): void {
   persist(clearCart(new Date().toISOString()));

@@ -47,6 +47,29 @@ async function createUser(email: string, password: string): Promise<EmulatorUser
   return { uid: b.localId, email, password };
 }
 
+/**
+ * A real Firebase ID token for a seeded user.
+ *
+ * WHY A REAL ONE AND NOT «Bearer fake»
+ * ------------------------------------
+ * Because the emulator rejects a malformed token with 400 BEFORE the rules
+ * run — so every «the customer is refused» assertion passed for the wrong
+ * reason, and would have kept passing with the rules deleted. An earlier
+ * version of this file did exactly that. With a real token the request reaches
+ * the rules, a denial is a 403, and a PUBLIC read succeeds — which is what
+ * makes the denials mean something.
+ */
+async function idTokenFor(user: EmulatorUser): Promise<string> {
+  const res = await fetch(
+    `http://${AUTH_HOST}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, password: user.password, returnSecureToken: true }) },
+  );
+  const b = await res.json() as { idToken?: string };
+  if (!b.idToken) throw new Error(`could not obtain an id token for ${user.email}`);
+  return b.idToken;
+}
+
 const docUrl = (path: string) =>
   `http://${FIRESTORE_HOST}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`;
 
@@ -67,6 +90,65 @@ async function seedProfile(uid: string, displayName: string, role: string, statu
     } }),
   });
   if (!res.ok) throw new Error(`seedProfile failed: ${await res.text()}`);
+}
+
+/**
+ * A product taken all the way to sellable, through the same collections the
+ * admin screens write.
+ *
+ * WHY THE SEED WRITES A SUPPLY RECORD AND A PRODUCT OVERRIDE
+ * -----------------------------------------------------------
+ * Because that is what the shop does. `storeSupply` holds the cost and the date
+ * it was checked — which is what the publication gate reads for staleness — and
+ * `storeProducts` holds the licensed image, the variant prices and `published`.
+ * Seeding a «published» flag alone would produce a product the storefront shows
+ * and the gate would refuse, which is the exact disagreement this batch exists
+ * to make impossible.
+ */
+async function seedSellableProduct(productId: string, variantId: string, priceMinor: number) {
+  const supply = await fetch(docUrl(`storeSupply/${productId}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ fields: {
+      supplierId: { stringValue: 'getfpv' },
+      supplierUrl: { stringValue: 'https://www.getfpv.com/example.html' },
+      unitCostMinor: { integerValue: String(Math.round(priceMinor / 1.1)) },
+      inboundShippingMinor: { integerValue: '0' },
+      costCurrency: { stringValue: 'USD' },
+      verified: { booleanValue: true },
+      updatedAt: { stringValue: new Date().toISOString() },
+    } }),
+  });
+  if (!supply.ok) throw new Error(`seedSupply failed: ${await supply.text()}`);
+
+  const product = await fetch(docUrl(`storeProducts/${productId}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ fields: {
+      published: { booleanValue: true },
+      availability: { stringValue: 'in-stock' },
+      images: { arrayValue: { values: [{ mapValue: { fields: {
+        url: { stringValue: '/assets/placeholder-product.png' },
+        altAr: { stringValue: 'صورة المنتج' },
+        order: { integerValue: '0' },
+        credit: { mapValue: { fields: {
+          ownerAr: { stringValue: 'الشركة المصنّعة' },
+          basis: { stringValue: 'manufacturer-media-kit' },
+          evidenceUrl: { stringValue: 'https://example.com/press-kit' },
+          official: { booleanValue: true },
+          reviewedAt: { stringValue: '2026-08-01' },
+        } } },
+      } } }] } },
+      variantState: { mapValue: { fields: {
+        [variantId]: { mapValue: { fields: {
+          availability: { stringValue: 'in-stock' },
+          priceMinor: { integerValue: String(priceMinor) },
+        } } },
+      } } },
+      updatedAt: { stringValue: new Date().toISOString() },
+    } }),
+  });
+  if (!product.ok) throw new Error(`seedProduct failed: ${await product.text()}`);
 }
 
 async function seedPost(id: string, authorId: string, authorName: string, text: string) {
@@ -287,12 +369,49 @@ async function main() {
       // confirmed with no source is refused, and the refusal names it.
       await page.fill('[data-testid="spec-label-0"]', 'اختبار');
       await page.fill('[data-testid="spec-value-0"]', '1234');
-      await page.check('[data-testid="spec-verified-0"]');
+      await page.selectOption('[data-testid="spec-status-0"]', 'verified');
+      // Choosing «مؤكَّدة» reveals the source fields, which is the point: the
+      // form asks for provenance exactly when a claim is being made.
+      ok('marking a spec confirmed asks where it came from',
+        (await page.locator('[data-testid="spec-source-url-0"]').count()) === 1
+        && (await page.locator('[data-testid="spec-checked-0"]').count()) === 1);
       await page.click('[data-testid="product-editor-save"]');
       await page.waitForSelector('[data-testid="product-editor-error"]', { timeout: 15_000 });
       const specError = await page.locator('[data-testid="product-editor-error"]').innerText();
       ok('a confirmed spec with no source is refused by the server',
         specError.includes('اختبار') && specError.includes('مصدر'));
+
+      // And «المصادر مختلفة» must say how, or it tells a reader nothing.
+      await page.selectOption('[data-testid="spec-status-0"]', 'disputed');
+      await page.click('[data-testid="product-editor-save"]');
+      await page.waitForTimeout(1200);
+      ok('a disputed spec with no explanation is refused too',
+        (await page.locator('[data-testid="product-editor-error"]').innerText())
+          .includes('المصادر المختلفة'));
+
+      // An image with no licence basis cannot be saved, whatever else it has.
+      await page.selectOption('[data-testid="spec-status-0"]', 'pending');
+      await page.click('[data-testid="spec-remove-0"]');
+      // Everything an image needs EXCEPT the licence basis, so the refusal that
+      // surfaces is the one under test and not a missing alt text.
+      await page.fill('[data-testid="image-url-0"]', 'https://example.com/photo.jpg');
+      await page.fill('[data-testid="image-row-0"] input >> nth=1', 'صورة المنتج');
+      await page.fill('[data-testid="image-row-0"] input >> nth=2', 'الشركة المصنّعة');
+      await page.click('[data-testid="product-editor-save"]');
+      await page.waitForTimeout(1500);
+      ok('an image with everything but a licence basis is still refused',
+        (await page.locator('[data-testid="product-editor-error"]').innerText())
+          .includes('أساس الاستخدام'));
+
+      // The queue is the panel's real job: what each product is waiting for.
+      await goto(page, `${BASE}/admin/store/products?q=no-images`, 'h1');
+      ok('the panel can list everything waiting on a licensed image',
+        (await page.locator('[data-testid="queue-rows"] > li').count()) > 20);
+      ok('…and says so in words rather than marking them invalid',
+        (await page.locator('body').innerText()).includes('صورة مرخّصة'));
+      await goto(page, `${BASE}/admin/store/products?q=needs-decision`, 'h1');
+      ok('…and separates the ones that need a decision, not data entry',
+        (await page.locator('[data-testid="queue-rows"] > li').count()) >= 3);
 
       // The supply screen is the only place a cost appears, and it is behind
       // its own capability.
@@ -310,6 +429,248 @@ async function main() {
       ok('no page error anywhere in the shop panel', errors.length === 0);
       if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
       await ctx.close();
+    }
+
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[0b] A whole purchase, from the section page to the audit log');
+    {
+      // The Cetus Pro, priced and published through the same collections the
+      // admin screens write. $199.00, so every figure below is checkable by eye.
+      const PRODUCT = 'betafpv-cetus-pro';
+      const VARIANT = 'betafpv-cetus-pro:rtf';
+      const PRICE = 19900;
+      await seedSellableProduct(PRODUCT, VARIANT, PRICE);
+      // A second one, because a comparison of one row is not a comparison —
+      // and because two prices is what makes «الأرخص» mean anything.
+      await seedSellableProduct('betafpv-meteor75-pro', 'betafpv-meteor75-pro:elrs-analog', 10900);
+
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await ctx.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(String(e)));
+
+      // 1–2. The section, and the product in it.
+      await goto(page, `${BASE}/store/tiny-whoop`, 'h1');
+      ok('the published product appears in its section',
+        (await page.locator(`[data-testid="product-card-${PRODUCT}"]`).count()) === 1);
+      ok('the section renders a comparison rather than only cards',
+        (await page.locator('[data-testid="compare-table"]').count()) === 1);
+      // The badge is computed, not typed: it lands on the lower of two real
+      // prices, and it would land elsewhere if the prices changed.
+      ok('«الأرخص» is on the cheaper of the two, decided by the numbers',
+        (await page.locator('[data-testid="compare-cheapest-betafpv-meteor75-pro"]').count()) === 1
+        && (await page.locator(`[data-testid="compare-cheapest-${PRODUCT}"]`).count()) === 0);
+
+      await goto(page, `${BASE}/store/p/${PRODUCT}`, 'h1');
+
+      // 3–5. The gallery, the variant picker, and the price.
+      ok('the product shows its licensed image, not the placeholder',
+        (await page.locator('[data-testid="product-gallery"]').count()) === 1
+        && (await page.locator('[data-testid="product-image-placeholder"]').count()) === 0);
+      ok('the product offers a choice of package',
+        (await page.locator(`[data-testid="variant-${VARIANT}"]`).count()) === 1);
+      ok('specifications carry a link to the source they came from',
+        (await page.locator('[data-testid="spec-source-0"]').count()) === 1);
+
+      await page.click(`[data-testid="variant-${VARIANT}"]`);
+      const shownPrice = await page.locator('[data-testid="variant-price"]').innerText();
+      ok(`the chosen variant shows its price (${shownPrice.trim()})`, shownPrice.includes('199'));
+      ok('an eligible variant advertises the free setup',
+        (await page.locator('[data-testid="variant-free-setup"]').count()) === 1);
+
+      // 6. Into the basket.
+      await page.click('[data-testid="add-to-cart"]');
+      await page.waitForSelector('[data-testid="go-to-cart"]', { timeout: 10_000 });
+      await goto(page, `${BASE}/store/cart`, 'h1');
+      ok('the basket holds the variant that was chosen',
+        (await page.locator(`[data-testid="cart-line-${VARIANT}"]`).count()) === 1);
+
+      // 7. The free service, added by the browser because the line earns it.
+      const cartText = await page.locator('body').innerText();
+      ok('the free setup service joins the basket automatically', cartText.includes('مجاناً'));
+      const total = await page.locator('[data-testid="cart-totals"]').innerText();
+      ok(`the basket totals the real price (${total.replace(/\s+/g, ' ').trim().slice(0, 60)})`,
+        total.includes('199'));
+
+      // 8. Sign-in, checked before an address is asked for.
+      await page.click('[data-testid="cart-checkout"]');
+      await page.waitForURL(/\/signin/, { timeout: 20_000 }).catch(() => { /* asserted below */ });
+      ok('an anonymous customer is sent to sign in before filling in an address',
+        page.url().includes('/signin'));
+      await signIn(page, plain);
+
+      // 9. The address.
+      await goto(page, `${BASE}/store/cart/checkout`, 'h1');
+      ok('the checkout summary lists what is being bought',
+        (await page.locator('[data-testid="checkout-summary"]').count()) === 1);
+      await page.fill('[data-testid="field-fullName"]', 'مشترٍ للاختبار');
+      await page.fill('[data-testid="field-phone"]', '0500000000');
+      await page.selectOption('[data-testid="field-country"]', 'السعودية');
+      await page.fill('[data-testid="field-city"]', 'الرياض');
+      await page.fill('[data-testid="field-address"]', 'حي النخيل، شارع الملك، مبنى رقم 12');
+
+      // 10–11. The server reprices and writes the order.
+      await page.click('[data-testid="checkout-submit"]');
+      // Wait for EITHER outcome, so a refusal is reported as a sentence rather
+      // than as a selector timeout that says nothing about what went wrong.
+      await page.waitForSelector('[data-testid="order-placed"], [data-testid="checkout-error"]',
+        { timeout: 25_000 });
+      const refusal = await page.locator('[data-testid="checkout-error"]').count();
+      if (refusal) {
+        console.log('   CHECKOUT REFUSED:',
+          await page.locator('[data-testid="checkout-error"]').innerText());
+      }
+      ok('the server accepted the order', refusal === 0);
+      const orderId = (await page.locator('[data-testid="order-id"]').innerText()).trim();
+      ok(`the order was created (${orderId})`, orderId.length > 5);
+
+      // The basket is cleared, so a refresh cannot place it twice.
+      await goto(page, `${BASE}/store/cart`, 'h1');
+      ok('the basket is emptied once the order is placed',
+        (await page.locator('[data-testid="cart-empty"]').count()) === 1);
+      await ctx.close();
+
+      // 12–13. The admin sees it, and can move it forward.
+      const adminCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const adminPage = await adminCtx.newPage();
+      await signIn(adminPage, admin);
+      await goto(adminPage, `${BASE}/admin/store/orders`, 'h1');
+      const ordersText = await adminPage.locator('body').innerText();
+      ok('the order reaches the admin panel', ordersText.includes('مشترٍ للاختبار'));
+      ok('…with the price the server computed, not one the browser sent',
+        ordersText.includes('199'));
+      ok('…and records that the free setup was included', ordersText.includes('مجاناً')
+        || ordersText.includes('الإعداد'));
+
+      const confirm = adminPage.locator(`[data-testid="order-status-${orderId}-confirmed"]`);
+      ok('the next status is offered', (await confirm.count()) === 1);
+      // A delivered order has nowhere to go, so no illegal jump is offered.
+      ok('an illegal jump is not offered',
+        (await adminPage.locator(`[data-testid="order-status-${orderId}-delivered"]`).count()) === 0);
+      await confirm.click();
+      await adminPage.waitForTimeout(1500);
+      await goto(adminPage, `${BASE}/admin/store/orders`, 'h1');
+      ok('the status change stuck',
+        (await adminPage.locator('body').innerText()).includes('مؤكَّد'));
+
+      // 14. And it is in the audit log, because moving an order moves money.
+      await goto(adminPage, `${BASE}/admin/audit`, 'h1');
+      const auditText = await adminPage.locator('body').innerText();
+      ok('the status change is in the audit log', auditText.includes('store.order.status'));
+
+      ok('no page error anywhere in the purchase', errors.length === 0);
+      if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
+      await adminCtx.close();
+    }
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[0c] What a customer cannot do, tried directly');
+    {
+      // Every assertion here bypasses the interface. A shop whose safety lives
+      // in a disabled button is a shop with no safety — these are the same
+      // requests a hostile browser would send.
+      const ctx = await browser.newContext();
+      const page = await ctx.newPage();
+      await signIn(page, plain);
+      const cookies = await ctx.cookies();
+      await ctx.close();
+
+      const post = async (path: string, body: unknown) => {
+        const res = await fetch(`${BASE}${path}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: cookies.map(c => `${c.name}=${c.value}`).join('; '),
+          },
+          body: JSON.stringify(body),
+        });
+        return { status: res.status, text: await res.text() };
+      };
+
+      // A REAL signed-in customer, so the rules actually evaluate. See the
+      // note on `idTokenFor`: a malformed token is rejected before the rules
+      // run, and every assertion below would then pass with no rules at all.
+      const token = await idTokenFor(plain);
+      const asCustomer = { Authorization: `Bearer ${token}` };
+
+      // The positive control FIRST. If a signed-in customer cannot read a
+      // published product either, the emulator is unreachable and nothing
+      // below means anything.
+      const publicRead = await fetch(
+        `${docUrl('storeProducts/betafpv-cetus-pro')}`, { headers: asCustomer },
+      );
+      const publicBody = await publicRead.text();
+      ok(`a signed-in customer CAN read a published product (${publicRead.status})`, publicRead.ok);
+      ok('…and it carries a price but no cost',
+        publicBody.includes('priceMinor') && !publicBody.includes('unitCostMinor'));
+
+      // Now the denials, which are meaningful because the control above passed.
+      const supplyRead = await fetch(
+        `${docUrl('storeSupply/betafpv-cetus-pro')}`, { headers: asCustomer },
+      );
+      ok(`a customer cannot read what we pay a supplier (${supplyRead.status})`,
+        supplyRead.status === 403);
+      ok('…and no cost figure reaches them in the body',
+        !(await supplyRead.text()).includes('unitCostMinor'));
+
+      // The margin is private for the subtler reason: price ÷ margin is cost.
+      const marginRead = await fetch(
+        `${docUrl('storeSettings/private')}`, { headers: asCustomer },
+      );
+      ok(`a customer cannot read the margin (${marginRead.status})`, marginRead.status === 403);
+
+      // Nor write a product, publish one, invent a price, or forge an order.
+      for (const [what, path, fields] of [
+        ['publish a product', 'storeProducts/betafpv-meteor75-pro', { published: { booleanValue: true } }],
+        ['change a price', 'storeProducts/betafpv-cetus-pro', { priceMinor: { integerValue: '1' } }],
+        ['record a cost', 'storeSupply/betafpv-meteor75-pro', { unitCostMinor: { integerValue: '1' } }],
+        ['change the margin', 'storeSettings/private', { defaultMarginPercent: { integerValue: '0' } }],
+        ['write an order directly', 'storeOrders/forged', { totalMinor: { integerValue: '1' } }],
+      ] as const) {
+        const res = await fetch(docUrl(path), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...asCustomer },
+          body: JSON.stringify({ fields }),
+        });
+        ok(`a customer cannot ${what} (${res.status})`, res.status === 403);
+      }
+
+      // A DRAFT product is invisible even to a signed-in customer, which is
+      // what makes «مسودة» a real state rather than a hidden-by-the-UI one.
+      const draftRead = await fetch(
+        `${docUrl('storeProducts/happymodel-mobula7')}`, { headers: asCustomer },
+      );
+      ok(`an unpublished product is not readable (${draftRead.status})`,
+        draftRead.status === 403 || draftRead.status === 404);
+
+      // …and cannot be ordered through the REAL path either.
+      //
+      // A server action cannot be invoked by a hand-made POST — Next refuses it
+      // before any of our code runs, which would make such a test pass for a
+      // reason that has nothing to do with the shop. So this drives the actual
+      // form with a basket written straight into storage, which is exactly what
+      // a customer who found a draft's variant id would do.
+      const draftCtx = await browser.newContext();
+      const draftPage = await draftCtx.newPage();
+      await signIn(draftPage, plain);
+      await draftPage.goto(`${BASE}/store`, { waitUntil: 'domcontentloaded' });
+      await draftPage.evaluate(() => localStorage.setItem('fpv-store-cart-v2', JSON.stringify({
+        v: 2, items: [{ variantId: 'happymodel-mobula7:elrs-bnf', quantity: 1 }], updatedAt: '',
+      })));
+      await draftPage.goto(`${BASE}/store/cart/checkout`, { waitUntil: 'domcontentloaded' });
+      await draftPage.waitForLoadState('load');
+      // The basket resolves to nothing orderable, so the form refuses to even
+      // ask for an address — the refusal happens before the customer's time is
+      // spent, which is the whole reason the check is here and not at submit.
+      ok('a basket holding only a draft offers no checkout form',
+        (await draftPage.locator('[data-testid="checkout-empty"]').count()) === 1
+        && (await draftPage.locator('[data-testid="checkout-submit"]').count()) === 0);
+      await draftCtx.close();
+
+      // The admin endpoints refuse a customer, with a code rather than a stack.
+      const r = await post('/api/admin/users/role', { uid: victim.uid, role: 'admin', reasonAr: 'محاولة' });
+      ok('a customer cannot make themselves an admin', r.status === 403);
     }
 
     /* ─────────────────────────────────────────────────────────────────── */

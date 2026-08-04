@@ -2,7 +2,7 @@ import 'server-only';
 import { adminDb, isAdminConfigured } from './firebaseAdmin';
 import { getSession } from './session';
 import { readCart, resolveCart } from '@core/data/store/cart';
-import { freeWithPurchaseService } from '@core/data/store/services';
+import { freeSetupVariantId } from '@core/data/store/services';
 import { cartProductViews } from './storeCatalogue';
 import { CART_SCHEMA_VERSION } from '@core/data/store/cart';
 import { ORDER_STATUS_NEXT } from '@core/data/store/types';
@@ -34,19 +34,6 @@ import type { OrderStatus, OrderSubmission, StoreOrder } from '@core/data/store/
  */
 
 const ORDERS = 'storeOrders';
-
-/**
- * The free service's variant id.
- *
- * Services carry exactly one variant, named by the same rule as everything
- * else. Derived rather than written down so a rename of the service cannot
- * leave a literal here pointing at nothing — which would silently stop the
- * promise being added and nobody would notice until a customer asked.
- */
-function freeServiceVariantId(): string | undefined {
-  const svc = freeWithPurchaseService();
-  return svc ? `${svc.id}:standard` : undefined;
-}
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string }
@@ -82,7 +69,7 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   const views = await cartProductViews();
   const byId = new Map(views.map(v => [v.id, v]));
 
-  const freeVariantId = freeServiceVariantId();
+  const freeVariantId = freeSetupVariantId();
   const hasPayable = cart.items.some(i => i.variantId !== freeVariantId);
   if (!hasPayable) return { ok: false, errorAr: 'سلّتك فارغة.' };
 
@@ -104,9 +91,16 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   if (resolved.dropped.length > 0) {
     // Refused rather than silently trimmed: a customer who ordered four things
     // and receives three did not agree to that.
+    //
+    // And it NAMES what changed. «Something in your basket changed» sends
+    // somebody back to a list of four items to work out which — the shop knows,
+    // so the shop says.
+    const reasons = resolved.dropped
+      .map(d => `${byId.get(d.variantId)?.nameEn ?? d.variantId}: ${d.reasonAr}`)
+      .join(' · ');
     return {
       ok: false,
-      errorAr: 'تغيّر توفّر بعض ما في سلّتك. افتح السلة وراجعها ثم أعد المحاولة.',
+      errorAr: `تغيّر توفّر بعض ما في سلّتك — ${reasons} افتح السلة وراجعها ثم أعد المحاولة.`,
     };
   }
 
