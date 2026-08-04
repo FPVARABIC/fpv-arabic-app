@@ -398,8 +398,13 @@ console.log('\n[11] The platform has ONE official name, in one place');
       /@core\/data\/brand/.test(read(f)));
   }
 
-  // The previous name must be gone from everything a visitor can see.
-  const surfaces = ['web/app', 'web/components', 'web/lib'];
+  // The previous name must be gone from everything a visitor can see — and
+  // that includes the SHARED CORE, which is where it actually survived the
+  // first pass. `src/data/store/services.ts` carried it as a product's brand
+  // and `settings.ts` inside the free-setup offer, so the shop's own pages
+  // rendered the old name under a header showing the new one. A rename that
+  // only sweeps the web surface is a half-rename.
+  const surfaces = ['web/app', 'web/components', 'web/lib', 'src/data', 'src/views', 'src/components'];
   let stale = 0;
   for (const dir of surfaces) {
     const walk = (d: string): string[] => {
@@ -415,7 +420,7 @@ console.log('\n[11] The platform has ONE official name, in one place');
       if (read(f).includes('FPV بالعربي')) { stale++; console.log(`     stale: ${f}`); }
     }
   }
-  ok(`no web file still carries the previous name (${stale} found)`, stale === 0);
+  ok(`no file on either surface still carries the previous name (${stale} found)`, stale === 0);
 
   // Android: the label may change, the identity may NOT. An application id is
   // the permanent identity of an installed app; changing it produces a second,

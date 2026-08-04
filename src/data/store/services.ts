@@ -194,7 +194,7 @@ export function serviceAsProduct(svc: StoreService, reviewedAt: string): StorePr
     collections: [],
     nameEn: svc.id.replace(/^svc-/, '').replace(/-/g, ' '),
     titleAr: svc.titleAr,
-    brandAr: 'FPV بالعربي',
+    brandAr: 'FPVARABIC',
     choicePosition: svc.includedWithPurchase ? 'entry' : 'middle',
     level: 'beginner',
     linkProtocol: 'none',

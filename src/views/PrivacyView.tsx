@@ -27,13 +27,13 @@ export const PrivacyView: React.FC = () => {
         {/* 1. مقدمة */}
         <div className="glass-card-sm p-4">
           <p className="text-sm text-slate-300 leading-relaxed">
-            تطبيق FPV بالعربي يحترم خصوصيتك ويلتزم بحماية بياناتك وفق اللوائح الأوروبية لحماية البيانات (GDPR).
+            تطبيق FPVARABIC يحترم خصوصيتك ويلتزم بحماية بياناتك وفق اللوائح الأوروبية لحماية البيانات (GDPR).
           </p>
         </div>
 
         {/* 2. المتحكم في البيانات */}
         <Section icon={<Shield size={16} className="text-cyan-400 flex-shrink-0" />} title="المتحكم في البيانات (Data Controller)">
-          <p><span className="text-slate-400">الاسم:</span> FPV بالعربي</p>
+          <p><span className="text-slate-400">الاسم:</span> FPVARABIC</p>
           <p><span className="text-slate-400">البريد الإلكتروني:</span> melianeahmed93@gmail.com</p>
           <p className="text-slate-400 text-xs pt-1">لأي استفسار أو طلب متعلق بخصوصيتك، تواصل معنا عبر البريد الإلكتروني أعلاه.</p>
         </Section>

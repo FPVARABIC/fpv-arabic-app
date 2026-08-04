@@ -11,8 +11,8 @@ export const AboutView: React.FC = () => (
       <div className="flex justify-center"><Logo size="lg"/></div>
 
       <div className="glass-card p-5 space-y-3">
-        <h2 className="text-lg font-bold text-white">ما هو FPV بالعربي؟</h2>
-        <p className="text-sm text-slate-300 leading-relaxed">FPV بالعربي هو تطبيق تعليمي عربي يساعد المبتدئين على فهم وبناء أول كوادكابتر FPV خطوة بخطوة. يوفر التطبيق دروسًا تفصيلية، خريطة بناء تفاعلية، مساعدًا ذكيًا، وقوائم فحص شاملة.</p>
+        <h2 className="text-lg font-bold text-white">ما هو FPVARABIC؟</h2>
+        <p className="text-sm text-slate-300 leading-relaxed">FPVARABIC هو تطبيق تعليمي عربي يساعد المبتدئين على فهم وبناء أول كوادكابتر FPV خطوة بخطوة. يوفر التطبيق دروسًا تفصيلية، خريطة بناء تفاعلية، مساعدًا ذكيًا، وقوائم فحص شاملة.</p>
       </div>
 
       <div className="warning-card space-y-1">

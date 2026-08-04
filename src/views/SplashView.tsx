@@ -47,7 +47,7 @@ export const SplashView: React.FC = () => {
             height-driven scaling (this frame is proportionally taller/
             narrower than the image itself) means the FULL image height is
             always visible, cropped only on the sides — so the artwork
-            (including its "FPV بالعربي" logo emblem, roughly 11%-37% down)
+            (including its "FPVARABIC" logo emblem, roughly 11%-37% down)
             always reaches the true bottom, no gap, at any viewport height,
             and sits at a fixed, predictable proportion of the frame. */}
         <img

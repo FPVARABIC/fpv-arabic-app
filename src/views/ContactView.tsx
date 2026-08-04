@@ -36,7 +36,7 @@ export const ContactView: React.FC = () => {
       <Header title="تواصل معنا"/>
       <div className="px-4 py-5 space-y-5 fade-in">
         <div className="glass-card-sm p-4 space-y-1">
-          <p className="font-semibold text-white">FPV بالعربي</p>
+          <p className="font-semibold text-white">FPVARABIC</p>
           <p className="text-xs text-slate-400">تطبيق تعليمي عربي للمبتدئين في بناء الدرونات</p>
         </div>
 

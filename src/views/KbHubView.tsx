@@ -67,7 +67,7 @@ export const KbHubView: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <Library size={20} style={{ color: '#0369a1' }} aria-hidden />
-            <h2 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>موسوعة الـFPV بالعربي</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>موسوعة الـFPVARABIC</h2>
           </div>
           <p style={{ fontSize: 13, lineHeight: 1.85, color: '#334155', margin: 0 }}>
             كل نظام مشروح بست طبقات: إجابة سريعة، شرح مبسّط، شرح تقني، تطبيق عملي، تشخيص، ومرجع.

@@ -7,7 +7,7 @@ const heights: Record<NonNullable<LogoProps['size']>, number> = { sm: 80, md: 10
 export const Logo: React.FC<LogoProps> = ({ size = 'md' }) => (
   <img
     src="/assets/logo.png"
-    alt="FPV بالعربي"
+    alt="FPVARABIC"
     style={{
       height: heights[size],
       width: 'auto',

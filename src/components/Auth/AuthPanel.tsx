@@ -539,7 +539,7 @@ export const AuthPanel: React.FC<AuthPanelProps> = ({ mode, theme = 'dark', onSi
 
   // full mode — bottom-anchored fixed panel. Capped maxHeight (not a
   // top:24 near-full-height span, which used to cover the splash artwork's
-  // own "FPV بالعربي" logo emblem — that logo sits at a fixed PROPORTION of
+  // own "FPVARABIC" logo emblem — that logo sits at a fixed PROPORTION of
   // the image, roughly 11%-37% down, and object-fit:cover's height-driven
   // scaling means that proportion is constant across every device height.
   // A capped, bottom-anchored height keeps this panel's top edge well

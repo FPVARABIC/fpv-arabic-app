@@ -36,7 +36,7 @@ export const HomeDashboardLegacy: React.FC = () => {
         <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: 24, paddingBottom: 12 }}>
           <img
             src="/assets/logo.png"
-            alt="FPV بالعربي"
+            alt="FPVARABIC"
             style={{
               maxHeight: 200,
               width: 'auto',

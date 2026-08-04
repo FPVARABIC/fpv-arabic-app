@@ -1048,7 +1048,16 @@ async function main() {
       const feedHtml = await (await fetch(`${BASE}/community`)).text();
       ok('the FEED\'s server HTML contains no <video> element', !/<video/.test(feedHtml));
       ok('the FEED references the poster jpg', feedHtml.includes('_thumb.jpg'));
-      ok('the FEED never references the .webm file', !feedHtml.includes('.webm'));
+      // `.webm` matched as a bare substring is not the clip: the site's own
+      // `<link rel="manifest" href="/manifest.webmanifest">` contains it too,
+      // and this assertion started failing the day that link was added — for a
+      // page that references no video at all. The check is the CLIP, so it is
+      // written as the clip: a `.webm` that is not the start of `.webmanifest`.
+      ok('the FEED never references the .webm clip',
+        !/\.webm(?!anifest)/.test(feedHtml));
+      // Proof the tightened rule can still fail: a real clip reference trips it.
+      ok('…and that rule would still catch a real clip reference',
+        /\.webm(?!anifest)/.test('<img src="/community/posts/x/clip.webm">'));
 
       // The post page shows the poster with a play control, and only mounts the
       // player when it is pressed.
