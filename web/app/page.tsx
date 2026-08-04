@@ -144,7 +144,10 @@ export default function HomePage() {
             gap: 12,
           }}
         >
-          {NAV_ITEMS.filter(i => !i.requiresAuth && !i.requiresRole).map(i => (
+          {/* `status !== 'planned'` — a card for a route that does not exist is a
+              dead click and a prefetched 404. The entries return here when
+              their batch ships them. */}
+          {NAV_ITEMS.filter(i => !i.requiresAuth && !i.requiresRole && i.status !== 'planned').map(i => (
             <Link
               key={i.id}
               href={i.href}

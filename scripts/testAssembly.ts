@@ -610,6 +610,11 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // runs the phone's code rather than a copy), its orphan-detection logic,
     // its tests, and the Storage rules they prove. None of it touches Assembly.
     f !== 'scripts/testOrphanMedia.ts' &&
+    // Batch 4: the admin surface. Roles live in src/data/auth/ (already
+    // allow-listed), everything else is under web/ or is a test/tool.
+    f !== 'scripts/testAdminRoles.ts' &&
+    f !== 'scripts/testWebAdminE2E.ts' &&
+    f !== 'scripts/grantOwner.ts' &&
     f !== 'scripts/testCommunity.ts' &&
     f !== 'storage.rules' &&
     !f.startsWith('functions/src/') &&

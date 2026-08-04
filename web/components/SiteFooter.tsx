@@ -32,7 +32,7 @@ export const SiteFooter: React.FC = () => {
           }}
         >
           {groups.map(g => {
-            const items = NAV_ITEMS.filter(i => i.group === g.id && !i.requiresRole);
+            const items = NAV_ITEMS.filter(i => i.group === g.id && !i.requiresRole && i.status !== 'planned');
             if (items.length === 0) return null;
             return (
               <nav key={g.id} aria-label={g.titleAr}>

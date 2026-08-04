@@ -1922,6 +1922,109 @@ async function main() {
       text: 'تعديل إشرافي', searchTokens: ['تعديل'], editedAt: serverTimestamp(),
     }));
 
+  console.log('\n=== 25. Admin batch: the audit log and role authority ===');
+  {
+    const asAdminUser = testEnv.authenticatedContext('uidAdmin');
+    const asOwnerUser = testEnv.authenticatedContext('uidOwner');
+    const asReviewerUser = testEnv.authenticatedContext('uidReviewer');
+
+    await testEnv.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'users/uidAdmin'), validUserDoc({ displayName: 'Adm', role: 'admin' }));
+      await setDoc(doc(db, 'users/uidOwner'), validUserDoc({ displayName: 'Own', role: 'owner' }));
+      await setDoc(doc(db, 'users/uidReviewer'), validUserDoc({ displayName: 'Rev', role: 'reviewer' }));
+      // One entry to read against. Written with rules disabled, exactly as the
+      // Admin SDK writes it in production.
+      await setDoc(doc(db, 'auditLog/entry-1'), {
+        actorUid: 'uidAdmin', actorRole: 'admin', action: 'user.ban',
+        targetType: 'user', targetId: 'uidB', result: 'ok',
+        requestId: 'req-1', at: serverTimestamp(),
+      });
+    });
+
+    // ── The audit log is closed to EVERY client, whatever their role ──────
+    await record('AL1 a plain user cannot read an audit entry', 'deny', () =>
+      getDoc(doc(asA.firestore(), 'auditLog/entry-1')));
+
+    await record('AL2 a MODERATOR cannot read an audit entry', 'deny', () =>
+      getDoc(doc(asAdminMod.firestore(), 'auditLog/entry-1')));
+
+    // The roles that DO hold audit.view still cannot read it from a client:
+    // every read goes through the server. This is the assertion that proves the
+    // closure is total rather than role-scoped.
+    await record('AL3 an ADMIN cannot read an audit entry from a client either — reads are server-side only', 'deny', () =>
+      getDoc(doc(asAdminUser.firestore(), 'auditLog/entry-1')));
+
+    await record('AL4 an OWNER cannot read an audit entry from a client either', 'deny', () =>
+      getDoc(doc(asOwnerUser.firestore(), 'auditLog/entry-1')));
+
+    await record('AL5 a guest cannot read an audit entry', 'deny', () =>
+      getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'auditLog/entry-1')));
+
+    await record('AL6 nobody can query the audit collection', 'deny', () =>
+      getDocs(query(collection(asOwnerUser.firestore(), 'auditLog'), limit(5))));
+
+    // ── And nobody can write, forge, alter or erase one ───────────────────
+    await record('AL7 a plain user cannot forge an audit entry', 'deny', () =>
+      setDoc(doc(asA.firestore(), 'auditLog/forged-1'), {
+        actorUid: 'uidA', actorRole: 'owner', action: 'owner.grant',
+        targetType: 'user', targetId: 'uidA', result: 'ok',
+        requestId: 'x', at: serverTimestamp(),
+      }));
+
+    await record('AL8 an ADMIN cannot create an audit entry from a client', 'deny', () =>
+      setDoc(doc(asAdminUser.firestore(), 'auditLog/forged-2'), {
+        actorUid: 'uidAdmin', actorRole: 'admin', action: 'user.ban',
+        targetType: 'user', targetId: 'uidB', result: 'ok',
+        requestId: 'x', at: serverTimestamp(),
+      }));
+
+    await record('AL9 an ADMIN cannot alter an existing entry — the log is not editable by the people it records', 'deny', () =>
+      updateDoc(doc(asAdminUser.firestore(), 'auditLog/entry-1'), { result: 'denied' }));
+
+    await record('AL10 an OWNER cannot alter an existing entry either', 'deny', () =>
+      updateDoc(doc(asOwnerUser.firestore(), 'auditLog/entry-1'), { reasonAr: 'rewritten' }));
+
+    await record('AL11 nobody can delete an audit entry', 'deny', () =>
+      deleteObject === undefined ? Promise.reject(new Error('unreachable')) : deleteDoc(doc(asOwnerUser.firestore(), 'auditLog/entry-1')));
+
+    // ── Role remains unreachable from any client ──────────────────────────
+    await record('RA1 a user cannot promote themselves', 'deny', () =>
+      updateDoc(doc(asA.firestore(), 'users/uidA'), { role: 'admin' }));
+
+    await record('RA2 an ADMIN cannot change a role from the client — role changes are server-side only', 'deny', () =>
+      updateDoc(doc(asAdminUser.firestore(), 'users/uidB'), { role: 'moderator' }));
+
+    await record('RA3 an ADMIN cannot make themselves owner', 'deny', () =>
+      updateDoc(doc(asAdminUser.firestore(), 'users/uidAdmin'), { role: 'owner' }));
+
+    await record('RA4 an OWNER cannot change a role from the client either', 'deny', () =>
+      updateDoc(doc(asOwnerUser.firestore(), 'users/uidB'), { role: 'admin' }));
+
+    await record('RA5 a moderator cannot bundle a role change with a status change', 'deny', () =>
+      updateDoc(doc(asAdminMod.firestore(), 'users/uidB'), { status: 'banned', role: 'moderator' }));
+
+    // ── isModerator() now covers admin and owner, and still excludes the
+    //    read-only roles. This is the alignment with ROLE_CAPABILITIES.
+    await record('IM1 an ADMIN can now ban from the client, as the capability model always said', 'allow', () =>
+      updateDoc(doc(asAdminUser.firestore(), 'users/uidB'), { status: 'banned' }));
+
+    await record('IM2 an OWNER can too', 'allow', () =>
+      updateDoc(doc(asOwnerUser.firestore(), 'users/uidB'), { status: 'active' }));
+
+    await record('IM3 a REVIEWER cannot — it is deliberately read-only', 'deny', () =>
+      updateDoc(doc(asReviewerUser.firestore(), 'users/uidB'), { status: 'banned' }));
+
+    await record('IM4 a REVIEWER cannot resolve a report', 'deny', () =>
+      updateDoc(doc(asReviewerUser.firestore(), 'reports/report-ok'), { resolved: true }));
+
+    await record('IM5 an ADMIN can read the reports queue', 'allow', () =>
+      getDoc(doc(asAdminUser.firestore(), 'reports/report-ok')));
+
+    await record('IM6 a plain user still cannot read the reports queue', 'deny', () =>
+      getDoc(doc(asB.firestore(), 'reports/report-ok')));
+  }
+
   console.log(`\n=== Results: ${passCount} passed, ${failCount} failed (${passCount + failCount} total) ===\n`);
 
   await testEnv.cleanup();

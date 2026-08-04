@@ -11,7 +11,9 @@
  *
  * The rules file cannot import TypeScript, so `firestore.rules` restates the
  * capability checks by hand — but it restates THESE names, and
- * `scripts/testWebSecurity.ts` asserts the two lists have not drifted apart.
+ * `scripts/testAdminRoles.ts` asserts the two have not drifted apart. That
+ * assertion is not decoration: the first thing it found was that the rules
+ * already let a `moderator` ban a user while this file said they could not.
  *
  * WHAT THIS FILE IS NOT
  * ---------------------
@@ -117,13 +119,27 @@ export type Capability = (typeof CAPABILITIES)[number];
 export const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
   user: [],
 
-  // Exactly the powers `firestore.rules`' isModerator() already grants today.
+  // Exactly the powers `firestore.rules`' isModerator() already grants today —
+  // including banning, which is the reconciliation this list needed.
+  //
+  // `users.ban`/`users.unban` were missing here while the rules' users/{uid}
+  // update branch has always let a moderator flip another account's `status`
+  // between 'active' and 'banned' from the client, and the phone's admin
+  // dashboard uses exactly that. So the model was wrong, not the rules. The fix
+  // is to record what a moderator can actually do rather than to take a power
+  // away from live accounts, which is what "preserve the meaning of the
+  // existing role" requires. `users.viewDetail` comes with it: being able to
+  // ban someone you cannot look at first is not a coherent permission.
   moderator: [
     'admin.access',
     'community.viewReports',
     'community.resolveReports',
     'community.hidePost',
     'community.hideComment',
+    'users.list',
+    'users.viewDetail',
+    'users.ban',
+    'users.unban',
   ],
 
   // Deliberately read-only. A reviewer exists so someone can audit the queue

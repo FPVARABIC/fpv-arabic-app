@@ -18,8 +18,26 @@ service cloud.firestore {
       return isSignedIn() && callerProfile().status == 'active';
     }
 
+    /**
+     * Community-moderation authority.
+     *
+     * The name is kept — it appears in a dozen places below and in
+     * scripts/testCommunityRules.ts — but the set is now the three roles that
+     * hold the community.* capabilities in src/data/auth/roles.ts: 'moderator',
+     * 'admin' and 'owner'.
+     *
+     * WHAT THIS DOES NOT CHANGE: 'moderator' keeps exactly the powers it had.
+     * Nothing is taken from it and nothing is added to it. What changes is that
+     * an 'admin' or 'owner' is no longer refused by rules that the capability
+     * model says they outrank — previously an admin could moderate only through
+     * the Admin SDK and would have been rejected by the phone's own admin
+     * dashboard, which is a divergence waiting to confuse someone.
+     *
+     * 'reviewer' and 'editor' are deliberately absent: a reviewer is read-only
+     * by design, and an editor's authority is over teaching content, not people.
+     */
     function isModerator() {
-      return isSignedIn() && callerProfile().role == 'moderator';
+      return isSignedIn() && callerProfile().role in ['moderator', 'admin', 'owner'];
     }
 
     // Preset avatar picker (Part C) — the exact, hand-maintained mirror of
@@ -821,6 +839,31 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved'])
                     && request.resource.data.resolved == true;
       allow delete: if false;
+    }
+
+    /**
+     * The administrative audit trail.
+     *
+     * TOTALLY CLOSED TO EVERY CLIENT — read, write, update and delete alike.
+     *
+     * This was previously governed by nothing at all. Firestore denies an
+     * unmatched path by default, so the effect was already "no client access",
+     * but an absent rule states no intent: the next person to add a rule
+     * anywhere near it has nothing telling them this closure is deliberate, and
+     * web/lib/server/audit.ts documented a read allowance that did not exist.
+     *
+     * Every read of this collection happens server-side through the Admin SDK,
+     * behind requireCapability('audit.view'). That is deliberately narrower
+     * than granting audit.view holders a client read: an admin page needs no
+     * direct client access, and an audit log that a client can query is an
+     * audit log whose access pattern nobody can see.
+     *
+     * Writes are closed to clients for the reason the log exists: a record the
+     * actor can create, edit or erase is not evidence of anything.
+     */
+    match /auditLog/{entryId} {
+      allow read: if false;
+      allow create, update, delete: if false;
     }
 
     // Announcements (Notifications Phase 1) — simple admin/broadcast

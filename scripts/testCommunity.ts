@@ -889,6 +889,8 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'storage.rules' &&
     !f.startsWith('functions/src/') &&
     f !== 'scripts/testOrphanMedia.ts' &&
+    f !== 'scripts/testAdminRoles.ts' &&
+    f !== 'scripts/grantOwner.ts' &&
     !f.startsWith('docs/platform/') &&
     f !== 'RULES_FOR_PUBLISH.md',
   );

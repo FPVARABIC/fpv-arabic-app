@@ -128,8 +128,25 @@ console.log('\n[4] Private surfaces verify server-side, not in the browser');
     /verifySessionCookie\([^)]*,\s*true\s*\)/.test(session));
   ok('the role is re-read from Firestore, not taken from the cookie alone',
     session.includes("collection('users')"));
-  ok('the LOWER of claim and document wins, so a revoked role takes effect at once',
-    session.includes('rankOf(claimRole) <= rankOf(docRole)'));
+  // CHANGED IN BATCH 4, DELIBERATELY.
+  //
+  // This asserted that the LOWER of the custom claim and the Firestore document
+  // won. That made revocation immediate, but it also meant an account with NO
+  // claim had no role at all — so any account provisioned by seeding, by a
+  // migration, from the console or from a backup was silently powerless on the
+  // web while `firestore.rules` treated it as a full moderator. The end-to-end
+  // suite caught exactly that.
+  //
+  // The document is now the sole authority, which is the same field the rules
+  // read. Revocation is still immediate — the document is read fresh on every
+  // request — and a stale HIGH claim still cannot escalate, because the claim
+  // is not consulted at all.
+  ok('the role comes from the Firestore document, the same field firestore.rules reads',
+    session.includes('const role: PlatformRole = toRole(profile.role);'));
+  ok('the custom claim is never consulted to grant a role',
+    !/claimRole/.test(session));
+  ok('a banned account has no role whatever the document says',
+    session.includes("role: status === 'banned' ? 'user' : role"));
   ok('a banned account loses every capability regardless of its stored role',
     /status === 'banned' \? 'user' : role/.test(session));
   ok('every failure collapses to "not signed in" rather than throwing',

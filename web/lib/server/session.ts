@@ -25,20 +25,38 @@ import {
  * by script (so XSS cannot exfiltrate it), sent automatically, and verifiable
  * during server rendering and in middleware.
  *
- * WHERE THE ROLE COMES FROM, AND WHY BOTH
- * ---------------------------------------
- * Two sources, and the more restrictive wins:
+ * WHERE THE ROLE COMES FROM
+ * -------------------------
+ * `users/{uid}.role` — the same field `firestore.rules` reads through
+ * `callerProfile()`, and a field with no client write path whatsoever. It is
+ * read fresh on every request, so a role revoked a second ago is gone a second
+ * ago.
  *
- *   the custom claim      — cheap, already inside the verified cookie
- *   users/{uid}.role      — the source Firestore rules themselves read
+ * The custom claim is NOT used to grant. It is written by `assignRole` so that
+ * anything reading a token sees a consistent value, but this function ignores
+ * it for the elevated case, and here is why that is the safe direction rather
+ * than the lax one:
  *
- * They are read together because they can legitimately disagree for a while: a
- * claim is baked into a cookie at sign-in and does not change until the cookie
- * is reissued, so a role revoked five minutes ago is still in the old cookie.
- * Taking the LOWER of the two makes revocation take effect immediately while
- * still allowing the fast path to grant nothing the database does not agree
- * with. Escalation therefore requires writing to a document that has no client
- * write path at all.
+ *   - The document is already being read on every request, so the claim adds
+ *     no freshness and no independence — both come from the same server.
+ *   - Taking the LOWER of the two, which this originally did, means an account
+ *     with NO claim gets no role at all. Every account provisioned by any route
+ *     other than `assignRole` — seeded, migrated, promoted in the console,
+ *     restored from a backup — would then be silently powerless on the web
+ *     while `firestore.rules` treated it as a full moderator. Two surfaces
+ *     disagreeing about who someone is, is precisely the failure this file
+ *     exists to prevent, and the end-to-end suite caught it doing exactly that.
+ *   - A stale HIGH claim cannot escalate, because the claim is not consulted.
+ *
+ * What the claim IS still good for is other consumers (a future Cloud Function
+ * that only has a token), which is why `assignRole` keeps it in step and
+ * revokes tokens so it is reissued promptly.
+ *
+ * A BANNED ACCOUNT HAS NO ROLE
+ * ----------------------------
+ * Whatever the document says, `status: 'banned'` collapses the effective role
+ * to `user`. So banning a staff account removes its powers in the same write
+ * that stops it posting, without a second field to keep in step.
  */
 
 export const SESSION_COOKIE = '__session';
@@ -74,16 +92,12 @@ export async function getSession(): Promise<Session | null> {
     // difference between "banned" meaning something and meaning nothing.
     const decoded = await adminAuth().verifySessionCookie(raw, true);
 
-    const claimRole = toRole((decoded as Record<string, unknown>).role);
-
     const snap = await adminDb().collection('users').doc(decoded.uid).get();
     const profile = snap.data() ?? {};
-    const docRole = toRole(profile.role);
+    // The document, and only the document. See the header for why the custom
+    // claim is deliberately not consulted here.
+    const role: PlatformRole = toRole(profile.role);
     const status = profile.status === 'banned' ? 'banned' : 'active';
-
-    // The lower of the two. A claim can only ever confirm what the document
-    // already says — it can never grant beyond it.
-    const role: PlatformRole = rankOf(claimRole) <= rankOf(docRole) ? claimRole : docRole;
 
     return {
       uid: decoded.uid,
@@ -99,9 +113,6 @@ export async function getSession(): Promise<Session | null> {
   }
 }
 
-function rankOf(r: PlatformRole): number {
-  return ['user', 'moderator', 'reviewer', 'editor', 'admin', 'owner'].indexOf(r);
-}
 
 /** True only for a signed-in, non-banned account holding the capability. */
 export function sessionCan(session: Session | null, capability: Capability): boolean {

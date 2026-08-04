@@ -18,6 +18,18 @@ export interface NavItem {
   id: string;
   labelAr: string;
   href: string;
+  /**
+   * Whether the route this points at EXISTS YET.
+   *
+   * The nav is written ahead of the batches that build these sections, which is
+   * useful as a plan and dangerous as a header: Next prefetches every visible
+   * link, so an entry for a route that does not exist fires a 404 on page load
+   * and offers the reader a dead click. `planned` entries are kept here — they
+   * are the map — but `SiteHeader` does not render them as links.
+   *
+   * Flip to `live` in the batch that ships the route, not before.
+   */
+  status?: 'live' | 'planned';
   /** One line explaining the section, used on the home page and in menus. */
   blurbAr: string;
   group: 'learn' | 'build' | 'software' | 'community' | 'account' | 'admin';
@@ -50,12 +62,16 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'programming', labelAr: 'البرامج', href: '/programming', group: 'software',
     blurbAr: 'Betaflight وExpressLRS وEdgeTX وأدوات الفيديو، مربوطة بمشروعك.',
+    // Batch 6.
+    status: 'planned',
   },
 
   // ── Build ────────────────────────────────────────────────────────────────
   {
     id: 'project', labelAr: 'مشروعي', href: '/project', group: 'build',
     blurbAr: 'قطعك وإعداداتك، وأحكام التوافق التي تُحسب منها.',
+    // Batch 5.
+    status: 'planned',
   },
 
   // ── Community ────────────────────────────────────────────────────────────
@@ -79,7 +95,18 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 /** The items shown in the primary sidebar, in order. */
-export const PRIMARY_NAV = NAV_ITEMS.filter(i => i.group !== 'admin' && !i.requiresAuth);
+/**
+ * What the header actually renders.
+ *
+ * Excludes `planned` entries. Next prefetches every link it can see, so an
+ * entry pointing at a route that has not shipped fires a 404 on every page
+ * load and gives the reader a dead click — which the admin end-to-end run
+ * caught as console errors on all three viewports. The entries stay in
+ * NAV_ITEMS as the map of where the site is going; they become links when
+ * their route exists.
+ */
+export const PRIMARY_NAV = NAV_ITEMS.filter(i =>
+  i.group !== 'admin' && !i.requiresAuth && i.status !== 'planned');
 
 export function navItem(id: string): NavItem | undefined {
   return NAV_ITEMS.find(i => i.id === id);

@@ -247,10 +247,21 @@ console.log('\n[7] The role model is least-privilege and cannot self-escalate');
   ok('the two pre-existing roles are preserved verbatim',
     PLATFORM_ROLES.includes('user') && PLATFORM_ROLES.includes('moderator'));
 
-  // The existing moderator's powers must not have silently grown, because
-  // firestore.rules already grants isModerator() rights to live accounts.
-  ok('moderator cannot administer users', !can('moderator', 'users.ban')
-    && !can('moderator', 'users.assignRole'));
+  // The existing moderator's powers must not silently grow BEYOND what
+  // firestore.rules already grants live accounts — and must not silently
+  // shrink below it either.
+  //
+  // `users.ban` was added to the moderator in batch 4, deliberately: the rules'
+  // users/{uid} update branch has always let isModerator() flip another
+  // account's `status`, and the phone's admin dashboard uses exactly that. The
+  // model was under-describing a live power, so recording it is the fix;
+  // removing it would have taken a capability away from accounts that have it
+  // today. What must remain false is everything a moderator has never had.
+  ok('moderator CAN ban, matching the rule that has always let them',
+    can('moderator', 'users.ban') && can('moderator', 'users.unban'));
+  ok('moderator cannot assign roles', !can('moderator', 'users.assignRole'));
+  ok('moderator cannot delete content administratively', !can('moderator', 'community.deletePost'));
+  ok('moderator cannot read the audit log', !can('moderator', 'audit.view'));
   ok('moderator cannot edit teaching content', !can('moderator', 'content.edit'));
 
   ok('a plain user has no capabilities at all', ROLE_CAPABILITIES.user.length === 0);
@@ -304,11 +315,22 @@ console.log('\n[8] The admin surface is refused server-side, not merely hidden')
     .filter(([f]) => f.endsWith('.tsx') || f.endsWith('.ts'));
   ok(`admin files exist (${adminFiles.length})`, adminFiles.length > 0);
 
+  // `export const POST = adminRoute` counts as a guard because it IS the
+  // guard — matched on the export rather than on a bare mention, so merely
+  // importing the wrapper is not enough. It resolves the
+  // session, refuses a banned account and checks the capability before the
+  // handler is called at all, and scripts/testAdminRoles.ts asserts that
+  // ordering against the wrapper's own source. A route that used it and then
+  // skipped a check would fail there, not here.
   const unguarded = adminFiles
-    .filter(([, s]) => !/requireCapability|requireSession|getSession/.test(s))
+    .filter(([, s]) => !/requireCapability|requireSession|getSession|export const (POST|GET) = adminRoute/.test(s))
     .map(([f]) => f);
   if (unguarded.length) console.error('  UNGUARDED ADMIN FILES:', unguarded);
   ok('every admin page and route consults the server-side guard', unguarded.length === 0);
+
+  const routeWrapper = SOURCES.get('web/lib/server/adminRoute.ts') ?? '';
+  ok('the route wrapper that stands in for that guard is itself guarded',
+    /await getSession\(\)/.test(routeWrapper) && /can\(session\.role, capability\)/.test(routeWrapper));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

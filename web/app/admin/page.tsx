@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getSession, sessionCan } from '@/lib/server/session';
 import { isAdminConfigured } from '@/lib/server/firebaseAdmin';
-import {
-  ROLE_LABEL_AR, ROLE_DESCRIPTION_AR, ROLE_CAPABILITIES, can,
-} from '@core/data/auth/roles';
+import { getAdminStats } from '@/lib/server/adminRead';
+import { listAudit } from '@/lib/server/audit';
+import { AdminShell } from '@/components/admin/AdminShell';
+import { AuditTable } from '@/components/admin/AuditTable';
+import { can } from '@core/data/auth/roles';
 
 export const metadata: Metadata = {
   title: 'الإدارة',
@@ -28,12 +30,13 @@ export const dynamic = 'force-dynamic';
  * with no cookie at all, but this check is what actually authorises — and it
  * would still be correct if the middleware were deleted.
  *
- * WHAT EACH VIEWER SEES
- * ---------------------
- * The tiles shown are computed from the viewer's own capabilities, so a
- * reviewer does not see actions they cannot perform. That is a courtesy, not a
- * control: every route behind these tiles re-checks the capability server-side,
- * because a hidden link is not a closed door.
+ * EVERY NUMBER HERE IS COUNTED, NOT STORED
+ * ----------------------------------------
+ * The tiles come from `getAdminStats`, which counts the collections it
+ * describes at read time. No cached totals, no denormalised counters. A
+ * dashboard whose figures are quietly stale is worse than one with no figures:
+ * it produces confident decisions from wrong data. Where a count hits its cap
+ * the tile says so rather than reporting the cap as the truth.
  */
 export default async function AdminHome() {
   const session = await getSession();
@@ -43,96 +46,64 @@ export default async function AdminHome() {
   // surface does not confirm to a probing user that it is there.
   if (!session || !sessionCan(session, 'admin.access')) redirect('/');
 
+  if (!isAdminConfigured()) {
+    return (
+      <div className="shell">
+        <p className="card" data-testid="admin-unconfigured" style={{ padding: '18px 20px', marginTop: 30 }}>
+          الإدارة غير مهيّأة في هذه البيئة.
+        </p>
+      </div>
+    );
+  }
+
+  const stats = await getAdminStats();
+  const recent = can(session.role, 'audit.view') ? await listAudit({ limit: 8 }) : [];
+
   const tiles = [
-    {
-      id: 'users', href: '/admin/users', titleAr: 'المستخدمون',
-      blurbAr: 'ابحث عن حساب، اعرض دوره وحالته، وامنح أو اسحب الأدوار ضمن صلاحيتك.',
-      cap: 'users.list' as const,
-    },
-    {
-      id: 'reports', href: '/admin/reports', titleAr: 'البلاغات',
-      blurbAr: 'بلاغات المجتمع بترتيب ورودها، مع ما تسمح لك صلاحيتك بفعله.',
-      cap: 'community.viewReports' as const,
-    },
-    {
-      id: 'posts', href: '/admin/posts', titleAr: 'المنشورات',
-      blurbAr: 'راجع منشورات المجتمع وأخفِ المخالف منها.',
-      cap: 'community.hidePost' as const,
-    },
-    {
-      id: 'audit', href: '/admin/audit', titleAr: 'سجلّ التدقيق',
-      blurbAr: 'كل إجراء إداري: من فعله، وبماذا، ومتى. لا يُعدَّل ولا يُحذَف.',
-      cap: 'audit.view' as const,
-    },
+    { id: 'open-reports', value: stats.openReports, labelAr: 'بلاغات مفتوحة', href: '/admin/reports?status=open', cap: 'community.viewReports' as const },
+    { id: 'in-review', value: stats.inReviewReports, labelAr: 'بلاغات قيد المراجعة', href: '/admin/reports?status=in_review', cap: 'community.viewReports' as const },
+    { id: 'hidden-posts', value: stats.hiddenPosts, labelAr: 'منشورات مخفية', href: '/admin/reports', cap: 'community.hidePost' as const },
+    { id: 'banned-users', value: stats.bannedUsers, labelAr: 'حسابات موقوفة', href: '/admin/users?status=banned', cap: 'users.list' as const },
+    { id: 'total-users', value: stats.totalUsers, labelAr: 'حسابات مسجّلة', href: '/admin/users', cap: 'users.list' as const },
   ].filter(t => can(session.role, t.cap));
 
   return (
-    <div className="shell" style={{ paddingTop: 36, paddingBottom: 20 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>الإدارة</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '10px 0 0', lineHeight: 1.9 }}>
-        أنت داخل بدور <strong style={{ color: 'var(--accent)' }}>{ROLE_LABEL_AR[session.role]}</strong>.
-        {' '}{ROLE_DESCRIPTION_AR[session.role]}
-      </p>
+    <div className="shell">
+      <AdminShell role={session.role} actorName={session.displayName} current="/admin" titleAr="لوحة الإدارة">
+        <p style={{ color: 'var(--text-dim)', fontSize: 13.5, margin: '0 0 4px', lineHeight: 1.9 }}>
+          كل رقم هنا محسوب من قاعدة البيانات عند فتح الصفحة، لا من عدّاد مخزَّن.
+          {stats.capped && ' بعض الأعداد بلغت حدّ العدّ وتظهر بعلامة «+».'}
+        </p>
 
-      {!isAdminConfigured() && (
-        <div
-          className="card"
-          style={{
-            marginTop: 20, padding: '14px 16px',
-            borderColor: 'rgba(251,191,36,0.32)', background: 'rgba(251,191,36,0.07)',
-          }}
-        >
-          <p style={{ margin: 0, fontSize: 13, color: '#fcd34d', lineHeight: 1.9 }}>
-            بيانات اعتماد الخادم غير مهيّأة في هذه البيئة، فبعض الإجراءات ستكون معطّلة.
-            راجع <span className="ltr">web/.env.example</span>.
-          </p>
-        </div>
-      )}
-
-      <section aria-labelledby="tiles-h" style={{ marginTop: 28 }}>
-        <h2 id="tiles-h" className="sr-only">أقسام الإدارة</h2>
-        <div
-          style={{
-            display: 'grid', gap: 13,
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          }}
-        >
+        <div className="admin-stats" data-testid="admin-stats">
           {tiles.map(t => (
-            <Link
-              key={t.id}
-              href={t.href}
-              className="card"
-              data-testid={`admin-tile-${t.id}`}
-              style={{ display: 'block', padding: '18px 20px' }}
-            >
-              <h3 style={{ fontSize: 16, fontWeight: 900, margin: 0 }}>{t.titleAr}</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '8px 0 0', lineHeight: 1.85 }}>
-                {t.blurbAr}
-              </p>
+            <Link key={t.id} href={t.href} className="admin-stat" data-testid={`admin-stat-${t.id}`}>
+              <div className="admin-stat-value" dir="ltr">
+                {t.value}{stats.capped && t.value >= 500 ? '+' : ''}
+              </div>
+              <div className="admin-stat-label">{t.labelAr}</div>
             </Link>
           ))}
         </div>
-      </section>
 
-      <section aria-labelledby="caps-h" style={{ marginTop: 36, maxWidth: 640 }}>
-        <h2 id="caps-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 12px' }}>
-          ما تسمح به صلاحيتك
-        </h2>
-        <ul
-          className="card-sm"
-          style={{ margin: 0, padding: '13px 16px', listStyle: 'none', display: 'grid', gap: 6 }}
-        >
-          {ROLE_CAPABILITIES[session.role].map(c => (
-            <li key={c} className="ltr" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-              {c}
-            </li>
-          ))}
-        </ul>
-        <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '10px 0 0', lineHeight: 1.85 }}>
-          هذه القائمة تُقرأ من نموذج الأدوار المشترك، والتحقق يتم على الخادم في كل طلب —
-          إخفاء زر لا يمنع أحداً.
-        </p>
-      </section>
+        {can(session.role, 'audit.view') && (
+          <section className="admin-section" aria-labelledby="recent-actions">
+            <h2 id="recent-actions">آخر الإجراءات الإدارية</h2>
+            {recent.length === 0 ? (
+              <div className="card-sm admin-empty" data-testid="admin-audit-empty">
+                لا إجراءات مسجَّلة بعد.
+              </div>
+            ) : (
+              <>
+                <AuditTable rows={recent} />
+                <p style={{ marginTop: 12 }}>
+                  <Link href="/admin/audit" className="btn-ghost">كل السجل ←</Link>
+                </p>
+              </>
+            )}
+          </section>
+        )}
+      </AdminShell>
     </div>
   );
 }
