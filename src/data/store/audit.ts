@@ -184,13 +184,14 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
       + 'ExpressLRS لا يبِنّ مستقبِل FrSky. أُضيفت النسخ الثلاث كخيارات شراء.',
   },
   {
-    productId: 'happymodel-mobula8', kind: 'real-product', sources: 'reseller',
+    productId: 'happymodel-mobula8', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
+    decision: 'approve', launchSet: true,
     noteAr:
-      'المنتج الوحيد في مجموعة الجولة الأولى الذي لم تُقرأ صفحته الرسمية بعد. '
-      + 'موقع Happymodel لا يعرض صفحة مستقلّة له بالوضوح الذي عرض به Mobula7، '
-      + 'ويحتاج بحثاً أطول. أُبقي مؤجَّلاً بدل أن يُنقل عنه ما لم يُقرأ.',
+      'رُفع التأجيل. Happymodel تنشر صفحة لكل نسخة، وقد قُرئت: 85 مم، 43 '
+      + 'غراماً، محرّكات EX1103 بسرعة 11000. أُضيفت أربع نسخ شراء لأن '
+      + 'المستقبِل هنا قرار شراء لا إعداد — لوحة FlySky المدمجة لن تربط جهاز '
+      + 'ExpressLRS أبداً.',
   },
 
   // ── 2.5 inch ──────────────────────────────────────────────────────────────
@@ -205,52 +206,81 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
       + 'تصحيحاً إلى V2 وهو تعديل كتالوج.',
   },
   {
-    productId: 'betafpv-pavo25', kind: 'real-product', sources: 'reseller',
+    productId: 'betafpv-pavo25', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'مرشّح قوي للجولة الثانية — نسخه تختلف باختلاف نظام الفيديو اختلافاً حقيقياً.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم كان جيلاً كاملاً وراء الواقع: BetaFPV تبيع Pavo25 V2 بمحرّكات '
+      + 'LAVA 1506 ومتحكّم F722. وصُحّح ما هو أهمّ: يُباع بلا نظام فيديو، '
+      + 'وهذا لم يكن مكتوباً.',
   },
   {
-    productId: 'geprc-cinebot25', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-cinebot25', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'يتداخل مع Cinelog25 أكثر ممّا ينبغي. راجع إن كان القسم يحتاجهما معاً.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الجيل الحالي Cinebot25 V2 بوحدة DJI O4 Air Unit Pro ووزن 219 غراماً. '
+      + 'صُحّح الاسم وأُضيفت نسختا الفيديو، وسُجّلت مواصفاته من صفحة الشركة.',
   },
 
   // ── 3 inch ────────────────────────────────────────────────────────────────
   {
-    productId: 'iflight-nazgul-evoque-f3', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-smart35', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'ثلاث إنشات مناسب للقسم. أُجّل لصالح الخمس إنشات في هذه الجولة.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'حلّ محلّ «iFlight Nazgul Evoque F3». ذلك المنتج لا وجود له: عائلة Evoque '
+      + 'عند iFlight هي 4 و5 و6 إنشات، وثلاث عمليات بحث مستقلّة في متجرها لم تجد '
+      + 'أي Evoque بمقاس ثلاث إنشات. اسم لا يبيعه أحد لا يُصحَّح بل يُسحب. '
+      + 'SMART35 منتج حقيقي قُرئت صفحته، ويجيب السؤال نفسه: أصغر آلة فريستايل '
+      + 'يمكن أن تُطار قرب البيت، وتحت حدّ 250 غراماً.',
   },
   {
-    productId: 'geprc-cinelog30', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-cinelog30', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم الثلاث إنشات.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'كان جيلين وراء الواقع: GEPRC تبيع Cinelog30 V3. نقل مواصفات V3 تحت '
+      + 'الاسم القديم كان سيكون الخطأ الذي وُجدت هذه المراجعة لالتقاطه.',
   },
   {
-    productId: 'iflight-nazgul-evoque-f3d', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-domain36', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'النسخة الرقمية من الذي فوقه. الأصحّ أن يكونا Variants لمنتج واحد لا منتجين.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'حلّ محلّ «iFlight Nazgul Evoque F3D» — التوأم الرقمي لمنتج لم يوجد أصلاً. '
+      + 'DoMain3.6 حقيقي وقُرئت صفحته: قطر 170 مم، ومحرّكات SPEEDX2 2105.5 وهي '
+      + 'محرّكات مقاس الخمسة على مروحة 3.6، ووزن 279 غراماً بالنسخة التماثلية. '
+      + 'أُضيفت نسخ الفيديو الثلاث كخيارات شراء.',
   },
 
   // ── 3.5 inch ──────────────────────────────────────────────────────────────
   {
-    productId: 'geprc-cinelog35', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-cinelog35', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'سينيووب معروف، مؤجَّل إلى جولة التوثيق الثانية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الجيل الحالي CineLog35 V3 بوحدة DJI O4 Air Unit Pro تسجّل 4K عند 120 '
+      + 'إطاراً. صُحّح الاسم ونظام الفيديو — كان مسجَّلاً تماثلياً وهو رقمي.',
   },
   {
-    productId: 'geprc-cinebot30', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-cinebot30', kind: 'wrong-category', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مكشوف المراوح في قسم يغلب عليه السينيووب — راجع انتماءه قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'كان في قسم 3.5 إنش وهو يدور مراوح HQProp T76mm — أي ثلاث إنشات. '
+      + 'صُنّف بالرقم في اسمه لا بالمروحة التي يحملها. نُقل إلى قسم الثلاث '
+      + 'إنشات وأُضيفت نسخه الثلاث.',
   },
   {
-    productId: 'iflight-nazgul-evoque-f4', kind: 'real-product', sources: 'reseller',
+    productId: 'iflight-nazgul-evoque-f4', kind: 'needs-variants', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مقاس أربع إنشات في قسم 3.5 — راجع الانتماء قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'حقيقي — وهو الوحيد من عائلة Evoque الذي كان في الكتالوج بالاسم '
+      + 'الصحيح. قطره 185 مم ويُباع بهيكلَين: F4X على شكل X وF4D على شكل '
+      + 'DeadCat يُبعد المراوح عن الكاميرا. أُضيفا كخيارَي شراء، وصُحّح نظام '
+      + 'فيديوه إلى الرقمي.',
   },
 
   // ── 5 inch: the second launch anchor ──────────────────────────────────────
@@ -267,52 +297,72 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'المنافس المباشر، وله دليل استخدام رسمي منشور — أقوى مصدر في الكتالوج كلّه.',
   },
   {
-    productId: 'tbs-source-one-v5', kind: 'wrong-category', sources: 'reseller',
-    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: false,
-    decision: 'replace',
+    productId: 'tbs-source-one-v5', kind: 'duplicate', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'defer',
     noteAr:
-      'مُدرَج كطائرة كاملة وهو هيكل. يتعارض مع tbs-source-one-v5-frame في قسم الهياكل. '
-      + 'استبدله بطائرة اقتصادية حقيقية، أو ادمج الاثنين في منتج هيكل واحد.',
+      'ظهر دليل جديد يغيّر قرارك المعلَّق: TBS تبيع فعلاً منتجَين مختلفَين '
+      + '— الهيكل مفرداً، وطقم RTF/BNF مبنيّاً. فالسجلّان قد لا يكونان '
+      + 'تكراراً أصلاً. سُجّل هذا في صفحة قراراتك ولم يُحسم. الاسم الرسمي '
+      + 'V5.1 ولا يوجد «V5» مجرَّد.',
   },
 
   // ── 7 inch and long range ─────────────────────────────────────────────────
   {
-    productId: 'iflight-chimera7-pro', kind: 'real-product', sources: 'reseller',
+    productId: 'iflight-chimera7-pro', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'مدى طويل حقيقي. مؤجَّل: القسم يحتاج مراجعة قانونية للمدى قبل الترويج له.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الجيل الحالي Chimera7 Pro V2. سُجّلت أرقامه: 327 مم، وXING2 2809 '
+      + 'بسرعة 1250، و725 غراماً بلا بطارية. أُضيفت ثلاث نسخ فيديو.',
   },
   {
-    productId: 'geprc-crocodile7', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-crocodile7', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم السبع إنشات.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي «Crocodile 7 PRO». سُجّلت مواصفاته: 315 مم بين '
+      + 'المحرّكات، ومحرّكات GR2306 بسرعة 1600، وزمن طيران معلَن سبع دقائق '
+      + 'ببطارية 6S سعة 2200.',
   },
   {
-    productId: 'iflight-chimera7-eco', kind: 'real-product', sources: 'reseller',
+    productId: 'iflight-chimera7-eco', kind: 'needs-variants', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'تأكّد أن هذه النسخة ما تزال تُنتَج قبل اعتمادها — الأسماء الاقتصادية تتغيّر بسرعة.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي «Chimera7 ECO 6S». الاكتشاف المهمّ: وحدة تحديد الموقع '
+      + 'لا تأتي مركّبة وتُطلب مسبقاً — وطائرة مدى طويل بلا GPS مشكلة سلامة '
+      + 'لا نقص ميزة. كُتب ذلك في محتوى الصندوق وفي «لا يناسبك».',
   },
 
   // ── ready to fly ──────────────────────────────────────────────────────────
   {
-    productId: 'emax-tinyhawk-3-rtf', kind: 'aging', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'خطّ Tinyhawk أقدم من بدائله. تحقّق من استمرار الإنتاج قبل الاعتماد.',
+    productId: 'emax-tinyhawk-3-rtf', kind: 'aging', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: F4 بمسرّع 5A، ومحرّكات 15000، وكاميرا RunCam Nano 4. '
+      + 'كُتب الفرق الحقيقي عن أطقم BetaFPV صراحةً: بروتوكول FrSky D8 لا '
+      + 'ExpressLRS. ملاحظة: EMAX تعرض الآن Tinyhawk III Plus بنسخة '
+      + 'ExpressLRS.',
   },
   {
-    productId: 'betafpv-cetus-lite', kind: 'real-product', sources: 'reseller',
+    productId: 'betafpv-cetus-lite', kind: 'real-product', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'النسخة الأرخص من الطقم المعتمد. توثَّق في الجولة الثانية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته. أُضيف ما كان ناقصاً وهو جوهري: محرّكاته مكنَّسة لا '
+      + 'عديمة المكانس. هذا يفسّر السعر ويفسّر أنه يُستهلك — وإخفاؤه بيعٌ '
+      + 'ناقص المعلومة.',
   },
   {
     productId: 'radiomaster-pocket-combo', kind: 'bundle', sources: 'none',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: false,
     decision: 'unpublish',
     noteAr:
-      'ليس منتجاً بل فكرة: «جهاز تحكّم ومحاكي» لا يُشترى كصندوق واحد من أي مورد. '
-      + 'إمّا أن نجمّعه بأنفسنا ونسعّره كحزمة، أو يُحجب. لا يُنشر كما هو.',
+      'لم يتغيّر: لا يبيع أحد «جهاز ومحاكي» كصندوق واحد. جهاز Pocket موجود '
+      + 'مفرداً في قسم الأجهزة، والمحاكي برنامج لا يُشحن. القرار قرارك وهو في '
+      + 'صفحتها.',
   },
 
   // ── radios: complete, documented, and the easiest section to sell ─────────
@@ -343,14 +393,22 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'أرخص مدخل إلى الصورة الرقمية، ومواصفاته منشورة بالكامل عند الشركة.',
   },
   {
-    productId: 'walksnail-avatar-hd-x', kind: 'real-product', sources: 'reseller',
+    productId: 'walksnail-avatar-hd-x', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'يحتاج قراءة صفحة Walksnail الرسمية قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: 1080p عند مئة إطار، وزاوية 50 درجة، و290 غراماً، ومدخل '
+      + 'HDMI. رُبط بوحدة الطائرة من نظامه لأن النظام مغلق والربط هنا ليس '
+      + 'اقتراحاً بل شرطاً.',
   },
   {
-    productId: 'hdzero-goggles', kind: 'real-product', sources: 'reseller',
+    productId: 'hdzero-goggles', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. تحقّق أيضاً أي جيل هو المعروض حالياً.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      '«HDZero Goggles» فئة لا منتج. المنتج هو «HDZero Goggle 2»، وفيه '
+      + 'مستقبِل تماثلي مدمج يجعله يقرأ الطائرات القديمة — وهذه ميزة شراء لم '
+      + 'تكن مكتوبة.',
   },
 
   // ── digital systems ───────────────────────────────────────────────────────
@@ -361,14 +419,21 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'صفحة مواصفات رسمية مفصّلة. أوضح منتج رقمي يمكن توثيقه في الكتالوج.',
   },
   {
-    productId: 'walksnail-avatar-hd-pro', kind: 'real-product', sources: 'reseller',
+    productId: 'walksnail-avatar-hd-pro', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية منظومة Walksnail.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: مستشعر Sony Starvis II مقاس 1/1.8 إنش، وتأخير 22 مللي '
+      + 'ثانية، وتسجيل داخلي 8 غيغابايت.',
   },
   {
-    productId: 'hdzero-freestyle-v2', kind: 'real-product', sources: 'reseller',
+    productId: 'hdzero-freestyle-v2', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. تأكّد من الجيل المعروض.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته، وفيها أمران يغيّران قرار الشراء: الكاميرا ليست في '
+      + 'الصندوق، والوحدة محدودة عند 200 ميلي واط من المصنع لا 1 واط. كُتب '
+      + 'الاثنان صراحةً.',
   },
 
   // ── components ────────────────────────────────────────────────────────────
@@ -379,96 +444,152 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'أشهر طقم متحكّم في السوق، ومواصفاته منشورة رسمياً بالتفصيل.',
   },
   {
-    productId: 'speedybee-f405-v4-fc', kind: 'real-product', sources: 'reseller',
+    productId: 'speedybee-f7-v3-fc', kind: 'real-product', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'الأصحّ أن يكون Variant من الطقم لا منتجاً ثانياً. أعِد النظر في البنية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'حلّ محلّ «SpeedyBee F405 V4 (FC only)» — وهو ليس منتجاً: SpeedyBee لا تبيع '
+      + 'لوحة F405 V4 مفردة إطلاقاً، بل ضمن طقم فقط، واللوحة المفردة التي كانت '
+      + 'موجودة هي F405 V3 وصفحتها تقول إنها متوقّفة. F7 V3 هو متحكّمها المفرد '
+      + 'الحالي ويجيب الحاجة نفسها. ملاحظة: صفحته تذكر معالجاً من عائلة F4 على لوح '
+      + 'اسمه F7 — تناقض لم يُنقل، فلم تُسجَّل مواصفة المعالج.',
   },
   {
-    productId: 'holybro-kakute-h7', kind: 'real-product', sources: 'reseller',
+    productId: 'holybro-kakute-h7', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. Holybro تنشر وثائق جيدة — مرشّح قوي للجولة الثانية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الجيل الحالي Kakute H7 V2. وسُجّل تفصيل عملي: أحد منافذ UART الستّة '
+      + 'مشغول بالبلوتوث، فالمتاح خمسة — وهذا هو الرقم الذي يبني عليه '
+      + 'المشتري.',
   },
   {
-    productId: 'speedybee-bls-50a', kind: 'aging', sources: 'reseller',
+    productId: 'speedybee-bls-50a', kind: 'aging', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'replace',
-    noteAr: 'مسرّع الجيل السابق. استبدله بالمعروض حالياً عند SpeedyBee.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي يحمل بادئة F405. لم يُستبدل: ما زال يُباع، وسُجّل أن '
+      + 'نسخة 60 أمبير هي الأحدث في الخطّ بدل حذفه.',
   },
   {
-    productId: 'hobbywing-xrotor-g2', kind: 'real-product', sources: 'reseller',
+    productId: 'hobbywing-xrotor-g2', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'Hobbywing تنشر وثائق مقتضبة لهذا الخطّ. يحتاج مصدراً رسمياً أوضح قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم القديم «XRotor Micro G2» دمج خطَّين مختلفَين عند Hobbywing: '
+      + '«XRotor Micro» و«XRotor FPV G2». المقصود هو الثاني، وله ورقة بيانات '
+      + 'منشورة — وهذا نادر. أُضيفت نسختا 45 و65 أمبير كخيارَي شراء، والفرق '
+      + 'بينهما ليس القوّة بل مخرج الجهد.',
   },
   {
-    productId: 'tmotor-f55a-pro-ii', kind: 'real-product', sources: 'reseller',
+    productId: 'tmotor-f55a-pro-ii', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. تحقّق من الجيل المعروض حالياً.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: 55 أمبير مستمر و75 ذروة ومخرج 10 فولت. تعارض مسجَّل: '
+      + 'عنوان الصفحة يقول AM32 ونصّها يقول BLHeli32 — سُجّل التعارض ولم '
+      + 'يُعتمد أيّهما.',
   },
   {
-    productId: 'emax-eco-ii-2306', kind: 'real-product', sources: 'reseller',
+    productId: 'emax-eco-ii-2306', kind: 'needs-variants', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'المحرّكات تُباع بالطقم عادةً لا بالمفرد — راجع كيف نبيعها قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'سرعات الدوران الثلاث أُضيفت كخيارات شراء، لأن 2400 لبطارية 4S و1700 '
+      + 'لـ6S — واختيار الرقم الأكبر على الجهد الأعلى يحرق المسرّعات. سُجّل '
+      + 'أن ECO III أحدث.',
   },
   {
-    productId: 'tmotor-f60-pro-v', kind: 'real-product', sources: 'reseller',
+    productId: 'tmotor-f60-pro-v', kind: 'real-product', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم المحرّكات.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي «F60PRO V» بمقاس 2207.5. سُجّل وزنه ونسخته الأخفّ LV.',
   },
   {
-    productId: 'iflight-xing2-2207', kind: 'real-product', sources: 'reseller',
+    productId: 'iflight-xing2-2207', kind: 'needs-variants', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم المحرّكات.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'صفحته تنشر جدولاً كاملاً بجيلَين: القديم 1855 و2755، والحالي 1750 '
+      + 'و2050 و2750. أُضيفت سرعات الجيل الحالي كخيارات شراء.',
   },
   {
-    productId: 'armattan-marmotte', kind: 'not-dropshippable', sources: 'reseller',
+    productId: 'armattan-marmotte', kind: 'not-dropshippable', sources: 'official',
     supply: 'hard', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته على المتجر الرسمي — وهو armattanquads.com لا '
+      + 'armattanproductions. 236 مم، و115 غراماً، ولوح 4 مم. الضمان حقيقي '
+      + 'ومكتوب. يبقى صعب الشحن المباشر، وهذا سبب تجاري لا سبب جودة.',
+  },
+  {
+    productId: 'tbs-source-one-v5-frame', kind: 'needs-rename', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي «V5.1»، وهناك V6 يخلفه. سُجّل الاثنان. هذا السجلّ هو '
+      + 'الهيكل مفرداً، وسجلّ قسم الخمس إنشات هو الطقم المبنيّ — راجع قرارك '
+      + 'المعلَّق.',
+  },
+  {
+    productId: 'impulserc-apex', kind: 'needs-rename', sources: 'official',
+    supply: 'hard', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'خطّ Apex انتقل إلى EVO. بيع «Apex» مجرَّداً بيعُ جيل تجاوزته الشركة. '
+      + 'صُحّح إلى ApexDC EVO مقاس 5 إنش. يبقى صعب الشحن المباشر.',
+  },
+  {
+    productId: 'cnhl-black-series-4s', kind: 'needs-variants', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'البطارية ليست منتجاً واحداً: السعة والموصّل يختلفان. أُضيفت السعتان '
+      + 'الشائعتان كخيارَي شراء، وكُتب أن سعة 5000 بموصّل XT90 لا XT60. '
+      + 'النسخة الثانية 130C.',
+  },
+  {
+    productId: 'cnhl-black-series-6s', kind: 'needs-variants', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'ثلاث سعات كخيارات شراء. وكُتب تحذير عملي: سعة 5000 لا تدخل هيكل خمس '
+      + 'إنشات عادياً.',
+  },
+  {
+    productId: 'tattu-r-line-v5-6s', kind: 'needs-variants', sources: 'official',
+    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي «Version 5.0». الأوزان المنشورة تُظهر لماذا السعة ليست '
+      + 'تفصيلاً: 145 غراماً عند 850 و346 عند 2200. أُضيفت ثلاث سعات كخيارات '
+      + 'شراء.',
+  },
+  {
+    productId: 'isdt-q6-charger', kind: 'real-product', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئ دليله الرسمي: 200 واط بدخل من 10 إلى 24 فولت. أُضيف ما كان '
+      + 'ناقصاً: يحتاج مصدر طاقة خارجياً، فهو ليس قطعة واحدة كالشاحن الآخر.',
+  },
+  {
+    productId: 'isdt-608ac', kind: 'real-product', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئ دليله الرسمي، وفيه فرق كان مخفياً: 50 واط من الكهرباء مباشرة '
+      + 'و200 واط من مصدر مستمرّ. بيعه بـ«200 واط» دون هذا التفصيل تضليل.',
+  },
+  {
+    productId: 'hota-d6-pro', kind: 'real-product', sources: 'none',
+    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'defer',
     noteAr:
-      'هيكل ممتاز، لكن Armattan تبيع مباشرة بضمان مدى الحياة يُدار عبرها — بيعه بالشحن '
-      + 'المباشر يضع المشتري بيننا وبين ضمان لا نملكه. أعِد النظر في طريقة عرضه.',
-  },
-  {
-    productId: 'tbs-source-one-v5-frame', kind: 'duplicate', sources: 'reseller',
-    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'ادمجه مع tbs-source-one-v5 — أحدهما مكرَّر.',
-  },
-  {
-    productId: 'impulserc-apex', kind: 'not-dropshippable', sources: 'reseller',
-    supply: 'hard', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'توفّره متذبذب ودُفعاته محدودة. غير مناسب للشحن المباشر الآن.',
-  },
-  {
-    productId: 'cnhl-black-series-4s', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'البطاريات تحتاج مراجعة قيود شحن الليثيوم جوّاً قبل عرضها للبيع.',
-  },
-  {
-    productId: 'cnhl-black-series-6s', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'كسابقتها: قيود الشحن أولاً.',
-  },
-  {
-    productId: 'tattu-r-line-v5-6s', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'كسابقتها: قيود الشحن أولاً.',
-  },
-  {
-    productId: 'isdt-q6-charger', kind: 'real-product', sources: 'reseller',
-    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. الشواحن تحتاج توضيح مزوّد الطاقة المطلوب.',
-  },
-  {
-    productId: 'isdt-608ac', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'تحقّق من فولطية الكهرباء والقابس لكل بلد قبل العرض.',
-  },
-  {
-    productId: 'hota-d6-pro', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم الشواحن.',
+      'المنتج حقيقي ويُباع في كل مكان، لكن لم يُعثر على صفحة رسمية للشركة '
+      + 'لهذا الطراز — وما عند الباعة معلومة تجارية لا مواصفة. تُرك بلا '
+      + 'مواصفات، وكُتب ذلك على صفحته صراحةً بدل نقل أرقام غير موثّقة.',
   },
   {
     productId: 'caddx-ratel-2', kind: 'real-product', sources: 'official',
@@ -479,31 +600,48 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
       + 'وأكثرها استعمالاً في التركيبات الجاهزة.',
   },
   {
-    productId: 'runcam-phoenix-2', kind: 'real-product', sources: 'reseller',
+    productId: 'runcam-phoenix-2', kind: 'real-product', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم الكاميرات.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته ودليله: مستشعر 1/2 إنش، و1000 خط، و9 غرامات، ومن 5 إلى '
+      + '36 فولت. من أكمل الصفحات التي قُرئت في هذه الدفعة.',
   },
   {
-    productId: 'foxeer-razer-micro', kind: 'real-product', sources: 'reseller',
+    productId: 'foxeer-razer-micro', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. تحقّق من المقاس المعروض (Micro/Nano/Full).',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'ترتيب الكلمات كان خاطئاً: الاسم الرسمي «Foxeer Micro Razer» لا '
+      + '«Razer Micro». الترتيب يهمّ لأن «Razer Mini» و«Razer Nano» منتجات '
+      + 'أخرى. سُجّل أن خطّ Razer Mini أحدث منه.',
   },
   {
-    productId: 'rush-tank-ultimate', kind: 'real-product', sources: 'reseller',
+    productId: 'rush-tank-ultimate', kind: 'needs-rename', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'مرسلات الفيديو تحتاج مراجعة حدود الطاقة المسموحة في كل بلد قبل عرضها.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'موقع الشركة rushfpv.net لا rushfpv.com، ولا يوجد منتج اسمه «Rush '
+      + 'Tank Ultimate» مجرَّداً: الخطّ هو TANK II و TANK III ULTIMATE '
+      + 'وULTIMATE PLUS وMINI II. صُحّح إلى TANK II ULTIMATE وسُجّل أن الثالث '
+      + 'متاح.',
   },
   {
-    productId: 'tbs-unify-pro32-nano', kind: 'real-product', sources: 'reseller',
+    productId: 'tbs-unify-pro32-nano', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'كسابقه: حدود الطاقة أولاً.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي يحمل «5G8 V1.1». سُجّلت مستويات الطاقة الأربعة ومخرج 5 '
+      + 'فولت بتيّار أمبيرين — وهو سبب شراء لم يكن مكتوباً.',
   },
   {
-    productId: 'foxeer-reaper-extreme', kind: 'real-product', sources: 'reseller',
+    productId: 'foxeer-reaper-extreme', kind: 'needs-variants', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'طاقة عالية — الأكثر عرضة لقيود قانونية. لا يُنشر قبل حسم ذلك.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'كان اسماً بلا نسخة، وFoxeer تبيع خمس نسخ بطاقات ونطاقات مختلفة. '
+      + 'صُحّح إلى V3 وسُجّلت النسخ. وكُتب تحذير النطاق الممتدّ: ليس مسموحاً '
+      + 'في كل مكان.',
   },
   {
     productId: 'matek-m10-gps', kind: 'needs-rename', sources: 'official',
@@ -515,63 +653,99 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
       + 'الكتالوج يحتاج تصحيحاً حتى لا يطلب المشتري طرازاً متوقّفاً.',
   },
   {
-    productId: 'holybro-m10-gps', kind: 'real-product', sources: 'reseller',
+    productId: 'holybro-m10-gps', kind: 'wrong-category', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'Holybro تنشر وثائق ممتازة، لكن أسماء طرازات M10 متقاربة — تأكّد من الطراز بالضبط.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      '«M10 GPS» عند Holybro وحدة طيّار آلي: فيها صافرة ومفتاح أمان وكابل '
+      + 'عشاري لا يستعملها متحكّم Betaflight. المنتج الصحيح لهذا المتجر '
+      + '«Micro M10 GPS». صُحّح.',
   },
   {
-    productId: 'flywoo-goku-gm10-pro', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'يحتاج تأكيد أنه يجمع GPS وبوصلة فعلاً في الطراز المعروض حالياً.',
-  },
-  {
-    productId: 'radiomaster-rp1', kind: 'real-product', sources: 'reseller',
+    productId: 'flywoo-goku-gm10-pro', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. مرشّح قوي — يكمّل أجهزة التحكّم المعتمدة.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الاسم الرسمي يحمل V3. صفحته من أكمل ما قُرئ: الشريحة والبوصلة والوزن '
+      + 'والأبعاد والحساسية ومعدّل التحديث كلّها منشورة.',
   },
   {
-    productId: 'happymodel-ep1-elrs', kind: 'real-product', sources: 'reseller',
+    productId: 'radiomaster-rp1', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'يُباع بنسخ هوائي مختلفة تُغيّر السعر — يجب فصلها كـVariants قبل الاعتماد.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الجيل الحالي «RP1 V2». أُضيفت ميزة عملية لم تكن مكتوبة: واي فاي مدمج '
+      + 'يُحدَّث ويُضبط من المتصفّح بلا فكّ الطائرة.',
   },
   {
-    productId: 'betafpv-superd-elrs', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'أكبر من أن يناسب البناء الصغير، وقسم المستقبِلات يحتاج خياراً وسطاً قبله.',
-  },
-  {
-    productId: 'truerc-x-air', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. تأكّد من نوع الموصل المعروض (SMA/RP-SMA/U.FL).',
-  },
-  {
-    productId: 'lumenier-axii-2', kind: 'real-product', sources: 'reseller',
-    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. الموصل والاستقطاب يجب أن يكونا Variants.',
-  },
-  {
-    productId: 'foxeer-lollipop-4', kind: 'real-product', sources: 'reseller',
+    productId: 'happymodel-ep1-elrs', kind: 'real-product', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. كسابقه: الموصل Variant لا وصف.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: 0.41 غرام بلا هوائي، و10 × 10 × 6 مم، ومعدّل من 25 إلى '
+      + '500 هرتز. سُجّل أخواه EP2 وEP1 Dual لأنهما إجابتان مختلفتان لسؤالين '
+      + 'مختلفين.',
   },
   {
-    productId: 'gemfan-hurricane-51466', kind: 'real-product', sources: 'reseller',
+    productId: 'betafpv-superd-elrs', kind: 'needs-variants', sources: 'official',
+    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'صُحّح الوصف: هذا تنوّع حقيقي بسلسلتَي استقبال كاملتين، لا مبدّل بين '
+      + 'هوائيين — وكان مكتوباً أنه «يختار بينهما». أُضيف النطاقان كخيارَي '
+      + 'شراء لأنهما لا يرتبطان.',
+  },
+  {
+    productId: 'truerc-x-air', kind: 'wrong-category', sources: 'official',
+    supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'أخطر تصنيف في هذه الدفعة: كان معروضاً كهوائي عام «لكل بناء تماثلي أو '
+      + 'رقمي». وهو هوائي استقبال اتجاهي بكسب عشرة ديسيبل وحزمة 120 درجة، '
+      + 'تصنّفه الشركة نفسها ضمن هوائيات الاستقبال. تركيبه على طائرة يفقد '
+      + 'الصورة كلّما ابتعدت بزاوية. صُحّح.',
+  },
+  {
+    productId: 'lumenier-axii-2', kind: 'needs-variants', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. اللون والكمية Variants.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الموصّل والاستقطاب خياران يجب أن يُختارا قبل الطلب لا بعده. أُضيفت '
+      + 'أربعة خيارات شراء، وكُتب صراحةً أن الاستقطاب يجب أن يطابق الطرف '
+      + 'الآخر.',
+  },
+  {
+    productId: 'foxeer-lollipop-4', kind: 'real-product', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته: كسب 2.6 ديسيبل ومتعدّد الاتجاهات. صُحّح محتوى الصندوق '
+      + 'إلى هوائيَين لأنه يُباع بعبوة زوجية.',
+  },
+  {
+    productId: 'gemfan-hurricane-51466', kind: 'needs-rename', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'الطراز الحالي «51466 V2». صفحته تنشر كل ما يلزم: ثلاث شفرات، وخطوة '
+      + '3.6 إنش، وقرص 131.8 مم، و4.2 غرام، وفتحة M5. وكُتب أن المحرّك يجب أن '
+      + 'يكون 2207 فما فوق.',
   },
   {
     productId: 'lipo-safe-bag', kind: 'category-placeholder', sources: 'none',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'replace',
     noteAr:
-      'ليس منتجاً بل فئة: «حقيبة ليبو» بلا شركة ولا موديل. لا صفحة رسمية ولا مواصفة '
-      + 'ولا صورة يمكن ترخيصها. اختر موديلاً محدَّداً من شركة معروفة.',
+      'لم يتغيّر: «حقيبة ليبو» فئة لا منتج، ولا مصنّع ولا طراز. القرار '
+      + 'قرارك وهو في صفحة القرارات — إمّا اختيار طراز بعينه أو حجبه.',
   },
   {
     productId: 'battery-strap-set', kind: 'category-placeholder', sources: 'none',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'replace',
-    noteAr: 'كسابقه: قالب بلا شركة ولا موديل. يحتاج منتجاً حقيقياً.',
+    noteAr:
+      'لم يتغيّر: «طقم أحزمة» فئة لا منتج. القرار قرارك وهو في صفحة '
+      + 'القرارات.',
   },
 ];
 
