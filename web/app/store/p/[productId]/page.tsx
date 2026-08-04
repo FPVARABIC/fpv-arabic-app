@@ -13,6 +13,7 @@ import { SECTION_ROUTES, webHref } from '@/lib/webRoutes';
 import { ProductGallery, StoreBanner } from '@/components/store/StorePieces';
 import { VariantPicker } from '@/components/store/VariantPicker';
 import { publicStoreSettings } from '@/lib/server/storeSettings';
+import { NEED_CAVEAT_AR } from '@core/data/store/relationships';
 
 export const dynamicParams = false;
 
@@ -230,8 +231,21 @@ export default async function ProductPage(
         </section>
       )}
 
-      <Related titleAr="أو هذا بدلاً منه" products={alternatives} testId="product-alternatives" />
-      <Related titleAr="وتحتاج معه" products={completes} testId="product-completes" />
+      <Related titleAr="أو هذا بدلاً منه" products={alternatives} testId="product-alternatives"
+        noteAr="خيارات هذا القسم الأخرى. اختلافها في الموضع لا في الجودة." />
+
+      {/*
+        «ستحتاج أيضاً», not «متوافق مع».
+        The links point at each section's entry-level option because that is a
+        CATEGORY-level need — «a drone needs a battery» — and never a claim that
+        this exact battery fits this exact bay. This shop does not have the data
+        to make that claim, and the caveat under each link says what the buyer
+        must check themselves.
+      */}
+      <Related titleAr="ستحتاج أيضاً" products={completes} testId="product-completes"
+        noteAr="هذه احتياجات عامة لهذا النوع، لا قائمة توافق. تحقّق من التفاصيل أدناه قبل الشراء."
+        caveats={completes.map(c => NEED_CAVEAT_AR[c.categoryId]).filter(Boolean)} />
+
       <Related titleAr="مرتبط" products={related} testId="product-related" />
 
       {/* The promise, only where it is true. A banner offering free setup on a
@@ -274,12 +288,24 @@ const Block: React.FC<{
 };
 
 const Related: React.FC<{
-  titleAr: string; products: StoreProduct[]; testId: string;
-}> = ({ titleAr, products, testId }) => {
+  titleAr: string;
+  products: StoreProduct[];
+  testId: string;
+  /** What the group means, so a link is not read as more than it claims. */
+  noteAr?: string;
+  /** Per-section warnings — voltage, connector, video system. */
+  caveats?: string[];
+}> = ({ titleAr, products, testId, noteAr, caveats }) => {
   if (products.length === 0) return null;
+  const unique = [...new Set(caveats ?? [])];
   return (
     <section className="admin-section" aria-labelledby={`rel-${testId}`}>
       <h2 id={`rel-${testId}`}>{titleAr}</h2>
+      {noteAr && (
+        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
+          {noteAr}
+        </p>
+      )}
       <div data-testid={testId} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {products.map(p => (
           <Link key={p.id} href={productHref(p.id)} className="btn-ghost"
@@ -288,6 +314,14 @@ const Related: React.FC<{
           </Link>
         ))}
       </div>
+      {unique.length > 0 && (
+        <ul data-testid={`${testId}-caveats`}
+          style={{ margin: '11px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
+          {unique.map((c, i) => (
+            <li key={i} style={{ fontSize: 11.5, color: '#fcd34d', lineHeight: 1.9 }}>{c}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 };

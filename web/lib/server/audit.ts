@@ -80,7 +80,13 @@ export type AuditAction =
   | 'store.product.images'
   // The margin, the review window and the shop-wide notices. One action for
   // the settings screen — a margin change moves every price it touches.
-  | 'store.settings';
+  | 'store.settings'
+  // A judgement the system declined to make. Recorded because «who decided to
+  // keep selling that» is a question with consequences.
+  | 'store.decision'
+  // A bulk edit of supplier costs. Audited as one entry naming how many rows
+  // moved, because fifty separate entries is a log nobody reads.
+  | 'store.import';
 
 export type AuditResult = 'ok' | 'denied' | 'error';
 

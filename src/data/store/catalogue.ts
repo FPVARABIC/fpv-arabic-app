@@ -40,6 +40,7 @@ import type {
 } from './types';
 import { STORE_SERVICES, serviceAsProduct } from './services';
 import { LAUNCH_SPECS } from './launch';
+import { withRelationships } from './relationships';
 import type { KbLink } from '../kb/types';
 
 const REVIEWED = '2026-08-04';
@@ -1674,7 +1675,7 @@ export const STORE_CATALOGUE: StoreProduct[] = [
  * the order and the admin panel see them as ordinary products, which is the
  * whole reason for modelling them this way.
  */
-export const STORE_PRODUCTS: StoreProduct[] = [
+export const STORE_PRODUCTS: StoreProduct[] = withRelationships([
   // Specifications are attached here rather than written inline above, because
   // they have a different lifecycle: the catalogue says what a product IS and
   // changes when the shop's selection changes, while `launch.ts` records what a
@@ -1683,7 +1684,11 @@ export const STORE_PRODUCTS: StoreProduct[] = [
   // file and reviews as one diff.
   ...STORE_CATALOGUE.map(p => (LAUNCH_SPECS[p.id] ? { ...p, specs: LAUNCH_SPECS[p.id] } : p)),
   ...STORE_SERVICES.map(svc => serviceAsProduct(svc, REVIEWED)),
-];
+  // «أو هذا بدلاً منه» and «ستحتاج أيضاً», derived from the sections rather
+  // than hand-written per product — see `relationships.ts` for why, and for the
+  // line between «this section's other options» and a compatibility claim this
+  // shop cannot make.
+]);
 
 const productById = new Map(STORE_PRODUCTS.map(p => [p.id, p]));
 

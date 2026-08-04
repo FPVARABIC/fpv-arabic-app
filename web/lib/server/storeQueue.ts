@@ -34,6 +34,57 @@ import type { AuditRow } from '@core/data/store/audit';
  * sixty-nine round trips to render one page.
  */
 
+/**
+ * What is outstanding, split by WHO can act on it.
+ *
+ * The distinction the shop's owner asked for, and it is the right one: a list
+ * that mixes «this needs a supplier cost» with «this needs three more sourced
+ * specifications» is a list where their own work is buried in ours. One column
+ * is theirs — photographs, costs, the publish decision — and one is the
+ * platform's, and each is finishable on its own.
+ *
+ * A single percentage was considered and rejected. «80% complete» reads as
+ * nearly done and hides whether the missing 20% is a caption or the price, and
+ * a shop owner who trusts it publishes something unsellable. The counts are
+ * separate and the blockers are never folded into them.
+ */
+export interface OwnerWork {
+  needsImage: boolean;
+  needsSupplier: boolean;
+  needsUnitCost: boolean;
+  needsShipping: boolean;
+  needsPriceReview: boolean;
+  needsPublishDecision: boolean;
+}
+
+export const OWNER_WORK_LABEL_AR: Record<keyof OwnerWork, string> = {
+  needsImage: 'يحتاج صورة',
+  needsSupplier: 'يحتاج مورداً ورابطه',
+  needsUnitCost: 'يحتاج تكلفة المورد',
+  needsShipping: 'يحتاج تكلفة الشحن',
+  needsPriceReview: 'يحتاج مراجعة السعر',
+  needsPublishDecision: 'يحتاج قرار النشر',
+};
+
+/** What the platform is responsible for, and whether it is done. */
+export interface PlatformWork {
+  specsDocumented: boolean;
+  descriptionComplete: boolean;
+  variantsComplete: boolean;
+  categorised: boolean;
+  alternativesLinked: boolean;
+  servicesDecided: boolean;
+}
+
+export const PLATFORM_WORK_LABEL_AR: Record<keyof PlatformWork, string> = {
+  specsDocumented: 'المواصفات موثّقة بمصادرها',
+  descriptionComplete: 'الوصف العربي مكتمل',
+  variantsComplete: 'خيارات الشراء مكتملة',
+  categorised: 'التصنيف مكتمل',
+  alternativesLinked: 'البدائل والمكمّلات مربوطة',
+  servicesDecided: 'أهلية الخدمة المجانية محدَّدة',
+};
+
 export interface QueueRow {
   product: StoreProduct;
   stage: PublicationStage;
@@ -45,6 +96,8 @@ export interface QueueRow {
   hasSupply: boolean;
   /** Days since the cost was last checked, or null when there is no record. */
   supplyAgeDays: number | null;
+  owner: OwnerWork;
+  platform: PlatformWork;
   /**
    * Whether the cost is older than the SHOP'S OWN review window.
    *
@@ -75,6 +128,36 @@ export async function catalogueQueue(nowIso = new Date().toISOString()): Promise
       hasSupply: !!record,
       supplyAgeDays: record ? ageInDays(record.updatedAt, nowIso) : null,
       priceStale: !!record && isPriceStale(record, nowIso, reviewDays),
+      owner: {
+        needsImage: product.images.filter(isImagePublishable).length === 0,
+        needsSupplier: !record || !record.supplierUrl,
+        needsUnitCost: !record || !record.unitCostMinor,
+        // Zero is a REAL answer here — plenty of suppliers ship free — so this
+        // asks whether the field was filled in at all, not whether it is
+        // non-zero. `undefined` means nobody has said; `0` means somebody did.
+        needsShipping: !record || record.inboundShippingMinor === undefined,
+        needsPriceReview: !record || !record.verified
+          || isPriceStale(record, nowIso, reviewDays),
+        // Only counts once it COULD be published. «Needs a publish decision» on
+        // something that cannot be published is not a decision, it is noise.
+        needsPublishDecision: !product.published
+          && !product.suspendedReasonAr
+          && publicationStage({ product, supply: record, priceReviewDays: reviewDays, now: nowIso }) === 'ready',
+      },
+      platform: {
+        specsDocumented: product.specs.filter(isSpecVerified).length >= 3,
+        descriptionComplete: product.summaryAr.trim().length >= 40
+          && product.notForAr.length > 0
+          && product.suitsAr.length > 0
+          && product.highlightsAr.length > 0,
+        variantsComplete: product.variants.length > 0
+          && product.variants.filter(v => v.isDefault).length === 1
+          && product.variants.every(v => v.inTheBoxAr.length > 0),
+        categorised: !!product.categoryId,
+        alternativesLinked: product.categoryId === 'services'
+          || product.alternativeProductIds.length > 0,
+        servicesDecided: product.variants.length > 0,
+      },
     };
   });
 }
@@ -98,7 +181,9 @@ export type QueueFilter =
   | 'ready'
   | 'published'
   | 'suspended'
-  | 'needs-decision';
+  | 'needs-decision'
+  | 'waiting-on-me'
+  | 'platform-incomplete';
 
 export const QUEUE_FILTER_LABEL_AR: Record<QueueFilter, string> = {
   all: 'الكل',
@@ -112,6 +197,8 @@ export const QUEUE_FILTER_LABEL_AR: Record<QueueFilter, string> = {
   published: 'منشور',
   suspended: 'موقوف',
   'needs-decision': 'يحتاج قراراً منك',
+  'waiting-on-me': 'ينتظر مني',
+  'platform-incomplete': 'ينقصه عمل المنصّة',
 };
 
 export function isQueueFilter(v: string): v is QueueFilter {
@@ -136,6 +223,10 @@ export function applyQueueFilter(rows: QueueRow[], filter: QueueFilter): QueueRo
     case 'needs-decision':
       return rows.filter(r => r.audit
         && (r.audit.decision === 'replace' || r.audit.decision === 'unpublish'));
+    case 'waiting-on-me':
+      return rows.filter(r => Object.values(r.owner).some(Boolean));
+    case 'platform-incomplete':
+      return rows.filter(r => Object.values(r.platform).some(v => !v));
     case 'all':
     default: return rows;
   }

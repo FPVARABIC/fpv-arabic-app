@@ -7,6 +7,7 @@ import { privateStoreSettings } from '@/lib/server/storeSettings';
 import { resolvedProducts } from '@/lib/server/storeCatalogue';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { SupplyRow } from '@/components/admin/SupplyRow';
+import { SupplyImport } from '@/components/admin/SupplyImport';
 import { readAllSupply } from '@/lib/server/storeSupply';
 
 export const metadata: Metadata = {
@@ -96,6 +97,8 @@ export default async function AdminSupply() {
           ))}
         </div>
       </section>
+
+      {canEdit && <SupplyImport />}
 
       <section className="admin-section" aria-labelledby="pricing-h">
         <h2 id="pricing-h">المنتجات</h2>

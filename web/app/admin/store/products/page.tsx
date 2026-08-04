@@ -14,7 +14,8 @@ import { AdminShell } from '@/components/admin/AdminShell';
 import { PublishToggle } from '@/components/admin/PublishToggle';
 import {
   catalogueQueue, applyQueueFilter, queueCounts, isQueueFilter,
-  QUEUE_FILTER_LABEL_AR, type QueueFilter,
+  QUEUE_FILTER_LABEL_AR, OWNER_WORK_LABEL_AR, PLATFORM_WORK_LABEL_AR,
+  type QueueFilter, type OwnerWork, type PlatformWork,
 } from '@/lib/server/storeQueue';
 
 export const metadata: Metadata = {
@@ -87,6 +88,52 @@ export default async function AdminProducts(
           </Link>
         ))}
       </nav>
+
+      {/*
+        THE TWO COLUMNS.
+        One is the owner's work — photographs, costs, the publish decision —
+        and one is the platform's. Mixing them buries their work in ours, and
+        neither list is then finishable. Deliberately NOT one percentage: «80%
+        complete» reads as nearly done and hides whether the missing fifth is a
+        caption or the price.
+      */}
+      <section className="admin-section" aria-labelledby="split-h">
+        <h2 id="split-h">أين يقف العمل</h2>
+        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+          <div data-testid="owner-work">
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>ينتظر مني</p>
+            <ul style={{ margin: '9px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
+              {(Object.keys(OWNER_WORK_LABEL_AR) as (keyof OwnerWork)[]).map(k => {
+                const n = rows.filter(r => r.owner[k]).length;
+                return (
+                  <li key={k} data-testid={`owner-${k}`}
+                    style={{ fontSize: 12, color: 'var(--text-dim)', display: 'flex', gap: 8 }}>
+                    <span style={{ minWidth: 34 }} dir="ltr">{n}</span>
+                    <span>{OWNER_WORK_LABEL_AR[k]}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div data-testid="platform-work">
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--accent)' }}>
+              أنجزه النظام
+            </p>
+            <ul style={{ margin: '9px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
+              {(Object.keys(PLATFORM_WORK_LABEL_AR) as (keyof PlatformWork)[]).map(k => {
+                const done = rows.filter(r => r.platform[k]).length;
+                return (
+                  <li key={k} data-testid={`platform-${k}`}
+                    style={{ fontSize: 12, color: 'var(--text-dim)', display: 'flex', gap: 8 }}>
+                    <span style={{ minWidth: 52 }} dir="ltr">{done}/{rows.length}</span>
+                    <span>{PLATFORM_WORK_LABEL_AR[k]}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       {/* The audit, summarised. The number that matters is the last one. */}
       <section className="admin-section" aria-labelledby="audit-h">
@@ -162,6 +209,17 @@ export default async function AdminProducts(
                       {AUDIT_DECISION_LABEL_AR[row.audit.decision]} — {AUDIT_KIND_LABEL_AR[row.audit.kind]}
                     </span>
                   )}
+                  {/* What THIS product needs from its owner, named. A row that
+                      says «incomplete» is a row somebody has to open to find
+                      out why. */}
+                  {(Object.keys(OWNER_WORK_LABEL_AR) as (keyof OwnerWork)[])
+                    .filter(k => row.owner[k])
+                    .map(k => (
+                      <span key={k} className="admin-badge" data-testid={`row-owner-${k}-${p.id}`}
+                        style={{ color: '#fcd34d' }}>
+                        {OWNER_WORK_LABEL_AR[k]}
+                      </span>
+                    ))}
                   <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                     {/* The button only appears when the gate would allow it.
                         A control that is always there and always refuses
