@@ -51,6 +51,30 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # Says WHY Pages is unavailable when it is, instead of leaving the next
+      # step's "Resource not accessible by integration" to be guessed at. The
+      # two causes need opposite fixes, so the distinction is the whole point:
+      #   403 + the repo is private  -> Pages needs a public repo (or a paid plan)
+      #   403 + the repo is public   -> the workflow token was denied `pages`
+      - name: Diagnose Pages availability
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo='${{ github.repository }}'
+          private=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/$repo" | grep -o '"private": *[a-z]*' | head -1)
+          echo "repository visibility -> $private"
+          echo "--- GET  /pages ---"
+          curl -sS -o /dev/null -w 'http=%{http_code}\n' \
+            -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$repo/pages"
+          echo "--- POST /pages ---"
+          curl -sS -w '\nhttp=%{http_code}\n' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$repo/pages" \
+            -d '{"build_type":"workflow"}' | head -5
+
       # Turns Pages on if it is off, and reports the base path this site will
       # be served from — which the build needs, because every internal link and
       # every asset URL has to carry it.
