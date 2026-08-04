@@ -1559,12 +1559,14 @@ export const STORE_CATALOGUE: StoreProduct[] = [
   // Moved here from the 3.5-inch section. The Cinebot30 flies 3-inch props
   // (HQProp T76mm), so it belonged in this section all along — it was filed by
   // the number in its name rather than by the propeller it turns.
+  // Deliberately NOT in the «cinematic» collection. Its own description says
+  // the props are exposed and it is an outdoor machine — putting it beside five
+  // ducted cinewhoops would make that collection answer two questions at once.
   product({
     id: 'geprc-cinebot30',
     level: 'intermediate',
     link: 'elrs',
     video: 'dji',
-    collections: ['cinematic'],
     categoryId: 'size-3',
     nameEn: 'GEPRC Cinebot30',
     titleAr: 'طائرة تصوير 3 إنش بمراوح مكشوفة',
@@ -1604,6 +1606,56 @@ export const STORE_CATALOGUE: StoreProduct[] = [
         id: 'hd-wasp', nameAr: 'نسخة RunCam Link Wasp', kind: 'bnf',
         link: 'elrs', video: 'walksnail',
         inBox: ['الطائرة بنظام Wasp الرقمي', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
+  }),
+
+  // Added during the second review. Withdrawing the two invented Evoques left
+  // this section with two products, and a section of two is a section that
+  // cannot be compared. The Pavo30 is real, documented, and the third genuinely
+  // different answer here: a PUSHER whoop, where the props sit above the arms.
+  product({
+    id: 'betafpv-pavo30',
+    level: 'intermediate',
+    link: 'elrs',
+    video: 'dji',
+    categoryId: 'size-3',
+    nameEn: 'BetaFPV Pavo30',
+    titleAr: 'أوّل ووب دافع بمقاس ثلاث إنشات',
+    brandAr: 'BetaFPV',
+    pos: 'pro',
+    summaryAr:
+      'ووب مغطّى المراوح لكن بترتيب مختلف: المراوح فوق الأذرع لا بينها، وهو ما '
+      + 'تسمّيه BetaFPV «دافعاً». محرّكات 1506 بسرعة 3000 دورة لكل فولت ومراوح '
+      + 'Gemfan D76 خماسية الشفرات، والشركة تعلن 6 إلى 8 دقائق ببطارية 4S سعة 750.',
+    suits: [
+      'التصوير الداخلي والقريب بمقاس أكبر من 2.5 إنش.',
+      'من يريد زمن طيران أطول من الووب الصغير مع بقاء المراوح محاطة.',
+    ],
+    notFor: [
+      'المساحات الضيّقة جداً — ثلاث إنشات محاطة تحتاج مساحة.',
+      'الفريستايل: هذا هيكل تصوير لا هيكل مناورة.',
+    ],
+    highlights: [
+      'محرّكات 1506 بسرعة 3000 دورة لكل فولت',
+      'مراوح Gemfan D76 خماسية الشفرات',
+      'متحكّم Toothpick F722 AIO بمسرّع 35 أمبير',
+    ],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    availability: 'needs-confirmation',
+    alternatives: ['geprc-cinelog30', 'betafpv-pavo25', 'geprc-cinebot30'],
+    completes: ['cnhl-black-series-4s', 'isdt-608ac', 'dji-goggles-n3', 'lipo-safe-bag'],
+    variants: [
+      {
+        id: 'analog', nameAr: 'نسخة تماثلية', kind: 'bnf',
+        link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة بنظام تماثلي', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd', nameAr: 'نسخة رقمية', kind: 'bnf',
+        link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بوحدة فيديو رقمية', 'مراوح احتياطية'],
         availability: 'needs-confirmation',
       },
     ],

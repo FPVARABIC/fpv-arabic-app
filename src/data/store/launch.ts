@@ -98,6 +98,7 @@ const IFLIGHT_XING2_2207 = 'https://shop.iflight.com/xing2-2207-4s-6s-fpv-motor-
 
 const BETAFPV_PAVO25_V2 = 'https://betafpv.com/products/pavo25-v2-brushless-whoop-quadcopter';
 const BETAFPV_CETUS_LITE = 'https://betafpv.com/products/cetus-lite-fpv-kit';
+const BETAFPV_PAVO30 = 'https://betafpv.com/products/pavo30-whoop-quadcopter';
 const BETAFPV_SUPERD = 'https://betafpv.com/products/superd-elrs-2-4g-diversity-receiver';
 const BETAFPV_SUPERX = 'https://betafpv.com/products/superx-elrs-gemini-xross-receiver';
 
@@ -771,7 +772,29 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
     ),
   ],
 
+  // The built aircraft. TBS lists this as its own product, separate from the
+  // bare frame below — which is why this catalogue carries both.
   'tbs-source-one-v5': [
+    official(
+      'ما هو',
+      'TBS Source One V5.1 RTF/BNF Set — الهيكل المفتوح نفسه مبنيّاً وجاهزاً للربط أو للطيران',
+      '', 'صفحة TBS Source One V5.1 RTF/BNF Set', TBS_SOURCE_ONE_RTF,
+    ),
+    official(
+      'الشكل', 'X واسع المسافة — مخصَّص للفريستايل والطيران الحرّ', '',
+      'صفحة TBS Source One V5.1 5inch', TBS_SOURCE_ONE_V51,
+    ),
+    official(
+      'الترخيص',
+      'مبنيّ على مشروع مفتوح تبرّعت به الشركة للمجتمع وملفّاته منشورة — لذلك تُصنَّع قطع غياره على نطاق واسع',
+      '', 'صفحة TBS Source One V5.1 5inch', TBS_SOURCE_ONE_V51,
+    ),
+    { labelAr: 'الوزن', valueAr: NOT_PUBLISHED_AR, status: 'pending' },
+    { labelAr: 'المكوّنات المرفقة', valueAr: NOT_PUBLISHED_AR, status: 'pending' },
+  ],
+
+  // The bare frame. Same project, different purchase.
+  'tbs-source-one-v5-frame': [
     official(
       'الشكل', 'X واسع المسافة — مخصَّص للفريستايل والطيران الحرّ', '',
       'صفحة TBS Source One V5.1 5inch', TBS_SOURCE_ONE_V51,
@@ -782,13 +805,42 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
       '', 'صفحة TBS Source One V5.1 5inch', TBS_SOURCE_ONE_V51,
     ),
     official(
-      'الجيل التالي', 'TBS Source One V6 مقاس 5 إنش، وله أذرع بديلة مستقلّة', '',
-      'صفحة TBS Source One V6 5inch', TBS_SOURCE_ONE_V6,
+      'الطراز الحالي',
+      'V5.1 هو الاسم الرسمي — ولا يوجد طراز باسم «V5» مجرَّداً',
+      '', 'صفحة TBS Source One V5.1 5inch', TBS_SOURCE_ONE_V51,
     ),
     official(
-      'يُباع أيضاً كطائرة كاملة',
-      'TBS Source One V5.1 RTF/BNF Set — الهيكل نفسه مبنيّاً وجاهزاً للربط أو للطيران',
-      '', 'صفحة TBS Source One V5.1 RTF/BNF Set', TBS_SOURCE_ONE_RTF,
+      'الجيل التالي', 'TBS Source One V6 مقاس 5 إنش، وله أذرع بديلة تُباع مستقلّة', '',
+      'صفحة TBS Source One V6 5inch', TBS_SOURCE_ONE_V6,
+    ),
+    { labelAr: 'الوزن', valueAr: NOT_PUBLISHED_AR, status: 'pending' },
+    { labelAr: 'سماكة الأذرع', valueAr: NOT_PUBLISHED_AR, status: 'pending' },
+  ],
+
+  'betafpv-pavo30': [
+    official('المحرّكات', '1506 3000KV', '', 'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30),
+    official('المراوح', 'Gemfan D76 خماسية الشفرات', '', 'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30),
+    official(
+      'متحكّم الطيران والمسرّع',
+      'Toothpick F722 AIO بمسرّع 35 أمبير من نوع BLHeli_S وشاشة معلومات Betaflight',
+      '', 'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30,
+    ),
+    official(
+      'التصميم',
+      'أوّل ووب دافع بمقاس ثلاث إنشات عند BetaFPV — المراوح فوق الأذرع لا بينها',
+      '', 'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30,
+    ),
+    official(
+      'البطارية الموصى بها', '4S بسعة 750', 'ميلي أمبير/ساعة',
+      'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30,
+    ),
+    official(
+      'زمن الطيران المعلَن', '6 إلى 8', 'دقائق ببطارية 4S سعة 750',
+      'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30,
+    ),
+    official(
+      'نسخ الفيديو', 'نسخة تماثلية ونسخة رقمية', '',
+      'صفحة Pavo30 Whoop Quadcopter', BETAFPV_PAVO30,
     ),
     { labelAr: 'الوزن', valueAr: NOT_PUBLISHED_AR, status: 'pending' },
   ],
@@ -954,12 +1006,14 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
 
   'foxeer-reaper-extreme': [
     official(
-      'الجيل الحالي',
-      'Reaper Extreme V3 بطاقة 2.5 واط و80 قناة على نطاق 4.9 إلى 6 غيغاهرتز',
-      '', 'صفحة Reaper Extreme V3', FOXEER_REAPER_V3,
+      'الجيل الحالي', 'Reaper Extreme V3', '',
+      'صفحة Reaper Extreme V3', FOXEER_REAPER_V3,
     ),
+    official('طاقة الإرسال', '2.5', 'واط', 'صفحة Reaper Extreme V3', FOXEER_REAPER_V3),
+    official('نطاق التردّد', '4.9 – 6', 'غيغاهرتز', 'صفحة Reaper Extreme V3', FOXEER_REAPER_V3),
+    official('عدد القنوات', '80', 'قناة', 'صفحة Reaper Extreme V3', FOXEER_REAPER_V3),
     official(
-      'النسخ المتاحة',
+      'النسخ الأخرى المتاحة',
       'نسخة 5.8 غيغاهرتز بطاقة 2.5 واط و40 قناة، ونسخة V2 بطاقة 2.5 واط و72 قناة، '
       + 'ونسخة بطاقة 1.8 واط و72 قناة، ونسخة بطاقة 3 واط و80 قناة',
       '', 'صفحة Reaper Extreme V3', FOXEER_REAPER_V3,

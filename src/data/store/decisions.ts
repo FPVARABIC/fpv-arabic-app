@@ -137,41 +137,56 @@ export const OWNER_DECISIONS: OwnerDecision[] = [
   {
     id: 'source-one-duplicate',
     productId: 'tbs-source-one-v5',
-    titleAr: 'هيكل مُدرَج مرّتين، مرّة كطائرة',
+    titleAr: 'Source One مرّتين — وقد تبيّن أنهما ليسا واحداً',
+    // Rewritten after the second catalogue review. The original framing said
+    // flatly that these were one product filed twice, and recommended
+    // replacing the aircraft. Reading TBS's own shop showed that is false:
+    // they list the bare frame AND a built RTF/BNF set as separate products.
+    // The premise changed, so the options and the recommendation had to. What
+    // did not change is that the choice stays the shop owner's.
     problemAr:
-      '«TBS Source One V5» في قسم الخمس إنشات بوصفه طائرة، و«TBS Source One V5 Frame» '
-      + 'في قسم الهياكل. المنتج واحد، والأول مصنَّف خطأً: Source One هيكل يُباع وحده.',
+      '«TBS Source One» مُدرَج مرّتين: مرّة في قسم الخمس إنشات كطائرة، ومرّة في '
+      + 'قسم الهياكل. كان مسجَّلاً هنا أن هذا تكرار وأن الأول مصنَّف خطأً — '
+      + 'والمراجعة الثانية أثبتت العكس: متجر TBS نفسه يبيع الاثنين كمنتجَين '
+      + 'مستقلَّين، «Source One V5.1» هيكلاً مفرداً و«Source One V5.1 RTF/BNF Set» '
+      + 'طائرة مبنيّة. فالسؤال لم يعد «أيّهما نحذف» بل «هل تريد بيع الاثنين».',
     whyNotAutomaticAr:
-      'دمج المنتجَين يغيّر ما يعرضه قسم الخمس إنشات، وقد يترك القسم بخيارين. '
-      + 'وأيّهما يبقى قرارك: هل تريد طائرة اقتصادية في القسم أم تكتفي بالهيكل؟',
+      'بيع الطقم المبنيّ يعني مورداً آخر وسعراً آخر وخدمة ما بعد بيع مختلفة عن '
+      + 'بيع ألواح كربون. وهذا قرار تجاري لا يُستنتج من صفحة المصنّع: قد لا تريد '
+      + 'أن تبيع طائرة مبنيّة أصلاً في هذه المرحلة.',
     options: [
       {
-        id: 'hide-aircraft',
-        labelAr: 'احجب النسخة المُدرَجة كطائرة، وأبقِ الهيكل',
+        id: 'keep-both',
+        labelAr: 'أبقِ الاثنين — هما منتجان مختلفان فعلاً',
         effectAr:
-          'قسم الخمس إنشات ينزل إلى خيارين حتى تضيف طائرة اقتصادية بديلة. '
-          + 'قسم الهياكل يبقى صحيحاً.',
+          'قسم الخمس إنشات يحتفظ بمدخل اقتصادي، وقسم الهياكل يحتفظ بالهيكل. '
+          + 'الوصفان صُحّحا بالفعل ليقول كلٌّ منهما ما هو، فلن يظنّ المشتري أنه '
+          + 'يرى الشيء نفسه مرّتين.',
+        effect: 'safe',
+        action: 'keep',
+      },
+      {
+        id: 'hide-aircraft',
+        labelAr: 'أبقِ الهيكل وحده واحجب الطقم المبنيّ',
+        effectAr:
+          'قسم الخمس إنشات ينزل إلى خيارين. مناسب إن كنت لا تريد بيع طائرات '
+          + 'مبنيّة من هذا المورد في هذه المرحلة.',
         effect: 'costly',
         action: 'unpublish',
       },
       {
         id: 'replace-with-aircraft',
-        labelAr: 'استبدله بطائرة خمس إنشات اقتصادية حقيقية',
-        effectAr: 'أبحث عن طائرة موثّقة في هذه الفئة وأكملها في الدفعة التالية.',
+        labelAr: 'استبدل الطقم المبنيّ بطائرة خمس إنشات اقتصادية أخرى',
+        effectAr:
+          'أبحث عن طائرة موثّقة في هذه الفئة وأكملها في دفعة قادمة. '
+          + 'هذا خيار إن كنت تفضّل مورداً غير TBS للطائرة الاقتصادية.',
         effect: 'safe',
         action: 'needs-commit',
       },
-      {
-        id: 'keep-both',
-        labelAr: 'أبقِ الاثنين',
-        effectAr: 'المشتري يرى نفس المنتج مرّتين بوصفين مختلفين. يُفقد الثقة في التنظيم.',
-        effect: 'risky',
-        action: 'keep',
-      },
     ],
-    recommendedOptionId: 'replace-with-aircraft',
-    recommendationBasisAr:
-      'قسم الخمس إنشات يحتاج مدخلاً اقتصادياً حقيقياً، والهيكل موجود أصلاً في قسمه.',
+    // No recommendation. The evidence now says both products are real, which
+    // removes the factual ground the old recommendation stood on — what
+    // remains is a commercial preference, and that is not ours to state.
   },
   {
     id: 'pocket-combo-not-a-sku',

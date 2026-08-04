@@ -48,6 +48,7 @@ import {
   isPriceStale, daysBetween, MIN_VERIFIED_SPECS, DEFAULT_PRICE_REVIEW_DAYS,
 } from '../src/data/store/publication';
 import { CATALOGUE_AUDIT, auditFor, launchSetIds, auditSummary } from '../src/data/store/audit';
+import type { AuditKind } from '../src/data/store/audit';
 import { NEED_CAVEAT_AR, alternativesFor } from '../src/data/store/relationships';
 import { OWNER_DECISIONS } from '../src/data/store/decisions';
 import {
@@ -61,7 +62,7 @@ const NEEDS_SECTIONS = [
   'receivers', 'cameras', 'vtx', 'air-units', 'antennas', 'gps', 'frames',
   'radios', 'goggles',
 ];
-import { LAUNCH_SPECS, CHECKED } from '../src/data/store/launch';
+import { LAUNCH_SPECS, CHECKED, NOT_PUBLISHED_AR } from '../src/data/store/launch';
 import { isSpecVerified } from '../src/data/store/types';
 import { ROLE_CAPABILITIES } from '../src/data/auth/roles';
 import { getArticle } from '../src/data/kb/registry';
@@ -1530,8 +1531,17 @@ console.log('\n[20] The audit covers the catalogue, and the launch set is real')
 
   // The launch set: approved, documented, and actually carrying the specs.
   const launch = launchSetIds();
-  ok(`the launch set is between 10 and 18 products (${launch.length})`,
-    launch.length >= 10 && launch.length <= 18);
+  // This used to assert a narrow band, from the round when the launch set was
+  // a hand-picked pilot group. The whole catalogue has since been reviewed, so
+  // the band is meaningless — but the invariant underneath it is not, and it is
+  // the one worth keeping: the launch set is exactly the approved products, and
+  // it is NOT everything. A launch set equal to the catalogue would mean the
+  // audit had stopped rejecting anything, which is how a review becomes a
+  // rubber stamp.
+  ok(`the launch set is exactly the approved products (${launch.length})`,
+    launch.length === CATALOGUE_AUDIT.filter(r => r.decision === 'approve').length);
+  ok('the launch set is not the whole catalogue',
+    launch.length < CATALOGUE_AUDIT.length);
   ok('every launch product was approved', launch.every(id => auditFor(id)!.decision === 'approve'));
   ok('every launch product has official sources recorded',
     launch.every(id => auditFor(id)!.sources === 'official'));
@@ -1905,6 +1915,167 @@ console.log('\n[24] The reviewed group holds together as a group');
       gate.advisory.every(a => a.gate === 'images'));
   }
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[25] The second review: what it found, and that it stayed found');
+{
+  /**
+   * Batch two reviewed the remaining fifty-three products.
+   *
+   * These assertions are not «the data is present» — the earlier sections
+   * cover that. They lock in the FINDINGS, because a finding that nothing
+   * tests is a finding that quietly reverts the next time somebody tidies the
+   * catalogue. Each one below is a specific thing the review discovered was
+   * wrong, expressed as a rule that would fail if it came back.
+   */
+  const byId = new Map(STORE_PRODUCTS.map(p => [p.id, p]));
+
+  // ── Products that turned out not to exist ─────────────────────────────────
+  // iFlight's Evoque line is 4, 5 and 6 inch. «F3» and «F3D» were names
+  // nobody sells. SpeedyBee never sold the F405 V4 board on its own.
+  for (const ghost of [
+    'iflight-nazgul-evoque-f3', 'iflight-nazgul-evoque-f3d', 'speedybee-f405-v4-fc',
+  ]) {
+    ok(`«${ghost}» is gone — it was never a real product`, !byId.has(ghost));
+    ok('…and nothing still points at it',
+      STORE_PRODUCTS.every(p => ![
+        ...p.alternativeProductIds, ...p.completesProductIds, ...p.relatedProductIds,
+      ].includes(ghost)));
+  }
+
+  // ── A product with no manufacturer page says so, and stays empty ──────────
+  // The HOTA D6 Pro is real and sold everywhere, but no official page for it
+  // was found. Reseller listings are commercial information, not specification
+  // — so it carries none, and its own page admits that rather than quietly
+  // looking thin.
+  const hota = byId.get('hota-d6-pro')!;
+  ok('a product with no manufacturer source carries no sourced figure',
+    hota.specs.filter(isSpecVerified).length === 0);
+  ok('…and says so where a buyer will read it, instead of just looking thin',
+    hota.summaryAr.includes('صفحة رسمية') || hota.notForAr.some(n => n.includes('موثّقة')));
+  ok('…and its audit row records why, not just that',
+    (auditFor('hota-d6-pro')!.noteAr).includes('لم يُعثر'));
+
+  // ── The reclassification that was a safety problem ───────────────────────
+  // The X-AIR was sold as an all-purpose omni «for every analog or digital
+  // build». It is a 120°-beam receive antenna. Fitting one to an aircraft
+  // loses the picture the moment the aircraft turns away.
+  const xair = byId.get('truerc-x-air')!;
+  ok('the directional receive antenna no longer claims to suit every build',
+    !xair.suitsAr.some(s => s.includes('كل بناء')));
+  ok('…and warns against the wrong fitting explicitly',
+    xair.notForAr.some(n => n.includes('الطائرة')));
+
+  // ── Products sold WITHOUT something a buyer would assume is included ──────
+  // Three separate cases found in this batch. Each must say so twice: in the
+  // box list, where somebody checks what arrives, and in «لا يناسبك», which
+  // is what actually stops the wrong purchase.
+  // The token searched for is the one the product's own copy uses. Matching on
+  // a phrase we invented would pass only because we wrote both sides of it.
+  const OMISSIONS: [string, string][] = [
+    ['betafpv-pavo25', 'وحدة رقمية'],
+    ['hdzero-freestyle-v2', 'كاميرا HDZero'],
+    ['iflight-chimera7-eco', 'وحدة تحديد الموقع'],
+  ];
+  for (const [id, missing] of OMISSIONS) {
+    const p = byId.get(id)!;
+    const box = p.variants.flatMap(v => v.inTheBoxAr).join(' ');
+    ok(`${id} says in its box list what is NOT in the box`,
+      /بلا|ليست|غير/.test(box));
+    ok('…and repeats it where it stops the wrong purchase',
+      p.notForAr.some(n => n.includes(missing)));
+  }
+
+  // ── Every multi-option product names what differs ────────────────────────
+  // «Option 1 / Option 2» is a shop telling somebody to guess. A variant name
+  // must carry the thing that distinguishes it — a protocol, a capacity, a
+  // KV, a connector, a video system.
+  for (const p of STORE_PRODUCTS) {
+    if (p.variants.length < 2) continue;
+    ok(`${p.id}'s options are told apart by name`,
+      new Set(p.variants.map(v => v.nameAr)).size === p.variants.length);
+    ok('…and none of them is an unnamed «version»',
+      p.variants.every(v => v.nameAr.trim().length >= 6 && !/^نسخة \d+$/.test(v.nameAr.trim())));
+  }
+
+  // ── Nothing quotes a figure it did not read ──────────────────────────────
+  // Every sourced row across the WHOLE catalogue, not just the pilot group.
+  const allSpecs = STORE_PRODUCTS.flatMap(p => p.specs);
+  const sourced = allSpecs.filter(isSpecVerified);
+  ok(`the catalogue carries sourced figures at scale (${sourced.length})`,
+    sourced.length >= 300);
+  ok('every one of them names a manufacturer document',
+    sourced.every(sp => sp.source?.kind === 'manufacturer-page'
+      || sp.source?.kind === 'manufacturer-manual'));
+  ok('…and none of them was read from a marketplace',
+    sourced.every(sp => !/aliexpress|amazon|banggood|ebay/i.test(sp.source!.url)));
+
+  // A row the manufacturer does not publish is a real row, and it must say
+  // that rather than being dropped — «we checked» and «we did not» differ.
+  const unpublished = allSpecs.filter(sp => sp.valueAr === NOT_PUBLISHED_AR);
+  ok(`«not published by the source» is recorded, not silently omitted (${unpublished.length})`,
+    unpublished.length > 0);
+  ok('…and never claims to be verified',
+    unpublished.every(sp => sp.status !== 'verified'));
+
+  // ── A conflict between two statements on one page is recorded, not picked ─
+  const disputed = allSpecs.filter(sp => sp.status === 'disputed');
+  ok(`source conflicts are recorded as conflicts (${disputed.length})`, disputed.length > 0);
+  ok('…each explaining what disagrees with what',
+    disputed.every(sp => (sp.disagreementAr ?? '').trim().length >= 20));
+
+  // ── The audit says what it DID, not only what it saw ─────────────────────
+  // A row that found a wrong name, a wrong section or a missing variant has to
+  // record the correction. Otherwise the finding lives only in a diff.
+  const CORRECTED: AuditKind[] = ['needs-rename', 'wrong-category', 'needs-variants'];
+  const corrected = CATALOGUE_AUDIT.filter(r => CORRECTED.includes(r.kind));
+  ok(`corrections were recorded, not just noticed (${corrected.length})`, corrected.length >= 25);
+  // The verb set is wide because Arabic offers several ways to say «and so the
+  // catalogue now shows X» — but it is not empty: a note that merely observes
+  // the product exists carries none of these and still fails.
+  ok('…and every one of them says what was changed, not only what was seen',
+    corrected.every(r => /صُحّح|أُضيف|أُضيفت|نُقل|حلّ محلّ|رُفع|سُجّل|سُجّلت|كُتب/.test(r.noteAr)));
+  // Proof the rule can fail: the phrasing a deferred row uses does not pass it.
+  ok('…and the rule would reject a row that only records an observation',
+    !/صُحّح|أُضيف|أُضيفت|نُقل|حلّ محلّ|رُفع|سُجّل|سُجّلت|كُتب/
+      .test('موجود ويُباع. مؤجَّل إلى جولة توثيق ثانية.'));
+
+  // ── Sections still hold together after the withdrawals ───────────────────
+  // Two products were removed from the 3-inch section. A section that drops to
+  // two is a section nobody can compare inside, so the replacement mattered.
+  for (const cat of ['size-3', 'size-3-5', 'size-5', 'size-7']) {
+    const members = STORE_PRODUCTS.filter(p => p.categoryId === cat);
+    ok(`«${cat}» still offers a real choice (${members.length})`, members.length >= 3);
+  }
+
+  // ── The whole catalogue is one owner-input away ──────────────────────────
+  // The point of the batch: what is left for the shop's owner is a photograph,
+  // a supplier cost and a price. Nothing else may be outstanding on an
+  // approved product.
+  const NOW25 = '2026-08-04T00:00:00.000Z';
+  const approved = launchSetIds().map(id => byId.get(id)!).filter(Boolean);
+  ok(`the approved set is the bulk of the catalogue (${approved.length})`,
+    approved.length >= 50);
+  let ready = 0;
+  for (const p of approved) {
+    const priced = {
+      ...p,
+      variants: p.variants.map(v => ({
+        ...v, priceMinor: 9900, availability: 'in-stock' as const,
+      })),
+    };
+    const gate = publishability({
+      product: priced,
+      supply: { updatedAt: '2026-08-03T00:00:00.000Z', verified: true },
+      now: NOW25,
+    });
+    if (gate.allowed && gate.advisory.every(a => a.gate === 'images')) ready++;
+  }
+  ok(`every approved product is publishable once priced and photographed (${ready}/${approved.length})`,
+    ready === approved.length);
+}
+
 
 console.log(`\n${failed === 0 ? '✅' : '❌'} testStore: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

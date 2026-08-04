@@ -240,8 +240,19 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'approve', launchSet: true,
     noteAr:
-      'كان جيلين وراء الواقع: GEPRC تبيع Cinelog30 V3. نقل مواصفات V3 تحت '
-      + 'الاسم القديم كان سيكون الخطأ الذي وُجدت هذه المراجعة لالتقاطه.',
+      'كان جيلين وراء الواقع: GEPRC تبيع Cinelog30 V3. صُحّح الاسم وسُجّلت '
+      + 'مواصفات V3 تحت اسم V3. نقلُها تحت الاسم القديم كان سيكون الخطأ الذي '
+      + 'وُجدت هذه المراجعة لالتقاطه.',
+  },
+  {
+    productId: 'betafpv-pavo30', kind: 'real-product', sources: 'official',
+    supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'أُضيف في هذه الدفعة. سحبُ المنتجَين الوهميَّين ترك قسم الثلاث إنشات '
+      + 'بمنتجَين، وقسم من منتجَين قسم لا يمكن المقارنة داخله. Pavo30 حقيقي '
+      + 'وقُرئت صفحته، وهو الإجابة الثالثة المختلفة فعلاً هنا: ووب دافع '
+      + 'مراوحه فوق الأذرع لا بينها.',
   },
   {
     productId: 'geprc-domain36', kind: 'real-product', sources: 'official',
@@ -406,9 +417,9 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'approve', launchSet: true,
     noteAr:
-      '«HDZero Goggles» فئة لا منتج. المنتج هو «HDZero Goggle 2»، وفيه '
-      + 'مستقبِل تماثلي مدمج يجعله يقرأ الطائرات القديمة — وهذه ميزة شراء لم '
-      + 'تكن مكتوبة.',
+      '«HDZero Goggles» فئة لا منتج. صُحّح الاسم إلى «HDZero Goggle 2»، وكُتبت '
+      + 'ميزة لم تكن مذكورة: فيه مستقبِل تماثلي مدمج يجعله يقرأ الطائرات '
+      + 'القديمة أيضاً، فلا تحتاج نظّارتين.',
   },
 
   // ── digital systems ───────────────────────────────────────────────────────
@@ -666,8 +677,9 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'approve', launchSet: true,
     noteAr:
-      'الاسم الرسمي يحمل V3. صفحته من أكمل ما قُرئ: الشريحة والبوصلة والوزن '
-      + 'والأبعاد والحساسية ومعدّل التحديث كلّها منشورة.',
+      'صُحّح الاسم ليحمل V3 كما تكتبه الشركة، وسُجّلت مواصفاته التسع. صفحته من '
+      + 'أكمل ما قُرئ في هذه الدفعة: الشريحة والبوصلة والوزن والأبعاد والحساسية '
+      + 'ومعدّل التحديث كلّها منشورة.',
   },
   {
     productId: 'radiomaster-rp1', kind: 'needs-rename', sources: 'official',

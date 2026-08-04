@@ -65,8 +65,12 @@ export const STORE_CATEGORIES: StoreCategory[] = [
   },
   {
     id: 'size-3-5',
-    titleAr: 'مقاس 3.5 إنش',
-    titleEn: '3.5 inch',
+    // Widened during the second catalogue review. The section already described
+    // itself as «between three and five», and it holds a 3.5-inch toothpick, a
+    // 3.6-inch freestyle machine and a 4-inch — a title saying «3.5» made one
+    // of its own members look misfiled. The section is the gap, not one number.
+    titleAr: 'مقاس 3.5 – 4 إنش',
+    titleEn: '3.5 – 4 inch',
     blurbAr: 'وسط بين خفّة الثلاثة وثبات الخمسة، ويحمل بطارية أكبر لزمن طيران أطول.',
     group: 'aircraft',
     choiceAxis: 'completeness',
