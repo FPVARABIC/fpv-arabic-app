@@ -490,7 +490,7 @@ export const setupPage: BfPage = {
   expertRequired: false,
   scope: 'universal',
   safetyLevel: 'caution',
-  glossaryTermIds: ['setup', 'save-and-reboot', 'arming-disable-flags'],
+  glossaryTermIds: ['arming', 'save-and-reboot', 'arming-disable-flags'],
   relatedPageIds: ['ports', 'configuration', 'sensors', 'power'],
   groups: [
     { id: 'calibration', titleAr: 'المعايرة', level: 'basic', order: 1, fields: calibrationFields },

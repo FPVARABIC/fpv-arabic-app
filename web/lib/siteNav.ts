@@ -62,8 +62,6 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'programming', labelAr: 'البرامج', href: '/programming', group: 'software',
     blurbAr: 'Betaflight وExpressLRS وEdgeTX وأدوات الفيديو، مربوطة بمشروعك.',
-    // Batch 6.
-    status: 'planned',
   },
 
   // ── Build ────────────────────────────────────────────────────────────────

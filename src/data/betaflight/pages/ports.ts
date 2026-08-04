@@ -231,7 +231,7 @@ export const portsPage: BfPage = {
   expertRequired: false,
   scope: 'universal',
   safetyLevel: 'warning',
-  glossaryTermIds: ['ports', 'uart', 'msp', 'serial-rx', 'save-and-reboot'],
+  glossaryTermIds: ['uart', 'msp', 'serial-rx', 'save-and-reboot'],
   relatedPageIds: ['setup', 'receiver', 'gps', 'vtx', 'blackbox'],
   groups: [
     { id: 'assignment', officialTitle: undefined, titleAr: 'تعيين وظيفة كل منفذ (صف واحد لكل UART)', level: 'basic', order: 1, fields },

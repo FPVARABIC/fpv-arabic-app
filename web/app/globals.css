@@ -405,3 +405,41 @@ a:hover { text-decoration: none; }
 .admin-kv > div { display: flex; gap: 10px; flex-wrap: wrap; }
 .admin-kv dt { color: var(--text-dimmer); min-width: 118px; font-weight: 700; }
 .admin-kv dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+
+/* ── Software centre ──────────────────────────────────────────────────────── */
+
+/*
+ * The row a `?topic=` link named.
+ *
+ * A search for «Subtrim» lands on a screen of fourteen settings, and scrolling
+ * to the right one is only half the job — the reader still has to work out
+ * which of the rows now in view was meant. The outline says so, and fades,
+ * because a marker that never leaves becomes decoration people stop seeing.
+ */
+[data-focused='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  transition: outline-color 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-focused='true'] { transition: none; }
+}
+
+/*
+ * Collapsed software entries.
+ *
+ * `<details>` is what lets forty ExpressLRS issues live in one indexable page
+ * without becoming a wall, so its summary has to read as a control: a pointer
+ * cursor, a visible focus ring for keyboard users, and no browser marker in the
+ * wrong corner for a right-to-left document.
+ */
+details.card > summary,
+details.card-sm > summary { list-style-position: inside; }
+
+details.card > summary:focus-visible,
+details.card-sm > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

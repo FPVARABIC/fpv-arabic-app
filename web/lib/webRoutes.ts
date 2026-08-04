@@ -107,6 +107,37 @@ export function href(d: Destination): string | null {
 }
 
 /**
+ * Section indexes, which the destination resolver deliberately does not model.
+ *
+ * A `Destination` names a piece of CONTENT — an article, a Betaflight page, one
+ * ExpressLRS issue. The doors in front of those (the software hub, the
+ * ExpressLRS front page) are navigation, not content: nothing links to them as
+ * an answer, no finding points at them, and the bot returning «افتح قسم
+ * البرامج» instead of the actual page would be the failure the resolver's
+ * optional-id comment already warns about.
+ *
+ * The scope pages are here for a different reason: a page whose entire subject
+ * is «هذا البرنامج غير مغطّى بعد» has no counterpart on the phone, so a
+ * destination kind for it would resolve to null there — a dead link, which is
+ * precisely what the resolver exists to prevent.
+ *
+ * They live in the adapter rather than in a component for the ordinary reason:
+ * a path interpolated inside a component is how a second routing table starts,
+ * and `scripts/testWebCore.ts` fails the build when one appears.
+ */
+export const SECTION_ROUTES = {
+  /** The software centre's index. */
+  programming: '/programming',
+  /** The ExpressLRS front page, in front of the setup and troubleshooting flows. */
+  expresslrs: '/programming/expresslrs',
+  /**
+   * The honest-scope page for a program this platform does not document.
+   * Never linked for a program that HAS pages — those resolve as destinations.
+   */
+  scope: (topicId: string): string => `/programming/scope/${encodeURIComponent(topicId)}`,
+} as const;
+
+/**
  * Whether an outbound URL is safe to render as a link.
  *
  * Blocks `javascript:`, `data:` and `vbscript:` — the three schemes that turn

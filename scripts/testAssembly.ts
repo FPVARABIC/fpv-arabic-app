@@ -581,6 +581,46 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     // Record<domain, string>; no Assembly logic, and scripts/testKbLanguage.ts
     // is the gate that guards the terms themselves.
     f !== 'src/views/GlossaryView.tsx' &&
+    // ── The software centre, completed on the web ──────────────────────────
+    // The four programme centres now have real pages on the web, and the gaps
+    // are stated rather than hidden. What that needed from the shared core:
+    //
+    //   src/data/software/scope.ts   what the platform does NOT cover, as data
+    //                                rather than as prose on a web page, so the
+    //                                phone and a future answering layer give the
+    //                                same answer to «هل تدعمون INAV؟»
+    //   glossary/terms.ts            four terms the Betaflight pages already
+    //                                referenced but that did not exist (MSP,
+    //                                Serial RX, Save and Reboot, Arming Disable
+    //                                Flags), plus VTX Table and Dynamic Idle
+    //   betaflight/pages/{ports,setup}.ts
+    //                                two of those references pointed at tab
+    //                                NAMES rather than terms; repointed at the
+    //                                concepts that are terms
+    //   search/{buildIndex,query}.ts one new result type, so searching an
+    //                                uncovered programme returns the honest
+    //                                answer instead of three articles that
+    //                                merely mention the word
+    //   platform/destinations.ts     the Betaflight centre gained an id-less
+    //                                form, matching the three other centres —
+    //                                an id'd destination resolves exactly as
+    //                                before, which testWebSoftware asserts
+    //
+    // None of it carries Assembly logic: no part, no compatibility rule, no
+    // stage order, no persistence shape. `scripts/testWebSoftware.ts` is the
+    // gate for all of it, and `scripts/testKbSearch.ts` still guards the index.
+    !f.startsWith('src/data/software/') &&
+    f !== 'src/data/kb/glossary/terms.ts' &&
+    f !== 'src/data/betaflight/pages/ports.ts' &&
+    f !== 'src/data/betaflight/pages/setup.ts' &&
+    f !== 'src/data/kb/search/buildIndex.ts' &&
+    f !== 'src/data/kb/search/query.ts' &&
+    f !== 'src/platform/destinations.ts' &&
+    f !== 'scripts/testWebSoftware.ts' &&
+    f !== 'scripts/testWebSoftwareE2E.ts' &&
+    // The two new gates are registered as npm scripts like every gate before
+    // them. `package.json` carries no product data.
+    f !== 'package.json' &&
     // ── The web platform ───────────────────────────────────────────────────
     // `web/` is the Next.js surface. It is a SEPARATE build that imports the
     // shared core out of ../src rather than copying it, so nothing under it can

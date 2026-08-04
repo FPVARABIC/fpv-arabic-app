@@ -548,8 +548,80 @@ export function videoFactsForModule(p: ProjectSnapshot, moduleId: string): Video
   return videoFactsFor(p, MODULE_VIDEO_FIELDS[moduleId] ?? []);
 }
 
+/**
+ * The findings that named this video-software topic as where to act.
+ *
+ * The fifth mirror of the same rule, and the last one: the verdict engine's own
+ * links decide, so a topic can never claim a finding that did not point at it.
+ */
+export function findingsForVideoToolPage(findings: Finding[], pageId: string): Finding[] {
+  return findings.filter(f =>
+    f.links.some(l => l.kind === 'video' && l.targetId === pageId));
+}
+
+/**
+ * Labels for an explicit field list.
+ *
+ * The video software pages differ from the other three centres in one way: each
+ * page carries its OWN `projectFields`, declared beside its content rather than
+ * in a map here. That is the better arrangement for them — the fields are part
+ * of what the page is about — but it means this module cannot look them up
+ * without importing the video registry, which would drag the whole centre into
+ * every bundle that needs a label. So the caller passes the fields and this
+ * returns their labels, from the same table `videoFactsFor` renders with.
+ */
+export function videoFieldLabels(fields: readonly (keyof VideoSetup)[]): string[] {
+  return fields.map(f => VIDEO_FIELD_LABEL_AR[f]).filter((l): l is string => !!l);
+}
+
 /** The findings that named this diagnostic tree as where to act. */
 export function findingsForDxTree(findings: Finding[], treeId: string): Finding[] {
   return findings.filter(f =>
     f.links.some(l => l.kind === 'dx' && l.targetId === treeId));
+}
+
+// ── What an entry is ABOUT, regardless of what the reader recorded ───────────
+
+/**
+ * The Arabic labels of every field an entry is about — recorded or not.
+ *
+ * `rcFactsFor` and `videoFactsFor` return only fields that HAVE values, which is
+ * the correct contract for them: the core must never invent a value. But it
+ * leaves a UI unable to distinguish "this page has nothing to do with UARTs"
+ * from "this page is about UARTs and you never recorded yours" — and those two
+ * deserve very different screens. Naming the full expected set is the missing
+ * half, and it belongs here rather than in a renderer: a surface that hand-wrote
+ * its own copy of these labels would drift from the ones `rcFactsFor` returns,
+ * and a label that differs by one word makes a recorded field read as missing.
+ *
+ * Derived from the same maps the fact readers use, so a field added to a page
+ * appears in both results at once with no second edit.
+ */
+export type ContextEntryKind = 'betaflight' | 'edgetx' | 'elrs';
+
+function rcLabels(fields: (keyof RcSetup)[] | undefined): string[] {
+  return (fields ?? []).map(f => RC_FIELD_LABEL_AR[f]).filter((l): l is string => !!l);
+}
+
+function videoLabels(fields: (keyof VideoSetup)[] | undefined): string[] {
+  return (fields ?? []).map(f => VIDEO_FIELD_LABEL_AR[f]).filter((l): l is string => !!l);
+}
+
+export function expectedLabelsFor(kind: ContextEntryKind, entryId: string): string[] {
+  switch (kind) {
+    case 'betaflight':
+      return [
+        ...rcLabels(BF_PAGE_RC_FIELDS[entryId]),
+        ...videoLabels(BF_PAGE_VIDEO_FIELDS[entryId]),
+      ];
+    case 'edgetx':
+      return rcLabels(EDGETX_PAGE_RC_FIELDS[entryId]);
+    case 'elrs':
+      return rcLabels(ELRS_ENTRY_RC_FIELDS[entryId]);
+  }
+}
+
+/** Whether an entry has any project-relevant fields at all. */
+export function hasProjectFields(kind: ContextEntryKind, entryId: string): boolean {
+  return expectedLabelsFor(kind, entryId).length > 0;
 }

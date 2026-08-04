@@ -29,7 +29,11 @@ export type Destination =
   | { kind: 'glossary'; id: string }
   | { kind: 'dx'; id: string }
   | { kind: 'lesson'; id: string }
-  | { kind: 'betaflight'; id: string }
+  // The Betaflight centre. Optional id for the same reason the other three
+  // centres have one: «افتح مركز Betaflight» is a real destination, and before
+  // this it resolved to null — so a link to the centre itself rendered as
+  // unavailable while a link to one page inside it worked.
+  | { kind: 'betaflight'; id?: string }
   | { kind: 'elrs-setup'; id?: string }
   | { kind: 'elrs-issue'; id?: string }
   | { kind: 'edgetx'; id?: string }
@@ -101,7 +105,7 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
     case 'lesson':
       return d.id ? `/lessons/${d.id}` : null;
     case 'betaflight':
-      return d.id ? `/betaflight/${d.id}` : null;
+      return d.id ? `/betaflight/${d.id}` : '/betaflight';
     // The software-centre pages are single screens that select an entry from a
     // query parameter, so an id is optional: without one the destination is the
     // page, with one it is the exact step or issue. That difference is the whole
@@ -167,6 +171,7 @@ export function destinationKey(d: Destination): string {
     case 'coverage':
     case 'diagnose':
       return d.kind;
+    case 'betaflight':
     case 'elrs-setup':
     case 'elrs-issue':
     case 'edgetx':
@@ -184,6 +189,7 @@ export function parseDestinationKey(key: string): Destination | null {
     return key === 'project' || key === 'assembly' || key === 'checklist'
       || key === 'coverage' || key === 'diagnose'
       || key === 'elrs-setup' || key === 'elrs-issue' || key === 'edgetx' || key === 'video'
+      || key === 'betaflight'
       ? ({ kind: key } as Destination)
       : null;
   }

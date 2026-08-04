@@ -32,6 +32,7 @@ import { setupSteps } from '../../expresslrs/setupSteps';
 import { allEdgeTxPages } from '../../edgetx/registry';
 import { allVideoToolPages } from '../../video/software/registry';
 import { troubleshootingIssues } from '../../expresslrs/troubleshootingIssues';
+import { SOFTWARE_SCOPE } from '../../software/scope';
 import { resolveDestination } from '../../../platform/destinations';
 import { troubleshootingData } from '../../troubleshootingData';
 
@@ -65,6 +66,7 @@ export type SearchDocType =
   | 'edgetx-topic'
   | 'edgetx-setting'
   | 'video-tool'
+  | 'software-scope'
   | 'troubleshooting';
 
 export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
@@ -83,6 +85,7 @@ export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   'edgetx-topic': 'EdgeTX — موضوع',
   'edgetx-setting': 'EdgeTX — إعداد',
   'video-tool': 'برامج الفيديو',
+  'software-scope': 'خارج التغطية',
   troubleshooting: 'مشكلة وحل',
 };
 
@@ -480,6 +483,39 @@ function buildDocs(): SearchDoc[] {
         ...p.prerequisitesAr, ...p.relationAr, ...p.commonMistakesAr,
         ...p.verifyAr, p.revertAr, ...p.versionNotesAr, ...p.manualRequiredAr,
         ...p.stepsAr.map(x => x.textAr),
+      ),
+    });
+  }
+
+  // Programs the platform does NOT cover.
+  //
+  // Indexed deliberately, and this is the whole point of them: someone typing
+  // «BLHeli» or «هل تدعمون INAV» currently gets results ABOUT those words from
+  // articles that merely mention them, and has to read three pages to work out
+  // that no, there is no coverage. A result that says «خارج التغطية» in its own
+  // badge answers the question in the result list itself.
+  //
+  // The badge is why this is a distinct type rather than an article: a scope
+  // page must never be mistaken for coverage, and its own type label is what
+  // guarantees the reader sees the answer before the click.
+  for (const sc of SOFTWARE_SCOPE) {
+    docs.push({
+      key: `software-scope:${sc.id}`,
+      type: 'software-scope',
+      sourceId: sc.id,
+      titleAr: sc.titleAr,
+      titleEn: sc.nameEn,
+      subtitle: sc.whatItIsAr,
+      route: `/programming/scope/${sc.id}`,
+      contentClass: 'reference',
+      titleTokens: toks(sc.nameEn, sc.titleAr),
+      keywordTokens: toks(
+        ...(sc.bot?.symptomsAr ?? []), ...(sc.bot?.misspellingsAr ?? []),
+        ...(sc.bot?.software ?? []),
+      ),
+      bodyTokens: bodyToks(
+        sc.whatItIsAr, sc.whoNeedsItAr, sc.whyAr, sc.goInsteadAr,
+        ...sc.weHaveAr, ...sc.weDoNotHaveAr,
       ),
     });
   }

@@ -62,6 +62,12 @@ const TYPE_BIAS: Record<SearchDocType, number> = {
   // subject, which is exactly where the ExpressLRS and EdgeTX entries sit.
   'video-tool': 4,
   'elrs-step': 3,
+  // Above the field-level types but below every real page: when someone asks
+  // about a program we do not cover, saying so is a genuine answer and should
+  // be visible — but it must never outrank an article that actually teaches
+  // something adjacent. A reader searching «BLHeli» is better served by the ESC
+  // firmware article first and the «no coverage» notice second.
+  'software-scope': 2,
   'assembly-stage': 2,
   roadmap: 2,
   part: 2,
