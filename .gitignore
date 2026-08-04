@@ -32,3 +32,16 @@ dist-uitest
 dist-assembly-uitest
 dist-project-uitest
 dist-video-uitest
+
+# Scratch output from verification runs — screenshots, review pages, one-off
+# scripts. These are produced to be LOOKED AT and then discarded; a 7 MB set of
+# JPEGs was committed once by a `git add -A` and had to be removed in the next
+# commit, which is exactly what these patterns prevent.
+.brand-shots/
+.preview-shots/
+*.preview-review.html
+.fpvarabic-review.html
+.look.mts
+.shots.mts
+.final.mts
+.verify.mts
