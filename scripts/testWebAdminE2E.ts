@@ -780,6 +780,18 @@ async function main() {
         ok(`a customer cannot ${what} (${res.status})`, res.status === 403);
       }
 
+      // The new admin surfaces refuse a customer as well.
+      for (const path of [
+        '/admin/store/decisions', '/admin/store/settings', '/admin/store/import/template',
+      ]) {
+        const res = await fetch(`${BASE}${path}`, {
+          headers: { Cookie: cookies.map(c => `${c.name}=${c.value}`).join('; ') },
+          redirect: 'manual',
+        });
+        ok(`a customer cannot reach ${path} (${res.status})`,
+          res.status === 403 || (res.status >= 300 && res.status < 400));
+      }
+
       // A DRAFT product is invisible even to a signed-in customer, which is
       // what makes «مسودة» a real state rather than a hidden-by-the-UI one.
       // A product NOTHING in this run publishes. Using one that a later
@@ -817,6 +829,137 @@ async function main() {
       // The admin endpoints refuse a customer, with a code rather than a stack.
       const r = await post('/api/admin/users/role', { uid: victim.uid, role: 'admin', reasonAr: 'محاولة' });
       ok('a customer cannot make themselves an admin', r.status === 403);
+    }
+
+
+    /* ─────────────────────────────────────────────────────────────────── */
+    console.log('\n[0d] The work list, the decisions, and the spreadsheet');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await ctx.newPage();
+      const errors: string[] = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      await signIn(page, admin);
+
+      // ── the two columns ───────────────────────────────────────────────
+      await goto(page, `${BASE}/admin/store/products`, 'h1');
+      ok('the panel separates the owner’s work from the platform’s',
+        (await page.locator('[data-testid="owner-work"]').count()) === 1
+        && (await page.locator('[data-testid="platform-work"]').count()) === 1);
+      const ownerText = await page.locator('[data-testid="owner-work"]').innerText();
+      ok('…and names the photograph, the cost and the publish decision',
+        ownerText.includes('صورة') && ownerText.includes('تكلفة') && ownerText.includes('النشر'));
+      const platformText = await page.locator('[data-testid="platform-work"]').innerText();
+      ok('…while the platform column reports specs, description and variants',
+        platformText.includes('المواصفات') && platformText.includes('الوصف')
+        && platformText.includes('خيارات'));
+      // Every product's alternatives are linked, so that row must read n/n.
+      const relText = await page.locator('[data-testid="platform-alternativesLinked"]').innerText();
+      const [done, total] = (relText.match(/(\d+)\/(\d+)/) ?? []).slice(1).map(Number);
+      ok(`the platform reports its relationship work as finished (${done}/${total})`,
+        !!total && done === total);
+
+      await goto(page, `${BASE}/admin/store/products?q=waiting-on-me`, 'h1');
+      ok('«ينتظر مني» is a filter with real rows in it',
+        (await page.locator('[data-testid="queue-rows"] > li').count()) > 10);
+
+      // ── the five decisions ────────────────────────────────────────────
+      await goto(page, `${BASE}/admin/store/decisions`, 'h1');
+      const cards = await page.locator('[data-testid^="decision-"]').count();
+      ok(`the decisions have their own page (${cards} cards)`, cards >= 5);
+      const first = await page.locator('[data-testid="decision-lipo-safe-bag-is-a-category"]').innerText();
+      ok('…each stating the problem and why the system will not settle it',
+        first.includes('لماذا لا يحسمه النظام'));
+      ok('…with an effect on every option, including doing nothing',
+        first.includes('يحمل مخاطرة') || first.includes('يكلّف'));
+
+      // Deciding is a click, and it sticks.
+      await page.click('[data-testid="decision-option-pocket-combo-not-a-sku-hide"]');
+      await page.click('[data-testid="decision-apply-pocket-combo-not-a-sku"]');
+      await page.waitForSelector('[data-testid="decision-done-pocket-combo-not-a-sku"]',
+        { timeout: 20_000 });
+      await goto(page, `${BASE}/admin/store/decisions`, 'h1');
+      ok('a recorded decision stops the panel asking again',
+        (await page.locator('body').innerText()).includes('قرارات حُسمت'));
+
+      // ── the spreadsheet ───────────────────────────────────────────────
+      await goto(page, `${BASE}/admin/store/supply`, 'h1');
+      ok('the supply screen offers a bulk import', 
+        (await page.locator('[data-testid="supply-import"]').count()) === 1);
+
+      // The template is pre-filled, so the job is «fill in the blanks» rather
+      // than «work out which of ninety ids this row is».
+      const template = await page.evaluate(async base => {
+        const r = await fetch(`${base}/admin/store/import/template`);
+        const buf = new Uint8Array(await r.arrayBuffer());
+        return {
+          status: r.status,
+          // The RAW first three bytes. `Response.text()` strips a BOM while
+          // decoding, so reading the text back would prove nothing about
+          // whether one was sent — and the BOM is the whole reason Excel opens
+          // Arabic instead of mojibake.
+          bom: [buf[0], buf[1], buf[2]].join(','),
+          text: new TextDecoder().decode(buf),
+        };
+      }, BASE);
+      ok(`the template downloads (${template.status})`, template.status === 200);
+      ok('…with a row per variant and the product’s name on it',
+        template.text.includes('betafpv-cetus-pro:rtf')
+        && template.text.includes('BetaFPV Cetus Pro Kit'));
+      ok(`…and a UTF-8 BOM, so Excel opens Arabic correctly (${template.bom})`,
+        template.bom === '239,187,191');
+
+      // A file with one good row and two bad ones imports one and names two.
+      const csv = ['﻿variantId,productNameEn,variantNameAr,supplierId,supplierUrl,'
+        + 'unitCost,inboundShipping,currency,availability,verified,notesAr',
+      'betafpv-meteor75-pro:elrs-analog,Meteor75,تماثلي,getfpv,https://example.com/a,'
+        + '35.00,2.00,USD,in-stock,true,',
+      'no-such:variant,Ghost,وهم,getfpv,,10.00,0,USD,in-stock,,',
+      'happymodel-mobula7:pnp,Mobula7,بلا مستقبِل,getfpv,,$29.99,0,USD,in-stock,,',
+      ].join('\r\n');
+      await page.setInputFiles('[data-testid="import-file"]', {
+        name: 'supply.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf8'),
+      });
+      await page.waitForSelector('[data-testid="import-preview"]', { timeout: 25_000 });
+      const summary = await page.locator('[data-testid="import-summary"]').innerText();
+      ok(`the preview judges each row before anything is written (${summary.replace(/\s+/g, ' ')})`,
+        summary.includes('1') && summary.includes('2'));
+      ok('…naming the unknown variant rather than refusing the file',
+        (await page.locator('[data-testid="import-preview"]').innerText())
+          .includes('لا يوجد خيار شراء بهذا المعرّف'));
+
+      await page.click('[data-testid="import-apply"]');
+      await page.waitForSelector('[data-testid="import-done"]', { timeout: 25_000 });
+      const doneText = await page.locator('[data-testid="import-done"]').innerText();
+      ok('the good row applied and the bad ones did not', doneText.includes('1'));
+      ok('…and the import says plainly that it published nothing',
+        doneText.includes('لم يُنشر'));
+
+      // The price landed, computed from the cost — and the product is still a
+      // draft, because an import cannot publish. Uses a product NOTHING else in
+      // this run publishes, so the assertion cannot pass or fail by ordering.
+      const csv2 = ['﻿variantId,productNameEn,variantNameAr,supplierId,supplierUrl,'
+        + 'unitCost,inboundShipping,currency,availability,verified,notesAr',
+      'caddx-ratel-2:standard,Ratel 2,كاميرا,getfpv,https://example.com/r,'
+        + '24.00,0.00,USD,in-stock,true,',
+      ].join('\r\n');
+      await page.setInputFiles('[data-testid="import-file"]', {
+        name: 'one.csv', mimeType: 'text/csv', buffer: Buffer.from(csv2, 'utf8'),
+      });
+      await page.waitForSelector('[data-testid="import-preview"]', { timeout: 25_000 });
+      await page.click('[data-testid="import-apply"]');
+      await page.waitForSelector('[data-testid="import-done"]', { timeout: 25_000 });
+
+      await goto(page, `${BASE}/admin/store/products/caddx-ratel-2`, 'h1');
+      const afterImport = await page.locator('body').innerText();
+      ok('the imported cost produced a price', /\d\d\.\d\d/.test(afterImport));
+      ok('…and the product is still unpublished', afterImport.includes('مخفي من المتجر'));
+      ok('…so the publish button is the only thing left, and it is the owner’s',
+        (await page.locator('[data-testid="publish-now"]').count()) === 1);
+
+      ok('no page error anywhere in the panel', errors.length === 0);
+      if (errors.length) console.log('   ERRORS:', errors.slice(0, 3));
+      await ctx.close();
     }
 
     /* ─────────────────────────────────────────────────────────────────── */

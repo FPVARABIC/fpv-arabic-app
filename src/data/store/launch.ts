@@ -70,6 +70,10 @@ const GEPRC_MARK5_MANUAL = 'https://geprc.com/wp-content/uploads/2022/03/MARK5-U
 const DJI_O3 = 'https://www.dji.com/o3-air-unit/specs';
 const DJI_N3 = 'https://www.dji.com/goggles-n3/specs';
 const SPEEDYBEE_F405V4 = 'https://www.speedybee.com/speedybee-f405-v4-bls-55a-30x30-fc-esc-stack/';
+const GEPRC_CINELOG25 = 'https://geprc.com/product/cinelog25-v2-analog-quadcopter/';
+const MATEK_M10Q = 'https://www.mateksys.com/?portfolio=m10q-5883';
+const CADDX_RATEL2 =
+  'https://www.caddxfpv.com/products/ratel-2-1-1-8inch-starlight-sensor-freestyle-fpv-camera';
 
 /**
  * Specifications by product id.
@@ -201,7 +205,67 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
     official('الأبعاد', '41.6 × 39.4 × 7.8', 'مم', 'صفحة F405 V4 BLS 55A Stack', SPEEDYBEE_F405V4),
     official('تسجيل الصندوق الأسود', 'بطاقة ذاكرة حتى 4', 'غيغابايت', 'صفحة F405 V4 BLS 55A Stack', SPEEDYBEE_F405V4),
   ],
+
+  // ── Round two ───────────────────────────────────────────────────────────
+  // Read on the same date. Each of these turned up something the catalogue had
+  // wrong as well as something it was missing — see the `noteAr` on their audit
+  // rows: two carried the previous generation's name, and the Cinelog's three
+  // video versions are three different purchases, not one product.
+
+  'geprc-cinelog25': [
+    official('المحرّكات', '1404 4500KV', '', 'صفحة Cinelog25 V2 Analog', GEPRC_CINELOG25),
+    official('متحكّم الطيران والمسرّع', 'TAKER G4 35A AIO', '', 'صفحة Cinelog25 V2 Analog', GEPRC_CINELOG25),
+    official('المراوح', 'HQ DT63mm رباعية الشفرات', '', 'صفحة Cinelog25 V2 Analog', GEPRC_CINELOG25),
+    official('وحدة تحديد الموقع', 'شريحة M10 مدمجة', '', 'صفحة Cinelog25 V2 Analog', GEPRC_CINELOG25),
+    {
+      labelAr: 'الوزن',
+      valueAr: 'غير متوفّر من المصدر',
+      status: 'pending',
+    },
+  ],
+
+  'matek-m10-gps': [
+    official('الشريحة', 'u-blox SAM-M10Q-00B', '', 'صفحة M10Q-5883 الرسمية', MATEK_M10Q),
+    official(
+      'المنظومات المدعومة',
+      'GPS وGLONASS وGalileo وBeiDou في وقت واحد',
+      '', 'صفحة M10Q-5883 الرسمية', MATEK_M10Q,
+    ),
+    official('الهوائي', 'رقعة عالية الكسب 15 × 15', 'مم', 'صفحة M10Q-5883 الرسمية', MATEK_M10Q),
+    official(
+      'البروتوكول ومعدّل التحديث',
+      'UBX بمعدّل 5Hz مع GPS وGalileo وBeiDou B1C وGLONASS، أو NMEA بمعدّل 1Hz',
+      '', 'صفحة M10Q-5883 الرسمية', MATEK_M10Q,
+    ),
+    official('الموصل', 'JST-GH بستّة أطراف', '', 'صفحة M10Q-5883 الرسمية', MATEK_M10Q),
+    { labelAr: 'الوزن', valueAr: 'غير متوفّر من المصدر', status: 'pending' },
+  ],
+
+  'caddx-ratel-2': [
+    official('المستشعر', '1/1.8" ستارلايت بمدى ديناميكي واسع', '', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2),
+    official('الوضوح', '1200', 'خط تلفزيوني', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2),
+    official('زاوية الرؤية', '165', 'درجة', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2),
+    official('زمن التأخير', '8', 'مللي ثانية', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2),
+    official('حساسية الإضاءة', '0.0001', 'لكس', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2),
+    official(
+      'نسبة الصورة والنظام',
+      'تبديل بين 4:3 و16:9، وبين PAL وNTSC',
+      '', 'صفحة Ratel 2 الرسمية', CADDX_RATEL2,
+    ),
+    { labelAr: 'الوزن', valueAr: 'غير متوفّر من المصدر', status: 'pending' },
+  ],
 };
+
+/**
+ * What a source did NOT say.
+ *
+ * «غير متوفّر من المصدر» is a real row and appears on the page as one. It is
+ * the difference between «we did not check» and «we checked and the
+ * manufacturer does not publish it» — and a buyer who needs that figure learns
+ * from the second that asking the manufacturer is the next step, rather than
+ * assuming the shop was careless.
+ */
+export const NOT_PUBLISHED_AR = 'غير متوفّر من المصدر';
 
 /** Products with at least one sourced figure recorded in this file. */
 export function documentedProductIds(): string[] {

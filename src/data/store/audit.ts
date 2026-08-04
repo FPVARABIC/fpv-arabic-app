@@ -46,7 +46,15 @@ export type AuditKind =
   /** Ours. No manufacturer, no photograph to license, no supplier to pay. */
   | 'service'
   /** Several products sold together as one line. */
-  | 'bundle';
+  | 'bundle'
+  /** Real, and listed under the previous generation's name. */
+  | 'needs-rename'
+  /** The same thing as another entry, under a second id. */
+  | 'duplicate'
+  /** Real, and in the wrong section. */
+  | 'wrong-category'
+  /** Real, and sold in versions this catalogue currently flattens into one. */
+  | 'needs-variants';
 
 export const AUDIT_KIND_LABEL_AR: Record<AuditKind, string> = {
   'real-product': 'منتج حقيقي موثَّق',
@@ -55,6 +63,10 @@ export const AUDIT_KIND_LABEL_AR: Record<AuditKind, string> = {
   'not-dropshippable': 'لا يصلح للشحن المباشر',
   service: 'خدمة',
   bundle: 'حزمة مركّبة',
+  'needs-rename': 'يحتاج إعادة تسمية',
+  duplicate: 'مكرَّر',
+  'wrong-category': 'في فئة خاطئة',
+  'needs-variants': 'يحتاج تقسيماً إلى خيارات',
 };
 
 export type AuditDecision =
@@ -173,10 +185,14 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
 
   // ── 2.5 inch ──────────────────────────────────────────────────────────────
   {
-    productId: 'geprc-cinelog25', kind: 'real-product', sources: 'reseller',
+    productId: 'geprc-cinelog25', kind: 'needs-variants', sources: 'official',
     supply: 'moderate', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer',
-    noteAr: 'سينيووب معروف. صفحته الرسمية تحتاج قراءة، ونسخه كثيرة ويجب فصلها كـVariants.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته الرسمية: الطراز المعروض حالياً «Cinelog25 V2» لا «Cinelog25»، '
+      + 'ويُباع بثلاث نسخ فيديو مختلفة (تماثلي · O3 · Wasp) بأسعار ومكوّنات مختلفة. '
+      + 'أُضيفت النسخ الثلاث كخيارات شراء، وسُجّلت مواصفاته الموثّقة. الاسم يحتاج '
+      + 'تصحيحاً إلى V2 وهو تعديل كتالوج.',
   },
   {
     productId: 'betafpv-pavo25', kind: 'real-product', sources: 'reseller',
@@ -241,7 +257,7 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'المنافس المباشر، وله دليل استخدام رسمي منشور — أقوى مصدر في الكتالوج كلّه.',
   },
   {
-    productId: 'tbs-source-one-v5', kind: 'real-product', sources: 'reseller',
+    productId: 'tbs-source-one-v5', kind: 'wrong-category', sources: 'reseller',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: false,
     decision: 'replace',
     noteAr:
@@ -404,7 +420,7 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
       + 'المباشر يضع المشتري بيننا وبين ضمان لا نملكه. أعِد النظر في طريقة عرضه.',
   },
   {
-    productId: 'tbs-source-one-v5-frame', kind: 'real-product', sources: 'reseller',
+    productId: 'tbs-source-one-v5-frame', kind: 'duplicate', sources: 'reseller',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
     decision: 'defer', noteAr: 'ادمجه مع tbs-source-one-v5 — أحدهما مكرَّر.',
   },
@@ -445,9 +461,12 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     decision: 'defer', noteAr: 'مؤجَّل مع بقية قسم الشواحن.',
   },
   {
-    productId: 'caddx-ratel-2', kind: 'real-product', sources: 'reseller',
+    productId: 'caddx-ratel-2', kind: 'real-product', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. كاميرا معروفة ومرشّحة للجولة الثانية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته الرسمية وسُجّلت مواصفاته الستّ. أشهر كاميرا تماثلية في السوق '
+      + 'وأكثرها استعمالاً في التركيبات الجاهزة.',
   },
   {
     productId: 'runcam-phoenix-2', kind: 'real-product', sources: 'reseller',
@@ -477,9 +496,13 @@ export const CATALOGUE_AUDIT: AuditRow[] = [
     noteAr: 'طاقة عالية — الأكثر عرضة لقيود قانونية. لا يُنشر قبل حسم ذلك.',
   },
   {
-    productId: 'matek-m10-gps', kind: 'real-product', sources: 'reseller',
+    productId: 'matek-m10-gps', kind: 'needs-rename', sources: 'official',
     supply: 'easy', imagesLicensable: 'unknown', fitsCategory: true,
-    decision: 'defer', noteAr: 'مؤجَّل. Matek تنشر وثائق ممتازة — مرشّح قوي للجولة الثانية.',
+    decision: 'approve', launchSet: true,
+    noteAr:
+      'قُرئت صفحته الرسمية وسُجّلت مواصفاته. تنبيه: الطراز المعروض حالياً '
+      + '«M10Q-5883»، بينما «M10-5883» موسوم عند Matek بأنه أُوقف. الاسم في '
+      + 'الكتالوج يحتاج تصحيحاً حتى لا يطلب المشتري طرازاً متوقّفاً.',
   },
   {
     productId: 'holybro-m10-gps', kind: 'real-product', sources: 'reseller',

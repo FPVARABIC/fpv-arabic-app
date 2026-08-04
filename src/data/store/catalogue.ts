@@ -356,6 +356,27 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     notFor: ['الفريستايل الحادّ — الحماية حول المراوح تكلّف كفاءة.'],
     highlights: ['ثبات مناسب للتصوير', 'يعمل داخل وخارج البيت'],
     inBox: ['الطائرة', 'مراوح احتياطية'],
+    availability: 'needs-confirmation',
+    // Three video versions, read off GEPRC's own product pages. They are three
+    // different purchases — different cameras, different transmitters,
+    // different goggles required — not one product with a colour option.
+    variants: [
+      {
+        id: 'analog', nameAr: 'تماثلي', kind: 'bnf',
+        link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة', 'مراوح احتياطية', 'أدوات'],
+      },
+      {
+        id: 'hd-o3', nameAr: 'رقمي بوحدة DJI O3', kind: 'bnf',
+        link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بوحدة O3', 'مراوح احتياطية', 'أدوات'],
+      },
+      {
+        id: 'hd-wasp', nameAr: 'رقمي بنظام Walksnail', kind: 'bnf',
+        link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بوحدة Walksnail', 'مراوح احتياطية', 'أدوات'],
+      },
+    ],
   }),
   product({
     id: 'iflight-nazgul-evoque-f3',

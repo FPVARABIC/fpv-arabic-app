@@ -72,6 +72,9 @@ export interface SupplyCsvRow {
   notesAr: string;
 }
 
+/** The UTF-8 byte order mark, as an escape rather than an invisible literal. */
+export const BOM = '\uFEFF';
+
 /** One line of CSV, with the quoting rules a spreadsheet expects. */
 function cell(value: string): string {
   // A field containing a comma, a quote or a newline must be quoted, and inner
@@ -87,7 +90,10 @@ export function toCsv(rows: SupplyCsvRow[]): string {
   // A BOM, so Excel opens Arabic as UTF-8 instead of as mojibake. Without it
   // every note in the file becomes unreadable the moment somebody double-clicks
   // it on Windows, and they conclude the export is broken.
-  return `﻿${lines.join('\r\n')}\r\n`;
+  //
+  // Written as an escape, not as a literal: a raw BOM in a source file is an
+  // invisible character that nobody reviewing the diff can see.
+  return `${BOM}${lines.join('\r\n')}\r\n`;
 }
 
 /**
@@ -99,7 +105,7 @@ export function toCsv(rows: SupplyCsvRow[]): string {
  * the cost column, and a bad price nobody notices is worse than a refusal.
  */
 export function parseCsv(text: string): { rows: Record<string, string>[]; errorAr?: string } {
-  const clean = text.replace(/^﻿/, '');
+  const clean = text.startsWith(BOM) ? text.slice(BOM.length) : text;
   const records = splitRecords(clean);
   if (records.length === 0) return { rows: [], errorAr: 'الملف فارغ.' };
 

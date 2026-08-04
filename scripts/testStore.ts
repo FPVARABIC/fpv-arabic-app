@@ -48,6 +48,19 @@ import {
   isPriceStale, daysBetween, MIN_VERIFIED_SPECS, DEFAULT_PRICE_REVIEW_DAYS,
 } from '../src/data/store/publication';
 import { CATALOGUE_AUDIT, auditFor, launchSetIds, auditSummary } from '../src/data/store/audit';
+import { NEED_CAVEAT_AR, alternativesFor } from '../src/data/store/relationships';
+import { OWNER_DECISIONS } from '../src/data/store/decisions';
+import {
+  toCsv, parseCsv, validateRows, SUPPLY_CSV_COLUMNS,
+} from '../src/data/store/supplyCsv';
+
+/** The sections whose members genuinely need something else to be usable. */
+const NEEDS_SECTIONS = [
+  'tiny-whoop', 'size-2', 'size-2-5', 'size-3', 'size-3-5', 'size-5', 'size-7',
+  'rtf', 'batteries', 'chargers', 'motors', 'escs', 'flight-controllers',
+  'receivers', 'cameras', 'vtx', 'air-units', 'antennas', 'gps', 'frames',
+  'radios', 'goggles',
+];
 import { LAUNCH_SPECS, CHECKED } from '../src/data/store/launch';
 import { isSpecVerified } from '../src/data/store/types';
 import { ROLE_CAPABILITIES } from '../src/data/auth/roles';
@@ -1569,6 +1582,242 @@ console.log('\n[20] The audit covers the catalogue, and the launch set is real')
   const summary = auditSummary();
   ok('the audit reports that every product still needs image rights',
     summary.imagesPending === summary.total);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[21] The catalogue is linked, and the links claim only what they can');
+{
+  const nonService = STORE_PRODUCTS.filter(p => p.categoryId !== SERVICES_CATEGORY_ID);
+
+  ok('every product offers alternatives',
+    nonService.every(p => p.alternativeProductIds.length > 0));
+  // Accessories need nothing, which is why the rule table has no entry for them
+  // — an empty list there is correct rather than missing.
+  const shouldComplete = nonService.filter(p => NEEDS_SECTIONS.includes(p.categoryId));
+  ok(`every product in a section with declared needs has complements (${shouldComplete.length})`,
+    shouldComplete.length > 0 && shouldComplete.every(p => p.completesProductIds.length > 0));
+
+  const ids = new Set(STORE_PRODUCTS.map(p => p.id));
+  const dangling = STORE_PRODUCTS.flatMap(p =>
+    [...p.alternativeProductIds, ...p.completesProductIds].filter(id => !ids.has(id)));
+  ok('no relationship points at a product that does not exist', dangling.length === 0);
+  ok('no product recommends itself',
+    STORE_PRODUCTS.every(p =>
+      ![...p.alternativeProductIds, ...p.completesProductIds].includes(p.id)));
+
+  // The RULE only ever produces section-mates — a claim that cannot be wrong,
+  // which is the whole reason it is the one the rule makes.
+  //
+  // Scoped to what the rule produces, not to every list on the catalogue. A
+  // person may legitimately cross sections: the Cetus Pro kit and the Tinyhawk
+  // RTF really are alternatives to each other even though one is filed under
+  // «ووب» and the other under «أطقم جاهزة», and a test that forbade that would
+  // be a test overruling the judgement the override exists for.
+  const derivedStray = STORE_PRODUCTS.flatMap(p => alternativesFor(p, STORE_PRODUCTS)
+    .map(id => STORE_PRODUCTS.find(x => x.id === id)!)
+    .filter(a => a && a.categoryId !== p.categoryId)
+    .map(a => `${p.id}→${a.id}`));
+  if (derivedStray.length) console.error('   RULE CROSSED A SECTION:', derivedStray);
+  ok('the rule only ever suggests a product’s own section-mates', derivedStray.length === 0);
+  ok('…and the rule actually produced something, so that is not vacuous',
+    STORE_PRODUCTS.some(p => alternativesFor(p, STORE_PRODUCTS).length > 0));
+
+  // A hand-written list crossing a section is allowed, and there is one — so
+  // the override is real rather than theoretical.
+  const crossed = STORE_CATALOGUE.filter(p => p.alternativeProductIds
+    .some(id => STORE_CATALOGUE.find(x => x.id === id)?.categoryId !== p.categoryId));
+  ok(`a person may cross sections deliberately, and has (${crossed.length})`,
+    crossed.length > 0);
+
+  // Three is the cap: a page offering six alternatives has stopped
+  // recommending and started listing.
+  ok('no product offers more than three alternatives',
+    STORE_PRODUCTS.every(p => p.alternativeProductIds.length <= 3));
+
+  // A complement is a CATEGORY-level need and never a fit. The caveat is what
+  // keeps the link from being read as a compatibility claim, so a section whose
+  // fit genuinely varies must carry one.
+  for (const section of ['batteries', 'goggles', 'radios', 'receivers', 'escs']) {
+    ok(`«${section}» links carry the caveat a buyer must check`,
+      !!NEED_CAVEAT_AR[section] && NEED_CAVEAT_AR[section].length > 20);
+  }
+  const productPage = readFileSync(
+    join(ROOT, 'web/app/store/p/[productId]/page.tsx'), 'utf8');
+  ok('the page says «ستحتاج أيضاً», never «متوافق مع»',
+    productPage.includes('ستحتاج أيضاً') && !stripComments(productPage).includes('متوافق مع'));
+  ok('…and renders the caveats beside the links',
+    productPage.includes('NEED_CAVEAT_AR') && productPage.includes('caveats='));
+
+  // A hand-written list is never overwritten by the rule: a product whose
+  // neighbours were chosen deliberately keeps them.
+  const handPicked = STORE_CATALOGUE.find(p => p.alternativeProductIds.length > 0);
+  if (handPicked) {
+    const merged = STORE_PRODUCTS.find(p => p.id === handPicked.id)!;
+    ok('a hand-written alternative list survives the rule',
+      JSON.stringify(merged.alternativeProductIds)
+      === JSON.stringify(handPicked.alternativeProductIds));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[22] The spreadsheet round-trip');
+{
+  const variantIds = new Set(STORE_PRODUCTS.flatMap(p => p.variants.map(v => v.id)));
+  const supplierIds = new Set(SUPPLIERS.map(s => s.id));
+  const ctx = { knownVariantIds: variantIds, knownSupplierIds: supplierIds };
+  const someVariant = [...variantIds][0];
+
+  // Out and back in, unchanged.
+  const exported = toCsv([{
+    variantId: someVariant, productNameEn: 'X', variantNameAr: 'ي',
+    supplierId: 'getfpv', supplierUrl: 'https://example.com/x',
+    unitCost: '29.99', inboundShipping: '0.00', currency: 'USD',
+    availability: 'in-stock', verified: 'true', notesAr: 'ملاحظة, فيها فاصلة',
+  }]);
+  const back = parseCsv(exported);
+  ok('a row survives export and re-import', back.rows.length === 1
+    && back.rows[0].variantId === someVariant);
+  // Arabic notes contain commas constantly; unquoted they would shift every
+  // column after them by one.
+  ok('a comma inside a field does not shift the columns',
+    back.rows[0].notesAr === 'ملاحظة, فيها فاصلة');
+  ok('Excel gets a BOM, so Arabic is not mojibake', exported.startsWith('﻿'));
+
+  const verdicts = validateRows(back.rows, ctx);
+  ok('a complete row applies', verdicts[0].kind === 'apply');
+  ok('…converting money exactly',
+    verdicts[0].kind === 'apply' && verdicts[0].unitCostMinor === 2999);
+
+  // Every refusal, one at a time.
+  const cases: [string, Record<string, string>, 'reject' | 'skip'][] = [
+    ['an unknown variant', { variantId: 'no-such:variant', unitCost: '1.00', supplierId: 'getfpv' }, 'reject'],
+    ['no id at all', { variantId: '', unitCost: '1.00' }, 'reject'],
+    ['a price with a currency symbol', { variantId: someVariant, unitCost: '$29.99', supplierId: 'getfpv' }, 'reject'],
+    ['a comma decimal, which means different things in different places',
+      { variantId: someVariant, unitCost: '29,99', supplierId: 'getfpv' }, 'reject'],
+    ['a third decimal place', { variantId: someVariant, unitCost: '29.999', supplierId: 'getfpv' }, 'reject'],
+    ['an unknown supplier', { variantId: someVariant, unitCost: '1.00', supplierId: 'nope' }, 'reject'],
+    ['no supplier', { variantId: someVariant, unitCost: '1.00', supplierId: '' }, 'reject'],
+    ['a non-USD currency', { variantId: someVariant, unitCost: '1.00', supplierId: 'getfpv', currency: 'EUR' }, 'reject'],
+    ['an unknown availability', { variantId: someVariant, unitCost: '1.00', supplierId: 'getfpv', availability: 'maybe' }, 'reject'],
+    ['a non-http supplier link', { variantId: someVariant, unitCost: '1.00', supplierId: 'getfpv', supplierUrl: 'javascript:x' }, 'reject'],
+    // A blank cost is a row nobody has got to yet. Skipping is right: an import
+    // must never blank a price somebody already entered.
+    ['a blank cost', { variantId: someVariant, unitCost: '' }, 'skip'],
+  ];
+  for (const [what, row, want] of cases) {
+    ok(`${what} is ${want === 'reject' ? 'refused' : 'left alone'}`,
+      validateRows([row], ctx)[0].kind === want);
+  }
+
+  // A file that disagrees with itself is refused rather than last-wins.
+  const dup = validateRows([
+    { variantId: someVariant, unitCost: '1.00', supplierId: 'getfpv' },
+    { variantId: someVariant, unitCost: '2.00', supplierId: 'getfpv' },
+  ], ctx);
+  ok('a duplicated variant in one file is refused', dup[1].kind === 'reject');
+
+  // A misaligned header would write supplier ids into the cost column.
+  ok('a file with a missing column is refused whole',
+    !!parseCsv('variantId,unitCost\nx,1').errorAr);
+  ok('…and says which columns are missing',
+    (parseCsv('variantId,unitCost\nx,1').errorAr ?? '').includes('supplierId'));
+  ok('an empty file is refused', !!parseCsv('').errorAr);
+
+  // Empty shipping means zero: «no shipping line» and «free shipping» are the
+  // same thing to a supplier, and demanding a 0 is busywork.
+  const noShip = validateRows(
+    [{ variantId: someVariant, unitCost: '10.00', supplierId: 'getfpv' }], ctx);
+  ok('blank shipping is read as zero, not as an error',
+    noShip[0].kind === 'apply' && noShip[0].inboundShippingMinor === 0);
+
+  // «Verified» means a person looked. A spreadsheet cannot claim it for them.
+  ok('«verified» defaults to false rather than true',
+    noShip[0].kind === 'apply' && noShip[0].verified === false);
+
+  // AN IMPORT CANNOT PUBLISH. Not one row, not by any column.
+  const importAction = readFileSync(
+    join(ROOT, 'web/app/admin/store/import/actions.ts'), 'utf8');
+  ok('the importer writes no published field',
+    !/published/.test(stripComments(importAction).replace(/\/\*[\s\S]*?\*\//g, '')));
+  ok('there is no published column to write from',
+    !(SUPPLY_CSV_COLUMNS as readonly string[]).includes('published'));
+  ok('preview and apply run the same validation',
+    (importAction.match(/judge\(csv\)/g) ?? []).length === 2);
+  ok('the import needs both the edit and the supply capability',
+    importAction.includes("sessionCan(session, 'store.editProducts')")
+    && importAction.includes("sessionCan(session, 'store.viewSupply')"));
+  ok('the import is audited as one entry naming how many rows moved',
+    importAction.includes("action: 'store.import'"));
+  ok('a failed batch writes nothing', importAction.includes('batch.commit()')
+    && importAction.includes('لم يُكتب شيء'));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[23] The work list, and the decisions the system refuses to make');
+{
+  const queue = readFileSync(join(ROOT, 'web/lib/server/storeQueue.ts'), 'utf8');
+
+  // The owner's column names exactly the six things they said they would do.
+  for (const k of ['needsImage', 'needsSupplier', 'needsUnitCost', 'needsShipping',
+    'needsPriceReview', 'needsPublishDecision']) {
+    ok(`«${k}» is on the owner's list`, queue.includes(`${k}:`));
+  }
+  // …and the platform's column names what the platform owes.
+  for (const k of ['specsDocumented', 'descriptionComplete', 'variantsComplete',
+    'categorised', 'alternativesLinked', 'servicesDecided']) {
+    ok(`«${k}» is on the platform's list`, queue.includes(`${k}:`));
+  }
+  // No single percentage: «80% complete» hides whether the missing fifth is a
+  // caption or the price.
+  ok('there is no blended completion percentage',
+    !/percent|completion\s*=|\/\s*6\s*\*\s*100/.test(stripComments(queue)));
+  // Zero shipping is a real answer — plenty of suppliers ship free — so the
+  // check must be «was it filled in», not «is it non-zero».
+  ok('zero shipping counts as answered, not as missing',
+    queue.includes('inboundShippingMinor === undefined'));
+  // «Needs a publish decision» on something unpublishable is noise, not a task.
+  ok('a publish decision is only outstanding once it could actually be made',
+    queue.includes("=== 'ready'"));
+
+  const page = readFileSync(join(ROOT, 'web/app/admin/store/products/page.tsx'), 'utf8');
+  ok('the panel shows the two columns separately',
+    page.includes('data-testid="owner-work"') && page.includes('data-testid="platform-work"'));
+  ok('…and each row names its own outstanding owner work',
+    page.includes('row-owner-'));
+
+  // ── the five decisions ─────────────────────────────────────────────────
+  ok(`there are five open questions (${OWNER_DECISIONS.length})`, OWNER_DECISIONS.length === 5);
+  ok('every decision names a real product',
+    OWNER_DECISIONS.every(d => STORE_PRODUCTS.some(p => p.id === d.productId)));
+  ok('every decision says why the system will not settle it',
+    OWNER_DECISIONS.every(d => d.whyNotAutomaticAr.length > 40));
+  ok('every decision offers at least two options',
+    OWNER_DECISIONS.every(d => d.options.length >= 2));
+  // Inaction has a consequence, and a page that prices only the actions
+  // quietly argues for inaction.
+  ok('every option states what it costs, including «leave it»',
+    OWNER_DECISIONS.every(d => d.options.every(o => o.effectAr.length > 25)));
+  ok('a recommendation, where present, says what it rests on',
+    OWNER_DECISIONS.every(d => !d.recommendedOptionId || !!d.recommendationBasisAr));
+  ok('…and it names one of that decision’s own options',
+    OWNER_DECISIONS.every(d => !d.recommendedOptionId
+      || d.options.some(o => o.id === d.recommendedOptionId)));
+  // Politeness is not evidence. Some of these genuinely have no answer.
+  ok('some decisions honestly offer no recommendation',
+    OWNER_DECISIONS.some(d => !d.recommendedOptionId));
+
+  // A click may hide. It may not rewrite the catalogue.
+  const decisionAction = readFileSync(
+    join(ROOT, 'web/app/admin/store/decisions/actions.ts'), 'utf8');
+  ok('a decision may unpublish, because that is reversible',
+    decisionAction.includes("option.action === 'unpublish'"));
+  ok('…and may not swap a product or split it — that is a reviewed commit',
+    !/categoryId|variants\s*:/.test(stripComments(decisionAction)));
+  ok('every decision is audited under the owner’s name',
+    decisionAction.includes("action: 'store.decision'"));
+  ok('…recording the option in its own words, not as an id',
+    decisionAction.includes('option.labelAr'));
 }
 
 console.log(`\n${failed === 0 ? '✅' : '❌'} testStore: ${passed} passed, ${failed} failed`);
