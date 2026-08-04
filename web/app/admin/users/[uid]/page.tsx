@@ -81,7 +81,7 @@ export default async function AdminUserDetail(
 
         {whyNot && (
           <p className="card-sm" data-testid="admin-user-blocked" style={{
-            padding: '13px 15px', marginTop: 16, fontSize: 13, color: '#fcd34d', lineHeight: 1.9,
+            padding: '13px 15px', marginTop: 16, fontSize: 13, color: 'var(--sev-warning)', lineHeight: 1.9,
           }}>
             {whyNot}
           </p>

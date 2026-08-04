@@ -134,7 +134,7 @@ export const ProjectContextPanel: React.FC<ProjectContextProps> = ({ kind, entry
 
       {missing.length > 0 && (
         <div style={{ marginTop: 13 }} data-testid="project-context-missing">
-          <h3 style={{ margin: '0 0 7px', fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>
+          <h3 style={{ margin: '0 0 7px', fontSize: 12.5, fontWeight: 900, color: 'var(--sev-warning)' }}>
             لم تسجّله بعد
           </h3>
           <ul style={{ margin: 0, paddingInlineStart: 20, display: 'grid', gap: 5 }}>

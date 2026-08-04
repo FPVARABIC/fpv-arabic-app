@@ -39,7 +39,7 @@ export default async function AdminDecisions() {
 
       {open.length === 0 && (
         <p className="card-sm" data-testid="decisions-none"
-          style={{ padding: '14px 16px', fontSize: 13, color: '#6ee7b7' }}>
+          style={{ padding: '14px 16px', fontSize: 13, color: 'var(--sev-ok)' }}>
           لا قرار مفتوح. كل ما كان ينتظرك حُسم.
         </p>
       )}

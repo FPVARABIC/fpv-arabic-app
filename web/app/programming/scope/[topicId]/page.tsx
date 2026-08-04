@@ -75,7 +75,7 @@ export default async function SoftwareScopePage(
       {/* The verdict, before anything else. Nobody should have to scroll to
           learn that the answer is no. */}
       <p className="card" data-testid="scope-verdict"
-        style={{ padding: '15px 17px', marginTop: 16, fontSize: 14, lineHeight: 2, color: '#fcd34d' }}>
+        style={{ padding: '15px 17px', marginTop: 16, fontSize: 14, lineHeight: 2, color: 'var(--sev-warning)' }}>
         هذه الصفحة تقول ما لا نغطّيه، بصراحة. لا يوجد شرح لهذا البرنامج في المنصة،
         وما تجده أدناه هو ما نملكه فعلاً مما يتّصل به، وأين تذهب لما لا نملكه.
       </p>
@@ -108,7 +108,7 @@ export default async function SoftwareScopePage(
         <h2 id="scope-missing">ما لا تملكه</h2>
         <ul style={{ margin: 0, paddingInlineStart: 20, display: 'grid', gap: 7 }} data-testid="scope-missing">
           {scope.weDoNotHaveAr.map((t, i) => (
-            <li key={i} style={{ fontSize: 13.5, lineHeight: 1.95, color: '#fcd34d' }}>{t}</li>
+            <li key={i} style={{ fontSize: 13.5, lineHeight: 1.95, color: 'var(--sev-warning)' }}>{t}</li>
           ))}
         </ul>
       </section>

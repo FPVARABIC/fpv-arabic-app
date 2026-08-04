@@ -133,7 +133,7 @@ const Group: React.FC<{
       <ul className="card-sm" style={{
         margin: 0, padding: '13px 15px 13px 34px', paddingInlineStart: 34,
         fontSize: 13.5, lineHeight: 1.95, display: 'grid', gap: 6,
-        color: tone === 'danger' ? '#fca5a5' : 'var(--text-dim)',
+        color: tone === 'danger' ? 'var(--sev-blocker)' : 'var(--text-dim)',
       }}>
         {items.map((t, i) => <li key={i}>{t}</li>)}
       </ul>

@@ -18,8 +18,8 @@ export const metadata: Metadata = {
 
 const WARN_COLOR: Record<string, string> = {
   info: 'var(--text-dim)',
-  warning: '#fcd34d',
-  danger: '#fca5a5',
+  warning: 'var(--sev-warning)',
+  danger: 'var(--sev-blocker)',
 };
 
 const WARN_LABEL_AR: Record<string, string> = {
@@ -72,7 +72,7 @@ export default function ExpressLrsSetup() {
         عطل يبدو عشوائياً.
       </p>
 
-      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: '#fca5a5', lineHeight: 2 }}>
+      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 2 }}>
         انزع المراوح قبل أي خطوة تتضمّن تسليحاً أو تحريك عصي. لا تختبر رابطاً
         والمراوح مركّبة.
       </p>

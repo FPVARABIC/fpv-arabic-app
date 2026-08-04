@@ -46,7 +46,7 @@ export const CheckoutForm: React.FC<{ catalogue: readonly PricedProduct[] }> = (
   if (placed) {
     return (
       <div className="card" data-testid="order-placed" style={{ padding: '20px 22px', marginTop: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#6ee7b7' }}>وصل طلبك</h2>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--sev-ok)' }}>وصل طلبك</h2>
         <p style={{ margin: '9px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
           رقم الطلب <span className="ltr" data-testid="order-id">{placed}</span>. سنتواصل معك
           لتأكيد التوفّر وتكلفة الشحن قبل أي دفع.
@@ -113,7 +113,7 @@ export const CheckoutForm: React.FC<{ catalogue: readonly PricedProduct[] }> = (
               </span>
               <span style={{ whiteSpace: 'nowrap' }}>
                 {l.unitPriceMinor === 0
-                  ? <span style={{ color: '#6ee7b7' }}>مجاناً</span>
+                  ? <span style={{ color: 'var(--sev-ok)' }}>مجاناً</span>
                   : formatPrice(l.lineTotalMinor, l.product.currency)}
               </span>
             </li>
@@ -153,7 +153,7 @@ export const CheckoutForm: React.FC<{ catalogue: readonly PricedProduct[] }> = (
 
       {error && (
         <p data-testid="checkout-error" role="alert" className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: '#fca5a5', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
           {error}
         </p>
       )}

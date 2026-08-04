@@ -101,7 +101,7 @@ export default async function AdminProducts(
         <h2 id="split-h">أين يقف العمل</h2>
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           <div data-testid="owner-work">
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>ينتظر مني</p>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--sev-warning)' }}>ينتظر مني</p>
             <ul style={{ margin: '9px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
               {(Object.keys(OWNER_WORK_LABEL_AR) as (keyof OwnerWork)[]).map(k => {
                 const n = rows.filter(r => r.owner[k]).length;
@@ -150,8 +150,8 @@ export default async function AdminProducts(
             <dd className="ltr">{audit.launchSet}</dd>
           </div>
           <div>
-            <dt style={{ color: '#fcd34d' }}>بانتظار تأكيد حقوق الصور</dt>
-            <dd className="ltr" style={{ color: '#fcd34d' }}>{audit.imagesPending}</dd>
+            <dt style={{ color: 'var(--sev-warning)' }}>بانتظار تأكيد حقوق الصور</dt>
+            <dd className="ltr" style={{ color: 'var(--sev-warning)' }}>{audit.imagesPending}</dd>
           </div>
         </dl>
       </section>
@@ -180,7 +180,7 @@ export default async function AdminProducts(
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 900, whiteSpace: 'nowrap' }}>
                     {p.variants[0]?.priceMinor == null
-                      ? <span style={{ color: '#fcd34d', fontSize: 11.5, fontWeight: 500 }}>بلا سعر</span>
+                      ? <span style={{ color: 'var(--sev-warning)', fontSize: 11.5, fontWeight: 500 }}>بلا سعر</span>
                       : <span className="ltr">{formatPrice(p.variants[0].priceMinor, p.currency)}</span>}
                   </span>
                 </div>
@@ -188,8 +188,8 @@ export default async function AdminProducts(
                 <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
                   <span className="admin-badge" data-testid={`stage-${p.id}`}
                     style={{
-                      color: row.stage === 'published' ? '#6ee7b7'
-                        : row.stage === 'ready' ? 'var(--accent)' : '#fcd34d',
+                      color: row.stage === 'published' ? 'var(--sev-ok)'
+                        : row.stage === 'ready' ? 'var(--accent)' : 'var(--sev-warning)',
                     }}>
                     {STAGE_LABEL_AR[row.stage]}
                   </span>
@@ -204,7 +204,7 @@ export default async function AdminProducts(
                     مواصفات موثّقة: <span dir="ltr">{row.sourcedSpecs}</span>
                   </span>
                   {row.audit && row.audit.decision !== 'approve' && (
-                    <span className="admin-badge" style={{ color: '#fcd34d' }}
+                    <span className="admin-badge" style={{ color: 'var(--sev-warning)' }}
                       data-testid={`audit-${p.id}`}>
                       {AUDIT_DECISION_LABEL_AR[row.audit.decision]} — {AUDIT_KIND_LABEL_AR[row.audit.kind]}
                     </span>
@@ -216,7 +216,7 @@ export default async function AdminProducts(
                     .filter(k => row.owner[k])
                     .map(k => (
                       <span key={k} className="admin-badge" data-testid={`row-owner-${k}-${p.id}`}
-                        style={{ color: '#fcd34d' }}>
+                        style={{ color: 'var(--sev-warning)' }}>
                         {OWNER_WORK_LABEL_AR[k]}
                       </span>
                     ))}
@@ -248,7 +248,7 @@ export default async function AdminProducts(
                     {[...hardBlockers(row.blockers), ...advisories(row.blockers)].map((b, i) => (
                       <li key={i} style={{
                         fontSize: 11.5, lineHeight: 1.85,
-                        color: b.severity === 'blocking' ? '#fca5a5' : 'var(--text-dimmer)',
+                        color: b.severity === 'blocking' ? 'var(--sev-blocker)' : 'var(--text-dimmer)',
                       }}>
                         {b.messageAr}
                         {b.fixHref && (
@@ -262,7 +262,7 @@ export default async function AdminProducts(
                 {/* The audit's own note, where it says something a data-entry
                     round will not fix. */}
                 {row.audit && row.audit.decision !== 'approve' && (
-                  <p style={{ margin: 0, fontSize: 11.5, color: '#fcd34d', lineHeight: 1.9 }}>
+                  <p style={{ margin: 0, fontSize: 11.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
                     {row.audit.noteAr}
                   </p>
                 )}

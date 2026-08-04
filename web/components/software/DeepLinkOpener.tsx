@@ -74,7 +74,7 @@ export const DeepLinkOpener: React.FC<{
         data-testid="deeplink-missing"
         style={{ padding: '13px 15px', marginTop: 16, borderColor: 'rgba(252,211,77,0.35)' }}
       >
-        <p style={{ margin: 0, fontSize: 13, color: '#fcd34d', lineHeight: 1.95 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--sev-warning)', lineHeight: 1.95 }}>
           الرابط طلب {nounAr} باسم <span className="ltr">{requested}</span> ولا وجود له هنا.
           قد يكون الاسم تغيّر. القائمة كاملة أدناه.
         </p>

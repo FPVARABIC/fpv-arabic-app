@@ -6,6 +6,7 @@ import '@fontsource-variable/cairo';
 import './globals.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
+import { BottomNav } from '@/components/NavTabs';
 import { getSession } from '@/lib/server/session';
 
 /**
@@ -50,7 +51,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#02080f',
+  // The header's mint, so a mobile browser's own chrome continues the bar
+  // instead of framing it in a colour the product does not use.
+  themeColor: '#5EEAD4',
   width: 'device-width',
   initialScale: 1,
 };
@@ -70,6 +73,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <main id="main">{children}</main>
         <SiteFooter />
+        {/* The thumb-reachable tab bar. CSS hides it from 900px up, where the
+            same tabs are already in the header — one component, two placements. */}
+        <BottomNav />
       </body>
     </html>
   );

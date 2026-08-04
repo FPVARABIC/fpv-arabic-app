@@ -131,7 +131,7 @@ export default function GlossaryPage() {
                     </p>
                   )}
                   {t.confusedWith.length > 0 && (
-                    <p style={{ fontSize: 12, color: '#fcd34d', margin: '9px 0 0', lineHeight: 1.8 }}>
+                    <p style={{ fontSize: 12, color: 'var(--sev-warning)', margin: '9px 0 0', lineHeight: 1.8 }}>
                       يُخلَط مع: {t.confusedWith.map(c => c.note).join(' · ')}
                     </p>
                   )}

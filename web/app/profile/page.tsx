@@ -55,7 +55,7 @@ export default async function ProfilePage() {
             borderColor: 'rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.07)',
           }}
         >
-          <p style={{ margin: 0, fontSize: 13.5, color: '#fca5a5', lineHeight: 1.9 }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
             هذا الحساب موقوف. يمكنك تصفّح المحتوى، لكن لا يمكنك النشر أو التعليق.
           </p>
         </div>

@@ -243,7 +243,7 @@ export const NewPostForm: React.FC = () => {
         <p role="alert" data-testid="new-post-error" style={{
           margin: '16px 0 0', padding: '11px 14px', borderRadius: 'var(--radius-sm)',
           background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.32)',
-          fontSize: 13, color: '#fca5a5', lineHeight: 1.85,
+          fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.85,
         }}>
           {error}
         </p>

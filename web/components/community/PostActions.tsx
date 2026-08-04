@@ -79,7 +79,7 @@ export const PostActions: React.FC<{
           style={{
             margin: '0 0 12px', padding: '10px 13px', borderRadius: 'var(--radius-sm)',
             background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.32)',
-            fontSize: 13, color: '#fca5a5',
+            fontSize: 13, color: 'var(--sev-blocker)',
           }}>
           {error}
         </p>
@@ -89,7 +89,7 @@ export const PostActions: React.FC<{
           style={{
             margin: '0 0 12px', padding: '10px 13px', borderRadius: 'var(--radius-sm)',
             background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.32)',
-            fontSize: 13, color: '#6ee7b7',
+            fontSize: 13, color: 'var(--sev-ok)',
           }}>
           {done}
         </p>
@@ -133,7 +133,7 @@ export const PostActions: React.FC<{
 
       {mode === 'confirmDelete' && (
         <div className="card-sm" style={{ padding: '14px 16px', marginBottom: 14, borderColor: 'rgba(248,113,113,0.32)' }}>
-          <p style={{ margin: 0, fontSize: 13.5, color: '#fca5a5', lineHeight: 1.9 }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
             سيُخفى المنشور عن الجميع. التعليقات تبقى محفوظة، ولا يمكنك التراجع من هنا.
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -146,7 +146,7 @@ export const PostActions: React.FC<{
               )}
               style={{
                 background: 'rgba(248,113,113,0.16)', border: '1px solid rgba(248,113,113,0.4)',
-                color: '#fca5a5', borderRadius: 'var(--radius-sm)', padding: '9px 16px',
+                color: 'var(--sev-blocker)', borderRadius: 'var(--radius-sm)', padding: '9px 16px',
                 fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >

@@ -62,7 +62,7 @@ export default function VideoToolsHub() {
         <span dir="ltr">{videoToolSections.length}</span> أقسام.
       </p>
 
-      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: '#fca5a5', lineHeight: 2 }}>
+      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 2 }}>
         لا تُشغّل وحدة بثّ بلا هوائي مركّب. البثّ بلا هوائي يُتلف الوحدة، وأحياناً
         من أول ثانية.
       </p>

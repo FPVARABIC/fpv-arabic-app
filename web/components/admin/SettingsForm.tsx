@@ -100,13 +100,13 @@ export const SettingsForm: React.FC<{
 
       {error && (
         <p role="alert" data-testid="settings-error" className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: '#fca5a5', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
           {error}
         </p>
       )}
       {saved && (
         <p role="status" data-testid="settings-saved" className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: '#6ee7b7' }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: 'var(--sev-ok)' }}>
           حُفظت الإعدادات. الأسعار المحسوبة سابقاً لا تتغيّر بأثر رجعي — أعد حفظ
           تكلفة المنتج ليُعاد حساب سعره بالهامش الجديد.
         </p>

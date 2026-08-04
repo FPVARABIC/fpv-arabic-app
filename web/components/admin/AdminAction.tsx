@@ -143,7 +143,7 @@ export const AdminAction: React.FC<AdminActionProps> = ({
 
           {stage === 'confirm' && (
             <p role="alert" data-testid={`${testId}-confirm-text`} style={{
-              margin: 0, fontSize: 13, color: '#fca5a5', lineHeight: 1.9,
+              margin: 0, fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.9,
             }}>
               {confirmAr}
             </p>

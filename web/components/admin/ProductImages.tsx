@@ -139,12 +139,12 @@ export const ProductImages: React.FC<{
           />
         </label>
         {pending && <span style={{ fontSize: 11.5, marginInlineStart: 10, color: 'var(--text-dimmer)' }}>جارٍ الحفظ…</span>}
-        {saved && !pending && <span style={{ fontSize: 11.5, marginInlineStart: 10, color: '#6ee7b7' }}>حُفظ</span>}
+        {saved && !pending && <span style={{ fontSize: 11.5, marginInlineStart: 10, color: 'var(--sev-ok)' }}>حُفظ</span>}
       </p>
 
       {error && (
         <p role="alert" data-testid="product-images-error" className="card-sm"
-          style={{ padding: '11px 13px', margin: '0 0 14px', fontSize: 12.5, color: '#fca5a5' }}>
+          style={{ padding: '11px 13px', margin: '0 0 14px', fontSize: 12.5, color: 'var(--sev-blocker)' }}>
           {error}
         </p>
       )}
@@ -174,10 +174,10 @@ export const ProductImages: React.FC<{
                       : <span className="admin-badge">صورة {i + 1}</span>}
                     {!isComplete(img) && (
                       <span className="admin-badge" data-testid={`image-incomplete-${i}`}
-                        style={{ color: '#fcd34d' }}>لن تظهر في المتجر — ينقصها مصدرها</span>
+                        style={{ color: 'var(--sev-warning)' }}>لن تظهر في المتجر — ينقصها مصدرها</span>
                     )}
                     {img.needsReplacement && (
-                      <span className="admin-badge" style={{ color: '#fcd34d' }}>مؤقّتة</span>
+                      <span className="admin-badge" style={{ color: 'var(--sev-warning)' }}>مؤقّتة</span>
                     )}
                   </span>
                   <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

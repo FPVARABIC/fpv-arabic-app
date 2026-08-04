@@ -66,7 +66,7 @@ export const ManualRequired: React.FC<{ items: readonly string[] }> = ({ items }
   return (
     <section className="card-sm" data-testid="manual-required"
       style={{ padding: '13px 15px', marginTop: 16, borderColor: 'rgba(252,211,77,0.3)' }}>
-      <h3 style={{ ...SUB, color: '#fcd34d' }}>لا نذكره هنا — خذه من دليل جهازك</h3>
+      <h3 style={{ ...SUB, color: 'var(--sev-warning)' }}>لا نذكره هنا — خذه من دليل جهازك</h3>
       <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
         {items.map((t, i) => (
           <li key={i} style={{ fontSize: 13, lineHeight: 1.95, color: 'var(--text-dim)' }}>{t}</li>

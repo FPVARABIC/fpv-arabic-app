@@ -92,7 +92,7 @@ export const VariantPicker: React.FC<{
                       {PACKAGE_LABEL_AR[v.packageKind]}
                     </span>
                     {!buyable && (
-                      <span className="admin-badge" style={{ fontSize: 10.5, color: '#fcd34d' }}>
+                      <span className="admin-badge" style={{ fontSize: 10.5, color: 'var(--sev-warning)' }}>
                         {AVAILABILITY_LABEL_AR[v.availability]}
                       </span>
                     )}
@@ -138,7 +138,7 @@ export const VariantPicker: React.FC<{
 
       {chosen.freeSetupEligible && (
         <p data-testid="variant-free-setup" style={{
-          margin: '11px 0 0', fontSize: 12.5, color: '#6ee7b7', lineHeight: 1.9,
+          margin: '11px 0 0', fontSize: 12.5, color: 'var(--sev-ok)', lineHeight: 1.9,
         }}>
           يشمل خدمة البرمجة والإعداد مجاناً قبل الشحن.
         </p>

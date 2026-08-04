@@ -185,7 +185,7 @@ export default async function SearchPage({
           {result.missingForVerdict.length > 0 && (
             <aside className="card-sm" data-testid="search-missing"
               style={{ padding: '13px 15px', marginTop: 16 }}>
-              <h2 style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>
+              <h2 style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--sev-warning)' }}>
                 لا يمكن الحكم قبل معرفة
               </h2>
               <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 4 }}>
@@ -315,7 +315,7 @@ const ResultCard: React.FC<{ result: RetrievalResult & { route?: string; postId?
       </div>
 
       {unavailableReasonAr && (
-        <p style={{ fontSize: 11.5, color: '#fcd34d', margin: '7px 0 0', lineHeight: 1.8 }}>
+        <p style={{ fontSize: 11.5, color: 'var(--sev-warning)', margin: '7px 0 0', lineHeight: 1.8 }}>
           {unavailableReasonAr}
         </p>
       )}

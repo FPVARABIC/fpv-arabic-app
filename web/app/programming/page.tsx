@@ -91,7 +91,7 @@ export default function ProgrammingHub() {
                     يخصّ: {s.appliesToAr.join(' · ')}
                   </p>
                   {s.pending > 0 && (
-                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#fcd34d', lineHeight: 1.85 }}>
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--sev-warning)', lineHeight: 1.85 }}>
                       <span dir="ltr">{s.pending}</span> صفحة مسجَّلة بلا محتوى بعد — تظهر معلَّمة داخل المركز.
                     </p>
                   )}

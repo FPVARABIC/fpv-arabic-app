@@ -117,7 +117,7 @@ export default async function EdgeTxTopic(
       {page.canonicalDiagnosis && (
         <aside className="card-sm" data-testid="edgetx-canonical-diagnosis"
           style={{ padding: '14px 16px', marginTop: 14, borderColor: 'rgba(252,211,77,0.35)' }}>
-          <h2 style={{ margin: 0, fontSize: 13.5, fontWeight: 900, color: '#fcd34d' }}>
+          <h2 style={{ margin: 0, fontSize: 13.5, fontWeight: 900, color: 'var(--sev-warning)' }}>
             الإجراء الكامل ليس هنا
           </h2>
           <p style={{ margin: '7px 0 0', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
@@ -149,7 +149,7 @@ export default async function EdgeTxTopic(
                 {s.noteAr && (
                   <span style={{
                     display: 'block', marginTop: 4, fontSize: 12.5, lineHeight: 1.9,
-                    color: s.risk === 'critical' || s.risk === 'warning' ? '#fcd34d' : 'var(--text-dimmer)',
+                    color: s.risk === 'critical' || s.risk === 'warning' ? 'var(--sev-warning)' : 'var(--text-dimmer)',
                   }}>
                     {s.noteAr}
                   </span>
@@ -196,7 +196,7 @@ export default async function EdgeTxTopic(
                   <strong>متى تلمسه:</strong> {setting.whenAr}
                 </p>
                 {setting.riskAr && (
-                  <p style={{ margin: '7px 0 0', fontSize: 12.5, color: '#fcd34d', lineHeight: 1.9 }}>
+                  <p style={{ margin: '7px 0 0', fontSize: 12.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
                     <strong>إن ضبطته خطأ:</strong> {setting.riskAr}
                   </p>
                 )}
@@ -216,7 +216,7 @@ export default async function EdgeTxTopic(
                   </p>
                 )}
                 {setting.manualCheckAr && (
-                  <p style={{ margin: '7px 0 0', fontSize: 12, color: '#fcd34d', lineHeight: 1.9 }}>
+                  <p style={{ margin: '7px 0 0', fontSize: 12, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
                     من دليل جهازك: {setting.manualCheckAr}
                   </p>
                 )}

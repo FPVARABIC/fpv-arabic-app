@@ -82,7 +82,7 @@ export const ProjectResults: React.FC<{ query: string }> = ({ query }) => {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                 <span style={{
-                  fontSize: 10.5, fontWeight: 800, color: '#fcd34d',
+                  fontSize: 10.5, fontWeight: 800, color: 'var(--sev-warning)',
                   border: '1px solid rgba(252,211,77,0.35)', borderRadius: 999, padding: '2px 9px',
                 }}>
                   {r.type === 'project-finding' ? 'حكم في مشروعك' : 'من مشروعك'}

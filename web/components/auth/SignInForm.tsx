@@ -139,7 +139,7 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
   if (!configured) {
     return (
       <div className="card" style={{ padding: '18px 20px' }} data-testid="signin-unconfigured">
-        <p style={{ margin: 0, fontSize: 13.5, color: '#fcd34d', lineHeight: 1.9 }}>
+        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
           تسجيل الدخول غير مهيّأ في هذه البيئة: متغيّرات{' '}
           <span className="ltr">NEXT_PUBLIC_FIREBASE_*</span> غير مضبوطة. راجع{' '}
           <span className="ltr">web/.env.example</span>.
@@ -243,7 +243,7 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
             style={{
               margin: '0 0 14px', padding: '10px 13px', borderRadius: 'var(--radius-sm)',
               background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.32)',
-              fontSize: 13, color: '#fca5a5', lineHeight: 1.85,
+              fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.85,
             }}
           >
             {error}
@@ -257,7 +257,7 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
             style={{
               margin: '0 0 14px', padding: '10px 13px', borderRadius: 'var(--radius-sm)',
               background: 'rgba(52,211,153,0.10)', border: '1px solid rgba(52,211,153,0.32)',
-              fontSize: 13, color: '#6ee7b7', lineHeight: 1.85,
+              fontSize: 13, color: 'var(--sev-ok)', lineHeight: 1.85,
             }}
           >
             {notice}

@@ -57,6 +57,14 @@
       // and write the same Firestore documents and must agree on their fields.
       "@core/community/*": [
         "../src/components/Community/*"
+      ],
+      // Small, dependency-free helpers the two surfaces must agree on by
+      // VALUE, not by convention. `STORAGE_KEYS` is the reason: the web's
+      // settings screen clears the same browser keys the phone app writes,
+      // and a retyped key string would produce a screen that silently clears
+      // nothing — and keeps working until somebody renames a key.
+      "@core/utils/*": [
+        "../src/utils/*"
       ]
     }
   },

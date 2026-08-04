@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const RISK_COLOR: Record<DxRisk, string> = {
   low: 'var(--sev-ok)',
   medium: 'var(--sev-warning)',
-  high: '#fb923c',
+  high: 'var(--sev-warning)',
   critical: 'var(--sev-blocker)',
 };
 
@@ -56,7 +56,7 @@ export default function DiagnoseIndexPage() {
           borderColor: 'rgba(248,113,113,0.32)', background: 'rgba(248,113,113,0.06)',
         }}
       >
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: '#fca5a5' }}>قبل أي فحص</p>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: 'var(--sev-blocker)' }}>قبل أي فحص</p>
         <p style={{ margin: '7px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
           انزع المراوح قبل توصيل البطارية في أي فحص أرضي. وإن شممت رائحة احتراق أو رأيت
           دخاناً، افصل البطارية فوراً ولا تكمل.
@@ -98,12 +98,12 @@ export default function DiagnoseIndexPage() {
                         {DX_RISK_LABEL_AR[t.risk]}
                       </span>
                       {t.removeProps && (
-                        <span style={{ fontSize: 10.5, color: '#fca5a5', fontWeight: 700 }}>
+                        <span style={{ fontSize: 10.5, color: 'var(--sev-blocker)', fontWeight: 700 }}>
                           المراوح منزوعة
                         </span>
                       )}
                       {t.disconnectBattery && (
-                        <span style={{ fontSize: 10.5, color: '#fca5a5', fontWeight: 700 }}>
+                        <span style={{ fontSize: 10.5, color: 'var(--sev-blocker)', fontWeight: 700 }}>
                           البطارية مفصولة
                         </span>
                       )}

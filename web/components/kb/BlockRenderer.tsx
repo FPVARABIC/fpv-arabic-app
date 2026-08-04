@@ -26,11 +26,11 @@ import type { KbBlock, KbSafetyLevel } from '@core/data/kb/types';
  */
 
 const TONE: Record<string, { bg: string; border: string; fg: string; labelAr: string }> = {
-  note:    { bg: 'rgba(56,224,224,0.07)',  border: 'rgba(56,224,224,0.28)',  fg: '#67e8f9', labelAr: 'ملاحظة' },
-  tip:     { bg: 'rgba(52,211,153,0.07)',  border: 'rgba(52,211,153,0.28)',  fg: '#6ee7b7', labelAr: 'نصيحة' },
-  warning: { bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.30)',  fg: '#fcd34d', labelAr: 'تحذير' },
-  danger:  { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.32)', fg: '#fca5a5', labelAr: 'خطر' },
-  safety:  { bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.38)', fg: '#fca5a5', labelAr: 'سلامة' },
+  note:    { bg: 'rgba(56,224,224,0.07)',  border: 'rgba(56,224,224,0.28)',  fg: 'var(--accent-ink)', labelAr: 'ملاحظة' },
+  tip:     { bg: 'rgba(52,211,153,0.07)',  border: 'rgba(52,211,153,0.28)',  fg: 'var(--sev-ok)', labelAr: 'نصيحة' },
+  warning: { bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.30)',  fg: 'var(--sev-warning)', labelAr: 'تحذير' },
+  danger:  { bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.32)', fg: 'var(--sev-blocker)', labelAr: 'خطر' },
+  safety:  { bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.38)', fg: 'var(--sev-blocker)', labelAr: 'سلامة' },
 };
 
 /** Mirrors KbSafetyLevel exactly — there is no 'none' level, absence means none. */
@@ -121,7 +121,7 @@ const Block: React.FC<{ block: KbBlock }> = ({ block: b }) => {
                       style={{
                         display: 'inline-block', marginTop: 7, padding: '2px 9px',
                         borderRadius: 999, fontSize: 11, fontWeight: 800,
-                        background: 'rgba(248,113,113,0.12)', color: '#fca5a5',
+                        background: 'rgba(248,113,113,0.12)', color: 'var(--sev-blocker)',
                       }}
                     >
                       {SAFETY_LABEL_AR[s.safety]}

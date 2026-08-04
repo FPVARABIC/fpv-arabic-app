@@ -62,7 +62,7 @@ export const PublishPanel: React.FC<{
 
       {suspendedReasonAr ? (
         <div data-testid="publish-suspended">
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 900, color: '#fca5a5' }}>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 900, color: 'var(--sev-blocker)' }}>
             هذا المنتج موقوف
           </p>
           <p style={{ margin: '7px 0 0', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
@@ -81,7 +81,7 @@ export const PublishPanel: React.FC<{
         <>
           {blocking.length > 0 && (
             <div data-testid="publish-blocking" style={{ marginBottom: 14 }}>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fca5a5' }}>
+              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--sev-blocker)' }}>
                 لا يمكن النشر قبل معالجة هذه:
               </p>
               <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
@@ -97,7 +97,7 @@ export const PublishPanel: React.FC<{
 
           {advisory.length > 0 && (
             <div data-testid="publish-advisory" style={{ marginBottom: 14 }}>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>
+              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--sev-warning)' }}>
                 يمكنك النشر، لكن هذه ناقصة:
               </p>
               <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
@@ -127,7 +127,7 @@ export const PublishPanel: React.FC<{
           )}
 
           {blocking.length === 0 && advisory.length === 0 && (
-            <p data-testid="publish-clean" style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6ee7b7' }}>
+            <p data-testid="publish-clean" style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--sev-ok)' }}>
               مكتمل. لا شيء ناقص.
             </p>
           )}
@@ -186,7 +186,7 @@ export const PublishPanel: React.FC<{
 
       {error && (
         <p role="alert" data-testid="publish-error" className="card-sm"
-          style={{ padding: '11px 13px', margin: '13px 0 0', fontSize: 12.5, color: '#fca5a5', lineHeight: 1.9 }}>
+          style={{ padding: '11px 13px', margin: '13px 0 0', fontSize: 12.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
           {error}
         </p>
       )}

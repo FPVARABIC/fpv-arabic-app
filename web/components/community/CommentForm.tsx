@@ -73,7 +73,7 @@ export const CommentForm: React.FC<{ postId: string }> = ({ postId }) => {
       </div>
       {error && (
         <p role="alert" data-testid="comment-error"
-          style={{ margin: '10px 0 0', fontSize: 13, color: '#fca5a5' }}>
+          style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--sev-blocker)' }}>
           {error}
         </p>
       )}

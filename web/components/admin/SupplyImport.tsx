@@ -74,13 +74,13 @@ export const SupplyImport: React.FC = () => {
 
       {error && (
         <p role="alert" data-testid="import-error" className="card-sm"
-          style={{ padding: '12px 14px', margin: '0 0 14px', fontSize: 12.5, color: '#fca5a5', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: '0 0 14px', fontSize: 12.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
           {error}
         </p>
       )}
       {done && (
         <p role="status" data-testid="import-done" className="card-sm"
-          style={{ padding: '12px 14px', margin: '0 0 14px', fontSize: 12.5, color: '#6ee7b7', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: '0 0 14px', fontSize: 12.5, color: 'var(--sev-ok)', lineHeight: 1.9 }}>
           {done}
         </p>
       )}
@@ -89,11 +89,11 @@ export const SupplyImport: React.FC = () => {
         <>
           <p data-testid="import-summary"
             style={{ margin: '0 0 12px', fontSize: 12.5, lineHeight: 1.9 }}>
-            <span style={{ color: '#6ee7b7' }}>سيُطبَّق: <span dir="ltr">{counts.apply}</span></span>
+            <span style={{ color: 'var(--sev-ok)' }}>سيُطبَّق: <span dir="ltr">{counts.apply}</span></span>
             {' · '}
             <span style={{ color: 'var(--text-dimmer)' }}>يُترك كما هو: <span dir="ltr">{counts.skip}</span></span>
             {' · '}
-            <span style={{ color: '#fca5a5' }}>مرفوض: <span dir="ltr">{counts.reject}</span></span>
+            <span style={{ color: 'var(--sev-blocker)' }}>مرفوض: <span dir="ltr">{counts.reject}</span></span>
           </p>
 
           <div style={{ overflowX: 'auto', maxHeight: 420, overflowY: 'auto' }}>
@@ -112,8 +112,8 @@ export const SupplyImport: React.FC = () => {
                     <td style={td} className="ltr">{v.variantId || '—'}</td>
                     <td style={{
                       ...td,
-                      color: v.kind === 'apply' ? '#6ee7b7'
-                        : v.kind === 'reject' ? '#fca5a5' : 'var(--text-dimmer)',
+                      color: v.kind === 'apply' ? 'var(--sev-ok)'
+                        : v.kind === 'reject' ? 'var(--sev-blocker)' : 'var(--text-dimmer)',
                     }}>
                       {v.kind === 'apply'
                         ? `تُسجَّل التكلفة ${(v.unitCostMinor / 100).toFixed(2)} + شحن ${(v.inboundShippingMinor / 100).toFixed(2)} ويُحسب السعر`

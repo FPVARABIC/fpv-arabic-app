@@ -91,7 +91,7 @@ export default async function AdminProductEdit(
             : formatPrice(product.variants[0].priceMinor, product.currency)}
         </span>
         {!product.published && (
-          <span className="admin-badge" style={{ color: '#fcd34d' }}>مخفي من المتجر</span>
+          <span className="admin-badge" style={{ color: 'var(--sev-warning)' }}>مخفي من المتجر</span>
         )}
         <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {product.published && (

@@ -78,7 +78,7 @@ export default function ExpressLrsHub() {
 
       <section className="admin-section" aria-labelledby="elrs-safety">
         <h2 id="elrs-safety">قبل أي اختبار</h2>
-        <p className="card-sm" style={{ padding: '13px 15px', fontSize: 13.5, color: '#fca5a5', lineHeight: 2, margin: 0 }}>
+        <p className="card-sm" style={{ padding: '13px 15px', fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 2, margin: 0 }}>
           انزع المراوح قبل أي تسليح أو اختبار قنوات. اختبار الرابط يعني تحريك
           العصي والطائرة مسلَّحة، وهذا أكثر ما تُصاب الأيدي فيه.
         </p>

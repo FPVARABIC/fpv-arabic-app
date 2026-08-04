@@ -43,7 +43,7 @@ export const StoreBanner: React.FC<{
       }}
     >
       <p style={{
-        margin: 0, fontSize: compact ? 14 : 16, fontWeight: 900, color: '#6ee7b7',
+        margin: 0, fontSize: compact ? 14 : 16, fontWeight: 900, color: 'var(--sev-ok)',
       }}>
         {b.headlineAr}
       </p>

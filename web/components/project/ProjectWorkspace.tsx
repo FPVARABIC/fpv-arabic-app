@@ -448,7 +448,7 @@ const ProjectData: React.FC<{
           </button>
         ) : (
           <span className="card-sm" style={{ padding: '10px 13px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: '#fca5a5' }}>
+            <span style={{ fontSize: 13, color: 'var(--sev-blocker)' }}>
               سيُحذف المشروع من هذا الجهاز نهائياً. صدّره أولاً إن أردت الاحتفاظ به.
             </span>
             <button type="button" className="admin-danger" data-testid="project-clear-confirm"

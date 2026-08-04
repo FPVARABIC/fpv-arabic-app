@@ -160,7 +160,7 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
       {dropped.length > 0 && (
         <div className="card-sm" data-testid="cart-dropped"
           style={{ padding: '13px 15px', marginBottom: 14, borderColor: 'rgba(252,211,77,0.35)' }}>
-          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>
+          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: 'var(--sev-warning)' }}>
             أُزيلت من سلّتك
           </p>
           <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
@@ -194,7 +194,7 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
                     a customer should SEE what they received, not merely fail to
                     be charged for it. */}
                 {l.unitPriceMinor === 0
-                  ? <span style={{ color: '#6ee7b7' }}>مجاناً</span>
+                  ? <span style={{ color: 'var(--sev-ok)' }}>مجاناً</span>
                   : formatPrice(l.lineTotalMinor, l.product.currency)}
               </span>
             </div>

@@ -137,7 +137,7 @@ export default function EdgeTxHub() {
           <ul style={{ margin: 0, paddingInlineStart: 20, display: 'grid', gap: 5 }}
             data-testid="edgetx-uncovered">
             {uncovered.map(t => (
-              <li key={t.id} style={{ fontSize: 13, lineHeight: 1.9, color: '#fcd34d' }}>
+              <li key={t.id} style={{ fontSize: 13, lineHeight: 1.9, color: 'var(--sev-warning)' }}>
                 {t.labelAr} — لا صفحة له بعد.
               </li>
             ))}

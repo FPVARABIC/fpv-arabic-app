@@ -201,13 +201,13 @@ export const ProductEditor: React.FC<{ product: StoreProduct }> = ({ product }) 
 
       {error && (
         <p role="alert" data-testid="product-editor-error" className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: '#fca5a5', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
           {error}
         </p>
       )}
       {saved && (
         <p role="status" data-testid="product-editor-saved" className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: '#6ee7b7' }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: 'var(--sev-ok)' }}>
           حُفظت التعديلات، وستظهر في المتجر خلال ثوانٍ.
         </p>
       )}

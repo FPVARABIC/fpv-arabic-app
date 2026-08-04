@@ -52,7 +52,7 @@ export async function generateMetadata(
 const RISK_COLOR: Record<DxRisk, string> = {
   low: 'var(--sev-ok)',
   medium: 'var(--sev-warning)',
-  high: '#fb923c',
+  high: 'var(--sev-warning)',
   critical: 'var(--sev-blocker)',
 };
 
@@ -86,7 +86,7 @@ export default async function DiagnoseTreePage(
           borderColor: 'rgba(248,113,113,0.32)', background: 'rgba(248,113,113,0.06)',
         }}
       >
-        <h2 id="safety-h" style={{ fontSize: 14, fontWeight: 900, margin: 0, color: '#fca5a5' }}>
+        <h2 id="safety-h" style={{ fontSize: 14, fontWeight: 900, margin: 0, color: 'var(--sev-blocker)' }}>
           قبل أن تبدأ
         </h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '11px 0 0' }}>
@@ -99,12 +99,12 @@ export default async function DiagnoseTreePage(
             {DX_RISK_LABEL_AR[t.risk]}
           </span>
           {t.disconnectBattery && (
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#fca5a5', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 999, padding: '2px 11px' }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--sev-blocker)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 999, padding: '2px 11px' }}>
               افصل البطارية
             </span>
           )}
           {t.removeProps && (
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#fca5a5', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 999, padding: '2px 11px' }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--sev-blocker)', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 999, padding: '2px 11px' }}>
               انزع المراوح
             </span>
           )}
@@ -112,7 +112,7 @@ export default async function DiagnoseTreePage(
         <ul style={{ listStyle: 'none', margin: '14px 0 0', padding: 0, display: 'grid', gap: 8 }}>
           {t.quickChecks.map((c, i) => (
             <li key={i} style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9, display: 'flex', gap: 9 }}>
-              <span aria-hidden style={{ color: '#fca5a5', flexShrink: 0 }}>—</span>
+              <span aria-hidden style={{ color: 'var(--sev-blocker)', flexShrink: 0 }}>—</span>
               <span>{c}</span>
             </li>
           ))}
@@ -162,7 +162,7 @@ export default async function DiagnoseTreePage(
                   style={{
                     margin: '11px 0 0', padding: '9px 12px', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(248,113,113,0.09)', border: '1px solid rgba(248,113,113,0.3)',
-                    fontSize: 13, color: '#fca5a5', lineHeight: 1.85,
+                    fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.85,
                   }}
                 >
                   {n.safetyNote}
@@ -182,7 +182,7 @@ export default async function DiagnoseTreePage(
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>
                       {o.label}
                       {o.likelyDamaged && (
-                        <span style={{ fontSize: 10.5, color: '#fca5a5', marginInlineStart: 9, fontWeight: 800 }}>
+                        <span style={{ fontSize: 10.5, color: 'var(--sev-blocker)', marginInlineStart: 9, fontWeight: 800 }}>
                           يُرجَّح تلف القطعة
                         </span>
                       )}

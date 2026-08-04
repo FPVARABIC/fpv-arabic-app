@@ -47,7 +47,7 @@ export const BuildStages: React.FC<{
       {blockers.length > 0 && (
         <p role="alert" data-testid="stages-blocked" className="card-sm" style={{
           padding: '13px 15px', margin: '0 0 16px', fontSize: 13.5,
-          color: '#fca5a5', lineHeight: 1.95,
+          color: 'var(--sev-blocker)', lineHeight: 1.95,
         }}>
           يوجد <span dir="ltr">{blockers.length}</span> مانع في مشروعك. عالجها قبل
           الوصول إلى مرحلة التشغيل الأول — المانع يعني أن المتابعة تُتلف قطعاً أو
@@ -153,11 +153,11 @@ const Block: React.FC<{
   <div data-testid={testId}>
     <h4 style={{
       margin: 0, fontSize: 12, fontWeight: 900,
-      color: tone === 'danger' ? '#fca5a5' : 'var(--text-dimmer)',
+      color: tone === 'danger' ? 'var(--sev-blocker)' : 'var(--text-dimmer)',
     }}>
       {titleAr}
     </h4>
-    <ul style={{ ...LIST, color: tone === 'danger' ? '#fca5a5' : 'var(--text-dim)' }}>
+    <ul style={{ ...LIST, color: tone === 'danger' ? 'var(--sev-blocker)' : 'var(--text-dim)' }}>
       {items.map((t, i) => <li key={i}>{t}</li>)}
     </ul>
   </div>

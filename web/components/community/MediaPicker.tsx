@@ -154,7 +154,7 @@ export const MediaPicker: React.FC<{
         <p role="alert" data-testid="media-error" style={{
           margin: '10px 0 0', padding: '10px 13px', borderRadius: 'var(--radius-sm)',
           background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.32)',
-          fontSize: 13, color: '#fca5a5', lineHeight: 1.85,
+          fontSize: 13, color: 'var(--sev-blocker)', lineHeight: 1.85,
         }}>
           {error}
         </p>

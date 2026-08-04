@@ -37,7 +37,7 @@ export const PublishToggle: React.FC<{ productId: string; published: boolean }> 
         {pending ? '…' : published ? 'أخفِ من المتجر' : 'أعد عرضه'}
       </button>
       {error && (
-        <span role="alert" style={{ fontSize: 11.5, color: '#fca5a5' }}>{error}</span>
+        <span role="alert" style={{ fontSize: 11.5, color: 'var(--sev-blocker)' }}>{error}</span>
       )}
     </>
   );

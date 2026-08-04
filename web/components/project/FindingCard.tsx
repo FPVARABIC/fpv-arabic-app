@@ -109,7 +109,7 @@ export const FindingCard: React.FC<{ finding: Finding; defaultOpen?: boolean }> 
 
           {finding.manualCheckAr && (
             <Section titleAr="يحتاج دليل الشركة">
-              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.95, color: '#fcd34d' }}>
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.95, color: 'var(--sev-warning)' }}>
                 {finding.manualCheckAr}
               </p>
             </Section>

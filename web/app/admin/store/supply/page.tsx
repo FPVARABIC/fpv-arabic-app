@@ -89,7 +89,7 @@ export default async function AdminSupply() {
                 <span dir="ltr">{s.leadTimeDays.min}–{s.leadTimeDays.max}</span> يوماً
               </p>
               {s.avoidForAr.length > 0 && (
-                <p style={{ margin: '6px 0 0', fontSize: 11.5, color: '#fcd34d', lineHeight: 1.8 }}>
+                <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--sev-warning)', lineHeight: 1.8 }}>
                   لا تشترِ منه: {s.avoidForAr[0]}
                 </p>
               )}
@@ -120,7 +120,7 @@ export default async function AdminSupply() {
 
       {unpriced.length > 0 && (
         <p className="card-sm" data-testid="supply-unpriced-note"
-          style={{ padding: '13px 15px', marginTop: 18, fontSize: 12.5, color: '#fcd34d', lineHeight: 1.95 }}>
+          style={{ padding: '13px 15px', marginTop: 18, fontSize: 12.5, color: 'var(--sev-warning)', lineHeight: 1.95 }}>
           <span dir="ltr">{unpriced.length}</span> خياراً ينتظر إدخال الإدارة. حتى
           تُدخل تكلفته لن يظهر بسعر في المتجر ولن يُضاف إلى أي سلة.
         </p>

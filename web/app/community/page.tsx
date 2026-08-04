@@ -4,6 +4,7 @@ import { listPosts } from '@/lib/server/community';
 import { isAdminConfigured } from '@/lib/server/firebaseAdmin';
 import { getSession } from '@/lib/server/session';
 import { PostCard } from '@/components/community/PostCard';
+import { AccountRail } from '@/components/AccountRail';
 import { CATEGORY_LABELS, VISIBLE_CATEGORY_IDS } from '@core/community/utils/categories';
 
 export const metadata: Metadata = {
@@ -73,12 +74,12 @@ export default async function CommunityPage(
 
   return (
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 20 }}>
-      <div
-        style={{
-          display: 'grid', gap: 30,
-          gridTemplateColumns: 'minmax(0, 1fr) 260px', alignItems: 'start',
-        }}
-      >
+      {/* `with-rail` rather than a hardcoded two-column grid. The old inline
+          `minmax(0,1fr) 260px` had no breakpoint, so at 390px the feed and the
+          sidebar were squeezed side by side into a phone screen. The class
+          stacks them below 1000px — and puts the rail UNDER the feed, because
+          on a phone the posts are what the reader came for. */}
+      <div className="with-rail">
         <div style={{ minWidth: 0 }}>
           <header style={{ marginBottom: 20 }}>
             <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>المجتمع</h1>
@@ -129,7 +130,7 @@ export default async function CommunityPage(
           {/* ── The three honest states ─────────────────────────────────── */}
           {!configured && (
             <div className="card" data-testid="community-unconfigured" style={{ padding: '18px 20px' }}>
-              <p style={{ margin: 0, fontSize: 13.5, color: '#fcd34d', lineHeight: 1.9 }}>
+              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
                 المجتمع غير مهيّأ في هذه البيئة: لا توجد بيانات اعتماد خادم لقراءة Firestore.
                 راجع <span className="ltr">web/.env.example</span>.
               </p>
@@ -138,7 +139,7 @@ export default async function CommunityPage(
 
           {configured && error && (
             <div className="card" data-testid="community-error" style={{ padding: '18px 20px', borderColor: 'rgba(248,113,113,0.32)' }}>
-              <p style={{ margin: 0, fontSize: 13.5, color: '#fca5a5', lineHeight: 1.9 }}>{error}</p>
+              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>{error}</p>
               <p style={{ margin: '12px 0 0' }}>
                 <Link href={qs({ category: activeCategory })} className="btn-ghost" data-testid="community-retry">
                   أعد المحاولة
@@ -196,7 +197,20 @@ export default async function CommunityPage(
         </div>
 
         {/* ── Sidebar: what the wide screen buys ─────────────────────────── */}
-        <aside style={{ display: 'grid', gap: 16, position: 'sticky', top: 82 }}>
+        <div style={{ display: 'grid', gap: 16 }} className="community-side">
+          {/* The account panel, first. The shop's owner asked for exactly this:
+              the reader's own identity and progress beside the feed, with the
+              settings/contact/about/sign-out rows under it, so none of those
+              has to be hunted for. It is the phone app's profile sheet, opened
+              flat. */}
+          <AccountRail
+            signedIn={!!session}
+            displayName={session?.displayName ?? null}
+            photoURL={session?.photoURL ?? null}
+            email={session?.email ?? null}
+            role={session?.role ?? 'user'}
+            signInNext="/community"
+          />
           <section className="card" style={{ padding: '16px 18px' }}>
             <h2 style={{ fontSize: 14, fontWeight: 900, margin: '0 0 10px' }}>اكتب منشوراً</h2>
             {session ? (
@@ -229,12 +243,12 @@ export default async function CommunityPage(
               وآراء — مفيدة، لكنها ليست مرجعاً. عند التعارض، الموسوعة ودليل الشركة أولاً.
             </p>
             <p style={{ margin: '12px 0 0' }}>
-              <Link href="/kb" style={{ fontSize: 12.5, color: 'var(--accent)' }}>
+              <Link href="/kb" style={{ fontSize: 12.5, color: 'var(--accent-ink)', fontWeight: 700 }}>
                 افتح الموسوعة ←
               </Link>
             </p>
           </section>
-        </aside>
+        </div>
       </div>
     </div>
   );

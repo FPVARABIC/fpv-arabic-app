@@ -55,7 +55,7 @@ export const OrderStatusControl: React.FC<{ orderId: string; status: OrderStatus
         ))}
       </div>
       {error && (
-        <p role="alert" style={{ margin: '8px 0 0', fontSize: 12, color: '#fca5a5' }}>{error}</p>
+        <p role="alert" style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--sev-blocker)' }}>{error}</p>
       )}
     </div>
   );

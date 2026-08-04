@@ -50,11 +50,11 @@ export const DecisionCard: React.FC<{
 
       {done ? (
         <p data-testid={`decision-done-${decision.id}`} className="card-sm"
-          style={{ padding: '12px 14px', margin: 0, fontSize: 12.5, color: '#6ee7b7', lineHeight: 1.9 }}>
+          style={{ padding: '12px 14px', margin: 0, fontSize: 12.5, color: 'var(--sev-ok)', lineHeight: 1.9 }}>
           قرارك المسجَّل: {done}
           {recorded?.decidedByName && <> — {recorded.decidedByName}</>}
           {recorded?.action === 'needs-commit' && (
-            <span style={{ display: 'block', color: '#fcd34d', marginTop: 6 }}>
+            <span style={{ display: 'block', color: 'var(--sev-warning)', marginTop: 6 }}>
               هذا الخيار يحتاج تعديلاً في الكتالوج، وسيُنفَّذ في الدفعة التالية.
             </span>
           )}
@@ -83,8 +83,8 @@ export const DecisionCard: React.FC<{
                       <span style={{ fontSize: 13, fontWeight: 800 }}>{o.labelAr}</span>
                       <span className="admin-badge" style={{
                         fontSize: 10.5,
-                        color: o.effect === 'risky' ? '#fca5a5'
-                          : o.effect === 'costly' ? '#fcd34d' : 'var(--text-dimmer)',
+                        color: o.effect === 'risky' ? 'var(--sev-blocker)'
+                          : o.effect === 'costly' ? 'var(--sev-warning)' : 'var(--text-dimmer)',
                       }}>
                         {DECISION_EFFECT_LABEL_AR[o.effect]}
                       </span>
@@ -134,7 +134,7 @@ export const DecisionCard: React.FC<{
       )}
 
       {error && (
-        <p role="alert" style={{ margin: '11px 0 0', fontSize: 12.5, color: '#fca5a5' }}>{error}</p>
+        <p role="alert" style={{ margin: '11px 0 0', fontSize: 12.5, color: 'var(--sev-blocker)' }}>{error}</p>
       )}
     </section>
   );

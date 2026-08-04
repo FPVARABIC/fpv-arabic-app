@@ -118,7 +118,7 @@ export default async function AdminOrders(
               <p style={{ margin: '11px 0 0', fontSize: 13, fontWeight: 900 }}>
                 الإجمالي قبل الشحن: <span className="ltr">{formatPrice(o.totalMinor, o.currency)}</span>
                 {o.includesFreeSetup && (
-                  <span style={{ fontSize: 11.5, fontWeight: 500, color: '#6ee7b7' }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--sev-ok)' }}>
                     {' '}· يشمل الإعداد المجاني
                   </span>
                 )}

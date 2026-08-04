@@ -34,7 +34,7 @@ export const SupplyEditor: React.FC<{ variantId: string; supply: StoreSupply | n
           onClick={() => { setOpen(true); setSaved(false); }} style={{ fontSize: 12 }}>
           {supply ? 'عدّل التكلفة' : 'أدخل التكلفة'}
         </button>
-        {saved && <span style={{ fontSize: 11.5, color: '#6ee7b7', marginInlineStart: 9 }}>حُفظ</span>}
+        {saved && <span style={{ fontSize: 11.5, color: 'var(--sev-ok)', marginInlineStart: 9 }}>حُفظ</span>}
       </p>
     );
   }
@@ -111,7 +111,7 @@ export const SupplyEditor: React.FC<{ variantId: string; supply: StoreSupply | n
       </label>
 
       {error && (
-        <p role="alert" style={{ margin: 0, fontSize: 12, color: '#fca5a5' }}>{error}</p>
+        <p role="alert" style={{ margin: 0, fontSize: 12, color: 'var(--sev-blocker)' }}>{error}</p>
       )}
 
       <div style={{ display: 'flex', gap: 8 }}>

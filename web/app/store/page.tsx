@@ -81,7 +81,7 @@ export default async function StorePage() {
       {stocking && (
         <div className="card-sm" data-testid="store-stocking"
           style={{ padding: '17px 19px', marginBottom: 18, borderColor: 'rgba(252,211,77,0.35)' }}>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: '#fcd34d' }}>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 900, color: 'var(--sev-warning)' }}>
             المتجر قيد التجهيز
           </p>
           <p style={{ margin: '9px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 2 }}>
@@ -132,7 +132,7 @@ export default async function StorePage() {
                         chosen and waiting on image rights, and the card says
                         that instead. */}
                     {n === 0
-                      ? <span style={{ color: '#fcd34d' }}>قيد التجهيز</span>
+                      ? <span style={{ color: 'var(--sev-warning)' }}>قيد التجهيز</span>
                       : <>
                         <span dir="ltr">{n}</span> {n === 1 ? 'خيار' : 'خيارات'} مختارة
                       </>}

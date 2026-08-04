@@ -19,7 +19,18 @@ import { clientAuth, isClientConfigured } from '@/lib/firebaseClient';
  * button says so, rather than clearing local state and leaving a live session
  * on the server that the user believes is closed.
  */
-export const SignOutButton: React.FC = () => {
+/**
+ * `className` and `children` exist so the same button can be a plain ghost
+ * button on the profile page and a menu row in the account rail. The behaviour
+ * — the ordering of the two halves and the refusal to clear local state on a
+ * failed server call — is the thing that must not be duplicated, and this is
+ * what stops a second copy of it being written for the rail.
+ */
+export const SignOutButton: React.FC<{
+  className?: string;
+  children?: React.ReactNode;
+  'data-testid'?: string;
+}> = ({ className, children, 'data-testid': testId }) => {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,18 +51,18 @@ export const SignOutButton: React.FC = () => {
   }
 
   return (
-    <span>
+    <span style={className ? { display: 'contents' } : undefined}>
       <button
         type="button"
-        className="btn-ghost"
+        className={className ?? 'btn-ghost'}
         onClick={onClick}
         disabled={busy}
-        data-testid="signout-button"
+        data-testid={testId ?? 'signout-button'}
       >
-        {busy ? 'جارٍ…' : 'تسجيل الخروج'}
+        {busy ? 'جارٍ…' : (children ?? 'تسجيل الخروج')}
       </button>
       {error && (
-        <span role="alert" style={{ display: 'block', marginTop: 8, fontSize: 12.5, color: '#fca5a5' }}>
+        <span role="alert" style={{ display: 'block', marginTop: 8, fontSize: 12.5, color: 'var(--sev-blocker)' }}>
           {error}
         </span>
       )}

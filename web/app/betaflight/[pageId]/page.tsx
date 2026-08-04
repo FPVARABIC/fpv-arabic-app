@@ -124,7 +124,7 @@ export default async function BetaflightPage(
       </dl>
 
       {page.conditionNote && (
-        <p className="card-sm" style={{ padding: '12px 14px', marginTop: 12, fontSize: 13, color: '#fcd34d', lineHeight: 1.95 }}>
+        <p className="card-sm" style={{ padding: '12px 14px', marginTop: 12, fontSize: 13, color: 'var(--sev-warning)', lineHeight: 1.95 }}>
           {page.conditionNote}
         </p>
       )}
@@ -181,12 +181,12 @@ export default async function BetaflightPage(
                   </p>
                 )}
                 {field.conditionNote && (
-                  <p style={{ margin: '8px 0 0', fontSize: 12.5, color: '#fcd34d', lineHeight: 1.9 }}>
+                  <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
                     {field.conditionNote}
                   </p>
                 )}
                 {field.deprecatedNote && (
-                  <p style={{ margin: '8px 0 0', fontSize: 12.5, color: '#fca5a5', lineHeight: 1.9 }}>
+                  <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--sev-blocker)', lineHeight: 1.9 }}>
                     {field.deprecatedNote}
                   </p>
                 )}

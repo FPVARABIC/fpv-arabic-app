@@ -189,10 +189,10 @@ export default async function ProductPage(
                     </a>
                   )}
                   {sp.status === 'pending' && (
-                    <span style={{ color: '#fcd34d', fontSize: 11 }}> · بانتظار التأكيد</span>
+                    <span style={{ color: 'var(--sev-warning)', fontSize: 11 }}> · بانتظار التأكيد</span>
                   )}
                   {sp.status === 'disputed' && (
-                    <span style={{ color: '#fcd34d', fontSize: 11 }} data-testid={`spec-disputed-${i}`}>
+                    <span style={{ color: 'var(--sev-warning)', fontSize: 11 }} data-testid={`spec-disputed-${i}`}>
                       {' '}· المصادر مختلفة: {sp.disagreementAr}
                     </span>
                   )}
@@ -274,7 +274,7 @@ const Block: React.FC<{
     <section style={{ marginTop: 16 }} data-testid={testId}>
       <h2 style={{
         margin: 0, fontSize: 13, fontWeight: 900,
-        color: tone === 'warn' ? '#fcd34d' : 'var(--text-dimmer)',
+        color: tone === 'warn' ? 'var(--sev-warning)' : 'var(--text-dimmer)',
       }}>
         {titleAr}
       </h2>
@@ -318,7 +318,7 @@ const Related: React.FC<{
         <ul data-testid={`${testId}-caveats`}
           style={{ margin: '11px 0 0', paddingInlineStart: 20, display: 'grid', gap: 5 }}>
           {unique.map((c, i) => (
-            <li key={i} style={{ fontSize: 11.5, color: '#fcd34d', lineHeight: 1.9 }}>{c}</li>
+            <li key={i} style={{ fontSize: 11.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>{c}</li>
           ))}
         </ul>
       )}

@@ -25,7 +25,7 @@ const APPLICABILITY_AR: Record<string, string> = {
 };
 
 const WARN_COLOR: Record<string, string> = {
-  info: 'var(--text-dim)', warning: '#fcd34d', danger: '#fca5a5',
+  info: 'var(--text-dim)', warning: 'var(--sev-warning)', danger: 'var(--sev-blocker)',
 };
 
 const WARN_LABEL_AR: Record<string, string> = {
@@ -88,7 +88,7 @@ export default function ExpressLrsTroubleshooting() {
         التالي — وإلا لن تعرف أيّها أصلح العطل.
       </p>
 
-      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: '#fca5a5', lineHeight: 2 }}>
+      <p className="card-sm" style={{ padding: '13px 15px', marginTop: 14, fontSize: 13.5, color: 'var(--sev-blocker)', lineHeight: 2 }}>
         انزع المراوح قبل أي فحص يتضمّن تسليحاً. وافصل البطارية قبل لمس أي توصيل
         كهربائي.
       </p>
@@ -159,7 +159,7 @@ export default function ExpressLrsTroubleshooting() {
                         <span style={{ display: 'block', marginTop: 5, fontSize: 12.5, color: 'var(--text-dim)' }}>
                           <strong>المتوقّع:</strong> {check.expectedResult}
                         </span>
-                        <span style={{ display: 'block', marginTop: 4, fontSize: 12.5, color: '#fcd34d' }}>
+                        <span style={{ display: 'block', marginTop: 4, fontSize: 12.5, color: 'var(--sev-warning)' }}>
                           <strong>إن لم يتحقق:</strong> {check.ifFailed}
                         </span>
                       </li>
