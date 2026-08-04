@@ -40,6 +40,8 @@
     "test:web-project-e2e": "npx tsx scripts/testWebProjectE2E.ts",
     "test:web-software": "npx tsx --tsconfig web/tsconfig.json scripts/testWebSoftware.ts",
     "test:web-software-e2e": "npx tsx scripts/testWebSoftwareE2E.ts",
+    "test:retrieval": "npx tsx scripts/testRetrieval.ts",
+    "test:web-search-e2e": "firebase emulators:exec --project demo-community-rules-test --only auth,firestore \"npx tsx scripts/testWebSearchE2E.ts\"",
     "test:web-admin-e2e": "firebase emulators:exec --project demo-community-rules-test --only auth,firestore,storage \"npx tsx scripts/testWebAdminE2E.ts\"",
     "test:web-community-e2e": "firebase emulators:exec --project demo-community-rules-test --only auth,firestore,storage \"npx tsx scripts/testWebCommunityE2E.ts\"",
     "web:build": "npm --prefix web run build",

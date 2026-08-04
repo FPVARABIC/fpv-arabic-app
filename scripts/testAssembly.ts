@@ -618,6 +618,35 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     f !== 'src/platform/destinations.ts' &&
     f !== 'scripts/testWebSoftware.ts' &&
     f !== 'scripts/testWebSoftwareE2E.ts' &&
+    // ── The unified retrieval layer ────────────────────────────────────────
+    // Search becomes the main way into the platform, and the layer the future
+    // assistant will call instead of building a knowledge base of its own.
+    // What it needed:
+    //
+    //   src/platform/retrieval/   the contract — retrieve(query, context),
+    //                             intent recognition, and the three groups that
+    //                             keep reviewed knowledge, a member's opinion
+    //                             and one person's aircraft from ever merging
+    //   search/buildIndex.ts      three sources that existed but could not be
+    //                             found (modules, learning paths, diagnostic
+    //                             nodes) plus the build archetypes, and the
+    //                             symptom surface split out of the keywords
+    //   search/query.ts           structured match reasons, symptom weighting,
+    //                             intent bias, and a per-doc set cache
+    //   search/normalize.ts       a stopword list, so «أين أجد Ports» stops
+    //                             matching every page that contains «أين»
+    //   kb/modules/video/.../osd.ts  one glossaryIds entry: the new MSP term is
+    //                             used 5× in that article, and testKbLanguage
+    //                             requires a heavily-used term to be linked
+    //
+    // No Assembly logic anywhere in it: no part, no compatibility rule, no
+    // stage order, no persistence shape. The build archetypes are READ to make
+    // «أريد بناء درون سينمائي» findable; nothing about them is changed.
+    !f.startsWith('src/platform/retrieval/') &&
+    f !== 'src/data/kb/search/normalize.ts' &&
+    f !== 'src/data/kb/modules/video/articles/osd.ts' &&
+    f !== 'scripts/testRetrieval.ts' &&
+    f !== 'scripts/testWebSearchE2E.ts' &&
     // The two new gates are registered as npm scripts like every gate before
     // them. `package.json` carries no product data.
     f !== 'package.json' &&

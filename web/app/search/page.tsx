@@ -1,11 +1,17 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { search } from '@core/data/kb/search/query';
-import { SEARCH_TYPE_LABEL_AR } from '@core/data/kb/search/buildIndex';
+import { retrieve, INTENT_LABEL_AR, type RetrievalResult } from '@core/platform/retrieval';
+import type { SearchDocType } from '@core/data/kb/search/buildIndex';
+import { searchCommunity } from '@/lib/server/communitySearch';
+import { RESULT_TYPE_LABEL_AR, topReasons, resultHref } from '@/lib/searchView';
+import { SECTION_ROUTES } from '@/lib/webRoutes';
+import { ProjectResults } from '@/components/search/ProjectResults';
 
 export const metadata: Metadata = {
   title: 'البحث',
-  description: 'ابحث في الموسوعة والمصطلحات والتشخيص وصفحات Betaflight وExpressLRS وEdgeTX والفيديو.',
+  description:
+    'ابحث في الموسوعة والمصطلحات والتشخيص وصفحات Betaflight وExpressLRS وEdgeTX '
+    + 'والفيديو ومشروعك والمجتمع — بمحرّك واحد يشرح لماذا ظهرت كل نتيجة.',
   alternates: { canonical: '/search' },
   // A results page has no stable content of its own, and indexing every query
   // string produces thousands of near-duplicate pages. The sections it searches
@@ -14,47 +20,90 @@ export const metadata: Metadata = {
 };
 
 /**
- * Search — the SAME engine, not a second one.
+ * Rendered on demand rather than prerendered.
  *
- * `search()` comes straight from the shared core, which means the ranking, the
- * synonym expansion («شاشة سوداء» → the no-image diagnosis), the Arabic
- * normalisation and the type bias are identical to the phone app's. A user who
- * learns what a query does in one place has learned it in both.
- *
- * IT RUNS ON THE SERVER
- * ---------------------
- * The search index is built from the whole encyclopedia, and shipping it to the
- * browser would mean downloading the entire content corpus just to type a
- * query. Running the search server-side keeps the client bundle tiny and makes
- * a shared result URL render its results as real HTML.
- *
- * KNOWLEDGE IS MARKED APART FROM OPINION
- * --------------------------------------
- * Every result carries its type badge. The requirement was explicit that a
- * user's opinion must never be presented as vetted information — community
- * results, when they join this list, will be visually distinct for that reason,
- * and the badge is the mechanism already in place.
+ * The community half needs Firestore and the query lives in the URL, so there
+ * is nothing to build ahead of time. The page is `noindex` anyway — see the
+ * metadata above — so nothing is lost.
  */
+export const dynamic = 'force-dynamic';
 
-export default async function SearchPage(
-  { searchParams }: { searchParams: Promise<{ q?: string }> },
-) {
-  const { q } = await searchParams;
-  const query = (q ?? '').trim();
-  const hits = query.length >= 2 ? search(query, { limit: 60 }) : [];
+const PAGE_SIZE = 20;
 
-  const byType = hits.reduce<Record<string, number>>((acc, h) => {
-    acc[h.doc.type] = (acc[h.doc.type] ?? 0) + 1;
-    return acc;
-  }, {});
+/**
+ * Search — the main way into everything.
+ *
+ * ONE ENGINE, ONE INDEX, THREE GROUPS
+ * -----------------------------------
+ * `retrieve()` from the shared core does the finding; this page only renders.
+ * The ranking, the Arabic normalisation, the synonym expansion, the symptom
+ * matching and the intent recognition are identical to what any other surface
+ * gets, which is the whole point of the layer existing.
+ *
+ * The three groups are three fields on the response, not three filters over one
+ * list. Reviewed knowledge, the reader's own build, and member posts are
+ * different KINDS of thing, and the separation has to survive somebody
+ * refactoring this component — so it lives in the contract rather than in the
+ * markup.
+ *
+ * WHY IT RUNS ON THE SERVER
+ * -------------------------
+ * The index is built from the whole platform, and shipping it to the browser
+ * would mean downloading the corpus to type a query. Server-side keeps the
+ * client bundle at zero for this feature and makes a shared result URL render
+ * as real HTML.
+ *
+ * THE PROJECT GROUP IS THE ONE EXCEPTION
+ * --------------------------------------
+ * It cannot be server-rendered: the project lives in the reader's own browser,
+ * and putting it in the HTML would leak one person's build into a cacheable
+ * public response. So it is a client island that runs `retrieve()` again, in
+ * the browser, over the project only — the same function, the same contract,
+ * on the side of the wire where the data already is.
+ */
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; type?: string; page?: string }>;
+}) {
+  const sp = await searchParams;
+  const query = (sp.q ?? '').trim();
+  const typeFilter = (sp.type ?? '').trim();
+  const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
+
+  const active = query.length >= 2;
+
+  const result = active
+    ? retrieve(query, {
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      filters: typeFilter ? { types: [typeFilter as SearchDocType] } : undefined,
+    })
+    : null;
+
+  // Community runs in parallel with nothing else blocking on it, and returns []
+  // rather than throwing if Firestore is unreachable.
+  const community = active ? await searchCommunity(query, { limit: 6 }) : [];
+
+  const totalPages = result ? Math.max(1, Math.ceil(result.totalOfficial / PAGE_SIZE)) : 1;
+
+  const qs = (over: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    if (query) p.set('q', query);
+    const t = over.type !== undefined ? over.type : typeFilter;
+    if (t) p.set('type', t);
+    const pg = over.page !== undefined ? over.page : String(page);
+    if (pg && pg !== '1') p.set('page', pg);
+    return `${SECTION_ROUTES.search}?${p.toString()}`;
+  };
 
   return (
-    <div className="shell" style={{ paddingTop: 36, paddingBottom: 20, maxWidth: 900 }}>
+    <div className="shell" style={{ paddingTop: 36, paddingBottom: 30, maxWidth: 900 }}>
       <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>البحث</h1>
 
       {/* A plain GET form: works with no JavaScript, and the query lands in the
-          URL so a result set can be shared or bookmarked. */}
-      <form action="/search" method="get" style={{ marginTop: 18 }} role="search">
+          URL so a result set can be shared, bookmarked, and reached with Back. */}
+      <form action={SECTION_ROUTES.search} method="get" style={{ marginTop: 18 }} role="search">
         <label htmlFor="q" className="sr-only">ابحث في المنصة</label>
         <div style={{ display: 'flex', gap: 9 }}>
           <input
@@ -62,10 +111,11 @@ export default async function SearchPage(
             name="q"
             type="search"
             defaultValue={query}
-            placeholder="اكتب مصطلحاً أو عرَضاً: «شاشة سوداء»، «Failsafe»، «الصورة تقطع»…"
+            placeholder="اكتب مصطلحاً أو عرَضاً: «الريسيفر لا يشتغل»، «أين أجد Ports»، «UART»…"
             data-testid="search-input"
+            autoComplete="off"
             style={{
-              flex: 1, padding: '12px 15px', borderRadius: 'var(--radius-sm)',
+              flex: 1, minWidth: 0, padding: '12px 15px', borderRadius: 'var(--radius-sm)',
               border: '1px solid var(--border)', background: 'var(--surface-2)',
               color: 'var(--text)', fontSize: 14.5, fontFamily: 'inherit',
             }}
@@ -74,100 +124,269 @@ export default async function SearchPage(
         </div>
       </form>
 
-      {query.length >= 2 && (
+      {active && result && (
         <>
-          <p
-            data-testid="search-count"
-            style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '18px 0 0' }}
-          >
-            {hits.length === 0
-              ? 'لا نتائج — جرّب الاسم الإنجليزي، أو صِف العرَض بكلماتك.'
-              : `${hits.length} نتيجة`}
-          </p>
-
-          {hits.length > 0 && (
-            <ul
-              style={{
-                listStyle: 'none', margin: '10px 0 0', padding: 0,
-                display: 'flex', flexWrap: 'wrap', gap: 6,
-              }}
-            >
-              {Object.entries(byType).map(([t, n]) => (
-                <li
-                  key={t}
-                  className="card-sm"
-                  style={{ padding: '4px 11px', fontSize: 11.5, color: 'var(--text-dim)' }}
-                >
-                  {SEARCH_TYPE_LABEL_AR[t as keyof typeof SEARCH_TYPE_LABEL_AR] ?? t}{' '}
-                  <span dir="ltr">({n})</span>
-                </li>
-              ))}
-            </ul>
+          {/* What the query looked like to the engine. Shown because a reader
+              who can see it was read as a fault report can tell instantly
+              whether the results below make sense. */}
+          {result.intents.length > 0 && (
+            <p data-testid="search-intent"
+              style={{ margin: '16px 0 0', fontSize: 12.5, color: 'var(--accent)' }}>
+              {result.intents.map(i => INTENT_LABEL_AR[i]).join(' · ')}
+            </p>
           )}
 
-          <ol
-            data-testid="search-results"
-            style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'grid', gap: 10 }}
-          >
-            {hits.map(h => (
-              <li key={h.doc.key}>
-                <Link
-                  href={h.doc.route}
-                  className="card-sm"
-                  data-testid={`search-result-${h.doc.type}-${h.doc.sourceId}`}
-                  style={{ display: 'block', padding: '14px 16px' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-                    <span
-                      style={{
-                        fontSize: 10.5, fontWeight: 800, color: 'var(--accent)',
-                        border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px',
-                      }}
-                    >
-                      {SEARCH_TYPE_LABEL_AR[h.doc.type] ?? h.doc.type}
-                    </span>
-                    <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{h.doc.titleAr}</h2>
-                  </div>
-                  {h.doc.titleEn && (
-                    <p className="ltr" style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '4px 0 0' }}>
-                      {h.doc.titleEn}
-                    </p>
-                  )}
-                  {h.doc.subtitle && (
-                    <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '7px 0 0', lineHeight: 1.8 }}>
-                      {h.doc.subtitle}
-                    </p>
-                  )}
-                  {h.doc.version && (
-                    <p style={{ fontSize: 11, color: 'var(--text-dimmer)', margin: '7px 0 0' }}>
-                      {h.doc.version}
-                    </p>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ol>
+          <p data-testid="search-count"
+            style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '10px 0 0' }}>
+            {result.totalOfficial === 0
+              ? 'لا نتائج في المحتوى الموثّق.'
+              : `${result.totalOfficial} نتيجة في المحتوى الموثّق`}
+            {community.length > 0 && ` · ${community.length} من المجتمع`}
+          </p>
+
+          {result.didYouMean && (
+            <p data-testid="search-didyoumean" style={{ margin: '9px 0 0', fontSize: 13.5 }}>
+              هل تقصد{' '}
+              <Link href={`${SECTION_ROUTES.search}?q=${encodeURIComponent(result.didYouMean)}`}
+                style={{ color: 'var(--accent)', fontWeight: 800 }}>
+                {result.didYouMean}
+              </Link>
+              ؟
+            </p>
+          )}
+
+          {/* Filters — counted from the real result set, so a chip never
+              promises results it cannot deliver. */}
+          {Object.keys(result.countsByType).length > 1 && (
+            <nav aria-label="تصفية حسب النوع" data-testid="search-filters"
+              style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+              <Link href={qs({ type: '', page: '1' })}
+                className={typeFilter ? 'btn-ghost' : 'btn-primary'}
+                style={{ fontSize: 12, padding: '5px 12px' }}>
+                الكل <span dir="ltr">({result.totalOfficial})</span>
+              </Link>
+              {Object.entries(result.countsByType)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8)
+                .map(([t, n]) => (
+                  <Link key={t} href={qs({ type: t, page: '1' })}
+                    data-testid={`search-filter-${t}`}
+                    className={typeFilter === t ? 'btn-primary' : 'btn-ghost'}
+                    style={{ fontSize: 12, padding: '5px 12px' }}>
+                    {RESULT_TYPE_LABEL_AR[t] ?? t} <span dir="ltr">({n})</span>
+                  </Link>
+                ))}
+            </nav>
+          )}
+
+          {/* What a judgement would still need. Retrieval does not judge — but
+              saying what is missing is the difference between an honest gap and
+              a guess. */}
+          {result.missingForVerdict.length > 0 && (
+            <aside className="card-sm" data-testid="search-missing"
+              style={{ padding: '13px 15px', marginTop: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 12.5, fontWeight: 900, color: '#fcd34d' }}>
+                لا يمكن الحكم قبل معرفة
+              </h2>
+              <ul style={{ margin: '8px 0 0', paddingInlineStart: 20, display: 'grid', gap: 4 }}>
+                {result.missingForVerdict.map(m => (
+                  <li key={m} style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>{m}</li>
+                ))}
+              </ul>
+            </aside>
+          )}
+
+          {/* ── The reader's own build. Client-only, never in this HTML. ──── */}
+          <ProjectResults query={query} />
+
+          {/* ── Reviewed knowledge ────────────────────────────────────────── */}
+          <section aria-labelledby="official-h" style={{ marginTop: 24 }}>
+            <h2 id="official-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 4px' }}>
+              محتوى موثّق
+            </h2>
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-dimmer)' }}>
+              مكتوب ومراجَع في المنصة، بمصادر وتواريخ مراجعة.
+            </p>
+
+            {result.official.length === 0 ? (
+              <EmptyState query={query} />
+            ) : (
+              <ol data-testid="search-results"
+                style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
+                {result.official.map(r => <ResultCard key={r.id} result={r} />)}
+              </ol>
+            )}
+          </section>
+
+          {totalPages > 1 && (
+            <nav aria-label="صفحات النتائج" data-testid="search-pagination"
+              style={{ display: 'flex', gap: 9, marginTop: 22, alignItems: 'center', flexWrap: 'wrap' }}>
+              {page > 1 && (
+                <Link href={qs({ page: String(page - 1) })} className="btn-ghost"
+                  data-testid="search-prev">← السابق</Link>
+              )}
+              <span style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
+                صفحة <span dir="ltr">{page}</span> من <span dir="ltr">{totalPages}</span>
+              </span>
+              {page < totalPages && (
+                <Link href={qs({ page: String(page + 1) })} className="btn-ghost"
+                  data-testid="search-next">التالي →</Link>
+              )}
+            </nav>
+          )}
+
+          {/* ── Community, apart and marked ───────────────────────────────── */}
+          {community.length > 0 && (
+            <section aria-labelledby="community-h" data-testid="search-community"
+              style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+              <h2 id="community-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 4px' }}>
+                من المجتمع
+              </h2>
+              <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
+                كتبها أعضاء، ولم تُراجَع. تجارب وآراء — لا تُعامَل كإجابة هندسية،
+                ولا تُغني عن دليل جهازك.
+              </p>
+              <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
+                {community.map(r => <ResultCard key={r.id} result={r} />)}
+              </ol>
+            </section>
+          )}
         </>
       )}
 
-      {query.length < 2 && (
-        <section style={{ marginTop: 26 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 900, margin: '0 0 10px' }}>البحث يصل إلى</h2>
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 7 }}>
-            {[
-              'مقالات الموسوعة ومصطلحات القاموس',
-              'أشجار التشخيص — ابحث بالعرَض كما تصفه أنت',
-              'صفحات Betaflight وحقولها بأسمائها الإنجليزية',
-              'خطوات ExpressLRS ومشكلاته، ومواضيع EdgeTX وإعداداتها',
-              'صفحات برامج الفيديو وأدوات الشركات',
-            ].map(t => (
-              <li key={t} style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-                — {t}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {!active && <SearchIntro />}
     </div>
   );
 }
+
+/* ── Pieces ───────────────────────────────────────────────────────────────── */
+
+const ResultCard: React.FC<{ result: RetrievalResult & { route?: string; postId?: string } }> = ({ result }) => {
+  const { href, unavailableReasonAr } = resultHref(result);
+  const reasons = topReasons(result.reasons);
+  const isCommunity = result.provenance === 'community';
+
+  const body = (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+        <span
+          data-testid={`result-badge-${result.type}`}
+          style={{
+            fontSize: 10.5, fontWeight: 800,
+            color: isCommunity ? 'var(--text-dimmer)' : 'var(--accent)',
+            border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px',
+          }}
+        >
+          {RESULT_TYPE_LABEL_AR[result.type] ?? result.type}
+        </span>
+        <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0, minWidth: 0 }}>{result.titleAr}</h3>
+      </div>
+
+      {result.titleEn && (
+        <p className="ltr" style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '4px 0 0' }}>
+          {result.titleEn}
+        </p>
+      )}
+      {result.summaryAr && (
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '7px 0 0', lineHeight: 1.8 }}>
+          {result.summaryAr}
+        </p>
+      )}
+
+      {/* Why it is here. Never a bare number. */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 9 }}>
+        {reasons.map(c => (
+          <span key={c.kind} data-testid={`reason-${c.kind}`}
+            style={{ fontSize: 10.5, color: 'var(--text-dimmer)' }}>
+            {c.labelAr}
+            {c.terms.length > 0 && <>: <span className="ltr">{c.terms.join('، ')}</span></>}
+          </span>
+        ))}
+        {result.reviewedAt && (
+          <span style={{ fontSize: 10.5, color: 'var(--text-dimmer)' }}>
+            · روجعت <span dir="ltr">{result.reviewedAt}</span>
+          </span>
+        )}
+        {result.version && (
+          <span className="ltr" style={{ fontSize: 10.5, color: 'var(--text-dimmer)' }}>
+            · {result.version}
+          </span>
+        )}
+      </div>
+
+      {unavailableReasonAr && (
+        <p style={{ fontSize: 11.5, color: '#fcd34d', margin: '7px 0 0', lineHeight: 1.8 }}>
+          {unavailableReasonAr}
+        </p>
+      )}
+    </>
+  );
+
+  return (
+    <li>
+      {href ? (
+        <Link href={href} className="card-sm"
+          data-testid={`search-result-${result.type}-${result.id.split(':').slice(1).join(':')}`}
+          style={{ display: 'block', padding: '14px 16px' }}>
+          {body}
+        </Link>
+      ) : (
+        <div className="card-sm" style={{ padding: '14px 16px' }}>{body}</div>
+      )}
+    </li>
+  );
+};
+
+/**
+ * The empty state.
+ *
+ * A search that finds nothing has to leave the reader somewhere better than
+ * where they started, so this offers the three things that actually work when a
+ * query fails: describe the symptom instead of the cause, use the English name,
+ * or start from the diagnosis index.
+ */
+const EmptyState: React.FC<{ query: string }> = ({ query }) => (
+  <div className="card-sm" data-testid="search-empty" style={{ padding: '16px 18px' }}>
+    <p style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>
+      لا نتائج لـ «{query}» في المحتوى الموثّق.
+    </p>
+    <ul style={{ margin: '11px 0 0', paddingInlineStart: 20, display: 'grid', gap: 6 }}>
+      <li style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+        صِف ما تراه بدل ما تظنّه سبباً — «الصورة تقطع» تجد أكثر من «تداخل».
+      </li>
+      <li style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+        جرّب الاسم الإنجليزي كما يظهر داخل البرنامج — <span className="ltr">Failsafe</span>،{' '}
+        <span className="ltr">Ports</span>.
+      </li>
+      <li style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+        أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent)' }}>فهرس التشخيص</Link>{' '}
+        إن كان شيء لا يعمل.
+      </li>
+    </ul>
+  </div>
+);
+
+const SearchIntro: React.FC = () => (
+  <section style={{ marginTop: 26 }}>
+    <h2 style={{ fontSize: 15, fontWeight: 900, margin: '0 0 10px' }}>البحث يصل إلى</h2>
+    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 7 }}>
+      {[
+        'الموسوعة ومنظوماتها ومسارات التعلّم والمصطلحات',
+        'أشجار التشخيص وخطواتها — ابحث بالعرَض كما تصفه أنت',
+        'صفحات Betaflight وحقولها بأسمائها الإنجليزية',
+        'خطوات ExpressLRS ومشكلاته، ومواضيع EdgeTX وإعداداتها',
+        'برامج الفيديو، وما لا تغطّيه المنصة بصراحة',
+        'قطعك وأحكام مشروعك — تظهر لك وحدك',
+        'منشورات المجتمع، في مجموعة منفصلة وموسومة',
+      ].map(t => (
+        <li key={t} style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>— {t}</li>
+      ))}
+    </ul>
+
+    <p style={{ marginTop: 20, fontSize: 13, color: 'var(--text-dimmer)', lineHeight: 1.95 }}>
+      اكتب كما تتكلّم. «الريسيفر لا يشتغل» و«أين أجد Ports» و«هل تدعمون INAV»
+      كلها أسئلة يفهمها البحث، ويقول لك لماذا ظهرت كل نتيجة.
+    </p>
+  </section>
+);
+

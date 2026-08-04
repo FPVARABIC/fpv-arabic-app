@@ -17,7 +17,7 @@
  */
 
 import { normalizeText, tokenize } from './normalize';
-import type { KbLevel } from '../types';
+import type { KbLevel, KbLink, KbBotMeta } from '../types';
 
 import { allKbModules } from '../registry';
 import { kbTerms } from '../glossary/terms';
@@ -26,6 +26,7 @@ import { allDxTrees } from '../diagnostics/trees';
 import { lessonsData } from '../../lessonsData';
 import { bfPageRegistry } from '../../betaflight/pageRegistry';
 import { buildStages } from '../../assembly/buildStages';
+import { droneTypes } from '../../assembly/droneTypes';
 import { roadmapData } from '../../roadmapData';
 import { checklistsData } from '../../checklistsData';
 import { setupSteps } from '../../expresslrs/setupSteps';
@@ -67,6 +68,16 @@ export type SearchDocType =
   | 'edgetx-setting'
   | 'video-tool'
   | 'software-scope'
+  // Three sources that existed but had no way to be found. A module is what a
+  // reader names when they say «افتح منظومة الفيديو»; a learning path is the
+  // answer to «من أين أبدأ»; and a diagnostic NODE is the individual check
+  // someone describes when they say «الطائرة لا تسلّح بعد ما وصّلت البطارية» —
+  // indexing only the tree root made every one of those land on a front page
+  // and leave the reader to find their own step.
+  | 'module'
+  | 'path'
+  | 'dx-node'
+  | 'drone-type'
   | 'troubleshooting';
 
 export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
@@ -86,6 +97,10 @@ export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   'edgetx-setting': 'EdgeTX — إعداد',
   'video-tool': 'برامج الفيديو',
   'software-scope': 'خارج التغطية',
+  module: 'منظومة',
+  path: 'مسار تعلّم',
+  'dx-node': 'خطوة تشخيص',
+  'drone-type': 'نوع بناء',
   troubleshooting: 'مشكلة وحل',
 };
 
@@ -109,18 +124,82 @@ export interface SearchDoc {
   software?: string;
   /** Firmware/app version this statement is tied to, when version-specific. */
   version?: string;
+  /**
+   * The normalised forms that ARE this thing's name.
+   *
+   * Not the same as its title tokens. «ESC» is the ABBREVIATION of a term whose
+   * English title is "Electronic Speed Controller" and whose Arabic title is
+   * «منظّم سرعة المحرك» — so an equality test against either title fails, and
+   * the entry that defines ESC lost to a lesson with ESC in its name. The names
+   * a thing answers to are their own field.
+   */
+  exactNames?: string[];
   /** Normalized, deduped title tokens — highest search weight. */
   titleTokens: string[];
   /** Normalized keyword tokens — high weight. */
   keywordTokens: string[];
   /** Normalized body tokens — lowest weight. */
   bodyTokens: string[];
+
+  /**
+   * The phrasings a reader uses when something is WRONG, kept apart from the
+   * ordinary keywords.
+   *
+   * This separation is the single biggest ranking fix in this batch. These
+   * strings already existed — every article, diagnostic tree, ExpressLRS issue
+   * and EdgeTX topic carries `bot.symptomsAr` — but they were folded into
+   * `keywordTokens`, which made «الريسيفر لا يشتغل» score a receiver PRODUCT
+   * above the diagnosis, because a product name shares those words too. A
+   * symptom match is a different KIND of evidence from a keyword match, and it
+   * has to be scored as one.
+   */
+  symptomTokens: string[];
+
+  /**
+   * Retrieval metadata, carried through from the entry's own `bot` block.
+   *
+   * Not new content and not a second copy: these are references into the same
+   * fields `src/data/` already holds, surfaced on the doc so the retrieval layer
+   * can answer "what does the reader have to tell me before I can judge this?"
+   * without loading the whole source entry. This is what lets the assistant use
+   * this index later instead of building its own.
+   */
+  intents?: string[];
+  /** Destinations this entry can offer, as abstract links — never routes. */
+  actions?: KbLink[];
+  /** Facts that must be known before any judgement about this topic. */
+  requiresBeforeVerdict?: string[];
+  /** Safety preconditions that must be stated before any step is suggested. */
+  safetyPrerequisitesAr?: string[];
+  /** Part categories this concerns, e.g. 'receivers'. */
+  parts?: string[];
+  /** When this statement was last checked against its source. */
+  reviewedAt?: string;
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function uniq(tokens: string[]): string[] {
   return Array.from(new Set(tokens.filter(Boolean)));
+}
+
+/**
+ * The normalised whole names a thing answers to, for equality matching.
+ *
+ * Five glossary entries write their acronym INSIDE the English name — «CRSF
+ * (Crossfire Serial Protocol)», «OSD (On-Screen Display)» — rather than in the
+ * `abbr` field the others use. Both spellings are legitimate content, so the
+ * acronym is derived here instead of the content being rewritten to suit the
+ * index: someone typing «CRSF» is naming that term whichever way its author
+ * chose to write it down.
+ */
+function names(...parts: (string | undefined | null)[]): string[] {
+  const out = parts.filter((p): p is string => !!p).map(normalizeText);
+  for (const p of parts) {
+    const m = p?.match(/^([A-Za-z0-9][A-Za-z0-9-]{1,6})\s*\(/);
+    if (m) out.push(normalizeText(m[1]));
+  }
+  return uniq(out);
 }
 
 function toks(...parts: (string | undefined | null)[]): string[] {
@@ -134,8 +213,37 @@ function bodyToks(...parts: (string | undefined | null)[]): string[] {
   return uniq(parts.filter((p): p is string => !!p).flatMap(tokenize)).slice(0, BODY_TOKEN_CAP);
 }
 
+/**
+ * The symptom surface of an entry: the words someone types when it is broken.
+ *
+ * Misspellings belong here rather than in the keywords for the same reason the
+ * symptoms do — «الريسيفر ميت» is a symptom phrasing, not a synonym of the
+ * title, and treating it as one made typo-tolerance and symptom matching
+ * indistinguishable in the score.
+ */
+function symptomToks(bot: KbBotMeta | undefined, ...extra: (string | undefined)[]): string[] {
+  return uniq([
+    ...(bot?.symptomsAr ?? []),
+    ...(bot?.misspellingsAr ?? []),
+    ...extra.filter((x): x is string => !!x),
+  ].flatMap(tokenize));
+}
+
+/** The retrieval metadata every doc carries, lifted from one `bot` block. */
+function botFields(bot: KbBotMeta | undefined) {
+  if (!bot) return {};
+  return {
+    ...(bot.intents?.length ? { intents: bot.intents as string[] } : {}),
+    ...(bot.actions?.length ? { actions: bot.actions } : {}),
+    ...(bot.requiresBeforeVerdict?.length ? { requiresBeforeVerdict: bot.requiresBeforeVerdict } : {}),
+    ...(bot.safetyPrerequisitesAr?.length ? { safetyPrerequisitesAr: bot.safetyPrerequisitesAr } : {}),
+    ...(bot.parts?.length ? { parts: bot.parts } : {}),
+  };
+}
+
 function partDocs(list: BasePart[], categoryAr: string, system: string): SearchDoc[] {
   return list.map(p => ({
+    symptomTokens: [],
     key: `part:${p.id}`,
     type: 'part' as const,
     sourceId: p.id,
@@ -197,6 +305,52 @@ function buildDocs(): SearchDoc[] {
         titleTokens: toks(a.titleAr, a.titleEn),
         keywordTokens: toks(...a.keywordsAr, ...a.keywordsEn, ...a.objectives),
         bodyTokens: bodyToks(a.summaryAr, layerText, ...(a.tasks ?? [])),
+        symptomTokens: symptomToks(a.bot),
+        reviewedAt: a.sources?.[0]?.reviewedAt,
+        ...botFields(a.bot),
+      });
+    }
+  }
+
+  // The seven systems themselves.
+  //
+  // A module was findable only through its articles, so «افتح منظومة الفيديو»
+  // returned eleven video articles and no way to see the system as a whole —
+  // which is the thing a reader starting out actually wants.
+  for (const mod of allKbModules) {
+    docs.push({
+      key: `module:${mod.id}`,
+      type: 'module',
+      sourceId: mod.id,
+      titleAr: mod.titleAr,
+      titleEn: mod.titleEn,
+      subtitle: mod.summaryAr,
+      route: `/kb/${mod.id}`,
+      contentClass: 'learning',
+      system: mod.id,
+      titleTokens: toks(mod.titleAr, mod.titleEn),
+      keywordTokens: toks(mod.summaryAr),
+      bodyTokens: bodyToks(...mod.articles.map(a => a.titleAr)),
+      symptomTokens: [],
+    });
+
+    // And the ordered routes through it. «من أين أبدأ» has an answer in this
+    // platform — thirty-one of them — and none of it was searchable.
+    for (const path of mod.paths ?? []) {
+      docs.push({
+        key: `path:${path.id}`,
+        type: 'path',
+        sourceId: path.id,
+        titleAr: path.titleAr,
+        subtitle: `${mod.titleAr} · ${path.audienceAr}`,
+        route: `/kb/${mod.id}`,
+        contentClass: 'learning',
+        level: path.level,
+        system: mod.id,
+        titleTokens: toks(path.titleAr),
+        keywordTokens: toks(path.audienceAr, path.outcomeAr),
+        bodyTokens: bodyToks(...path.articleIds),
+        symptomTokens: [],
       });
     }
   }
@@ -213,9 +367,14 @@ function buildDocs(): SearchDoc[] {
       route: `/glossary?term=${encodeURIComponent(t.id)}`,
       contentClass: 'reference',
       system: t.domain,
+      exactNames: names(t.ar, t.en, t.abbr, t.pronunciationAr),
       titleTokens: toks(t.ar, t.en, t.abbr, t.pronunciationAr),
       keywordTokens: toks(...t.appearsIn, ...(t.examples ?? [])),
       bodyTokens: bodyToks(t.short, t.technical),
+      // A term's «examples» ARE its symptom surface: «لا أستطيع تغيير القناة من
+      // النظارة» is written on the VTX Table entry precisely because that is
+      // what someone types when they meet the concept for the first time.
+      symptomTokens: symptomToks(undefined, ...(t.examples ?? [])),
     });
   }
 
@@ -237,7 +396,46 @@ function buildDocs(): SearchDoc[] {
         ...tree.nodes.flatMap(n => [n.question, n.how, n.expected, ...n.outcomes.map(o => `${o.label} ${o.meaning}`)]),
         ...tree.stopConditions,
       ),
+      // The symptom line and every alias for it. This is the field that makes
+      // «الريسيفر لا يشتغل» reach the diagnosis rather than a product whose
+      // description happens to contain the same three words.
+      symptomTokens: symptomToks(undefined, tree.symptomAr, ...tree.aliases),
+      reviewedAt: tree.lastReviewed,
+      safetyPrerequisitesAr: [
+        ...(tree.removeProps ? ['انزع المراوح قبل أي فحص في هذه الشجرة'] : []),
+        ...(tree.disconnectBattery ? ['افصل البطارية قبل أي فحص في هذه الشجرة'] : []),
+      ],
     });
+
+    // Every individual check inside the tree.
+    //
+    // Indexing only the root meant that someone describing the exact check they
+    // are stuck on — «الطائرة لا تسلّح بعد توصيل البطارية» — landed on the front
+    // of a five-step tree and had to find their own step. The node carries the
+    // question, how to perform it and what to expect, which is precisely the
+    // language a stuck reader uses.
+    for (const node of tree.nodes) {
+      docs.push({
+        key: `dx-node:${tree.id}.${node.id}`,
+        type: 'dx-node',
+        sourceId: `${tree.id}.${node.id}`,
+        titleAr: node.question,
+        subtitle: `${tree.titleAr} › ${node.how}`,
+        route: `/diagnose/${tree.id}`,
+        contentClass: 'diagnostic',
+        system: tree.moduleId,
+        titleTokens: toks(node.question),
+        keywordTokens: toks(node.how, node.expected),
+        bodyTokens: bodyToks(...node.outcomes.map(o => `${o.label} ${o.meaning}`)),
+        // Deliberately empty. A node's question is a CHECK — «هل يدور المحرك
+        // بحرية؟» — not a declaration that something is broken, and feeding it
+        // into the symptom surface made «كيف أغير اتجاه المحرك» score a
+        // thrown-propeller check above the setting that changes direction. The
+        // TREE declares the symptom; the node asks about it.
+        symptomTokens: [],
+        reviewedAt: tree.lastReviewed,
+      });
+    }
   }
 
   // Lessons.
@@ -254,6 +452,7 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(l.title, l.description),
       keywordTokens: toks(l.objective, ...(l.conceptIds ?? [])),
       bodyTokens: bodyToks(l.explanation, ...l.importantPoints, l.commonMistake, l.warning),
+      symptomTokens: symptomToks(undefined, l.commonMistake),
     });
   }
 
@@ -272,6 +471,9 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(entry.titleAr, entry.officialTitle, entry.officialId),
       keywordTokens: toks('betaflight'),
       bodyTokens: bodyToks(entry.page?.summaryAr, entry.conditionNote),
+      symptomTokens: [],
+      reviewedAt: entry.page?.reviewedAt,
+      version: entry.page?.firmwareVersionRange,
     });
 
     if (!entry.page) continue;
@@ -291,9 +493,35 @@ function buildDocs(): SearchDoc[] {
           titleTokens: toks(f.englishLabel, f.arabicMeaning),
           keywordTokens: toks(entry.officialTitle, entry.titleAr, group.titleAr, 'betaflight'),
           bodyTokens: bodyToks(f.arabicExplanation, f.beginnerGuidance, f.advancedGuidance, f.conditionNote),
+          symptomTokens: [],
+          reviewedAt: f.source.reviewedAt,
         });
       }
     }
+  }
+
+  // The build archetypes.
+  //
+  // «أريد بناء درون سينمائي» named a real thing in this platform — the
+  // `cinematic` build type, with its own frame size, voltages and description —
+  // and the only way to reach it was to already be inside the build flow. Four
+  // words of a beginner's first question, answerable, and unsearchable.
+  for (const t of droneTypes) {
+    docs.push({
+      key: `drone-type:${t.id}`,
+      type: 'drone-type',
+      sourceId: t.id,
+      titleAr: t.primaryName,
+      titleEn: t.nameEn,
+      subtitle: t.description,
+      route: '/assembly',
+      contentClass: 'learning',
+      exactNames: names(t.primaryName, t.nameEn, t.id),
+      titleTokens: toks(t.primaryName, t.nameEn, t.id),
+      keywordTokens: toks(t.description),
+      bodyTokens: [],
+      symptomTokens: [],
+    });
   }
 
   // Assembly parts.
@@ -325,6 +553,7 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(s.titleAr),
       keywordTokens: toks(s.partCategory ?? ''),
       bodyTokens: bodyToks(s.descriptionAr),
+      symptomTokens: [],
     });
   }
 
@@ -341,6 +570,7 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(r.title),
       keywordTokens: toks(...(r.conceptIds ?? [])),
       bodyTokens: bodyToks(r.description, ...r.checklist),
+      symptomTokens: [],
     });
   }
 
@@ -357,6 +587,7 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(c.title),
       keywordTokens: [],
       bodyTokens: bodyToks(...c.items.map(i => i.text)),
+      symptomTokens: [],
     });
   }
 
@@ -377,6 +608,9 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(s.title),
       keywordTokens: toks('expresslrs', 'elrs', ...s.terminology.map(t => `${t.term}`)),
       bodyTokens: bodyToks(s.summary, s.goal, ...s.actions, ...s.expectedResult, ...s.commonMistakes),
+      symptomTokens: symptomToks(s.bot),
+      reviewedAt: s.reviewedAt,
+      ...botFields(s.bot),
     });
   }
 
@@ -396,6 +630,9 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(i.title, i.symptom),
       keywordTokens: toks(i.category, 'expresslrs', 'elrs'),
       bodyTokens: bodyToks(...i.likelyCauses, i.resolvedWhen, i.nextIfUnresolved),
+      symptomTokens: symptomToks(i.bot, i.symptom, i.title),
+      reviewedAt: i.reviewedAt,
+      ...botFields(i.bot),
     });
   }
 
@@ -426,6 +663,9 @@ function buildDocs(): SearchDoc[] {
         ...p.relationAr, ...p.commonMistakesAr, ...p.verifyAr, p.revertAr,
         ...p.manualRequiredAr, ...p.stepsAr.map(x => x.textAr),
       ),
+      symptomTokens: symptomToks(p.bot, ...(p.troubleshootingAr ?? []).map(t => t.symptomAr)),
+      reviewedAt: p.lastReviewed,
+      ...botFields(p.bot),
     });
 
     for (const g of p.groups) {
@@ -444,6 +684,8 @@ function buildDocs(): SearchDoc[] {
           titleTokens: toks(st.labelAr, st.labelEn),
           keywordTokens: toks('edgetx', p.titleAr, p.titleEn, g.titleAr),
           bodyTokens: bodyToks(st.whatAr, st.effectAr, st.whenAr, st.riskAr, st.verifyAr, st.revertAr),
+          symptomTokens: [],
+          reviewedAt: p.lastReviewed,
         });
       }
     }
@@ -484,6 +726,9 @@ function buildDocs(): SearchDoc[] {
         ...p.verifyAr, p.revertAr, ...p.versionNotesAr, ...p.manualRequiredAr,
         ...p.stepsAr.map(x => x.textAr),
       ),
+      symptomTokens: symptomToks(p.bot),
+      reviewedAt: p.lastReviewed,
+      ...botFields(p.bot),
     });
   }
 
@@ -517,6 +762,9 @@ function buildDocs(): SearchDoc[] {
         sc.whatItIsAr, sc.whoNeedsItAr, sc.whyAr, sc.goInsteadAr,
         ...sc.weHaveAr, ...sc.weDoNotHaveAr,
       ),
+      symptomTokens: symptomToks(sc.bot),
+      reviewedAt: sc.reviewedAt,
+      ...botFields(sc.bot),
     });
   }
 
@@ -533,6 +781,7 @@ function buildDocs(): SearchDoc[] {
       titleTokens: toks(t.problem),
       keywordTokens: toks(...t.symptoms),
       bodyTokens: bodyToks(...t.causes, ...t.steps, t.safetyNote),
+      symptomTokens: symptomToks(undefined, t.problem, ...t.symptoms),
     });
   }
 

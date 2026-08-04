@@ -178,6 +178,17 @@ const RC_FIELD_LABEL_AR: Partial<Record<keyof RcSetup, string>> = {
   rangeTestedOn: 'آخر اختبار مدى',
 };
 
+/**
+ * Every control-link field that has a human label, so a caller can ask for
+ * «all of them» without hand-listing thirty names that would then drift.
+ *
+ * Derived from the label table rather than declared beside it: a field added
+ * there becomes searchable here with no second edit, and a field WITHOUT a
+ * label stays out — which is correct, because a value with no name is not
+ * something to show a reader.
+ */
+export const ALL_RC_FACT_FIELDS = Object.keys(RC_FIELD_LABEL_AR) as (keyof RcSetup)[];
+
 /** Renders one recorded value into Arabic, using the closed-set labels. */
 function rcValueAr(field: keyof RcSetup, rc: RcSetup): string | undefined {
   const v = rc[field];

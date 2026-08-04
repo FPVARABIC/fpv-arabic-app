@@ -101,6 +101,48 @@ export function allowedDistance(token: string): number {
   return 3;
 }
 
+/**
+ * Words that carry no retrieval signal on their own.
+ *
+ * WHY THIS EXISTS, AND WHAT IT MUST NOT DO
+ * ----------------------------------------
+ * Weighting symptom phrases made «أين أجد Ports؟» rank a video logging page
+ * first: the words «أين» and «أجد» appear in dozens of symptom lists, so a
+ * query made mostly of function words scored a symptom match against almost
+ * everything. Function words are how Arabic questions are ASKED — they are not
+ * what the question is ABOUT.
+ *
+ * They are removed only from the *evidence* side of scoring. They are NOT
+ * removed from the query before intent detection, because «أين» and «كيف» and
+ * «هل» are precisely what tells us whether the reader wants a location, a
+ * procedure or a yes/no — the one place these words are the most informative
+ * thing in the sentence.
+ *
+ * The list stays deliberately short. Every word here is one a reader can no
+ * longer search for on its own, so it holds only words that are never the
+ * subject of an FPV question.
+ */
+const STOPWORDS = new Set([
+  // Arabic interrogatives and particles.
+  'ما', 'ماذا', 'من', 'اين', 'كيف', 'متي', 'لماذا', 'هل', 'اي', 'ايه',
+  'في', 'علي', 'عن', 'الي', 'مع', 'ثم', 'او', 'و', 'ب', 'ل', 'ك',
+  'لا', 'لم', 'لن', 'ليس', 'غير', 'بين', 'بعد', 'قبل', 'عند', 'حتي',
+  'هذا', 'هذه', 'ذلك', 'تلك', 'التي', 'الذي', 'كل', 'بعض', 'اكثر',
+  'يوجد', 'اجد', 'اريد', 'عايز', 'ابغي', 'ممكن', 'يمكن', 'شو', 'وش', 'ايش',
+  // English equivalents that appear in transliterated queries.
+  'the', 'a', 'an', 'is', 'are', 'to', 'of', 'in', 'on', 'for', 'and', 'or',
+  'what', 'where', 'how', 'why', 'when', 'which', 'do', 'does', 'i', 'my',
+]);
+
+export function isStopword(token: string): boolean {
+  return STOPWORDS.has(token);
+}
+
+/** The query's content words — what it is about, minus how it was asked. */
+export function contentTokens(tokens: string[]): string[] {
+  return tokens.filter(t => !STOPWORDS.has(t));
+}
+
 export function fuzzyEquals(a: string, b: string): boolean {
   if (a === b) return true;
   const max = Math.min(allowedDistance(a), allowedDistance(b));

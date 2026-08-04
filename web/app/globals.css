@@ -443,3 +443,23 @@ details.card-sm > summary:focus-visible {
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
+
+/* ── Header search ────────────────────────────────────────────────────────── */
+
+/*
+ * At 390px the header already carries a logo, five nav links and an account
+ * control. Adding a text field pushed the row past the viewport and the whole
+ * page scrolled sideways — caught by the community end-to-end run, not by
+ * looking at it on a laptop.
+ *
+ * So the field is a field where there is room, and a labelled icon link where
+ * there is not. Both reach the same page and both are keyboard-reachable; the
+ * narrow one is simply a link, which needs no ARIA to be announced correctly.
+ */
+.header-search-full { display: none; }
+.header-search-compact { display: inline-flex; }
+
+@media (min-width: 620px) {
+  .header-search-full { display: flex; }
+  .header-search-compact { display: none; }
+}

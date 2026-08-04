@@ -67,9 +67,29 @@ export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // one specific stage or checklist group has no web address, and sending
   // someone to a page that does not scroll to what they asked for is worse
   // than telling them where it is.
+  // Found by the search end-to-end run: sixteen lessons are in the shared
+  // index, and every one of them rendered as a live link to `/lessons/:id`,
+  // which this surface has never had. They 404'd — silently, because nobody
+  // clicks a lesson result while testing a Betaflight page. Declaring the kind
+  // here turns the dead link into a visible «متاح في التطبيق».
+  lesson: 'الدروس المصوّرة والتفاعلية متاحة في تطبيق الهاتف',
   assembly: 'تدفّق البناء خطوة بخطوة متاح في تطبيق الهاتف',
   roadmap: 'مراحل البناء معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
   checklist: 'قوائم الفحص معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
+};
+
+/**
+ * Routes that exist on the PHONE and have no destination kind of their own.
+ *
+ * One entry, and it earns its place: the legacy troubleshooting list is indexed
+ * for search and carries `/troubleshooting` as its route — a phone screen. Six
+ * results linked to it from this surface and every one of them 404'd. It has no
+ * `Destination` kind to declare in `PHONE_ONLY_KINDS`, so the route itself is
+ * declared instead, and `searchView.resultHref` turns it into a visible
+ * «متاح في التطبيق» rather than a dead click.
+ */
+export const PHONE_ONLY_ROUTES: Record<string, string> = {
+  '/troubleshooting': 'قائمة الأعطال القديمة متاحة في تطبيق الهاتف — وأشجار التشخيص هنا تغطّي الأحدث منها',
 };
 
 export interface WebHref {
@@ -130,6 +150,15 @@ export const SECTION_ROUTES = {
   programming: '/programming',
   /** The ExpressLRS front page, in front of the setup and troubleshooting flows. */
   expresslrs: '/programming/expresslrs',
+  /**
+   * The community index. A post is a database row rather than content, so it
+   * has no `Destination` kind — the resolver models what the platform KNOWS,
+   * and a member's post is not that. Its path lives here for the same reason
+   * every other path does.
+   */
+  community: '/community',
+  /** The search page, so a "search for this" link is never hand-written. */
+  search: '/search',
   /**
    * The honest-scope page for a program this platform does not document.
    * Never linked for a program that HAS pages — those resolve as destinations.

@@ -27,6 +27,9 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+import { getSearchIndex } from '../src/data/kb/search/buildIndex';
+import { destinationFor, ROUTE_ONLY_TYPES } from '../src/platform/retrieval';
+import { resolveDestination } from '../src/platform/destinations';
 import { allKbModules, getArticle } from '../src/data/kb/registry';
 import { allDxTrees } from '../src/data/kb/diagnostics/trees';
 import { kbTerms } from '../src/data/kb/glossary/terms';
@@ -164,6 +167,70 @@ console.log('\n[4] Content routes are never hand-written in components');
 
   ok('the adapter is the only place resolveDestination is called',
     [...SOURCES.entries()].filter(([, s]) => s.includes('resolveDestination(')).length === 1);
+
+  /**
+   * Every kind the SEARCH INDEX can hand a reader must be openable here.
+   *
+   * This is the assertion that would have caught sixteen lesson results
+   * rendering as live links to a `/lessons/:id` route this surface has never
+   * had. They 404'd quietly for as long as search has existed, because nobody
+   * clicks a lesson result while testing something else. A kind is acceptable
+   * only if its route really exists under web/app, or if it is DECLARED
+   * phone-only — silence is not one of the options.
+   */
+  const routeExists = (route: string): boolean => {
+    const segments = route.split('?')[0].split('#')[0].split('/').filter(Boolean);
+    let dir = path.join(ROOT, 'web/app');
+    for (const seg of segments) {
+      const concrete = path.join(dir, seg);
+      if (existsSync(concrete)) { dir = concrete; continue; }
+      // A [param] directory serves any concrete segment.
+      const dynamic = readdirSync(dir).find(n => n.startsWith('[') && n.endsWith(']'));
+      if (!dynamic) return false;
+      dir = path.join(dir, dynamic);
+    }
+    return existsSync(path.join(dir, 'page.tsx'));
+  };
+
+  // The kinds this surface deliberately does not implement, read from the
+  // adapter's own declaration rather than restated here — a second list would
+  // be a second truth.
+  const adapterSrc = SOURCES.get(ADAPTER) ?? '';
+  const declaredPhoneOnly = new Set(
+    [...adapterSrc.matchAll(/^\s{2}(?:\/\/.*\n\s*)*([a-z-]+):\s*'/gm)]
+      .map(m => m[1]),
+  );
+  ok('the adapter declares at least one phone-only kind', declaredPhoneOnly.size > 0);
+
+  const phoneOnlyRoutes = new Set(
+    [...adapterSrc.matchAll(/^\s{2}'(\/[a-z/-]+)':/gm)].map(m => m[1]),
+  );
+
+  const CHECKS = {
+    articleExists: (id: string) => !!getArticle(id),
+    moduleIdOfArticle: (id: string) => getArticle(id)?.moduleId,
+    dxExists: (id: string) => allDxTrees.some(t => t.id === id),
+    glossaryExists: (id: string) => kbTerms.some(t => t.id === id),
+  };
+
+  const dead: string[] = [];
+  for (const doc of getSearchIndex()) {
+    if (ROUTE_ONLY_TYPES.has(doc.type)) {
+      // These carry the index's own route; check it directly.
+      if (!routeExists(doc.route)) dead.push(`${doc.type} → ${doc.route}`);
+      continue;
+    }
+    // A route the phone owns and this surface declares as such.
+    if (phoneOnlyRoutes.has(doc.route)) continue;
+    const dest = destinationFor(doc);
+    if (!dest) { dead.push(`${doc.type} → no destination`); continue; }
+    if (declaredPhoneOnly.has(dest.kind)) continue;   // honestly unavailable
+    const route = resolveDestination(dest, CHECKS);
+    if (!route) { dead.push(`${doc.type} → unresolvable`); continue; }
+    if (!routeExists(route)) dead.push(`${doc.type} → ${route}`);
+  }
+  if (dead.length) console.error('  DEAD ROUTES:', [...new Set(dead)].slice(0, 8));
+  ok('every route the search index can produce exists on this surface', dead.length === 0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

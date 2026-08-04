@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PRIMARY_NAV, navItem } from '@/lib/siteNav';
+import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { isStaff, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
 
 /**
@@ -101,6 +102,10 @@ export const SiteHeader: React.FC<{
             )}
           </ul>
         </nav>
+
+        {/* Search from anywhere. A client island inside a server header — the
+            only interactive thing on it, and the rest stays server-rendered. */}
+        <HeaderSearch />
 
         <div style={{ flexShrink: 0 }}>
           {signedIn ? (

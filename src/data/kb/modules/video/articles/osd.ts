@@ -39,7 +39,7 @@ export const videoOsd: KbArticle = {
     'advanced', 'pro', 'terminology', 'sources', 'internalLinks', 'search', 'assessment',
   ],
   glossaryIds: [
-    'osd', 'msp-displayport', 'canvas-mode', 'uart', 'dvr', 'pal-ntsc', 'firmware',
+    'osd', 'msp', 'msp-displayport', 'canvas-mode', 'uart', 'dvr', 'pal-ntsc', 'firmware',
     'fc', 'goggles', 'air-unit', 'video-link-class', 'black-screen',
   ],
   relatedArticleIds: ['video-what-is', 'video-analog', 'video-analog-vs-digital', 'fc-outputs', 'fc-ports'],
