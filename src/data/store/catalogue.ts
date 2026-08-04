@@ -394,43 +394,103 @@ export const STORE_CATALOGUE: StoreProduct[] = [
       },
     ],
   }),
+  // Replaced «iFlight Nazgul Evoque F3». That product does not exist: iFlight's
+  // Evoque line is 4, 5 and 6 inch, and three separate searches of their own
+  // shop found no 3-inch Evoque at all. A name nobody sells cannot be corrected
+  // — only withdrawn. GEPRC's SMART35 is the real product that answers the same
+  // question: the smallest freestyle machine somebody can fly near a house.
   product({
-    id: 'iflight-nazgul-evoque-f3',
+    id: 'geprc-smart35',
     level: 'intermediate',
     link: 'elrs',
     video: 'analog',
     collections: ['freestyle'],
-    categoryId: 'size-3',
-    nameEn: 'iFlight Nazgul Evoque F3',
-    titleAr: 'ثلاث إنشات للفريستايل في مساحة صغيرة',
-    brandAr: 'iFlight',
-    pos: 'middle',
+    categoryId: 'size-3-5',
+    nameEn: 'GEPRC SMART35',
+    titleAr: 'فريستايل تحت 250 غراماً',
+    brandAr: 'GEPRC',
+    pos: 'entry',
     summaryAr:
-      'يعطي إحساس الفريستايل الحقيقي في حديقة أو ساحة صغيرة، من دون مساحة الخمسة إنشات '
-      + 'ولا ضجيجها.',
-    suits: ['من يريد فريستايل ولا يملك مساحة واسعة.'],
-    notFor: ['المدى الطويل أو الحمولة الثقيلة.'],
-    highlights: ['حجم يسمح بالطيران قرب البيت', 'متانة مناسبة للتعلّم على المناورات'],
+      'أخفّ مدخل جدّي إلى الفريستايل: هيكل توثبيك بمقاس 3.5 إنش يبقى تحت 250 غراماً، '
+      + 'وهو حدّ يغيّر ما يُسمح لك به في كثير من البلدان. يُباع بنظام تماثلي بطاقة '
+      + '600 ميلي واط أو بنظام رقمي.',
+    suits: [
+      'من يريد مناورات حقيقية في حديقة أو ساحة، لا في ملعب.',
+      'من يهمّه حدّ 250 غراماً في بلده.',
+    ],
+    notFor: [
+      'من يريد ثبات الخمس إنشات في الهواء — هذا المقاس ينحرف بالرياح.',
+      'حمل كاميرا ثقيلة: الوزن كلّه محسوب هنا.',
+    ],
+    highlights: [
+      'يبقى تحت 250 غراماً — وهذا سبب شرائه الأول',
+      'نسختان: تماثلية بطاقة 600 ميلي واط، ورقمية',
+      'محرّكات 1404 بسرعة 3850 دورة لكل فولت',
+    ],
     inBox: ['الطائرة', 'مراوح احتياطية'],
-    completes: ['cnhl-black-series-4s'],
+    availability: 'needs-confirmation',
+    alternatives: ['geprc-domain36', 'iflight-nazgul-evoque-f4', 'geprc-cinebot30'],
+    completes: ['cnhl-black-series-4s', 'radiomaster-pocket', 'lipo-safe-bag'],
+    variants: [
+      {
+        id: 'analog', nameAr: 'نسخة تماثلية بطاقة 600 ميلي واط',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة بنظام تماثلي', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd', nameAr: 'نسخة رقمية',
+        kind: 'bnf', link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بوحدة فيديو رقمية', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
   product({
     id: 'geprc-cinelog35',
     level: 'intermediate',
     link: 'elrs',
-    video: 'analog',
+    video: 'dji',
     collections: ['cinematic'],
     categoryId: 'size-3-5',
-    nameEn: 'GEPRC Cinelog35',
-    titleAr: 'ثلاثة ونصف للتصوير مع زمن أطول',
+    // The catalogue carried the bare «Cinelog35». GEPRC is on the third
+    // generation and sells it only as V3 — quoting V3's motors under the old
+    // name would have been the exact error this review exists to catch.
+    nameEn: 'GEPRC CineLog35 V3',
+    titleAr: 'سينيووب 3.5 إنش بنظام رقمي من الجيل الرابع',
     brandAr: 'GEPRC',
     pos: 'pro',
     summaryAr:
-      'يحمل بطارية أكبر من مقاس الثلاثة فيطير أطول، ويبقى صغيراً بما يكفي للتصوير القريب.',
-    suits: ['التصوير الذي يحتاج زمن طيران أطول من الووب.'],
-    notFor: ['من يريد أخفّ وأصغر ما يمكن.'],
-    highlights: ['زمن طيران أطول من المقاسات الأصغر', 'مناسب للتصوير المتحرّك'],
+      'الجيل الثالث من CineLog35، مبنيّ حول وحدة DJI O4 Air Unit Pro التي تسجّل بدقّة '
+      + '4K عند 120 إطاراً في الثانية. مراوح محاطة تسمح بالاقتراب، وبطارية أكبر من '
+      + 'مقاس الثلاثة فيطير أطول.',
+    suits: [
+      'التصوير الداخلي والقريب حيث يجب أن تكون المراوح محاطة.',
+      'من يريد أعلى دقّة تسجيل متاحة في هذا المقاس.',
+    ],
+    notFor: [
+      'من يملك نظّارة تماثلية — هذه النسخة رقمية بالكامل.',
+      'من يريد أخفّ وأصغر ما يمكن: المراوح المحاطة تضيف وزناً.',
+    ],
+    highlights: [
+      'وحدة DJI O4 Air Unit Pro بتسجيل 4K عند 120 إطاراً',
+      'محرّكات SPEEDX2 2105.5 بسرعة 2650 دورة لكل فولت',
+      'مراوح HQProp D-T90 ثلاثية الشفرات',
+    ],
     inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinebot30', 'betafpv-pavo25', 'geprc-cinelog30'],
+    variants: [
+      {
+        id: 'o4-pro', nameAr: 'نسخة DJI O4 Air Unit Pro',
+        kind: 'bnf', link: 'elrs', video: 'dji', isDefault: true,
+        inBox: ['الطائرة بوحدة DJI O4 Air Unit Pro', 'مراوح احتياطية'],
+      },
+      {
+        id: 'wtfpv', nameAr: 'نسخة WTFPV',
+        kind: 'bnf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بنظام WTFPV', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
 
   /* ── 5" ─────────────────────────────────────────────────────────────────── */
@@ -1101,17 +1161,31 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     video: 'dji',
     collections: ['cinematic'],
     categoryId: 'size-2-5',
-    nameEn: 'BetaFPV Pavo25',
-    titleAr: 'سينيووب 2.5 إنش مصمَّم لوحدة فيديو رقمية',
+    // BetaFPV sells the V2. The old name was carrying the new generation's
+    // reputation without its parts.
+    nameEn: 'BetaFPV Pavo25 V2',
+    titleAr: 'سينيووب 2.5 إنش يُباع بلا نظام فيديو',
     brandAr: 'BetaFPV',
     pos: 'entry',
     summaryAr:
-      'سينيووب بمراوح محاطة مبني حول وحدة فيديو رقمية بدل النظام التماثلي — للّقطات '
-      + 'الداخلية القريبة بصورة أوضح، وبسعر ومقاس أصغر من طائرة تصوير كاملة.',
-    suits: ['التصوير الداخلي القريب بنظام فيديو رقمي.'],
-    notFor: ['من يملك نظّارة تماثلية فقط — الوحدة الرقمية تحتاج نظّارة تناسبها.'],
-    highlights: ['مراوح محاطة للاقتراب الآمن', 'مبني لوحدة فيديو رقمية'],
-    inBox: ['الطائرة', 'مراوح احتياطية'],
+      'سينيووب بمراوح محاطة، مبنيّ حول متحكّم F722 يقبل من 2S إلى 6S ووحدة فيديو '
+      + 'رقمية تختارها أنت. كما في Pavo Pico: الوحدة ليست في الصندوق، وهي شراء '
+      + 'ثانٍ يجب أن يطابق نظّارتك.',
+    suits: [
+      'التصوير الداخلي القريب حيث يجب أن تكون المراوح محاطة.',
+      'من يملك وحدة فيديو رقمية بالفعل ويريد هيكلاً يحملها.',
+    ],
+    notFor: [
+      'من يملك نظّارة تماثلية فقط — هذا الهيكل مبنيّ لوحدة رقمية.',
+      'من لا يملك وحدة رقمية: شراؤها يضاعف الكلفة تقريباً.',
+    ],
+    highlights: [
+      'محرّكات LAVA 1506 بسرعة 4200 دورة لكل فولت',
+      'متحكّم F722 35A مدمج بستّة منافذ UART ويقبل من 2S إلى 6S',
+      'مراوح GF D63 ثلاثية الشفرات',
+    ],
+    inBox: ['الطائرة بلا نظام فيديو', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinelog25', 'geprc-cinebot25', 'betafpv-pavo-pico'],
   }),
   product({
     id: 'geprc-cinebot25',
@@ -1119,18 +1193,42 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     link: 'elrs',
     video: 'dji',
     categoryId: 'size-2-5',
-    nameEn: 'GEPRC Cinebot25',
-    titleAr: 'سينيووب 2.5 إنش بأداء أعلى',
+    nameEn: 'GEPRC Cinebot25 V2',
+    titleAr: 'سينيووب 2.5 إنش بوحدة DJI O4 Air Unit Pro',
     brandAr: 'GEPRC',
     pos: 'pro',
     summaryAr:
-      'الطرف الأعلى من مقاس 2.5: محرّكات وإلكترونيات أقوى للّقطات التي تحتاج تسارعاً '
-      + 'ومتابعة، لا مجرّد تحليق ثابت.',
-    suits: ['من يصوّر مشاهد متحرّكة داخل مساحات ضيّقة.'],
-    notFor: ['المبتدئ — القوة الزائدة في مساحة ضيّقة تعني اصطدامات أغلى.'],
-    highlights: ['أداء أعلى داخل نفس المقاس', 'مبني لوحدة فيديو رقمية'],
-    inBox: ['الطائرة', 'مراوح احتياطية'],
-    alternatives: ['geprc-cinelog25'],
+      'الجيل الثاني من Cinebot25، وهو الطرف الأعلى في مقاس 2.5: محرّكات 1404 بسرعة '
+      + '4600 دورة لكل فولت ووحدة DJI O4 Air Unit Pro مركّبة، لللقطات التي تحتاج '
+      + 'تسارعاً ومتابعة لا مجرّد تحليق ثابت. وزنه 219 غراماً تقريباً بنسخة ExpressLRS.',
+    suits: [
+      'من يصوّر مشاهد متحرّكة داخل مساحات ضيّقة.',
+      'من يملك نظّارة DJI ويريد أعلى أداء في هذا المقاس.',
+    ],
+    notFor: [
+      'المبتدئ — القوة الزائدة في مساحة ضيّقة تعني اصطدامات أغلى.',
+      'من يملك نظّارة تماثلية: هذه النسخة رقمية.',
+    ],
+    highlights: [
+      'وحدة DJI O4 Air Unit Pro مركّبة',
+      'متحكّم TAKER F722 35A بمعالج STM32F722RET6',
+      'يقبل بطارية LiHV بجهد 4S وسعة 750 إلى 1100 ميلي أمبير/ساعة',
+    ],
+    inBox: ['الطائرة بوحدة DJI O4 Air Unit Pro', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinelog25', 'betafpv-pavo25', 'geprc-cinelog30'],
+    variants: [
+      {
+        id: 'o4-pro', nameAr: 'نسخة DJI O4 Air Unit Pro',
+        kind: 'bnf', link: 'elrs', video: 'dji', isDefault: true,
+        inBox: ['الطائرة بوحدة DJI O4 Air Unit Pro', 'مراوح احتياطية'],
+      },
+      {
+        id: 'wtfpv', nameAr: 'نسخة WTFPV',
+        kind: 'bnf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بنظام WTFPV', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
 
   // ── 3 inch ──────────────────────────────────────────────────────────────
@@ -1141,76 +1239,194 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     video: 'dji',
     collections: ['cinematic'],
     categoryId: 'size-3',
-    nameEn: 'GEPRC Cinelog30',
-    titleAr: 'سينيووب 3 إنش لزمن طيران أطول',
+    // Two generations behind. GEPRC ships V3.
+    nameEn: 'GEPRC Cinelog30 V3',
+    titleAr: 'سينيووب 3 إنش بزمن طيران معلَن يتجاوز ثماني دقائق',
     brandAr: 'GEPRC',
     pos: 'entry',
     summaryAr:
-      'نفس فكرة Cinelog25 بمقاس أكبر: مراوح محاطة وثبات للتصوير، لكن المقاس الأكبر '
-      + 'يعطي زمن طيران أطول وتحمّلاً أفضل للهواء.',
-    suits: ['التصوير الذي يحتاج دقائق أطول في الجوّ.'],
-    notFor: ['المساحات الضيّقة جداً — المقاس الأكبر يحدّ من أين يمكن أن تدخل.'],
-    highlights: ['زمن طيران أطول من 2.5 إنش', 'مراوح محاطة'],
-    inBox: ['الطائرة', 'مراوح احتياطية'],
+      'الجيل الثالث من Cinelog30: مراوح محاطة وثبات للتصوير، ووحدة DJI O4 Air Unit '
+      + 'Pro. الشركة تعلن زمن طيران يصل إلى ثماني دقائق وعشر ثوانٍ ببطارية LiHV بجهد '
+      + '4S وسعة 720 ميلي أمبير/ساعة — وهو رقمها لا رقمنا.',
+    suits: [
+      'التصوير الذي يحتاج دقائق أطول في الجوّ.',
+      'الاقتراب من الناس والأثاث بمراوح محاطة.',
+    ],
+    notFor: [
+      'المساحات الضيّقة جداً — المقاس الأكبر يحدّ أين يمكن أن تدخل.',
+      'من يملك نظّارة تماثلية.',
+    ],
+    highlights: [
+      'وحدة DJI O4 Air Unit Pro مركّبة',
+      'محرّكات 1404 بسرعة 3850 دورة لكل فولت',
+      'متحكّم TAKER F722 45A ثنائي وثلاثون بت',
+    ],
+    inBox: ['الطائرة بوحدة DJI O4 Air Unit Pro', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinebot30', 'geprc-cinelog25', 'geprc-cinelog35'],
+    variants: [
+      {
+        id: 'o4-pro', nameAr: 'نسخة DJI O4 Air Unit Pro',
+        kind: 'bnf', link: 'elrs', video: 'dji', isDefault: true,
+        inBox: ['الطائرة بوحدة DJI O4 Air Unit Pro', 'مراوح احتياطية'],
+      },
+      {
+        id: 'wtfpv', nameAr: 'نسخة WTFPV',
+        kind: 'bnf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بنظام WTFPV', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
-  product({
-    id: 'iflight-nazgul-evoque-f3d',
-    level: 'advanced',
-    link: 'elrs',
-    video: 'dji',
-    collections: ['freestyle'],
-    categoryId: 'size-3',
-    nameEn: 'iFlight Nazgul Evoque F3D',
-    titleAr: 'ثلاث إنشات للفريستايل بنظام فيديو رقمي',
-    brandAr: 'iFlight',
-    pos: 'pro',
-    summaryAr:
-      'النسخة الرقمية من Evoque F3: نفس الهيكل والغرض — فريستايل في مساحة أصغر من '
-      + 'خمس إنشات — مع وحدة فيديو رقمية بدل النظام التماثلي.',
-    suits: ['من يطير فريستايل في مساحات محدودة ويملك نظّارة رقمية.'],
-    notFor: ['من يملك نظّارة تماثلية — اشترِ النسخة التماثلية بدلاً منها.'],
-    highlights: ['فريستايل بمقاس صغير', 'وحدة فيديو رقمية مركّبة'],
-    inBox: ['الطائرة', 'مراوح احتياطية'],
-    alternatives: ['iflight-nazgul-evoque-f3'],
-  }),
-
-  // ── 3.5 inch ────────────────────────────────────────────────────────────
+  // Moved here from the 3.5-inch section. The Cinebot30 flies 3-inch props
+  // (HQProp T76mm), so it belonged in this section all along — it was filed by
+  // the number in its name rather than by the propeller it turns.
   product({
     id: 'geprc-cinebot30',
     level: 'intermediate',
     link: 'elrs',
     video: 'dji',
-    categoryId: 'size-3-5',
+    collections: ['cinematic'],
+    categoryId: 'size-3',
     nameEn: 'GEPRC Cinebot30',
-    titleAr: 'طائرة تصوير مكشوفة المراوح بمقاس متوسط',
+    titleAr: 'طائرة تصوير 3 إنش بمراوح مكشوفة',
     brandAr: 'GEPRC',
-    pos: 'entry',
+    pos: 'middle',
     summaryAr:
-      'ليست سينيووب: مراوحها مكشوفة، فهي أكفأ وأسرع وأطول زمناً — مقابل أنها لا '
-      + 'تُقارَب من الناس ولا من الأثاث. للتصوير في الخارج لا في الداخل.',
-    suits: ['التصوير في الهواء المفتوح حيث لا حاجة لحماية المراوح.'],
-    notFor: ['التصوير الداخلي أو قرب الناس — لا حماية حول المراوح.'],
-    highlights: ['أكفأ من السينيووب في نفس المقاس', 'زمن طيران أطول'],
+      'ليست سينيووب: مراوحها مكشوفة، فهي أكفأ وأخفّ من Cinelog30 بنفس المقاس — '
+      + 'مقابل أنها لا تُقارَب من الناس ولا من الأثاث. وزنها بلا بطارية 209 غرامات '
+      + 'بالنسخة التماثلية و235 غراماً بنسخة DJI O3.',
+    suits: [
+      'التصوير في الهواء المفتوح حيث لا حاجة لحماية المراوح.',
+      'من يريد أخفّ وزن ممكن في هذا المقاس.',
+    ],
+    notFor: [
+      'التصوير الداخلي أو قرب الناس — لا حماية حول المراوح.',
+      'من يريد سينيووب فعلاً: راجع Cinelog30.',
+    ],
+    highlights: [
+      'مراوح HQProp T76mm ثلاثية الشفرات — أي ثلاث إنشات',
+      'أخفّ من السينيووب في نفس المقاس',
+      'متحكّم GEP-F722-45A AIO النسخة الثانية',
+    ],
     inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['geprc-cinelog30', 'geprc-smart35', 'geprc-cinelog35'],
+    variants: [
+      {
+        id: 'analog', nameAr: 'نسخة تماثلية', kind: 'bnf',
+        link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة بنظام تماثلي', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd-o3', nameAr: 'نسخة DJI O3', kind: 'bnf',
+        link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بوحدة DJI O3', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd-wasp', nameAr: 'نسخة RunCam Link Wasp', kind: 'bnf',
+        link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بنظام Wasp الرقمي', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
+  }),
+
+  // ── 3.5 – 4 inch ────────────────────────────────────────────────────────
+  // Replaced «iFlight Nazgul Evoque F3D» — the digital twin of a product that
+  // never existed. GEPRC's DoMain3.6 is the real answer to the same question:
+  // a freestyle machine smaller than five inches with a digital video system.
+  product({
+    id: 'geprc-domain36',
+    level: 'advanced',
+    link: 'elrs',
+    video: 'dji',
+    collections: ['freestyle'],
+    categoryId: 'size-3-5',
+    nameEn: 'GEPRC DoMain3.6',
+    titleAr: 'فريستايل 3.6 إنش بمحرّكات مقاس الخمسة',
+    brandAr: 'GEPRC',
+    pos: 'pro',
+    summaryAr:
+      'هيكل فريستايل بقطر 170 مم يحمل محرّكات SPEEDX2 2105.5 — وهي محرّكات مقاس '
+      + 'الخمس إنشات على مروحة 3.6. هذا يعني تسارعاً حادّاً في مساحة أصغر. يُباع '
+      + 'بنسخة تماثلية وزنها 279 غراماً، وبنسخة DJI O3، وبنسخة WTFPV.',
+    suits: [
+      'من يطير فريستايل في مساحة لا تكفي لخمس إنشات.',
+      'من يريد تسارعاً حادّاً لا زمن طيران طويلاً.',
+    ],
+    notFor: [
+      'المبتدئ — هذه قوّة أكبر من أن تُتعلَّم عليها.',
+      'التصوير الهادئ: راجع Cinelog30 أو Cinebot30.',
+    ],
+    highlights: [
+      'محرّكات SPEEDX2 2105.5 بسرعة 2650 دورة لكل فولت',
+      'وصلات ألومنيوم 7075 في مواضع الشدّ',
+      'ثلاث نسخ فيديو: تماثلية وDJI O3 وWTFPV',
+    ],
+    inBox: ['الطائرة', 'مراوح احتياطية'],
+    availability: 'needs-confirmation',
+    alternatives: ['geprc-smart35', 'iflight-nazgul-evoque-f4', 'iflight-nazgul5-v3'],
+    completes: ['cnhl-black-series-6s', 'radiomaster-pocket', 'lipo-safe-bag'],
+    variants: [
+      {
+        id: 'analog', nameAr: 'نسخة تماثلية بكاميرا RunCam Phoenix 2',
+        kind: 'bnf', link: 'elrs', video: 'analog', isDefault: true,
+        inBox: ['الطائرة بكاميرا RunCam Phoenix 2', 'مراوح احتياطية'],
+      },
+      {
+        id: 'hd-o3', nameAr: 'نسخة DJI O3',
+        kind: 'bnf', link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بوحدة DJI O3', 'مراوح احتياطية'],
+      },
+      {
+        id: 'wtfpv', nameAr: 'نسخة WTFPV',
+        kind: 'bnf', link: 'elrs', video: 'walksnail',
+        inBox: ['الطائرة بنظام WTFPV', 'مراوح احتياطية'],
+        availability: 'needs-confirmation',
+      },
+    ],
   }),
   product({
     id: 'iflight-nazgul-evoque-f4',
     level: 'advanced',
     link: 'elrs',
-    video: 'analog',
+    video: 'dji',
     collections: ['freestyle'],
     categoryId: 'size-3-5',
     nameEn: 'iFlight Nazgul Evoque F4',
-    titleAr: 'أربع إنشات — بين الرشاقة والقوة',
+    titleAr: 'أربع إنشات بهيكلَين مختلفَين — X أو DeadCat',
     brandAr: 'iFlight',
     pos: 'middle',
     summaryAr:
-      'مقاس وسط بين 3 و5: أخفّ وأرشق من الخمس إنشات في المساحات المتوسّطة، وأقوى '
-      + 'وأثبت من الثلاث في الهواء.',
-    suits: ['من يجد الخمس إنشات كبيرة على مكانه والثلاث ضعيفة عليه.'],
-    notFor: ['المبتدئ — هذا مقاس يُختار بعد معرفة ما ينقصك.'],
-    highlights: ['حلّ وسط بين مقاسين', 'قطع غيار متوفّرة'],
+      'أربع إنشات بقطر 185 مم على بطارية 6S: أخفّ وأرشق من الخمس إنشات في المساحات '
+      + 'المتوسّطة. يُباع بهيكلَين ليسا تفضيلاً شكلياً — F4X على شكل X مضغوط، وF4D '
+      + 'على شكل DeadCat يُبعد المراوح عن مجال الكاميرا لتصوير خالٍ منها.',
+    suits: [
+      'من يجد الخمس إنشات كبيرة على مكانه والثلاث ضعيفة عليه.',
+      'من يريد لقطة خالية من المراوح: اختر هيكل F4D.',
+    ],
+    notFor: [
+      'المبتدئ — هذا مقاس يُختار بعد معرفة ما ينقصك.',
+      'المدى الطويل: أربع إنشات ليست مقاس الكفاءة.',
+    ],
+    highlights: [
+      'قطر 185 مم على بطارية 6S',
+      'هيكلان: X مضغوط أو DeadCat يخفي المراوح عن الكاميرا',
+      'يُباع بوحدة DJI O3 الرقمية',
+    ],
     inBox: ['الطائرة', 'مراوح احتياطية'],
+    alternatives: ['geprc-domain36', 'geprc-smart35', 'iflight-nazgul5-v3'],
+    variants: [
+      {
+        id: 'f4x-o3', nameAr: 'هيكل F4X — X مضغوط، وحدة DJI O3',
+        kind: 'bnf', link: 'elrs', video: 'dji', isDefault: true,
+        inBox: ['الطائرة بهيكل F4X ووحدة DJI O3', 'مراوح احتياطية'],
+      },
+      {
+        id: 'f4d-o3', nameAr: 'هيكل F4D — DeadCat، وحدة DJI O3',
+        kind: 'bnf', link: 'elrs', video: 'dji',
+        inBox: ['الطائرة بهيكل F4D ووحدة DJI O3', 'مراوح احتياطية'],
+      },
+    ],
   }),
 
   // ── 7 inch and long range ───────────────────────────────────────────────
@@ -1300,89 +1516,175 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     level: 'intermediate',
     categoryId: 'motors',
     nameEn: 'iFlight XING2 2207',
-    titleAr: 'محرّك خمس إنشات شائع في التركيبات الجاهزة',
+    titleAr: 'محرّك خمس إنشات — اختر سرعة الدوران بجهد بطاريتك',
     brandAr: 'iFlight',
     pos: 'middle',
     summaryAr:
       'من أكثر محرّكات الخمس إنشات استعمالاً، ويأتي مركّباً في كثير من الطائرات '
-      + 'الجاهزة — ما يعني أن قطع الغيار والتجارب حوله متوفّرة أكثر من غيره.',
-    suits: ['بناء أو إصلاح طائرة خمس إنشات للفريستايل.'],
-    notFor: ['المقاسات الصغيرة — هذا محرّك خمس إنشات.'],
-    highlights: ['شائع الاستعمال فقطع غياره متوفّرة', 'يُباع مفرداً وبالطقم'],
+      + 'الجاهزة. النسخة الحالية تُباع بثلاث سرعات دوران: 1750 و2050 لبطارية 6S، '
+      + 'و2750 لبطارية 4S. الرقم ليس تفضيلاً — سرعة عالية على جهد عالٍ تحرق المسرّعات.',
+    suits: [
+      'بناء أو إصلاح طائرة خمس إنشات للفريستايل.',
+      'من يريد محرّكاً تجد له شرحاً وتجارب جاهزة.',
+    ],
+    notFor: [
+      'المقاسات الصغيرة — هذا محرّك خمس إنشات.',
+      'من لم يحسم جهد بطاريته بعد: سرعة الدوران تُختار على أساسه.',
+    ],
+    highlights: [
+      'تكوين 12N14P بمحامل NSK ومغانط N52H منحنية',
+      'محور 5 مم وفتحات تثبيت 16 × 16 مم',
+      'وزن 30.5 غراماً بالسلك في النسخة الحالية',
+    ],
     inBox: ['المحرّك', 'براغي'],
+    alternatives: ['emax-eco-ii-2306', 'tmotor-f60-pro-v'],
     learn: [{ kind: 'article', targetId: 'motor-kv', label: 'ما معنى KV' }],
+    variants: [
+      {
+        id: 'kv1750', nameAr: '1750KV — لبطارية 6S', kind: 'single', isDefault: true,
+        inBox: ['المحرّك', 'براغي'],
+      },
+      { id: 'kv2050', nameAr: '2050KV — لبطارية 6S', kind: 'single', inBox: ['المحرّك', 'براغي'] },
+      { id: 'kv2750', nameAr: '2750KV — لبطارية 4S', kind: 'single', inBox: ['المحرّك', 'براغي'] },
+    ],
   }),
 
   // ── flight controllers ──────────────────────────────────────────────────
+  // Replaced «SpeedyBee F405 V4 (FC only)». SpeedyBee does not sell the F405 V4
+  // board on its own — it ships only as a stack — and the standalone board that
+  // did exist, the F405 V3, is marked discontinued on their own site. The F7 V3
+  // is their current standalone flight controller and answers the same need.
   product({
-    id: 'speedybee-f405-v4-fc',
+    id: 'speedybee-f7-v3-fc',
     level: 'intermediate',
     categoryId: 'flight-controllers',
-    nameEn: 'SpeedyBee F405 V4 (FC only)',
+    nameEn: 'SpeedyBee F7 V3',
     titleAr: 'متحكّم طيران مفرد بلا مسرّعات',
     brandAr: 'SpeedyBee',
     pos: 'entry',
     summaryAr:
-      'نفس المتحكّم الموجود في الطقم، مفرداً. للحالة التي احترق فيها المتحكّم '
-      + 'وحده والمسرّعات سليمة — وهي حالة شائعة أكثر ممّا يتوقّع الناس.',
-    suits: ['استبدال متحكّم تالف دون شراء الطقم كاملاً.'],
-    notFor: ['بناء جديد من الصفر — الطقم أرخص من القطعتين منفصلتين.'],
-    highlights: ['بديل مفرد للطقم', 'يُضبط عبر تطبيق الهاتف'],
+      'متحكّم يُباع وحده، لا ضمن طقم. للحالة التي احترق فيها المتحكّم والمسرّعات '
+      + 'سليمة — وهي أشيع ممّا يتوقّع الناس — ولمن يبني بمسرّعات اختارها بنفسه. '
+      + 'ينزّل الصندوق الأسود عبر البلوتوث أو الواي فاي بلا كابل.',
+    suits: [
+      'استبدال متحكّم تالف دون شراء طقم كامل.',
+      'بناء بمسرّعات مختارة على حدة.',
+    ],
+    notFor: [
+      'بناء جديد بسيط — الطقم عادةً أرخص من القطعتين منفصلتين.',
+      'البناءات الضيّقة التي تحتاج مقاس 20 × 20 مم.',
+    ],
+    highlights: [
+      'مخرجان مستقلّان: 9 فولت بتيار 4 أمبير و5 فولت بتيار 2 أمبير',
+      'الصندوق الأسود يُنزَّل لاسلكياً في نحو عشرين ثانية',
+      'فتحة كاميرا 22 مم للبناءات الضيّقة',
+    ],
     inBox: ['المتحكّم', 'كابلات', 'قواعد عازلة'],
-    alternatives: ['speedybee-f405-v4-stack'],
+    availability: 'needs-confirmation',
+    alternatives: ['speedybee-f405-v4-stack', 'holybro-kakute-h7'],
+    completes: ['hobbywing-xrotor-g2', 'radiomaster-rp1'],
     learn: [{ kind: 'betaflight', targetId: 'ports', label: 'صفحة Ports في Betaflight' }],
   }),
   product({
     id: 'holybro-kakute-h7',
     level: 'advanced',
     categoryId: 'flight-controllers',
-    nameEn: 'Holybro Kakute H7',
-    titleAr: 'متحكّم بمعالج أحدث ومنافذ أكثر',
+    nameEn: 'Holybro Kakute H7 V2',
+    titleAr: 'متحكّم H7 بستّة منافذ UART',
     brandAr: 'Holybro',
     pos: 'pro',
     summaryAr:
-      'معالج من الجيل الأحدث ومنافذ UART أكثر — وهذا هو الفرق العملي: عدد المنافذ '
-      + 'هو ما يحدّ عادةً كم قطعة يمكن أن تركّب على طائرة واحدة.',
-    suits: ['تركيبة تحتاج مستقبِلاً وGPS ووحدة فيديو رقمية معاً.'],
-    notFor: ['تركيبة بسيطة — ستدفع ثمن منافذ لن تستعملها.'],
-    highlights: ['منافذ UART أكثر', 'معالج من جيل أحدث'],
+      'معالج STM32H743 بتردّد 480 ميغاهرتز وستّة منافذ UART — وهذا هو الفرق العملي: '
+      + 'عدد المنافذ هو ما يحدّ عادةً كم قطعة تركّب على طائرة واحدة. انتبه أن المنفذ '
+      + 'الثاني مشغول بالبلوتوث، فالمتاح لك خمسة فعلياً إن أردت البلوتوث.',
+    suits: [
+      'تركيبة تحتاج مستقبِلاً وGPS ووحدة فيديو رقمية معاً.',
+      'من يريد ذاكرة صندوق أسود كبيرة بلا بطاقة ذاكرة.',
+    ],
+    notFor: [
+      'تركيبة بسيطة — ستدفع ثمن منافذ لن تستعملها.',
+      'من يحتاج المنافذ الستّة كلّها: البلوتوث يأخذ أحدها.',
+    ],
+    highlights: [
+      'معالج STM32H743 بتردّد 480 ميغاهرتز',
+      'ذاكرة 128 ميغابايت مدمجة للصندوق الأسود',
+      'مفتاح إطفاء لخطّ 9 فولت يقطع مرسل الفيديو',
+    ],
     inBox: ['المتحكّم', 'كابلات', 'قواعد عازلة'],
+    alternatives: ['speedybee-f405-v4-stack', 'speedybee-f7-v3-fc'],
     learn: [{ kind: 'betaflight', targetId: 'ports', label: 'كيف تُوزَّع منافذ UART' }],
   }),
 
   // ── ESCs ────────────────────────────────────────────────────────────────
+  // Renamed from «Hobbywing XRotor Micro G2» — a name that merged two separate
+  // Hobbywing lines. «XRotor Micro» and «XRotor FPV G2» are different products;
+  // the one this shop wants is the FPV G2, and it is sold by current rating.
   product({
     id: 'hobbywing-xrotor-g2',
     level: 'intermediate',
     categoryId: 'escs',
-    nameEn: 'Hobbywing XRotor Micro G2',
-    titleAr: 'مسرّعات رباعية معروفة بالمتانة',
+    nameEn: 'Hobbywing XRotor FPV G2 4in1',
+    titleAr: 'مسرّعات رباعية بورقة بيانات منشورة',
     brandAr: 'Hobbywing',
     pos: 'entry',
     summaryAr:
-      'لوحة مسرّعات رباعية من شركة قديمة في هذا المجال. تُشترى عادةً لأن سمعتها في '
-      + 'التحمّل أفضل من سعرها — وهي القطعة التي يكلّف احتراقها استبدال الأربعة.',
-    suits: ['بناء يريد مسرّعات لا يفكّر فيها بعد التركيب.'],
-    notFor: ['من يحتاج طاقة استثنائية لمقاس كبير — راجع الخيار الأعلى.'],
-    highlights: ['لوحة واحدة للمحرّكات الأربعة', 'سمعة جيّدة في التحمّل'],
+      'لوحة مسرّعات رباعية من شركة قديمة في هذا المجال، وتنشر ورقة بيانات كاملة — '
+      + 'وهذا نادر. تُباع بتيّارَين: 45 أمبير مستمر بلا مخرج جهد، و65 أمبير مستمر '
+      + 'مع مخرج 5 فولت. الفرق ليس في القوّة وحدها: نسخة 45 لن تغذّي مستقبِلك.',
+    suits: [
+      'بناء يريد مسرّعات لا يفكّر فيها بعد التركيب.',
+      'من يريد أرقاماً موثّقة لا وعوداً على الصندوق.',
+    ],
+    notFor: [
+      'من يحتاج مخرج جهد من المسرّعات: اختر نسخة 65 أمبير.',
+      'البناءات الصغيرة — هذه لوحة مقاس 30.5 مم.',
+    ],
+    highlights: [
+      'نسخة 45 أمبير: 12 غراماً و40 × 33 × 5 مم',
+      'نسخة 65 أمبير: 15 غراماً ومخرج 5 فولت بتيار 0.6 أمبير',
+      'معالج ثنائي وثلاثون بت بتردّد نبضات من 48 إلى 96 كيلوهرتز',
+    ],
     inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+    alternatives: ['speedybee-bls-50a', 'tmotor-f55a-pro-ii'],
     learn: [{ kind: 'article', targetId: 'esc-what-is', label: 'ما وظيفة المسرّع' }],
+    variants: [
+      {
+        id: 'a45', nameAr: '45 أمبير — بلا مخرج جهد', kind: 'single', isDefault: true,
+        inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+      },
+      {
+        id: 'a65', nameAr: '65 أمبير — بمخرج 5 فولت', kind: 'single',
+        inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+      },
+    ],
   }),
   product({
     id: 'tmotor-f55a-pro-ii',
     level: 'advanced',
     categoryId: 'escs',
     nameEn: 'T-Motor F55A Pro II',
-    titleAr: 'مسرّعات لتيّار أعلى ومقاسات أكبر',
+    titleAr: 'مسرّعات 55 أمبير بمخرج 10 فولت',
     brandAr: 'T-Motor',
     pos: 'pro',
     summaryAr:
-      'للتركيبات التي تسحب تيّاراً أعلى ممّا تتحمّله اللوحات الاقتصادية — مقاسات '
-      + 'أكبر، أو بطاريات 6S مع محرّكات قويّة.',
-    suits: ['تركيبة 6S بمحرّكات قوية أو مقاس أكبر من خمس إنشات.'],
-    notFor: ['تركيبة صغيرة — طاقة زائدة ووزن زائد بلا فائدة.'],
-    highlights: ['تحمّل تيّار أعلى', 'للمقاسات الكبيرة و6S'],
+      'خمسة وخمسون أمبيراً مستمرّة وخمسة وسبعون ذروة على 3 إلى 6S، ومخرج 10 فولت '
+      + 'بتيّار أمبيرين — وهذا المخرج هو سبب شرائها غالباً: مرسلات الفيديو القوية '
+      + 'تريد 10 فولت لا 5.',
+    suits: [
+      'تركيبة 6S بمحرّكات قوية أو مقاس أكبر من خمس إنشات.',
+      'بناء بمرسل فيديو يحتاج 10 فولت.',
+    ],
+    notFor: [
+      'تركيبة صغيرة — طاقة زائدة ووزن زائد بلا فائدة.',
+      'من يريد ضبط برنامج المسرّع بنفسه: راجع الملاحظة على برنامجه في المواصفات.',
+    ],
+    highlights: [
+      '55 أمبير مستمر و75 ذروة',
+      'مخرج 10 فولت بتيّار 2 أمبير لمرسل الفيديو',
+      'يقبل من 3S إلى 6S',
+    ],
     inBox: ['اللوحة', 'كابلات', 'مكثّف'],
+    alternatives: ['hobbywing-xrotor-g2', 'speedybee-bls-50a'],
   }),
 
   // ── frames ──────────────────────────────────────────────────────────────
@@ -1390,34 +1692,62 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     id: 'tbs-source-one-v5-frame',
     level: 'beginner',
     categoryId: 'frames',
-    nameEn: 'TBS Source One V5 Frame',
-    titleAr: 'هيكل خمس إنشات مفتوح ورخيص',
+    // TBS's own page is «V5.1», and a V6 now sits beside it. The bare «V5»
+    // was a name they never used.
+    nameEn: 'TBS Source One V5.1 Frame',
+    titleAr: 'هيكل خمس إنشات مفتوح المصدر',
     brandAr: 'Team BlackSheep',
     pos: 'entry',
     summaryAr:
-      'أرخص مدخل معقول إلى بناء طائرة خمس إنشات. تصميمه مفتوح وقطع غياره تُباع '
-      + 'مفردة، فذراع مكسورة تكلّف ثمن ذراع لا ثمن هيكل.',
-    suits: ['أوّل عملية بناء، حيث ستُكسر أذرع كثيرة.'],
-    notFor: ['من يريد أخفّ وأمتن هيكل ممكن — هذا هيكل اقتصادي.'],
-    highlights: ['قطع الغيار تُباع مفردة', 'تصميم مفتوح ومنتشر'],
+      'أرخص مدخل معقول إلى بناء طائرة خمس إنشات. الشركة تبرّعت بالتصميم للمجتمع '
+      + 'ونشرت ملفّاته، ولهذا تُصنَّع قطعه على نطاق واسع وتُباع مفردة — فذراع مكسورة '
+      + 'تكلّف ثمن ذراع لا ثمن هيكل. الجيل التالي V6 متاح أيضاً بأذرعه المستقلّة.',
+    suits: [
+      'أوّل عملية بناء، حيث ستُكسر أذرع كثيرة.',
+      'من يريد قطع غيار يجدها بعد سنوات.',
+    ],
+    notFor: [
+      'من يريد أخفّ وأمتن هيكل ممكن — هذا هيكل اقتصادي.',
+      'من يريد ضماناً على الكربون: راجع Marmotte.',
+    ],
+    highlights: [
+      'شكل X واسع المسافة للفريستايل',
+      'تصميم مفتوح وملفّاته منشورة — قطعه تُصنَّع في كل مكان',
+      'الجيل التالي V6 متاح بأذرع بديلة مستقلّة',
+    ],
     inBox: ['ألواح الهيكل', 'براغي'],
+    alternatives: ['armattan-marmotte', 'impulserc-apex'],
   }),
   product({
     id: 'impulserc-apex',
     level: 'advanced',
     categoryId: 'frames',
-    nameEn: 'ImpulseRC Apex',
-    titleAr: 'هيكل فريستايل معروف بتحمّل الاصطدام',
+    // The Apex line moved to EVO. Selling «Apex» plain is selling a generation
+    // that the manufacturer has moved past.
+    nameEn: 'ImpulseRC ApexDC EVO 5"',
+    titleAr: 'هيكل فريستايل بأذرع أمامية وخلفية مختلفة',
     brandAr: 'ImpulseRC',
     pos: 'pro',
     summaryAr:
-      'هيكل يُشترى لسبب واحد: أن يبقى سليماً بعد ما يكسر غيره. أغلى بوضوح، '
-      + 'ومن يشتريه يحسبه على عدد الأذرع التي لن يستبدلها.',
-    suits: ['من يطير فريستايل ويصطدم كثيراً.'],
-    notFor: ['أوّل عملية بناء — ادفع الفرق بعد أن تعرف ماذا تريد.'],
-    highlights: ['سمعة قوية في تحمّل الاصطدام', 'قطع غيار متوفّرة'],
+      'هيكل يُشترى لسبب واحد: أن يبقى سليماً بعد ما يكسر غيره. نسخة DC من الجيل '
+      + 'الحالي تستعمل أذرعاً أمامية بمقاس 5 إنشات وخلفية بمقاس 6 — وهذا ما يُبعد '
+      + 'المراوح عن مجال الكاميرا. أغلى بوضوح، ومن يشتريه يحسبه على أذرع لن يستبدلها.',
+    suits: [
+      'من يطير فريستايل ويصطدم كثيراً.',
+      'من يريد لقطة أنظف بأذرع خلفية أطول.',
+    ],
+    notFor: [
+      'أوّل عملية بناء — ادفع الفرق بعد أن تعرف ماذا تريد.',
+      'من يبحث عن أرخص هيكل: راجع Source One.',
+    ],
+    highlights: [
+      'أذرع أمامية 5 إنشات وخلفية 6 إنشات في نسخة DC',
+      'نسخة Micro Apex بوزن 67 غراماً للكربون والمسامير',
+      'نسخة ApexLR للمدى الطويل بأذرع 5.5 مم',
+    ],
     inBox: ['ألواح الهيكل', 'براغي'],
-    alternatives: ['armattan-marmotte'],
+    availability: 'needs-confirmation',
+    alternatives: ['armattan-marmotte', 'tbs-source-one-v5-frame'],
   }),
 
   // ── batteries ───────────────────────────────────────────────────────────
@@ -1425,18 +1755,41 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     id: 'tattu-r-line-v5-6s',
     level: 'advanced',
     categoryId: 'batteries',
-    nameEn: 'Tattu R-Line V5.0 6S',
-    titleAr: 'بطارية سباق 6S من الفئة الأعلى',
+    nameEn: 'Tattu R-Line Version 5.0 6S',
+    titleAr: 'بطارية سباق 6S بمعدّل تفريغ 150C',
     brandAr: 'Tattu',
     pos: 'pro',
     summaryAr:
       'بطارية تُشترى للأداء تحت الحمل العالي لا للسعر. الفرق يظهر في آخر ثلاثين '
-      + 'ثانية من الطيران، وهو ما يهمّ في السباق أكثر ممّا يهمّ في غيره.',
-    suits: ['السباق والفريستايل الحادّ حيث يظهر فرق البطارية.'],
-    notFor: ['الطيران العادي — ستدفع فرقاً لن تشعر به.'],
-    highlights: ['أداء ثابت تحت حمل عالٍ', 'فئة سباق'],
+      + 'ثانية من الطيران. السعة ليست تفصيلاً: 850 ميلي أمبير/ساعة تزن 145 غراماً '
+      + 'و2200 تزن 346 — وهذا فرق يغيّر إحساس الطائرة كلّه، لا زمن طيرانها فقط.',
+    suits: [
+      'السباق والفريستايل الحادّ حيث يظهر فرق البطارية.',
+      'من يعرف السعة التي يريدها ويريد أفضل ما فيها.',
+    ],
+    notFor: [
+      'الطيران العادي — ستدفع فرقاً لن تشعر به.',
+      'من لم يقس مكان البطارية في هيكله: الأبعاد تختلف كثيراً بين السعات.',
+    ],
+    highlights: [
+      'معدّل تفريغ 150C على كل السعات',
+      'ثماني سعات من 850 إلى 2200 ميلي أمبير/ساعة',
+      'سعة 850 بموصّل XT30U-F لا XT60',
+    ],
     inBox: ['البطارية'],
+    alternatives: ['cnhl-black-series-6s', 'cnhl-black-series-4s'],
     learn: [{ kind: 'article', targetId: 'battery-safety', label: 'التخزين والشحن الآمن' }],
+    variants: [
+      {
+        id: 'mah1050', nameAr: '1050 ميلي أمبير/ساعة — 186 غراماً', kind: 'single',
+        isDefault: true, inBox: ['البطارية'],
+      },
+      { id: 'mah1400', nameAr: '1400 ميلي أمبير/ساعة', kind: 'single', inBox: ['البطارية'] },
+      {
+        id: 'mah2200', nameAr: '2200 ميلي أمبير/ساعة — 346 غراماً', kind: 'single',
+        inBox: ['البطارية'],
+      },
+    ],
   }),
 
   // ── chargers ────────────────────────────────────────────────────────────
@@ -1449,12 +1802,24 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     brandAr: 'ISDT',
     pos: 'entry',
     summaryAr:
-      'شاحن بمنفذ كهرباء مدمج — لا يحتاج مزوّد طاقة منفصلاً. هذا هو الفرق العملي '
-      + 'للمبتدئ: قطعة واحدة تشتريها بدل قطعتين.',
-    suits: ['أوّل شاحن، حيث كل قطعة إضافية عائق.'],
-    notFor: ['من يشحن عدّة بطاريات في وقت واحد — راجع الخيار المزدوج.'],
-    highlights: ['كهرباء مدمجة بلا مزوّد منفصل', 'حجم صغير'],
+      'شاحن بمنفذ كهرباء مدمج — لا يحتاج مزوّد طاقة منفصلاً، وهذا هو الفرق العملي '
+      + 'للمبتدئ: قطعة واحدة بدل قطعتين. لكن انتبه للرقم: من الكهرباء مباشرة يعطي '
+      + '50 واط فقط، ولا يبلغ 200 واط إلّا من مصدر مستمرّ خارجي.',
+    suits: [
+      'أوّل شاحن، حيث كل قطعة إضافية عائق.',
+      'شحن بطارية أو بطاريتين في المساء لا أسطول بطاريات.',
+    ],
+    notFor: [
+      'من يشحن عدّة بطاريات في وقت واحد — راجع الخيار المزدوج.',
+      'من يريد 200 واط من مقبس الحائط: هذا الرقم لمصدر مستمرّ.',
+    ],
+    highlights: [
+      '50 واط من الكهرباء مباشرة، و200 واط من مصدر مستمرّ',
+      'خرج من 2 إلى 30 فولت بتيّار حتى 5 أمبير',
+      'جهد كل خليّة ومقاومتها لا يظهران إلّا في وضع الموازنة',
+    ],
     inBox: ['الشاحن', 'كابل الكهرباء'],
+    alternatives: ['isdt-q6-charger', 'hota-d6-pro'],
     learn: [{ kind: 'article', targetId: 'battery-safety', label: 'الشحن الآمن' }],
   }),
   product({
@@ -1467,12 +1832,23 @@ export const STORE_CATALOGUE: StoreProduct[] = [
     pos: 'pro',
     summaryAr:
       'قناتان تشحنان بطاريتين في وقت واحد. من يملك ست بطاريات ويطير يوماً كاملاً '
-      + 'يعرف لماذا هذا فرق حقيقي وليس رفاهية.',
-    suits: ['من يملك عدّة بطاريات ويطير جلسات طويلة.'],
-    notFor: ['من يملك بطاريتين — القناة الواحدة تكفيك.'],
-    highlights: ['قناتان مستقلّتان', 'يشحن أنواعاً مختلفة من البطاريات'],
+      + 'يعرف لماذا هذا فرق حقيقي وليس رفاهية. ملاحظة صريحة: لم نعثر على صفحة رسمية '
+      + 'للشركة لهذا الطراز، فلا مواصفة هنا موثّقة — وما تجده عند الباعة لم نَنقله.',
+    suits: [
+      'من يملك عدّة بطاريات ويطير جلسات طويلة.',
+      'من يشحن أنواعاً مختلفة من البطاريات لا الليبو وحدها.',
+    ],
+    notFor: [
+      'من يملك بطاريتين — القناة الواحدة تكفيك.',
+      'من يريد مواصفات موثّقة من المصنّع قبل الشراء: هذه ليست متاحة لهذا الطراز.',
+    ],
+    highlights: [
+      'قناتان مستقلّتان تشحنان معاً',
+      'يشحن أنواعاً مختلفة من البطاريات',
+      'مواصفاته غير موثّقة من المصنّع — راجع الشريط أدناه',
+    ],
     inBox: ['الشاحن', 'كابلات'],
-    alternatives: ['isdt-q6-charger'],
+    alternatives: ['isdt-q6-charger', 'isdt-608ac'],
   }),
 
   // ── cameras ─────────────────────────────────────────────────────────────
