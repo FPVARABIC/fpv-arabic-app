@@ -20,8 +20,10 @@
   // could not import the code they exist to exercise. The workaround each time
   // was to move or duplicate code, which is a worse answer than teaching the
   // root how to resolve one alias.
+  // No `baseUrl`: it is deprecated in TypeScript 6 and removed in 7. Paths
+  // beginning with "./" resolve relative to this file, which is what we want
+  // and needs no baseUrl at all.
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@core/data/*": ["./src/data/*"],
       "@core/platform/*": ["./src/platform/*"],

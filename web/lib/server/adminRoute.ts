@@ -3,7 +3,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSession, ForbiddenError, type Session } from './session';
-import { newRequestId, logDenied, actorFromSession } from './audit';
+import { newRequestId, logDenied, logAudit, actorFromSession } from './audit';
 import { can } from '@core/data/auth/roles';
 import { AdminError } from './admin';
 import type { Capability } from '@core/data/auth/roles';
@@ -212,4 +212,49 @@ export function errorResponse(e: unknown, requestId: string): NextResponse {
   console.error(`[admin ${requestId}]`, e);
   return NextResponse.json({ ok: false, requestId, code: 'internal', error: 'تعذّر تنفيذ الطلب' },
     { status: 500, headers: { 'x-request-id': requestId } });
+}
+
+/* ── Server-action gating ─────────────────────────────────────────────────── */
+
+/**
+ * The gate every privileged server action starts with.
+ *
+ * WHY THIS EXISTS RATHER THAN TWO LINES PER ACTION
+ * ------------------------------------------------
+ * Because the two lines are `getSession()` and `sessionCan(...)`, and the
+ * failure mode of writing them by hand is not writing them at all. A server
+ * action is a POST endpoint with a friendly signature: anything exported from a
+ * `'use server'` file is callable by anyone who can reach the site, whatever
+ * the button that normally calls it renders as. An action that forgets its
+ * check is not a hidden button — it is an open endpoint.
+ *
+ * It also AUDITS the refusal. A denied attempt to refund is exactly the event
+ * somebody wants to find later, and an action that simply returns an error
+ * leaves no trace that anyone tried.
+ */
+export type CapabilityGate =
+  | { ok: true; session: Session }
+  | { ok: false; errorAr: string };
+
+export async function requireCapability(
+  capability: Capability,
+): Promise<CapabilityGate> {
+  const session = await getSession();
+  if (!session) return { ok: false, errorAr: 'سجّل الدخول أولاً.' };
+
+  if (!can(session.role, capability)) {
+    await logAudit(actorFromSession(session), newRequestId(), {
+      action: 'store.settings',
+      targetType: 'product',
+      targetId: `capability:${capability}`,
+      result: 'denied',
+      error: `attempted an action requiring ${capability}`,
+    });
+    // The same sentence for «not signed in» and «not allowed» would be kinder
+    // to an attacker than to a user; this one is honest without enumerating
+    // what the capability is called.
+    return { ok: false, errorAr: 'ليست لديك صلاحية تنفيذ هذا الإجراء.' };
+  }
+
+  return { ok: true, session };
 }

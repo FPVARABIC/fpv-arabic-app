@@ -101,6 +101,11 @@ console.log('\n[2] The capability matrix — every role against every capability
       // reason they were not written as one 'store.manage'.
       'store.viewOrders', 'store.manageOrders',
       'store.viewProducts', 'store.editProducts', 'store.viewSupply',
+      // Refunds and provider re-syncs. Deliberately NOT bundled with
+      // `manageOrders`: advancing an order to «shipped» is a fulfilment task a
+      // warehouse role should have, and moving money out of the account is not.
+      // A future fulfilment role gets the first without ever getting this.
+      'store.refundPayments',
     ],
     owner: [...CAPABILITIES],
   };

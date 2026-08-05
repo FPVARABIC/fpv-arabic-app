@@ -1,3 +1,4 @@
+import type { ShippingAddress } from './address';
 /**
  * The store's data model.
  *
@@ -748,10 +749,22 @@ export const ORDER_STATUS_NEXT: Record<OrderStatus, readonly OrderStatus[]> = {
  * being a record of what was agreed.
  */
 export interface OrderItem {
+  /**
+   * The VARIANT ordered — what was actually bought.
+   *
+   * `placeOrder` has always written this and `variantNameAr` beside it; the
+   * interface simply never declared them, so every reader had to either cast or
+   * do without. An order line that names only its product cannot tell the
+   * analogue build from the DJI one, which is the difference between shipping
+   * the right box and the wrong one.
+   */
+  variantId: string;
   productId: string;
   /** Copied at order time, so the record survives the product being renamed. */
   nameEn: string;
   titleAr: string;
+  /** Empty for a single-variant product, where the name would just repeat. */
+  variantNameAr?: string;
   quantity: number;
   unitPriceMinor: Minor;
   lineTotalMinor: Minor;
@@ -768,14 +781,15 @@ export interface OrderItem {
  */
 export interface OrderSubmission {
   items: { variantId: string; quantity: number }[];
-  contact: {
-    fullNameAr: string;
-    phone: string;
-    country: string;
-    cityAr: string;
-    addressAr: string;
-    notesAr?: string;
-  };
+  /**
+   * The delivery address, structured.
+   *
+   * It used to be five loose strings with the whole address in one `addressAr`
+   * box. That shape cannot carry a house number as its own field, which is what
+   * Dutch, Belgian and German carriers match on — a one-line address is why
+   * parcels come back. See `ShippingAddress`.
+   */
+  contact: ShippingAddress;
 }
 
 export interface StoreOrder {
@@ -788,16 +802,12 @@ export interface StoreOrder {
   totalMinor: Minor;
   currency: CurrencyCode;
 
-  /** Contact details, supplied per order — never assumed from the profile. */
-  contact: {
-    fullNameAr: string;
-    phone: string;
-    country: string;
-    cityAr: string;
-    addressAr: string;
-    /** What the customer wants us to know. Their words, rendered as text. */
-    notesAr?: string;
-  };
+  /**
+   * Contact and delivery details, supplied per order — never assumed from the
+   * profile, because the address somebody wants a parcel sent to is not a
+   * property of their account.
+   */
+  contact: ShippingAddress;
 
   /**
    * The free setup service, recorded per order.

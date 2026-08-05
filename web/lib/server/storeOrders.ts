@@ -4,7 +4,9 @@ import { getSession } from './session';
 import { readCart, resolveCart } from '@core/data/store/cart';
 import { freeSetupVariantId } from '@core/data/store/services';
 import { cartProductViews } from './storeCatalogue';
-import { quoteShippingFor } from './storeShipping';
+import { quoteShippingFor, shippingZones } from './storeShipping';
+import { validateAddress } from '@core/data/store/address';
+import { shippableCountries } from '@core/data/store/shipping';
 import { publicStoreSettings } from './storeSettings';
 import { CART_SCHEMA_VERSION } from '@core/data/store/cart';
 import { ORDER_STATUS_NEXT } from '@core/data/store/types';
@@ -55,8 +57,19 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
     return { ok: false, errorAr: 'سجّل الدخول أولاً — الطلب يُربط بحسابك حتى تتابعه.' };
   }
 
-  const contact = validateContact(submission.contact);
-  if ('errorAr' in contact) return { ok: false, errorAr: contact.errorAr };
+  // The address is validated against the countries we can ACTUALLY quote, so a
+  // destination that would be refused two steps later is refused here, at the
+  // field that caused it.
+  const zones = await shippingZones();
+  const address = validateAddress(submission.contact, {
+    shippableCountries: shippableCountries(zones),
+  });
+  if (!address.ok) {
+    // Every problem at once. A checkout that reveals one error per submission
+    // makes somebody submit five times to learn five things the server knew
+    // from the first.
+    return { ok: false, errorAr: address.errors.map(e => e.messageAr).join(' · ') };
+  }
 
   // Prices come from the catalogue, never from the request.
   const cart = readCart({
@@ -104,7 +117,7 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   // zero. Shipping something for nothing because no rule matched is how a shop
   // discovers its rates by losing money on them.
   const shipping = await quoteShippingFor(
-    contact.value.country,
+    address.value.country,
     priced.totals.itemsTotalMinor,
     priced.lines.map(l => ({
       productId: l.product.productId,
@@ -155,7 +168,7 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
     // a mismatch that would have reached Mollie as a currency it was not asked
     // to charge in.
     currency: settings.currency,
-    contact: contact.value,
+    contact: address.value,
     includesFreeSetup: !!freeVariantId && resolved.lines.some(l => l.product.id === freeVariantId),
     status: 'received',
     createdAt: now,
@@ -172,47 +185,6 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   } catch {
     return { ok: false, errorAr: 'تعذّر حفظ الطلب. حاول مرة أخرى.' };
   }
-}
-
-type ContactResult =
-  | { value: StoreOrder['contact'] }
-  | { errorAr: string };
-
-/**
- * Validates contact details.
- *
- * Length caps rather than format rules for the name and address: Arabic
- * addresses do not follow one shape, and a regex that rejects a real address
- * is worse than a field that accepts an odd one. The phone is checked only for
- * having enough digits to be a phone at all.
- */
-function validateContact(raw: OrderSubmission['contact']): ContactResult {
-  if (typeof raw !== 'object' || raw === null) return { errorAr: 'بيانات التواصل ناقصة.' };
-
-  const str = (v: unknown, max: number) =>
-    typeof v === 'string' ? v.trim().slice(0, max) : '';
-
-  const fullNameAr = str(raw.fullNameAr, 120);
-  const phone = str(raw.phone, 32);
-  const country = str(raw.country, 60);
-  const cityAr = str(raw.cityAr, 80);
-  const addressAr = str(raw.addressAr, 400);
-  const notesAr = str(raw.notesAr, 600);
-
-  if (fullNameAr.length < 3) return { errorAr: 'اكتب اسمك كاملاً.' };
-  if ((phone.match(/\d/g) ?? []).length < 7) {
-    return { errorAr: 'اكتب رقم هاتف صحيحاً — نحتاجه للتواصل بشأن الشحن.' };
-  }
-  if (!country) return { errorAr: 'اختر بلد الشحن.' };
-  if (cityAr.length < 2) return { errorAr: 'اكتب المدينة.' };
-  if (addressAr.length < 10) return { errorAr: 'اكتب العنوان بتفصيل يكفي لوصول الشحنة.' };
-
-  return {
-    value: {
-      fullNameAr, phone, country, cityAr, addressAr,
-      ...(notesAr ? { notesAr } : {}),
-    },
-  };
 }
 
 /** Orders, newest first. Staff only — the caller checks the capability. */

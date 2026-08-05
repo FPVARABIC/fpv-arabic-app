@@ -7,6 +7,8 @@ import { SECTION_ROUTES } from '@/lib/webRoutes';
 import { cartHref } from '@/lib/store';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { cartProductViews } from '@/lib/server/storeCatalogue';
+import { shippingZones } from '@/lib/server/storeShipping';
+import { shippableCountries } from '@core/data/store/shipping';
 import { StoreBanner } from '@/components/store/StorePieces';
 
 export const metadata: Metadata = {
@@ -32,7 +34,10 @@ export default async function CheckoutPage() {
     redirect(`/signin?next=${encodeURIComponent(`${SECTION_ROUTES.store}/cart/checkout`)}`);
   }
 
-  const [catalogue, settings] = await Promise.all([cartProductViews(), publicStoreSettings()]);
+  const [catalogue, settings, zones] = await Promise.all([
+    cartProductViews(), publicStoreSettings(), shippingZones(),
+  ]);
+  const shippable = shippableCountries(zones);
 
   return (
     <div className="shell" style={{ paddingTop: 30, paddingBottom: 46, maxWidth: 720 }}>
@@ -43,11 +48,15 @@ export default async function CheckoutPage() {
 
       <h1 style={{ fontSize: 26, fontWeight: 900, margin: '14px 0 6px' }}>إتمام الطلب</h1>
       <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95, margin: 0 }}>
-        لا دفع إلكتروني في هذه المرحلة. نستلم طلبك، ونؤكّد التوفّر والشحن معك،
-        ثم نتّفق على الدفع.
+        اختر بلد الشحن أولاً — منه يُحسب الشحن على الخادم. بعد إنشاء الطلب
+        تنتقل إلى صفحة الدفع.
       </p>
 
-      <CheckoutForm catalogue={catalogue} />
+      <CheckoutForm
+        catalogue={catalogue}
+        accountEmail={session?.email ?? null}
+        shippableCountries={shippable}
+      />
 
       <StoreBanner settings={settings} compact />
     </div>

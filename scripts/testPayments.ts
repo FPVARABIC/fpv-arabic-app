@@ -271,6 +271,103 @@ console.log('\n[11] A stale price cannot be sold from');
     || /سعر هذه النسخة قيد التحديث/.test(cart));
 }
 
+console.log('\n[12] The four interfaces are wired, and gated');
+{
+  const shipAdmin  = stripComments(read('web/app/admin/store/shipping/page.tsx'));
+  const shipAct    = stripComments(read('web/app/admin/store/shipping/actions.ts'));
+  const orderPage  = stripComments(read('web/app/admin/store/orders/[orderId]/page.tsx'));
+  const orderAct   = stripComments(read('web/app/admin/store/orders/[orderId]/actions.ts'));
+  const donePage   = stripComments(read('web/app/store/cart/checkout/done/page.tsx'));
+  const checkout   = stripComments(read('web/components/store/CheckoutForm.tsx'));
+  const checkoutAct= stripComments(read('web/app/store/cart/checkout/actions.ts'));
+  const gate       = stripComments(read('web/lib/server/adminRoute.ts'));
+
+  // ── shipping admin ──
+  ok('the shipping screen exists and is capability-gated',
+    /sessionCan\(session, 'store\.viewSupply'\)/.test(shipAdmin));
+  ok('its save action requires edit rights',
+    /requireCapability\('store\.editProducts'\)/.test(shipAct));
+  ok('it refuses enabling a zone with no cost',
+    /لا يمكن تفعيل منطقة بلا تكلفة شحن/.test(shipAct));
+  ok('it refuses a free threshold with no cost to waive',
+    /لا يمكن تحديد حدّ شحن مجاني قبل إدخال تكلفة الشحن/.test(shipAct));
+  ok('it refuses an inverted delivery estimate',
+    /أقل مدة توصيل أكبر من أكثرها/.test(shipAct));
+  ok('a blank cost saves null, never 0',
+    /if \(!s\) return null;/.test(shipAct));
+  ok('every zone save is audited', /logAudit\(/.test(shipAct));
+
+  // ── admin payment panel ──
+  ok('the order detail page exists and is gated',
+    /sessionCan\(session, 'store\.viewOrders'\)/.test(orderPage));
+  ok('refund and resync sit behind their OWN capability',
+    (orderAct.match(/requireCapability\('store\.refundPayments'\)/g) ?? []).length === 2);
+  ok('…which is not the same as managing orders',
+    !/requireCapability\('store\.manageOrders'\)/.test(orderAct));
+  // The reference lives in the panel component, not the page. The first draft
+  // of this assertion read the page and papered over the miss with `|| true`,
+  // which is a check that cannot fail — worse than no check, because it reads
+  // like one.
+  const panel = stripComments(read('web/components/admin/PaymentPanel.tsx'));
+  // Anchored to the closing quote: `admin-payment-ref` is a PREFIX of
+  // `admin-payment-refund-open` and `admin-payment-refunded`, so the loose
+  // pattern passed even with the reference removed. Caught by deleting the
+  // attribute and watching the suite stay green.
+  ok('the panel shows the provider reference', /"admin-payment-ref"/.test(panel));
+  ok('…the status, amount and currency', /admin-payment-status/.test(panel)
+    && /المبلغ/.test(panel) && /العملة/.test(panel));
+  ok('…and the last sync time', /آخر مزامنة/.test(panel));
+  ok('a refund is confirmed before it is sent',
+    /admin-payment-refund-confirm/.test(panel) && /لا يمكن التراجع/.test(panel));
+  ok('the controls are absent — not merely disabled — without the capability',
+    /\{canRefund && \(/.test(panel));
+  ok('every payment attempt is listed, not just the last',
+    /admin-payment-attempts/.test(orderPage));
+  ok('the refund ceiling is enforced in the SERVICE, not the action',
+    !/remaining/.test(orderAct) && /remaining/.test(service));
+  ok('the action does no validation the service would skip',
+    /Number\.isInteger\(amountMinor\)/.test(orderAct));
+
+  // ── the gate helper itself ──
+  ok('a denied action is audited, not silently refused',
+    /result: 'denied'/.test(gate) && /attempted an action requiring/.test(gate));
+  ok('the refusal does not name the capability to the caller',
+    /ليست لديك صلاحية تنفيذ هذا الإجراء/.test(gate));
+
+  // ── payment result page ──
+  ok('the result page still writes nothing',
+    !/\.set\(|\.update\(|\.add\(|applyPaymentWebhook|startPayment/.test(donePage));
+  for (const st of ['paid', 'pending', 'requires_action', 'failed', 'cancelled',
+                    'refunded', 'partially_refunded']) {
+    ok(`it has copy for «${st}»`, new RegExp(`case '${st}':`).test(donePage));
+  }
+  ok('…and for a provider it cannot read right now',
+    /pay-result-unreadable/.test(donePage) && /تعذّر التحقّق الآن/.test(donePage));
+  ok('…and for an order with no payment yet', /default:/.test(donePage));
+  ok('retry is offered ONLY where the state allows it',
+    /canRetry/.test(donePage) && /showRetry/.test(donePage));
+  ok('a paid order offers no retry button',
+    /headlineAr: 'وصلت دفعتك'[\s\S]{0,200}canRetry: false/.test(donePage));
+  ok('a pending order offers no retry either — the first attempt is still live',
+    /الدفع ما زال مفتوحاً[\s\S]{0,400}canRetry: false/.test(donePage));
+
+  // ── checkout form ──
+  ok('the checkout uses the structured address fields',
+    /houseNumber/.test(checkout) && /postalCode/.test(checkout));
+  ok('the email comes from the account and is not an input',
+    /accountEmail/.test(checkout) && !/name="email"/.test(checkout));
+  ok('the country list is built from priced zones only',
+    /shippableCountries/.test(checkout));
+  ok('shipping is fetched from the server, never computed in the browser',
+    /quoteShippingAction/.test(checkout) && !/costMinor \* |zones\.find/.test(checkout));
+  ok('the quote action re-reads categories server-side',
+    /cartProductViews\(\)/.test(checkoutAct));
+  ok('submission cannot proceed without a successful quote',
+    /blockedReason/.test(checkout));
+  ok('the form still posts no price',
+    !/totalMinor:|priceMinor:/.test(checkout.slice(checkout.indexOf('submitOrder'))));
+}
+
 console.log(`\n${failures.length ? '❌' : '✅'} testPayments: ${passed} passed, ${failures.length} failed`);
 for (const f of failures) console.log(`   ✗ ${f}`);
 process.exit(failures.length ? 1 : 0);

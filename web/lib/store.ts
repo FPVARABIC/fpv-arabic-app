@@ -104,3 +104,20 @@ export function isOrderable(p: StoreProduct): boolean {
     && p.availability !== 'out-of-stock'
     && p.availability !== 'coming-soon';
 }
+
+/**
+ * The checkout, and the page the payment provider returns the customer to.
+ *
+ * Helpers rather than literals for the same reason every other store route is:
+ * a path typed into a component is a second routing table, and
+ * `scripts/testStore.ts` fails the build when one appears. The return URL in
+ * particular is built in THREE places — the payment service, the result page
+ * and the form — and three copies of one string is how a rename half-lands.
+ */
+export function checkoutHref(): string {
+  return `${SECTION_ROUTES.store}/cart/checkout`;
+}
+
+export function paymentResultHref(orderId: string): string {
+  return `${checkoutHref()}/done?order=${encodeURIComponent(orderId)}`;
+}

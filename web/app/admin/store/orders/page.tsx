@@ -7,6 +7,8 @@ import { ORDER_STATUS_LABEL_AR, type OrderStatus } from '@core/data/store/types'
 import { formatPrice } from '@core/data/store/pricing';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { OrderStatusControl } from '@/components/admin/OrderStatusControl';
+import { formatAddress } from '@core/data/store/address';
+import { COUNTRY_NAME_AR } from '@core/data/store/shipping';
 
 export const metadata: Metadata = { title: 'الطلبات — الإدارة', robots: { index: false, follow: false } };
 export const dynamic = 'force-dynamic';
@@ -88,12 +90,12 @@ export default async function AdminOrders(
               </div>
 
               <dl className="admin-kv" style={{ marginTop: 12 }}>
-                <div><dt>العميل</dt><dd>{o.contact.fullNameAr}</dd></div>
+                <div><dt>العميل</dt><dd>{o.contact.fullName}</dd></div>
                 <div><dt>الهاتف</dt><dd className="ltr">{o.contact.phone}</dd></div>
-                <div><dt>الوجهة</dt><dd>{o.contact.country} — {o.contact.cityAr}</dd></div>
-                <div><dt>العنوان</dt><dd style={{ lineHeight: 1.9 }}>{o.contact.addressAr}</dd></div>
-                {o.contact.notesAr && (
-                  <div><dt>ملاحظات العميل</dt><dd style={{ lineHeight: 1.9 }}>{o.contact.notesAr}</dd></div>
+                <div><dt>الوجهة</dt><dd>{COUNTRY_NAME_AR[o.contact.country] ?? o.contact.country} — {o.contact.city}</dd></div>
+                <div><dt>العنوان</dt><dd style={{ lineHeight: 1.9 }}>{formatAddress(o.contact)}</dd></div>
+                {o.contact.notes && (
+                  <div><dt>ملاحظات العميل</dt><dd style={{ lineHeight: 1.9 }}>{o.contact.notes}</dd></div>
                 )}
               </dl>
 

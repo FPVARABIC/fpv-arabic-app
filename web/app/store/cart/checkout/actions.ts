@@ -2,6 +2,8 @@
 
 import { placeOrder } from '@/lib/server/storeOrders';
 import { startPayment, type StartPaymentResult } from '@/lib/server/payments/service';
+import { quoteShippingFor } from '@/lib/server/storeShipping';
+import { cartProductViews } from '@/lib/server/storeCatalogue';
 import type { OrderSubmission } from '@core/data/store/types';
 
 /**
@@ -33,4 +35,49 @@ export async function beginPayment(orderId: string): Promise<StartPaymentResult>
     return { ok: false, errorAr: 'رقم الطلب غير صالح.' };
   }
   return startPayment(orderId.trim());
+}
+
+/**
+ * What shipping costs to a country, for the checkout to display.
+ *
+ * The SAME function `placeOrder` uses, so the figure shown and the figure
+ * charged cannot drift apart — that is the whole reason this is a round trip
+ * rather than a calculation in the browser.
+ *
+ * It takes the basket's variant ids and re-reads their categories on the
+ * server: the category decides whether a line is shippable at all, and a
+ * browser-supplied category would let somebody ship a blocked item by relabelling
+ * it.
+ */
+export async function quoteShippingAction(
+  country: string,
+  itemsTotalMinor: number,
+  variantIds: string[],
+): Promise<
+  | { ok: true; costMinor: number; zoneNameAr: string; etaAr: string | null }
+  | { ok: false; messageAr: string }
+> {
+  if (typeof country !== 'string' || !/^[A-Za-z]{2}$/.test(country.trim())) {
+    return { ok: false, messageAr: 'اختر بلد الشحن.' };
+  }
+  if (!Number.isInteger(itemsTotalMinor) || itemsTotalMinor < 0) {
+    return { ok: false, messageAr: 'تعذّر حساب الشحن.' };
+  }
+
+  const views = await cartProductViews();
+  const byId = new Map(views.map(v => [v.id, v]));
+  const lines = (Array.isArray(variantIds) ? variantIds : [])
+    .slice(0, 100)
+    .map(id => byId.get(id))
+    .filter((v): v is NonNullable<typeof v> => !!v)
+    .map(v => ({ productId: v.productId, categoryId: v.categoryId ?? '' }));
+
+  const q = await quoteShippingFor(country.trim().toUpperCase(), itemsTotalMinor, lines);
+  if (!q.ok) return { ok: false, messageAr: q.messageAr };
+
+  const etaAr = q.etaDaysMin !== null && q.etaDaysMax !== null
+    ? `التوصيل خلال ${q.etaDaysMin}–${q.etaDaysMax} يوماً`
+    : null;
+
+  return { ok: true, costMinor: q.costMinor, zoneNameAr: q.zoneNameAr, etaAr };
 }

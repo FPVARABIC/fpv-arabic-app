@@ -2,8 +2,12 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getSession } from '@/lib/server/session';
 import { getOrder } from '@/lib/server/storeOrders';
-import { activePaymentFor } from '@/lib/server/payments/service';
-import { PAYMENT_STATUS_LABEL_AR } from '@core/data/store/payment';
+import { activePaymentFor, paymentsFor } from '@/lib/server/payments/service';
+import {
+  PAYMENT_STATUS_LABEL_AR, isTerminalPayment, type PaymentStatus,
+} from '@core/data/store/payment';
+import { ORDER_STATUS_LABEL_AR } from '@core/data/store/types';
+import { RetryPaymentButton } from '@/components/store/RetryPaymentButton';
 
 export const metadata: Metadata = {
   title: 'حالة الدفع',
@@ -21,18 +25,114 @@ export const dynamic = 'force-dynamic';
  * times as they like — including somebody who never paid. If arriving here
  * marked an order paid, the shop would ship hardware to whoever guessed a URL.
  *
- * So it READS the order and reports what the server already believes. The
- * belief itself is only ever changed by `/api/payments/webhook`, which asks the
- * provider directly. See `docs/store/PAYMENTS.md`.
+ * So it READS and reports. The belief itself is only ever changed by
+ * `/api/payments/webhook`, which asks the provider directly.
  *
- * WHY IT CAN STILL SAY «بانتظار التأكيد»
- * --------------------------------------
- * The customer usually arrives here BEFORE the webhook does — the redirect is a
- * browser hop, the webhook is a server-to-server call that may take seconds.
- * Saying «لم يصلنا الدفع» in that window would be a lie told to somebody who
- * has just paid. So an unconfirmed payment is reported honestly as
- * not-yet-confirmed, with what happens next, rather than as a failure.
+ * WHY EVERY STATE GETS ITS OWN SENTENCE
+ * -------------------------------------
+ * Because «حدث خطأ» is what a shop says when it has not thought about what
+ * could go wrong, and the states here mean genuinely different things to the
+ * person reading them. «Cancelled» is something they did and can undo;
+ * «failed» is something their bank did and they should try differently;
+ * «pending» is nothing at all and the worst possible moment to alarm them.
+ * Collapsing the ten into two would be a smaller page and a worse shop.
+ *
+ * THE MOST IMPORTANT ONE IS «NOT YET»
+ * -----------------------------------
+ * The customer usually arrives BEFORE the webhook does — the redirect is a
+ * browser hop, the webhook is a server-to-server call. Telling somebody who has
+ * just paid that we have no payment would be a lie with their money already
+ * gone, so that window is reported as verification-in-progress, with what
+ * happens next.
  */
+
+interface StateCopy {
+  headlineAr: string;
+  bodyAr: string;
+  tone: 'ok' | 'wait' | 'warn' | 'bad';
+  /** Whether paying again is a sensible thing to offer. */
+  canRetry: boolean;
+}
+
+/**
+ * The full set. `null` means no payment record exists at all — the customer
+ * placed an order and has not started paying, or is here by a stray link.
+ */
+function copyFor(status: PaymentStatus | null): StateCopy {
+  switch (status) {
+    case 'paid':
+      return {
+        headlineAr: 'وصلت دفعتك',
+        bodyAr: 'أكّد مزوّد الدفع العملية. سنبدأ التجهيز، وتصلك رسالة عند الشحن.',
+        tone: 'ok', canRetry: false,
+      };
+    case 'pending':
+      return {
+        headlineAr: 'الدفع ما زال مفتوحاً',
+        bodyAr:
+          'بدأت عملية الدفع ولم تكتمل بعد. إن كنت قد أتممتها للتوّ فالتأكيد يصل من '
+          + 'مزوّد الدفع إلى خادمنا مباشرةً — لا عبر متصفّحك — وقد يتأخّر دقيقة. '
+          + 'لا تدفع مرّة أخرى قبل أن تتحقّق.',
+        tone: 'wait', canRetry: false,
+      };
+    case 'requires_action':
+      return {
+        headlineAr: 'الدفع يحتاج خطوة أخيرة منك',
+        bodyAr:
+          'بنكك يطلب تأكيداً إضافياً — عادةً في تطبيق البنك أو برسالة. أكمل الخطوة '
+          + 'هناك، ثم عُد إلى هذه الصفحة.',
+        tone: 'wait', canRetry: false,
+      };
+    case 'failed':
+      return {
+        headlineAr: 'لم تنجح عملية الدفع',
+        bodyAr:
+          'رفض مزوّد الدفع العملية. طلبك محفوظ كما هو ولم يُلغَ — جرّب وسيلة دفع '
+          + 'أخرى، أو تواصل مع بنكك إن تكرّر الرفض.',
+        tone: 'bad', canRetry: true,
+      };
+    case 'cancelled':
+      return {
+        headlineAr: 'أُلغيت عملية الدفع',
+        bodyAr:
+          'أُلغيت العملية أو انتهت مهلتها قبل إتمامها. طلبك ما زال محفوظاً '
+          + 'بمحتوياته وعنوانه — يمكنك الدفع متى شئت.',
+        tone: 'warn', canRetry: true,
+      };
+    case 'refunded':
+      return {
+        headlineAr: 'استُرجع المبلغ بالكامل',
+        bodyAr:
+          'أعدنا كامل المبلغ إلى وسيلة الدفع نفسها. قد يستغرق ظهوره في حسابك '
+          + 'أياماً قليلة حسب بنكك.',
+        tone: 'warn', canRetry: false,
+      };
+    case 'partially_refunded':
+      return {
+        headlineAr: 'استُرجع جزء من المبلغ',
+        bodyAr:
+          'أعدنا جزءاً من المبلغ إلى وسيلة الدفع نفسها. التفصيل أدناه، وقد يستغرق '
+          + 'ظهوره أياماً قليلة.',
+        tone: 'warn', canRetry: false,
+      };
+    default:
+      return {
+        headlineAr: 'طلبك مسجَّل',
+        bodyAr:
+          'لم تبدأ عملية دفع لهذا الطلب بعد. محتويات الطلب وعنوانه محفوظة، '
+          + 'ويمكنك الدفع الآن.',
+        tone: 'wait', canRetry: true,
+      };
+  }
+}
+
+const TONE_COLOR: Record<StateCopy['tone'], string> = {
+  ok: 'var(--sev-ok)',
+  wait: 'var(--accent-ink)',
+  warn: 'var(--sev-warning)',
+  bad: 'var(--sev-blocker)',
+};
+
 export default async function PaymentDonePage(
   { searchParams }: { searchParams: Promise<{ order?: string }> },
 ) {
@@ -43,9 +143,25 @@ export default async function PaymentDonePage(
   // Somebody else's order is treated exactly as a missing one — the page must
   // not confirm that an order id exists to a stranger who guessed it.
   const mine = order && session && order.customerUid === session.uid ? order : null;
-  const payment = mine ? await activePaymentFor(mine.id) : null;
 
-  const settled = payment?.status === 'paid';
+  // A provider outage while reading is its own state: we genuinely do not know,
+  // and saying so is better than defaulting to «unpaid» over somebody's money.
+  let payment = null;
+  let attempts: Awaited<ReturnType<typeof paymentsFor>> = [];
+  let unreadable = false;
+  if (mine) {
+    try {
+      [payment, attempts] = await Promise.all([
+        activePaymentFor(mine.id),
+        paymentsFor(mine.id),
+      ]);
+    } catch {
+      unreadable = true;
+    }
+  }
+
+  const copy = copyFor(payment?.status ?? null);
+  const showRetry = !!mine && !unreadable && copy.canRetry;
 
   return (
     <div className="shell" style={{ paddingTop: 40, paddingBottom: 48, maxWidth: 720 }}>
@@ -55,7 +171,7 @@ export default async function PaymentDonePage(
       </nav>
 
       {!mine && (
-        <div className="card" style={{ padding: '22px 24px', marginTop: 20 }}>
+        <div className="card" data-testid="pay-result-missing" style={{ padding: '22px 24px', marginTop: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>لا نجد هذا الطلب</h1>
           <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.95, margin: '10px 0 0' }}>
             تأكّد أنك مسجّل الدخول بالحساب الذي طلبت به. الطلبات مربوطة بالحساب،
@@ -67,18 +183,33 @@ export default async function PaymentDonePage(
         </div>
       )}
 
-      {mine && (
-        <div className="card" style={{ padding: '24px 26px', marginTop: 20 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 900, margin: 0 }}>
-            {settled ? 'وصلنا دفعتك' : 'طلبك مسجَّل'}
+      {mine && unreadable && (
+        <div className="card" data-testid="pay-result-unreadable" style={{ padding: '24px 26px', marginTop: 20 }}>
+          <h1 style={{ fontSize: 23, fontWeight: 900, margin: 0, color: 'var(--sev-warning)' }}>
+            تعذّر التحقّق الآن
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.95, margin: '12px 0 0' }}>
+            لم نستطع قراءة حالة الدفع في هذه اللحظة. هذا خلل مؤقّت عندنا ولا يعني
+            أن دفعتك لم تصل — <strong>لا تدفع مرّة أخرى</strong>. أعِد تحميل الصفحة
+            بعد قليل، أو تواصل معنا برقم الطلب.
+          </p>
+          <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '12px 0 0' }} dir="ltr">
+            {mine.id}
+          </p>
+        </div>
+      )}
+
+      {mine && !unreadable && (
+        <div className="card" data-testid="pay-result" style={{ padding: '24px 26px', marginTop: 20 }}>
+          <h1
+            style={{ fontSize: 24, fontWeight: 900, margin: 0, color: TONE_COLOR[copy.tone] }}
+            data-testid={`pay-state-${payment?.status ?? 'none'}`}
+          >
+            {copy.headlineAr}
           </h1>
 
           <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.95, margin: '12px 0 0' }}>
-            {settled
-              ? 'أكّد مزوّد الدفع العملية. سنبدأ التجهيز، وتصلك رسالة عند الشحن.'
-              : 'لم يصلنا تأكيد الدفع بعد. هذا طبيعي في الدقائق الأولى: تأكيد الدفع '
-                + 'يصل من مزوّد الدفع إلى خادمنا مباشرةً، لا عبر متصفّحك، وقد يتأخّر قليلاً. '
-                + 'لا تدفع مرّة أخرى — افتح صفحة طلباتك بعد قليل.'}
+            {copy.bodyAr}
           </p>
 
           <dl className="admin-kv card-sm" style={{ padding: '15px 17px', marginTop: 18 }}>
@@ -87,19 +218,54 @@ export default async function PaymentDonePage(
               <dt>حالة الدفع</dt>
               <dd>{payment ? PAYMENT_STATUS_LABEL_AR[payment.status] : 'لم تبدأ بعد'}</dd>
             </div>
+            <div><dt>حالة الطلب</dt><dd>{ORDER_STATUS_LABEL_AR[mine.status]}</dd></div>
+            {payment && (
+              <div>
+                <dt>المبلغ</dt>
+                <dd>
+                  <span dir="ltr">{(payment.amountMinor / 100).toFixed(2)} {payment.currency}</span>
+                </dd>
+              </div>
+            )}
+            {payment && (payment.refundedMinor ?? 0) > 0 && (
+              <div>
+                <dt>المُسترجَع</dt>
+                <dd>
+                  <span dir="ltr">
+                    {((payment.refundedMinor ?? 0) / 100).toFixed(2)} {payment.currency}
+                  </span>
+                </dd>
+              </div>
+            )}
+            {attempts.length > 1 && (
+              <div>
+                <dt>محاولات الدفع</dt>
+                <dd><span dir="ltr">{attempts.length}</span></dd>
+              </div>
+            )}
             {payment?.testMode && (
               <div>
                 <dt>وضع الاختبار</dt>
                 <dd style={{ color: 'var(--sev-warning)' }}>
-                  هذه عملية تجريبية — لم يُخصم أي مبلغ حقيقي.
+                  عملية تجريبية — لم يُخصم أي مبلغ حقيقي.
                 </dd>
               </div>
             )}
           </dl>
 
-          <p style={{ margin: '18px 0 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Link href="/store" className="btn-primary">تابع التسوّق</Link>
-          </p>
+          <div style={{ margin: '18px 0 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {/* Offered ONLY where the state allows it. A retry button beside a
+                paid order is an invitation to pay twice; beside a pending one it
+                is an invitation to pay while the first attempt is still live. */}
+            {showRetry && <RetryPaymentButton orderId={mine.id} />}
+            <Link href="/store" className="btn-ghost">تابع التسوّق</Link>
+          </div>
+
+          {payment && !isTerminalPayment(payment.status) && payment.status !== 'paid' && (
+            <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '14px 0 0', lineHeight: 1.85 }}>
+              هذه الصفحة تقرأ الحالة فقط ولا تغيّرها. حدّثها بعد دقيقة لترى آخر ما وصلنا.
+            </p>
+          )}
         </div>
       )}
     </div>

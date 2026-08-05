@@ -122,6 +122,17 @@ export const CAPABILITIES = [
   'store.viewProducts',
   'store.editProducts',
   'store.viewSupply',
+  // Sending money back. Its own capability, and NOT granted with
+  // `manageOrders`, because they are different kinds of act: advancing an order
+  // to «shipped» is a daily fulfilment task that a warehouse role should have,
+  // and moving money out of the account is not. Whoever fulfils orders should
+  // not be able to refund them by holding one capability.
+  //
+  // It also covers re-syncing a payment from the provider. That is read-only
+  // against the provider, but it WRITES the payment's status here — and a
+  // status somebody can set by pressing a button is one that needs the same
+  // gate as the money it describes.
+  'store.refundPayments',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -205,6 +216,7 @@ export const ROLE_CAPABILITIES: Record<PlatformRole, readonly Capability[]> = {
     'store.viewProducts',
     'store.editProducts',
     'store.viewSupply',
+    'store.refundPayments',
   ],
 
   // The only role that may create other privileged roles.
