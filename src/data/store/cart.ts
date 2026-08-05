@@ -170,6 +170,8 @@ export interface PricedProduct {
   currency: CurrencyCode;
   availability: Availability;
   published: boolean;
+  /** The section it belongs to — the shipping rules refuse by category. */
+  categoryId?: string;
   /** Whether buying this earns the free setup service. */
   freeSetupEligible: boolean;
 }

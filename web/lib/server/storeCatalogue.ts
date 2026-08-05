@@ -175,6 +175,10 @@ export async function cartProductViews(): Promise<CartProductView[]> {
   return (await resolvedProducts()).flatMap(p => p.variants.map(v => ({
     id: v.id,
     productId: p.id,
+    // Needed by the shipping rules, which refuse whole categories (batteries)
+    // rather than individual products. It is already public on the product
+    // page — this is a size boundary, not a security one.
+    categoryId: p.categoryId,
     nameEn: p.nameEn,
     titleAr: p.titleAr,
     variantNameAr: p.variants.length > 1 ? v.nameAr : '',

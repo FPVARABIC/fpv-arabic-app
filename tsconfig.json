@@ -3,5 +3,36 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  // `files: []` means this project compiles NOTHING — it is a solution file
+  // that exists to point at the two real ones. The paths below therefore change
+  // no build: `tsconfig.app.json` (Vite/Android) and `tsconfig.node.json` carry
+  // their own configuration and are unaffected.
+  //
+  // What they DO change is `tsx`, which resolves imports against the nearest
+  // tsconfig when a script is run from the repository root. Without them, any
+  // script under `scripts/` that imports a module from `web/` dies on
+  // `Cannot find package '@core/data'` — because that alias is declared in
+  // `web/tsconfig.json`, which a root-run script never reads.
+  //
+  // That gap has silently cost coverage three times: `testWebSoftware` has been
+  // stopping partway through, and both `testPayments` and `testPurchaseJourney`
+  // could not import the code they exist to exercise. The workaround each time
+  // was to move or duplicate code, which is a worse answer than teaching the
+  // root how to resolve one alias.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@core/data/*": ["./src/data/*"],
+      "@core/platform/*": ["./src/platform/*"],
+      "@core/community/*": ["./src/components/Community/*"],
+      "@core/utils/*": ["./src/utils/*"],
+      "@/*": ["./web/*"],
+      // The real package throws unless Next is bundling it for a server
+      // component — the guard that keeps secret-holding modules out of a
+      // client bundle. It stays in the source; this only satisfies it for
+      // scripts, where there is no client bundle to leak into.
+      "server-only": ["./scripts/stubs/server-only.ts"]
+    }
+  }
 }

@@ -4,6 +4,8 @@ import { getSession } from './session';
 import { readCart, resolveCart } from '@core/data/store/cart';
 import { freeSetupVariantId } from '@core/data/store/services';
 import { cartProductViews } from './storeCatalogue';
+import { quoteShippingFor } from './storeShipping';
+import { publicStoreSettings } from './storeSettings';
 import { CART_SCHEMA_VERSION } from '@core/data/store/cart';
 import { ORDER_STATUS_NEXT } from '@core/data/store/types';
 import type { OrderStatus, OrderSubmission, StoreOrder } from '@core/data/store/types';
@@ -66,7 +68,7 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   // The merged, live catalogue — the same rows the browser priced from, read
   // again here so a basket assembled against yesterday's prices is repriced
   // against today's before anything is written.
-  const views = await cartProductViews();
+  const [views, settings] = await Promise.all([cartProductViews(), publicStoreSettings()]);
   const byId = new Map(views.map(v => [v.id, v]));
 
   const freeVariantId = freeSetupVariantId();
@@ -84,7 +86,34 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   const items = cart.items.filter(i => i.variantId !== freeVariantId);
   if (earnsFreeSetup && freeVariantId) items.push({ variantId: freeVariantId, quantity: 1 });
 
-  const resolved = resolveCart({ ...cart, items }, id => byId.get(id), 0);
+  // Priced with zero shipping FIRST, because the shipping quote needs the items
+  // total to decide whether a free-shipping threshold is met. Two passes, not a
+  // guess.
+  const priced = resolveCart({ ...cart, items }, id => byId.get(id), 0);
+  if (priced.lines.length === 0) {
+    return { ok: false, errorAr: 'لم يعد أي منتج في سلّتك متاحاً للطلب.' };
+  }
+
+  // SHIPPING IS COMPUTED HERE, FROM THE ADDRESS, ON THE SERVER.
+  //
+  // Never taken from the submission. A checkout that accepts a client-supplied
+  // shipping cost has exactly the hole that accepting a client-supplied total
+  // has — it is merely smaller, and therefore likelier to survive review.
+  //
+  // A destination we cannot quote REFUSES THE ORDER rather than defaulting to
+  // zero. Shipping something for nothing because no rule matched is how a shop
+  // discovers its rates by losing money on them.
+  const shipping = await quoteShippingFor(
+    contact.value.country,
+    priced.totals.itemsTotalMinor,
+    priced.lines.map(l => ({
+      productId: l.product.productId,
+      categoryId: byId.get(l.product.id)?.categoryId ?? '',
+    })),
+  );
+  if (!shipping.ok) return { ok: false, errorAr: shipping.messageAr };
+
+  const resolved = resolveCart({ ...cart, items }, id => byId.get(id), shipping.costMinor);
   if (resolved.lines.length === 0) {
     return { ok: false, errorAr: 'لم يعد أي منتج في سلّتك متاحاً للطلب.' };
   }
@@ -118,11 +147,14 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
       lineTotalMinor: l.lineTotalMinor,
     })),
     itemsTotalMinor: resolved.totals.itemsTotalMinor,
-    // Quoted after the address is known, and recorded as unset rather than as
-    // zero — zero is a price, and it is not the one we are offering.
-    shippingMinor: 0,
+    // The figure the server quoted from the address, not from the request.
+    shippingMinor: shipping.costMinor,
     totalMinor: resolved.totals.totalMinor,
-    currency: 'USD',
+    // From the shop's own settings. It used to be the literal 'USD' while the
+    // shipping zones, the payment provider and the customer were all in euros —
+    // a mismatch that would have reached Mollie as a currency it was not asked
+    // to charge in.
+    currency: settings.currency,
     contact: contact.value,
     includesFreeSetup: !!freeVariantId && resolved.lines.some(l => l.product.id === freeVariantId),
     status: 'received',

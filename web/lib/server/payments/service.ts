@@ -237,6 +237,22 @@ export async function applyPaymentWebhook(
     return { ok: false, errorAr: 'تعارض في المبلغ.' };
   }
 
+  // AND THE CURRENCY MUST MATCH TOO.
+  // Checking only the amount is a hole with a number in it: 250 in a currency
+  // worth a fraction of the euro passes an equality test on the integer and is
+  // not the price. Currency is half of what an amount means.
+  if (state.status === 'paid' && state.currency !== payment.currency) {
+    await logAudit(SYSTEM_ACTOR, newRequestId(), {
+      action: 'store.order.status',
+      targetType: 'order',
+      targetId: payment.orderId,
+      result: 'error',
+      error: 'paid currency does not match the order',
+      meta: { expected: payment.currency, received: state.currency, providerRef: ref },
+    });
+    return { ok: false, errorAr: 'تعارض في العملة.' };
+  }
+
   if (!canTransitionPayment(payment.status, state.status)) {
     // Stale or impossible. Recorded, refused, and NOT an error to the provider:
     // returning 200 stops it retrying a message we have correctly ignored.
@@ -272,9 +288,172 @@ export async function applyPaymentWebhook(
       after: state.status,
       meta: { providerRef: ref, method: state.method ?? null, testMode: payment.testMode },
     });
+
+    await advanceOrderForPayment(payment.orderId, state.status);
   }
 
   return { ok: true, providerRef: ref, status: state.status, changed };
+}
+
+/**
+ * The ONE place a payment moves an order's own status.
+ *
+ * THE POLICY, STATED RATHER THAN SCATTERED
+ * ----------------------------------------
+ *   paid                    → `received` becomes `confirmed`, once.
+ *   failed / cancelled      → NOTHING. The order stays where it is.
+ *   refunded / partial      → NOTHING automatic.
+ *
+ * The two «nothing»s are the interesting ones and both were asked for
+ * explicitly.
+ *
+ * A failed or cancelled payment must not delete or cancel the order: the
+ * customer's basket, address and choices are still valid and they will very
+ * often pay again with another method. Cancelling on their behalf destroys work
+ * they did and a sale that was still live.
+ *
+ * A refund must not silently walk the order backwards. Money returning is a new
+ * event, not the undoing of an old one — the parcel may already have shipped,
+ * and an order that flips from `shipped` back to `received` because a refund
+ * arrived is a record that has started lying about what happened. Whether to
+ * cancel after a refund is a human decision, taken in the admin panel, audited.
+ *
+ * Forward-only and idempotent: it only ever acts on `received`, so a repeated
+ * `paid` webhook cannot re-advance an order somebody has since moved on.
+ */
+async function advanceOrderForPayment(orderId: string, status: PaymentStatus): Promise<void> {
+  if (status !== 'paid') return;
+
+  const ref = adminDb().collection(ORDERS).doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+
+  const current = (snap.data() as StoreOrder).status;
+  if (current !== 'received') return;
+
+  await ref.update({ status: 'confirmed', updatedAt: new Date().toISOString() });
+
+  await logAudit(SYSTEM_ACTOR, newRequestId(), {
+    action: 'store.order.status',
+    targetType: 'order',
+    targetId: orderId,
+    before: current,
+    after: 'confirmed',
+    meta: { reason: 'payment settled' },
+  });
+}
+
+export type RefundResult =
+  | { ok: true; status: PaymentStatus; refundedMinor: number }
+  | { ok: false; errorAr: string };
+
+/**
+ * Send money back. Staff only, server only.
+ *
+ * WHY THE CEILING IS CHECKED HERE AND NOT ONLY AT THE PROVIDER
+ * ------------------------------------------------------------
+ * The provider will refuse to over-refund, but by then the request has been
+ * made and the failure is a provider error somebody has to interpret. Checking
+ * against our own record turns «refund exceeds the amount paid» into a sentence
+ * in Arabic before any money moves — and it means a provider that DIDN'T check
+ * could not be used to over-refund through us.
+ */
+export async function refundPayment(
+  providerRef: string,
+  amountMinor: number,
+  actor: AuditActor,
+): Promise<RefundResult> {
+  if (!isAdminConfigured()) return { ok: false, errorAr: 'غير متاح.' };
+
+  const provider = paymentProvider();
+  if (!provider) return { ok: false, errorAr: 'الدفع غير مفعّل.' };
+  if (!provider.refund) {
+    return { ok: false, errorAr: 'مزوّد الدفع الحالي لا يدعم الاسترجاع من هنا.' };
+  }
+
+  const doc = await adminDb().collection(PAYMENTS).doc(providerRef).get();
+  if (!doc.exists) return { ok: false, errorAr: 'لا توجد عملية دفع بهذا المعرّف.' };
+  const payment = { id: doc.id, ...doc.data() } as OrderPayment;
+
+  if (payment.status !== 'paid' && payment.status !== 'partially_refunded') {
+    return { ok: false, errorAr: 'لا يمكن استرجاع عملية غير مدفوعة.' };
+  }
+
+  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
+    return { ok: false, errorAr: 'أدخل مبلغاً صحيحاً أكبر من صفر.' };
+  }
+
+  const already = payment.refundedMinor ?? 0;
+  const remaining = payment.amountMinor - already;
+  if (amountMinor > remaining) {
+    return {
+      ok: false,
+      errorAr: `المبلغ يتجاوز المتبقّي القابل للاسترجاع (${remaining / 100}).`,
+    };
+  }
+
+  let state;
+  try {
+    state = await provider.refund(providerRef, amountMinor);
+  } catch (e) {
+    console.error('[payments] refund failed', e);
+    await logAudit(actor, newRequestId(), {
+      action: 'store.order.status',
+      targetType: 'order',
+      targetId: payment.orderId,
+      result: 'error',
+      error: 'refund call failed',
+      meta: { providerRef },
+    });
+    return { ok: false, errorAr: 'تعذّر تنفيذ الاسترجاع الآن.' };
+  }
+
+  await adminDb().collection(PAYMENTS).doc(providerRef).update({
+    status: state.status,
+    refundedMinor: state.refundedMinor ?? already + amountMinor,
+    updatedAt: new Date().toISOString(),
+  });
+
+  await logAudit(actor, newRequestId(), {
+    action: 'store.order.status',
+    targetType: 'order',
+    targetId: payment.orderId,
+    before: payment.status,
+    after: state.status,
+    meta: { providerRef, refundedMinor: amountMinor, testMode: payment.testMode },
+  });
+
+  return { ok: true, status: state.status, refundedMinor: state.refundedMinor ?? 0 };
+}
+
+/**
+ * Ask the provider again, on demand.
+ *
+ * For the case a webhook was lost — a deploy mid-flight, an outage, a URL that
+ * was wrong for an hour. Without this the only repair is waiting for a provider
+ * retry that may never come, and an order sits unpaid while the money is in the
+ * account.
+ *
+ * It routes through the SAME `applyPaymentWebhook` rather than writing directly,
+ * so a manual resync obeys every rule an automatic one does: the transition
+ * check, the amount check, the currency check and the audit entry.
+ */
+export async function resyncPayment(
+  providerRef: string,
+  actor: AuditActor,
+): Promise<WebhookResult> {
+  const provider = paymentProvider();
+  if (!provider) return { ok: false, errorAr: 'الدفع غير مفعّل.' };
+
+  await logAudit(actor, newRequestId(), {
+    action: 'store.order.status',
+    targetType: 'order',
+    targetId: providerRef,
+    meta: { reason: 'manual resync requested' },
+  });
+
+  const body = new URLSearchParams({ id: providerRef }).toString();
+  return applyPaymentWebhook(new Headers(), body);
 }
 
 /** The payment a customer is currently on, if any. */
