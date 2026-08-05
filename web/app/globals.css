@@ -1286,6 +1286,185 @@ details.card-sm > summary:focus-visible {
   white-space: nowrap;
 }
 
+/*
+ * The cross-platform pointer.
+ *
+ * TWO STATES THAT MUST NOT LOOK ALIKE
+ * -----------------------------------
+ * A live chip opens a page in the shop, the encyclopedia or the software
+ * centre. A «soon» chip opens nothing and says so. If they shared a look, the
+ * second would collect clicks that go nowhere — which is exactly the failure
+ * the whole honest-absence arrangement exists to prevent.
+ *
+ * So the live one is inked and bordered in the accent, and the dead one is
+ * dashed, dimmer, and carries `cursor: default`. The dashed border is the
+ * conventional «this is a placeholder» signal and it survives being read in
+ * greyscale, which a colour difference alone does not.
+ */
+.ref-chip {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.ref-chip-live {
+  border: 1px solid var(--accent-ink);
+  color: var(--accent-ink);
+  background: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.ref-chip-live:hover,
+.ref-chip-live:focus-visible {
+  background: color-mix(in srgb, var(--accent-ink) 9%, transparent);
+}
+
+.ref-chip-soon {
+  border: 1px dashed var(--border);
+  color: var(--text-dimmer);
+  background: var(--surface-2);
+  cursor: default;
+  /*
+   * These sentences are longer than a section name — «سيضاف لاحقاً في مركز
+   * البرامج», «من موزّعي NVIDIA المعتمدين». Clipping them to one line would
+   * hide the half that says where the thing actually comes from.
+   */
+  white-space: normal;
+  line-height: 1.7;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .project-card, .project-card:hover { transition: none; transform: none; }
+  .ref-chip-live { transition: none; }
+}
+
+/* ── The project editor (admin) ───────────────────────────────────────────── */
+
+/*
+ * Its own prefix, deliberately.
+ *
+ * `.admin-field` styles the CONTROL — it is put on the `<input>` itself
+ * throughout the rest of the panel. This form wraps every control in a
+ * `<label>` carrying its own caption and hint, which is a different element
+ * with a different job. Reusing the name would mean one of the two screens
+ * silently changed shape the next time somebody touched the rule.
+ */
+.pe-field {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.pe-field > span,
+.pe-field > legend {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.pe-field > small {
+  font-size: 11.5px;
+  color: var(--text-dimmer);
+  line-height: 1.75;
+}
+
+.pe-field input[type='text'],
+.pe-field input[type='url'],
+.pe-field input[type='number'],
+.pe-field select,
+.pe-field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.8;
+}
+
+.pe-field textarea { resize: vertical; }
+
+.pe-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pe-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.pe-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.pe-hint {
+  font-size: 12.5px;
+  color: var(--text-dimmer);
+  line-height: 1.9;
+  margin: 0 0 14px;
+}
+
+.pe-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 14px;
+}
+
+/*
+ * A row is a card because the alternative — separators — makes an eight-field
+ * repeating group read as one long form, and the «احذف هذا السطر» button then
+ * looks like it belongs to whatever is directly above it.
+ */
+.pe-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 15px 16px 12px;
+}
+
+/* The reference picker sits inside a row and must read as one unit. */
+.pe-ref {
+  border-inline-start: 3px solid var(--accent-ink);
+  padding-inline-start: 12px;
+  margin: 4px 0 12px;
+}
+
+.pe-error {
+  border: 1px solid var(--sev-blocker);
+  background: var(--sev-blocker-wash);
+  color: var(--sev-blocker);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.85;
+}
+
+.pe-ok {
+  color: var(--sev-ok);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .pe-duo { grid-template-columns: 1fr; }
 }

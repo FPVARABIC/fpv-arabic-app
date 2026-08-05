@@ -2,11 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { resolvedProject, visibleProjects } from '@/lib/server/projects';
+import { publishedProducts } from '@/lib/server/storeCatalogue';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import {
   DIFFICULTY_LABEL_AR, DIFFICULTY_MEANS_AR, projectCategory,
 } from '@core/data/projects/types';
 import type { Project } from '@core/data/projects/types';
+import type { RefContext } from '@/lib/projectLinks';
+import { PlatformRefLink } from '@/components/projects/PlatformRefLink';
 
 export const revalidate = 300;
 
@@ -29,7 +32,7 @@ export async function generateMetadata(
 }
 
 /**
- * One project, whole.
+ * One project, whole — and connected to the rest of the platform.
  *
  * WHY IT IS ONE LONG PAGE AND NOT TABS
  * ------------------------------------
@@ -40,10 +43,34 @@ export async function generateMetadata(
  * one listing what will go wrong. A side index gives the return visit its
  * shortcut without hiding anything.
  *
+ * THE ORDER IS THE ARGUMENT
+ * -------------------------
+ * It answers a reader's questions in the order they actually ask them:
+ *
+ *   what is it · what will I learn · what must I already know ·
+ *   how hard is it · what does it use · what do I buy · what do I install ·
+ *   what do these words mean · how is it built · how does it work ·
+ *   what do I do first · what is it for · what will go wrong ·
+ *   where does it go next · where did this come from
+ *
+ * «ما الذي يجب أن تتعلّمه أوّلاً» sits at position four on purpose. Putting it
+ * after the parts list — where a bill of materials naturally wants to go —
+ * means somebody has already priced a €600 build before finding out it needs
+ * ROS. Putting it before difficulty means the difficulty badge arrives with
+ * evidence rather than as an assertion.
+ *
  * WHY THE CHALLENGES CARRY THEIR MITIGATIONS
  * ------------------------------------------
  * A list of difficulties with no answers is discouragement dressed as honesty.
  * The model requires both, so this page cannot render one without the other.
+ *
+ * WHY THIS PAGE HAS NO CONTENT OF ITS OWN ABOUT PARTS, PROGRAMS OR TERMS
+ * ----------------------------------------------------------------------
+ * Because those already exist — in the shop, in the software centre, in the
+ * encyclopedia — and a second copy here is a second thing that goes stale. Every
+ * one of them is a `PlatformRef` resolved through `lib/projectLinks.ts`, which
+ * either produces a link to the real page or says plainly that it does not exist
+ * yet. There is deliberately no third outcome and no hand-written path.
  */
 export default async function ProjectPage(
   { params }: { params: Promise<{ projectId: string }> },
@@ -56,18 +83,38 @@ export default async function ProjectPage(
     .filter(o => o.id !== p.id && o.categoryIds.some(c => p.categoryIds.includes(c)))
     .slice(0, 3);
 
+  /*
+   * The live shop, not the seeds.
+   *
+   * A project written months ago cannot know that a product was unpublished
+   * yesterday, and `/store/p/:id` calls `notFound()` for one that was. Reading
+   * the merged catalogue here turns that into a part rendered without a link
+   * instead of a reader's click landing on a 404.
+   */
+  const ctx: RefContext = {
+    publishedProductIds: new Set((await publishedProducts()).map(x => x.id)),
+  };
+
   const sections: { id: string; titleAr: string }[] = [
     { id: 'idea', titleAr: 'الفكرة والهدف' },
-    { id: 'outcomes', titleAr: 'ماذا ستتعلّم' },
-    { id: 'requirements', titleAr: 'المهارات والقطع والبرامج' },
+    { id: 'outcomes', titleAr: 'ماذا ستتعلّم من هذا المشروع' },
+    { id: 'prerequisites', titleAr: 'ما الذي يجب أن تتعلّمه أوّلاً' },
+    { id: 'difficulty', titleAr: 'مستوى الصعوبة' },
+    { id: 'skills', titleAr: 'التقنيات المستخدمة' },
+    { id: 'parts', titleAr: 'القطع المطلوبة' },
+    { id: 'software', titleAr: 'البرامج المطلوبة' },
+    { id: 'glossary', titleAr: 'المصطلحات المهمّة' },
     { id: 'architecture', titleAr: 'مخطّط البناء' },
     { id: 'flow', titleAr: 'طريقة العمل' },
-    { id: 'stages', titleAr: 'مراحل البناء' },
+    { id: 'stages', titleAr: 'مراحل التنفيذ' },
     { id: 'applications', titleAr: 'التطبيقات العملية' },
     { id: 'challenges', titleAr: 'التحدّيات' },
     { id: 'future', titleAr: 'التطوير المستقبلي' },
-    { id: 'references', titleAr: 'المراجع' },
+    { id: 'references', titleAr: 'المصادر' },
   ];
+
+  const essential = p.prerequisites.filter(q => q.essential);
+  const helpful = p.prerequisites.filter(q => !q.essential);
 
   return (
     <div className="shell" style={{ paddingTop: 32, paddingBottom: 28 }}>
@@ -89,6 +136,7 @@ export default async function ProjectPage(
 
         {/* ── The project ───────────────────────────────────────────────── */}
         <article style={{ minWidth: 0 }} className="prose">
+          {/* 1 — the title */}
           <header>
             <h1 style={{ fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1.45 }}>
               {p.titleAr}
@@ -109,15 +157,12 @@ export default async function ProjectPage(
               ))}
             </div>
 
-            <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '10px 0 0' }}>
-              {DIFFICULTY_MEANS_AR[p.difficulty]}
-            </p>
-
             <p style={{ fontSize: 16, color: 'var(--text)', margin: '20px 0 0', lineHeight: 2.05 }}>
               {p.definitionAr}
             </p>
           </header>
 
+          {/* 2 — the idea */}
           <Section id="idea" titleAr="الفكرة والهدف">
             <h3 style={H3}>الفكرة</h3>
             <p>{p.ideaAr}</p>
@@ -125,17 +170,68 @@ export default async function ProjectPage(
             <p>{p.purposeAr}</p>
           </Section>
 
-          <Section id="outcomes" titleAr="ماذا ستتعلّم">
-            <Bullets items={p.learningOutcomesAr} />
+          {/* 3 — what the reader leaves with */}
+          <Section id="outcomes" titleAr="ماذا ستتعلّم من هذا المشروع">
+            <p style={LEAD}>
+              هذه القائمة هي المعيار الذي تختار به بين مشروع وآخر: ما ستصير قادراً
+              على فعله بعده، لا ما سيثير إعجابك أثناءه.
+            </p>
+            <Bullets items={p.learningOutcomesAr} testId="project-outcome" />
           </Section>
 
-          <Section id="requirements" titleAr="المهارات والقطع والبرامج">
-            <h3 style={H3}>المهارات المطلوبة</h3>
-            <p style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              {p.skillsAr.map(s => <span key={s} className="project-badge">{s}</span>)}
+          {/* 4 — what the reader must arrive with */}
+          <Section id="prerequisites" titleAr="ما الذي يجب أن تتعلّمه أوّلاً">
+            <p style={LEAD}>
+              كل بند هنا مرتبط بمكانه داخل المنصّة. وما لم نغطّه بعد مكتوب كذلك
+              صراحةً — لأن رابطاً لا يفتح شيئاً أسوأ من الاعتراف بأن المحتوى لم يُكتب.
             </p>
 
-            <h3 style={H3}>القطع</h3>
+            {essential.length > 0 && (
+              <>
+                <h3 style={H3}>لن تبدأ بدونها</h3>
+                <PrereqList items={essential} ctx={ctx} tone="essential" />
+              </>
+            )}
+            {helpful.length > 0 && (
+              <>
+                <h3 style={H3}>ستساعدك كثيراً</h3>
+                <PrereqList items={helpful} ctx={ctx} tone="helpful" />
+              </>
+            )}
+          </Section>
+
+          {/* 5 — difficulty, as a promise rather than a badge */}
+          <Section id="difficulty" titleAr="مستوى الصعوبة">
+            <div className="card" style={{ padding: '15px 17px' }}>
+              <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: 17 }}>{DIFFICULTY_LABEL_AR[p.difficulty]}</strong>
+                <span className="project-badge">
+                  <span dir="ltr">{p.estimatedWeeks.min}–{p.estimatedWeeks.max}</span> أسبوعاً
+                </span>
+              </div>
+              <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '9px 0 0', lineHeight: 2 }}>
+                {DIFFICULTY_MEANS_AR[p.difficulty]}
+              </p>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '10px 0 0', lineHeight: 1.9 }}>
+              المدّة تقدير لساعات فراغ لا لدوام كامل، وتفترض أنك تملك ما في القسم
+              السابق. من ينقصه شرط أساسي فليضف زمن تعلّمه.
+            </p>
+          </Section>
+
+          {/* 6 — the technologies */}
+          <Section id="skills" titleAr="التقنيات المستخدمة">
+            <p style={{ display: 'flex', gap: 7, flexWrap: 'wrap', margin: 0 }}>
+              {p.skillsAr.map(s => <span key={s} className="project-badge">{s}</span>)}
+            </p>
+          </Section>
+
+          {/* 7 — the parts, pointed at the shop */}
+          <Section id="parts" titleAr="القطع المطلوبة">
+            <p style={LEAD}>
+              ما نبيعه مرتبط بصفحته في المتجر. وما لا نبيعه مكتوب من أين يُشترى فعلاً،
+              لأن «قطعة بلا مصدر» ليست معلومة.
+            </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
               {p.parts.map(part => (
                 <li key={part.nameEn} className="card-sm" style={{ padding: '13px 15px' }}>
@@ -153,30 +249,64 @@ export default async function ProjectPage(
                   <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '7px 0 0', lineHeight: 1.9 }}>
                     {part.whyAr}
                   </p>
+                  <p style={{ margin: '9px 0 0' }}>
+                    <PlatformRefLink refTo={part.ref} ctx={ctx} testId="project-part-ref" />
+                  </p>
                 </li>
               ))}
             </ul>
+          </Section>
 
-            <h3 style={H3}>البرامج</h3>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
+          {/* 8 — the software, pointed at the software centre */}
+          <Section id="software" titleAr="البرامج المطلوبة">
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 11 }}>
               {p.software.map(s => (
-                <li key={s.nameEn} style={{ fontSize: 13.5, lineHeight: 1.9 }}>
-                  <strong className="ltr">{s.nameEn}</strong>
-                  <span style={{ color: 'var(--text-dim)' }}> — {s.roleAr}</span>
-                  {s.url && (
-                    <>
-                      {' '}
+                <li key={s.nameEn} className="card-sm" style={{ padding: '12px 15px' }}>
+                  <strong className="ltr" style={{ fontSize: 13.5 }}>{s.nameEn}</strong>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '5px 0 0', lineHeight: 1.9 }}>
+                    {s.roleAr}
+                  </p>
+                  <p style={{ margin: '8px 0 0', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <PlatformRefLink refTo={s.ref} ctx={ctx} testId="project-software-ref" />
+                    {s.url && (
                       <a href={s.url} target="_blank" rel="noopener noreferrer"
                         style={{ color: 'var(--accent-ink)', fontSize: 12 }}>
-                        التوثيق ↗
+                        التوثيق الرسمي ↗
                       </a>
-                    </>
+                    )}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </Section>
+
+          {/* 9 — the vocabulary, pointed at the encyclopedia */}
+          <Section id="glossary" titleAr="المصطلحات المهمّة">
+            <p style={LEAD}>
+              لا نشرح هنا ما شرحته الموسوعة — نفتحه. والمصطلح الذي لم تصل إليه
+              الموسوعة بعد يحمل سطراً واحداً يكفيك لمواصلة القراءة، وموعداً.
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 9 }}>
+              {p.glossary.map(t => (
+                <li key={t.termEn} className="card-sm" style={{ padding: '11px 14px' }}>
+                  <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                    <strong style={{ fontSize: 13.5 }}>{t.termAr}</strong>
+                    <span className="ltr" style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+                      {t.termEn}
+                    </span>
+                    <PlatformRefLink refTo={t.ref} ctx={ctx} testId="project-term-ref" />
+                  </div>
+                  {t.hintAr && (
+                    <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.85 }}>
+                      {t.hintAr}
+                    </p>
                   )}
                 </li>
               ))}
             </ul>
           </Section>
 
+          {/* 10 — the architecture (kept from the first batch) */}
           <Section id="architecture" titleAr="مخطّط البناء">
             <p>{p.architectureIntroAr}</p>
             <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'grid', gap: 10 }}>
@@ -196,11 +326,13 @@ export default async function ProjectPage(
             </ul>
           </Section>
 
+          {/* 11 — how it actually works (kept) */}
           <Section id="flow" titleAr="طريقة العمل">
             <p>{p.dataFlowAr}</p>
           </Section>
 
-          <Section id="stages" titleAr="مراحل البناء">
+          {/* 12 — the stages */}
+          <Section id="stages" titleAr="مراحل التنفيذ">
             <ol style={{ padding: 0, margin: 0, listStyle: 'none', display: 'grid', gap: 12 }}>
               {p.stages.map((s, i) => (
                 <li key={s.titleAr} className="card" style={{ padding: '15px 17px' }}>
@@ -216,10 +348,12 @@ export default async function ProjectPage(
             </ol>
           </Section>
 
+          {/* 13 — what it is for (kept) */}
           <Section id="applications" titleAr="التطبيقات العملية">
             <Bullets items={p.applicationsAr} />
           </Section>
 
+          {/* 14 — the challenges */}
           <Section id="challenges" titleAr="التحدّيات">
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 12 }}>
               {p.challenges.map(c => (
@@ -239,11 +373,13 @@ export default async function ProjectPage(
             </ul>
           </Section>
 
+          {/* 15 — where it goes next */}
           <Section id="future" titleAr="التطوير المستقبلي">
             <Bullets items={p.futureAr} />
           </Section>
 
-          <Section id="references" titleAr="المراجع">
+          {/* 16 — where this came from */}
+          <Section id="references" titleAr="المصادر">
             <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
               المشاريع المفتوحة أدناه ملك أصحابها وتخضع لرخصها. الشرح في هذه الصفحة
               من كتابتنا، ولا نُعيد نشر شيفرة أو محتوى لا تسمح رخصته بذلك.
@@ -306,6 +442,10 @@ export default async function ProjectPage(
 
 const H3: React.CSSProperties = { fontSize: 16, fontWeight: 800, margin: '22px 0 8px' };
 
+const LEAD: React.CSSProperties = {
+  fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.95, margin: '0 0 14px',
+};
+
 const Section: React.FC<{ id: string; titleAr: string; children: React.ReactNode }> = (
   { id, titleAr, children },
 ) => (
@@ -322,10 +462,49 @@ const Section: React.FC<{ id: string; titleAr: string; children: React.ReactNode
   </section>
 );
 
-const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
+/**
+ * The prerequisites, split by whether they block the project or merely help.
+ *
+ * Split rather than flagged, because a reader scanning this section is asking
+ * one question — «can I start?» — and a list where the answer is a badge on
+ * every third row makes them read all of it to find out.
+ */
+const PrereqList: React.FC<{
+  items: Project['prerequisites'];
+  ctx: RefContext;
+  tone: 'essential' | 'helpful';
+}> = ({ items, ctx, tone }) => (
+  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
+    {items.map(q => (
+      <li
+        key={q.titleAr}
+        className="card-sm"
+        data-testid={`project-prereq-${tone}`}
+        style={{ padding: '13px 15px' }}
+      >
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'baseline' }}>
+          <strong style={{ fontSize: 14 }}>{q.titleAr}</strong>
+          {q.titleEn && (
+            <span className="ltr" style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+              {q.titleEn}
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '7px 0 0', lineHeight: 1.9 }}>
+          {q.whyAr}
+        </p>
+        <p style={{ margin: '9px 0 0' }}>
+          <PlatformRefLink refTo={q.ref} ctx={ctx} testId="project-prereq-ref" />
+        </p>
+      </li>
+    ))}
+  </ul>
+);
+
+const Bullets: React.FC<{ items: string[]; testId?: string }> = ({ items, testId }) => (
   <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 9 }}>
     {items.map(t => (
-      <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <li key={t} data-testid={testId} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <span
           aria-hidden
           style={{
