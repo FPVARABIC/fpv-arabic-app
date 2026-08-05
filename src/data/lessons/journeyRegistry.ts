@@ -44,3 +44,13 @@ const journeysByLessonId: Record<string, LessonJourneyDefinition> = {
 export function getLessonJourneyDefinition(lessonId: string): LessonJourneyDefinition | undefined {
   return journeysByLessonId[lessonId];
 }
+
+/**
+ * Every lesson id, in registry order.
+ *
+ * Exported so a surface that needs to OFFER a lesson — the projects admin
+ * panel, where a prerequisite may point at one — can list them without
+ * importing the map and reading its keys. A caller that reads the keys is a
+ * caller that could also write to it.
+ */
+export const LESSON_JOURNEY_IDS: readonly string[] = Object.keys(journeysByLessonId);

@@ -24,6 +24,120 @@
  * ours.
  */
 
+/* ── Pointing at the rest of the platform ────────────────────────────────── */
+
+/**
+ * The sections a reader can be sent to, spelled the way they are labelled.
+ *
+ * A closed union rather than a free string so «سيضاف لاحقاً في قسم البرامج»
+ * cannot be written for a section that is not called that. The labels here are
+ * the ones on the tab bar, and if a tab is renamed this list is what fails.
+ */
+export type PlatformSectionAr =
+  | 'الموسوعة'
+  | 'مركز البرامج'
+  | 'الدروس'
+  | 'المتجر'
+  | 'المشاريع'
+  | 'التشخيص';
+
+/**
+ * A pointer at something that already exists SOMEWHERE ELSE in FPVARABIC.
+ *
+ * WHY THIS IS AN IDENTITY AND NOT A URL
+ * -------------------------------------
+ * Same reason `Destination` is: a project written today must still link
+ * correctly after the store's routes change, and a path typed into a data file
+ * is a second routing table that nothing can audit. The web turns these into
+ * hrefs in exactly one place — `web/lib/projectLinks.ts` — and that resolver
+ * verifies the target exists before it returns a link.
+ *
+ * WHY THE LAST TWO CASES EXIST
+ * ----------------------------
+ * Because the honest answer is often «we do not have that yet», and the brief
+ * was explicit that the honest answer must be VISIBLE and must not be a link:
+ * «إذا لم يوجد المحتوى بعد، فاعرضه بوضوح على أنه "سيضاف لاحقاً" ولا تنشئ رابطاً
+ * ميتاً».
+ *
+ * They are two different absences and they read differently to a person:
+ *
+ *   `planned`   — we intend to cover this, in that section, and do not yet.
+ *   `elsewhere` — this is genuinely outside what this platform does or sells,
+ *                 and here is where it actually comes from.
+ *
+ * Collapsing them would turn «Raspberry Pi is not something we stock» into
+ * «Raspberry Pi is coming to our shop», which is a promise nobody made.
+ */
+export type PlatformRef =
+  /* Live targets. Each is verified against its registry before it renders. */
+  | { to: 'kb-article'; id: string }
+  | { to: 'kb-module'; id: string }
+  | { to: 'glossary'; id: string }
+  | { to: 'dx'; id: string }
+  /** A `web/lib/softwareHub.ts` entry id — including ones the hub covers only as scope. */
+  | { to: 'software'; id: string }
+  | { to: 'store-product'; id: string }
+  | { to: 'store-category'; id: string }
+  | { to: 'project'; id: string }
+  | { to: 'lesson'; id: string }
+  /* Honest absences. Never rendered as a link. */
+  | { to: 'planned'; sectionAr: PlatformSectionAr }
+  | { to: 'elsewhere'; whereAr: string };
+
+/** Whether this reference can ever become a link. */
+export function refIsLinkable(ref: PlatformRef): boolean {
+  return ref.to !== 'planned' && ref.to !== 'elsewhere';
+}
+
+/**
+ * What a reader must already be able to do before starting.
+ *
+ * WHY EACH ONE CARRIES A REFERENCE
+ * --------------------------------
+ * A prerequisite list with no route out of it is a wall. The brief asked that
+ * every prerequisite point at where it is taught INSIDE this platform — Python
+ * at the lessons, Betaflight at the software centre, a protocol at the
+ * encyclopedia — so that «I am not ready for this» becomes «here is the next
+ * thing to read» in one click.
+ *
+ * `whyAr` is required and is about THIS project, not about the skill in
+ * general. «تحتاج Python» tells a reader nothing; «تكتب حلقة معالجة تقرأ إطاراً
+ * وترسل أمراً كل 30 ملي ثانية» tells them whether their Python is enough.
+ */
+export interface ProjectPrerequisite {
+  titleAr: string;
+  /** The name as it is searched and installed. Absent for purely Arabic skills. */
+  titleEn?: string;
+  whyAr: string;
+  ref: PlatformRef;
+  /** False for «سيساعدك» rather than «لن تبدأ بدونه». */
+  essential: boolean;
+}
+
+/**
+ * A term the project's own text uses and the reader may not know.
+ *
+ * WHY A SHORT HINT IS ALLOWED AND A PARAGRAPH IS NOT
+ * --------------------------------------------------
+ * The rule is «لا تكرر المحتوى — اربط به», and it is right: a term the
+ * encyclopedia explains gets a link and nothing else, because a second
+ * explanation here is a second thing to keep correct.
+ *
+ * But a term the encyclopedia does NOT yet explain cannot be duplicated — there
+ * is nothing to duplicate — and leaving a reader with a bare «VIO» and a
+ * promise is not honest either. So an unlinked term may carry one line, capped
+ * hard by the suite, which is enough to keep reading and far too little to
+ * become a shadow encyclopedia. A term that HAS an article carries no hint at
+ * all, and the suite fails the build if one appears.
+ */
+export interface ProjectTerm {
+  termAr: string;
+  termEn: string;
+  ref: PlatformRef;
+  /** One line. Permitted only when `ref` is `planned` or `elsewhere`. */
+  hintAr?: string;
+}
+
 /** How hard this is to actually finish. */
 export type ProjectDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'research';
 
@@ -92,6 +206,14 @@ export interface ProjectPart {
   whyAr: string;
   /** True when a cheaper or different part genuinely will not do. */
   critical: boolean;
+  /**
+   * Where this part is bought — our shop, or honestly somewhere else.
+   *
+   * Required rather than optional. The whole point of the layer is that a
+   * reader never meets a part name with no answer to «فمن أين أشتريه», and an
+   * optional field is one that gets left out on the tenth project.
+   */
+  ref: PlatformRef;
 }
 
 /** A program, framework or firmware the build runs on. */
@@ -100,6 +222,15 @@ export interface ProjectSoftware {
   roleAr: string;
   /** Where its own documentation lives. Verified, never guessed. */
   url?: string;
+  /**
+   * Where this platform covers it — the software centre, or an honest absence.
+   *
+   * A project's stack is mostly tools the FPV software centre has never needed
+   * to document (OpenCV, ROS 2, PyTorch), so most of these are `planned`. That
+   * is not a gap being papered over: it is the backlog, written down where the
+   * person who has to fill it can count it.
+   */
+  ref: PlatformRef;
 }
 
 /** One stage of the build. Not every screw — the shape of the work. */
@@ -163,8 +294,27 @@ export interface Project {
   ideaAr: string;
   /** Why it was built, and what the reader gains. */
   purposeAr: string;
-  /** Concrete skills the reader walks away with. */
+  /**
+   * What the reader will be able to DO afterwards.
+   *
+   * A list, never a sentence, and never a restatement of the summary. This is
+   * the section somebody uses to choose between two projects, so each line has
+   * to name a transferable capability — «كيفية ربط MAVLink مع الحاسوب المرافق»
+   * — rather than a feeling about the subject.
+   */
   learningOutcomesAr: string[];
+
+  /**
+   * What must already be true about the reader.
+   *
+   * The mirror of `learningOutcomesAr`: one says what you leave with, the other
+   * says what you arrive with. Together they are the only honest answer to «هل
+   * هذا المشروع لي».
+   */
+  prerequisites: ProjectPrerequisite[];
+
+  /** Terms the project's own text uses, each pointed at where it is explained. */
+  glossary: ProjectTerm[];
 
   difficulty: ProjectDifficulty;
   categoryIds: ProjectCategoryId[];
