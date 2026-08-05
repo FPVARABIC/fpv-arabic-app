@@ -1,6 +1,7 @@
 import 'server-only';
 import { MollieProvider } from './mollie';
 import { PaymentProviderError, type PaymentProvider } from './provider';
+import { isStagingEnvironment } from '@/lib/staging';
 
 /**
  * Which provider this deployment uses, if any.
@@ -36,6 +37,26 @@ function build(): PaymentProvider | null {
   if (name === 'mollie') {
     const key = process.env.MOLLIE_API_KEY?.trim();
     if (!key) return null;
+
+    // A LIVE KEY IN STAGING IS A REFUSAL, NOT A WARNING.
+    //
+    // Staging exists to be clicked through carelessly: somebody testing a
+    // refund flow will happily press «refund» eight times. Every one of those
+    // moves real money if the key is a live one, and the mistake is invisible
+    // — the screens are identical, and Mollie's dashboard is the only place it
+    // shows. Pasting a key into the wrong environment is a routine slip, so it
+    // is caught here rather than trusted not to happen.
+    //
+    // Throwing rather than falling back to «no provider» is deliberate too: a
+    // silent downgrade would leave a staging site that looks payment-less for a
+    // reason nobody can see, and somebody would spend an afternoon on it.
+    if (isStagingEnvironment() && key.startsWith('live_')) {
+      throw new PaymentProviderError(
+        'refusing a live Mollie key on a staging deployment — set a test_ key, '
+        + 'or unset STAGING if this is production',
+      );
+    }
+
     return new MollieProvider(key);
   }
 

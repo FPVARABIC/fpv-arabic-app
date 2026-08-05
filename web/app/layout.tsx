@@ -10,6 +10,7 @@ import { BottomNav } from '@/components/NavTabs';
 import { getSession } from '@/lib/server/session';
 import { siteOrigin, isCanonicalOrigin } from '@/lib/siteOrigin';
 import { BRAND_NAME, BRAND_TITLE_AR, BRAND_TITLE_SUFFIX } from '@core/data/brand';
+import { isStagingEnvironment, STAGING_BADGE_AR } from '@/lib/staging';
 
 /**
  * The root of the web surface.
@@ -86,6 +87,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ar" dir="rtl">
       <body>
         <a href="#main" className="skip-link">تخطَّ إلى المحتوى</a>
+        {/* In the layout, above the header, so it appears on EVERY page — a
+            badge only the home page carries is one somebody deep-links past.
+            It is not dismissible: the moment it can be closed, the person most
+            likely to close it is the one about to forget which site they are
+            on. */}
+        {isStagingEnvironment() && (
+          <p className="staging-badge" role="status" data-testid="staging-badge">
+            {STAGING_BADGE_AR}
+          </p>
+        )}
         <SiteHeader
           signedIn={!!session}
           displayName={session?.displayName ?? null}

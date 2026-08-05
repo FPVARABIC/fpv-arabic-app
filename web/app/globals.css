@@ -1178,3 +1178,27 @@ details.card-sm > summary:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .pillar, .pillar:hover { transition: none; transform: none; }
 }
+
+/* ── The staging badge ────────────────────────────────────────────────────── */
+
+/*
+ * Above the header and never dismissible. It uses the warning severity rather
+ * than the brand accent deliberately: it must not read as part of the product's
+ * own identity, because the one thing it has to survive is being looked at
+ * every day until it stops being noticed.
+ *
+ * `position: static` — it scrolls away with the page rather than eating 40px of
+ * a 390px screen forever. It is a statement about the deployment, not a control,
+ * and a reader who has scrolled past it has read it.
+ */
+.staging-badge {
+  margin: 0;
+  padding: 7px 16px;
+  background: var(--sev-warning-wash);
+  border-bottom: 1px solid rgba(138, 90, 0, 0.32);
+  color: var(--sev-warning);
+  font-size: 12.5px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.6;
+}

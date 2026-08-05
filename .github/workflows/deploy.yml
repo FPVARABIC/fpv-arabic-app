@@ -81,8 +81,24 @@ jobs:
       # `--yes` accepts the project-creation prompts, so the very first run
       # needs no interaction. The project name fixes the default URL to
       # fpvarabic-*.vercel.app rather than a name derived from the directory.
+      # Installs the workspace root's dependencies, which `web/` resolves
+      # `@core/*` against. Vercel's own install runs inside `web/` and would
+      # otherwise never see the shared core.
+      - name: Install workspace dependencies
+        if: steps.guard.outputs.configured == 'true'
+        run: npm install
+
+      # RUN FROM `web/`, NOT THE REPOSITORY ROOT.
+      #
+      # The Vercel CLI treats its working directory as the project root. Run
+      # from the root, it finds a Vite app and no Next.js app, and the only
+      # documented fix is setting «Root Directory» in the dashboard — which is
+      # exactly the settings work the owner must not have to do. Running from
+      # `web/` puts the Next app where the CLI expects it, and `web/vercel.json`
+      # carries the framework and the security headers.
       - name: Pull deployment settings
         if: steps.guard.outputs.configured == 'true'
+        working-directory: web
         run: |
           vercel pull --yes \
             --environment=${{ inputs.production && 'production' || 'preview' }} \
@@ -90,10 +106,12 @@ jobs:
 
       - name: Build
         if: steps.guard.outputs.configured == 'true'
+        working-directory: web
         run: vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy
         if: steps.guard.outputs.configured == 'true'
+        working-directory: web
         id: deploy
         run: |
           URL=$(vercel deploy --prebuilt ${{ inputs.production && '--prod' || '' }} \

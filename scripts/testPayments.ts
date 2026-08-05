@@ -368,6 +368,60 @@ console.log('\n[12] The four interfaces are wired, and gated');
     !/totalMinor:|priceMinor:/.test(checkout.slice(checkout.indexOf('submitOrder'))));
 }
 
+console.log('\n[13] Staging cannot take real money, and says so');
+{
+  const registry2 = stripComments(read('web/lib/server/payments/index.ts'));
+  const staging   = stripComments(read('web/lib/staging.ts'));
+  const layout    = stripComments(read('web/app/layout.tsx'));
+  const seed      = stripComments(read('scripts/seedStaging.ts'));
+  const live      = stripComments(read('scripts/testMollieLive.ts'));
+
+  ok('a live Mollie key is REFUSED on staging',
+    /isStagingEnvironment\(\) && key\.startsWith\('live_'\)/.test(registry2));
+  ok('…by throwing, not by silently disabling payment',
+    /refusing a live Mollie key/.test(registry2));
+
+  // The fail-safe direction: unset means staging, exactly as unset means
+  // noindex. Getting this backwards is what puts a live key on a test site.
+  ok('an unset origin means staging, not production',
+    /if \(!explicit\) return true;/.test(staging));
+  ok('production must be DECLARED by naming the canonical origin',
+    /!== BRAND_ORIGIN/.test(staging));
+
+  ok('the badge is rendered from the layout, so every page carries it',
+    /isStagingEnvironment\(\) && \(/.test(layout) && /staging-badge/.test(layout));
+  ok('the badge says money is not taken and nothing ships',
+    /لا تُخصم أموال ولا تُشحن طلبات/.test(staging));
+
+  ok('the seed refuses to run against production',
+    /if \(!isStagingEnvironment\(\)\)/.test(seed));
+  ok('…and its teardown matches a prefix, so it cannot take a real row',
+    /startsWith\(PREFIX\)/.test(seed));
+  ok('…and it creates no admin account', /No admin account is created here/.test(seed)
+    || /grantOwner/.test(seed));
+
+  ok('the live Mollie script refuses a live key',
+    /refusing to run against a LIVE key/.test(live));
+  ok('…and skipping is reported as NOT a pass',
+    /This is not a pass/.test(live));
+  ok('…and it states what it could not prove',
+    /What this run did NOT prove/.test(live));
+
+  // The deployment has to find the Next app, or the owner's one step fails.
+  const deploy = read('.github/workflows/deploy.yml');
+  ok('the Vercel CLI runs from web/, where the Next app is',
+    (deploy.match(/working-directory: web/g) ?? []).length >= 3);
+  ok('web/vercel.json declares the framework', (() => {
+    const v = JSON.parse(read('web/vercel.json'));
+    return v.framework === 'nextjs';
+  })());
+  ok('…and carries the security headers rather than losing them', (() => {
+    const v = JSON.parse(read('web/vercel.json'));
+    const csp = JSON.stringify(v.headers);
+    return csp.includes('Content-Security-Policy') && csp.includes('frame-ancestors');
+  })());
+}
+
 console.log(`\n${failures.length ? '❌' : '✅'} testPayments: ${passed} passed, ${failures.length} failed`);
 for (const f of failures) console.log(`   ✗ ${f}`);
 process.exit(failures.length ? 1 : 0);
