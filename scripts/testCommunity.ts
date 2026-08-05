@@ -967,7 +967,13 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('docs/store/') &&
     f !== 'src/data/store/imageSlots.ts' &&
     f !== 'scripts/buildImageManifest.ts' &&
-    f !== 'scripts/testStoreImages.ts',
+    f !== 'scripts/testStoreImages.ts' &&
+    // ── The Firebase deploy package ───────────────────────────────────────
+    // App Hosting config, the runbook, and the preflight that refuses to ship
+    // a repository containing a credential. Deployment, not Community.
+    !f.startsWith('web/apphosting') &&
+    f !== 'docs/platform/DEPLOY_FIREBASE.md' &&
+    f !== 'scripts/preflightDeploy.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

@@ -1,0 +1,85 @@
+# FPVARABIC — Firebase App Hosting (production)
+#
+# WHY APP HOSTING AND NOT STATIC HOSTING
+# --------------------------------------
+# This is not a static site. Twenty-six pages are `force-dynamic`, fourteen
+# server modules use the Firebase Admin SDK, the checkout runs server actions,
+# and the payment webhook is a route handler. `firebase deploy --only hosting`
+# would upload the shell of a site whose every interactive part 404s.
+#
+# WHAT THIS FILE DOES AND DOES NOT CONTAIN
+# ----------------------------------------
+# It declares WHICH values the runtime needs and WHERE they come from. It
+# contains no credential. A `secret:` line names an entry in Cloud Secret
+# Manager; the value never enters this repository, this file, or a chat message.
+#
+# AVAILABILITY IS NOT DECORATION
+# ------------------------------
+# `BUILD` inlines the value into the bundle — correct for `NEXT_PUBLIC_*`, which
+# ships to the browser by design. `RUNTIME` keeps it on the server only. A
+# private key marked BUILD would be compiled into JavaScript a visitor can read,
+# so every secret here is RUNTIME and nothing else.
+
+runConfig:
+  # Zero, so an idle staging or a quiet night costs nothing. The first request
+  # after idle pays a cold start; for a content site that is the right trade.
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  # The search index is built once per instance from the whole corpus and held
+  # in memory. 512 MiB was not enough headroom beside Next's own footprint.
+  memoryMiB: 1024
+
+env:
+  # ── Public: shipped to the browser, and that is expected ──────────────────
+  # Firebase's web config is not a secret. Access is controlled by
+  # firestore.rules and storage.rules, not by hiding these. They MUST match the
+  # phone app's values so both surfaces talk to the same project, the same
+  # accounts and the same posts.
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: fpvarabic-web-api-key
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    secret: fpvarabic-web-auth-domain
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    secret: fpvarabic-project-id
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    secret: fpvarabic-storage-bucket
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: fpvarabic-messaging-sender-id
+    availability: [BUILD, RUNTIME]
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: fpvarabic-web-app-id
+    availability: [BUILD, RUNTIME]
+
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://fpvarabic.com
+    availability: [BUILD, RUNTIME]
+
+  # ── Private: server only, never in a browser bundle ──────────────────────
+  # The service account bypasses every Firestore and Storage rule by design.
+  # It is a master key. RUNTIME only, and nothing else in this file matters
+  # more than that.
+  - variable: FIREBASE_PROJECT_ID
+    secret: fpvarabic-project-id
+    availability: [RUNTIME]
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: fpvarabic-admin-client-email
+    availability: [RUNTIME]
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: fpvarabic-admin-private-key
+    availability: [RUNTIME]
+
+  # The payment provider. `fake` until a real key exists — the store then runs
+  # the whole journey against FakeProvider and says so on screen, rather than
+  # failing at checkout.
+  - variable: PAYMENT_PROVIDER
+    value: fake
+    availability: [RUNTIME]
+  - variable: MOLLIE_API_KEY
+    secret: fpvarabic-mollie-api-key
+    availability: [RUNTIME]
