@@ -32,7 +32,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync, mkdirSync, rmSync, symlinkSync, lstatSync, unlinkSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, symlinkSync, lstatSync, unlinkSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -101,6 +101,82 @@ console.log('\n[2] The blank-screen shell now explains itself');
     /<script>[\s\S]*getElementById\('root'\)[\s\S]*<\/script>/.test(shell));
   ok('…and it points at the real cause rather than a generic apology',
     shell.includes('web/netlify.toml') && shell.includes('Base directory'));
+}
+
+console.log('\n[2b] The publish gate catches the deploy that actually shipped');
+{
+  /*
+   * The gate is only worth having if it FAILS on the artefact that went live.
+   * So it is driven against a reconstruction of that artefact — the repository
+   * root, whose `index.html` asks for `/src/main.tsx` — as well as against a
+   * correct publish directory, because a check that rejects everything is as
+   * useless as one that accepts everything.
+   */
+  const { verifyPublishDir } = await import('../web/netlify/plugins/verify-publish/verify.js') as {
+    verifyPublishDir: (d: string) => { errors: string[]; stats: Record<string, number> };
+  };
+
+  // THE FAILING CASE, rebuilt exactly: the shell and the module the browser
+  // refused, with the MIME type Netlify gives an unknown extension.
+  const bad = path.join(ROOT, '.netlify-gate-check');
+  rmSync(bad, { recursive: true, force: true });
+  mkdirSync(path.join(bad, 'src'), { recursive: true });
+  writeFileSync(path.join(bad, 'index.html'),
+    '<!doctype html><html><body><div id="root"></div>'
+    + '<script type="module" src="/src/main.tsx"></script></body></html>');
+  writeFileSync(path.join(bad, 'src/main.tsx'), 'export const x = 1;\n');
+
+  const rejected = verifyPublishDir(bad);
+  ok(`the repository root is rejected (${rejected.errors.length} reason(s))`,
+    rejected.errors.length > 0);
+  ok('…naming /src/main.tsx specifically',
+    rejected.errors.some(e => e.includes('src/main.tsx')));
+  ok('…and the missing _next/static',
+    rejected.errors.some(e => e.includes('_next/static')));
+  ok('…and the source file a browser cannot execute',
+    rejected.errors.some(e => /source file/.test(e)));
+  rmSync(bad, { recursive: true, force: true });
+
+  // An empty or absent directory must not pass by having nothing to object to.
+  ok('an absent publish directory is rejected',
+    verifyPublishDir(path.join(ROOT, '.does-not-exist')).errors.length > 0);
+
+  // THE POSITIVE CONTROL. Without it every assertion above is satisfied by a
+  // gate that simply refuses everything, and the first correct deploy fails.
+  const real = path.join(ROOT, 'web/.netlify/static');
+  if (existsSync(real)) {
+    const accepted = verifyPublishDir(real);
+    if (accepted.errors.length) console.log('      unexpected:', accepted.errors);
+    ok(`the real Next publish directory is accepted (${accepted.stats.nextStatic} assets under _next/static)`,
+      accepted.errors.length === 0 && accepted.stats.nextStatic > 0);
+  } else {
+    ok('the real Next publish directory exists to check against', false);
+  }
+
+  /*
+   * A local plugin needs a manifest.yml, and declaring it in netlify.toml is
+   * NOT enough. Without the file the whole build dies at config resolution:
+   *
+   *   The plugin "./netlify/plugins/verify-publish" is missing a "manifest.yml".
+   *
+   * Nothing in the repository showed that; running the real pipeline did. So
+   * the file's existence is asserted rather than remembered.
+   */
+  const PLUGIN = 'web/netlify/plugins/verify-publish';
+  ok('the gate has the manifest.yml Netlify requires of a local plugin',
+    existsSync(path.join(ROOT, PLUGIN, 'manifest.yml')));
+  ok('…naming itself, which is what the manifest is for',
+    /^\s*name:\s*verify-publish\s*$/m.test(read(`${PLUGIN}/manifest.yml`)));
+  ok('the gate declares its entry point',
+    JSON.parse(read(`${PLUGIN}/package.json`)).main === 'index.js');
+
+  // And it must be wired into both configs, or it protects nothing.
+  for (const f of ['netlify.toml', 'web/netlify.toml']) {
+    ok(`${f} declares the publish gate`,
+      /package\s*=\s*"\.\/netlify\/plugins\/verify-publish"/.test(read(f)));
+    ok(`${f} declares it AFTER the Next runtime`,
+      read(f).indexOf('@netlify/plugin-nextjs') < read(f).indexOf('verify-publish'));
+  }
 }
 
 /* ── The runtime half ────────────────────────────────────────────────────── */

@@ -51,3 +51,6 @@ dist-video-uitest
 # Both are generated; the 35 MB function bundle in particular must never be committed.
 .netlify/
 .netlify-repro/
+
+# The gate self-check writes a throwaway publish directory here.
+.netlify-gate-check/

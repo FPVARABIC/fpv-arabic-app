@@ -69,10 +69,68 @@ BODYHEAD : <!DOCTYPE html><html lang="ar" dir="rtl">…
    يسحب `playwright` (تبعية إنتاج بسبب سكربتات مراجعة الواجهة)، وتنزيل
    المتصفّحات وحده كان يمكن أن يُفشل البناء.
 
+### الدورة الثانية: خطأ MIME
+
+بعد الإصلاح الأول ظهر في الـConsole:
+
+```
+Failed to load module script: Expected a JavaScript-or-Wasm module script
+but the server responded with a MIME type of "application/octet-stream".
+```
+
+الملف المرفوض هو `/src/main.tsx` — وهو **ملف مصدر**، لا يوجد في أي مخرجات
+بناء، بل في المستودع وحده. أي أن Netlify كان ينشر **المستودع نفسه بلا بناء**:
+`index.html` الخام الذي يطلب `/src/main.tsx`، وهو ما لا ينفّذه أي متصفّح.
+
+فأُضيف حارس يمنع ذلك من المستودع نفسه:
+
+**`web/netlify/plugins/verify-publish/`** — إضافة Netlify محلّية تعمل بعد
+البناء، تفحص المجلد الذي **سيُنشر فعلاً**، وتُفشل البناء إن لم يكن تطبيق Next.
+والبناء الفاشل يُبقي النشر السابق حيّاً، وهو أفضل من نشر موقع لا يعمل.
+
+ترفض:
+
+| الحالة | الرسالة |
+|---|---|
+| لا يوجد `_next/static/` | ليس بناء Next أصلاً |
+| أي ملف `.ts` / `.tsx` / `.jsx` | مصدر يُقدَّم للمتصفّح بنوع يرفض تنفيذه |
+| `src/main.tsx` | تطبيق Vite يُنشر كموقع |
+| HTML يشير إلى `.tsx` | الغلاف الخاطئ |
+| `package.json` أو `.env` في المنشور | ملفات مستودع لا يجوز تنزيلها |
+
+مثبت بالضبطين: يرفض إعادة بناء الحالة الحيّة (خمسة أسباب، منها `src/main.tsx`
+وغياب `_next/static`)، ويقبل مجلد النشر الحقيقي (56 أصلاً). وشُغِّل داخل خطّ
+Netlify الحقيقي حتى النهاية:
+
+```
+[verify-publish] checking .next
+[verify-publish] 160 file(s), 56 under _next/static, 0 html, 0 source file(s)
+[verify-publish] OK — this is the Next.js app, with no source files
+Netlify Build Complete    EXIT=0
+```
+
+### إثبات أيّ تطبيق أجاب
+
+أُضيف رأس مؤقّت. سطر واحد يكفي:
+
+```bash
+curl -sI https://<اسمك>.netlify.app/ | grep -i x-fpvarabic
+# X-FPVARABIC-Surface: next-web
+```
+
+ظهوره يعني أن تطبيق Next أجاب. غيابه يعني أن شيئاً آخر يُقدَّم. قل لي عند
+التأكّد وأحذفه — هو مُعلَّم في كلا ملفَّي `netlify.toml` بسطر واحد.
+
+### موقع جديد إن لزم
+
+إن بقي الموقع الحالي عالقاً بإعدادات قديمة: أنشئ موقعاً جديداً، اختر المستودع،
+والفرع `claude/web-platform-foundation`، ثم **Deploy** — **ولا تملأ أي خانة**.
+`netlify.toml` الجذري يعلن `base = "web"` وكل ما يلزم، فيصحّح الموقع نفسه.
+
 ### ما عليك فعله الآن
 
-**أعد النشر** (Deploys → Trigger deploy → Clear cache and deploy site). لا شيء
-غير ذلك: ملفات الإعداد تتجاوز إعدادات اللوحة، وقيم اللوحة كما هي صحيحة.
+**Deploys → Trigger deploy → Clear cache and deploy site.** ضغطة واحدة، لا
+غير: ملفات الإعداد تتجاوز إعدادات اللوحة في الحالتين — الخانة فارغة أو `web`.
 
 ---
 

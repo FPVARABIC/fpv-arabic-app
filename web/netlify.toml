@@ -104,6 +104,24 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# The last gate before a deploy goes live — see the long note in the plugin.
+#
+# Netlify calls a deploy successful when the build command exits zero. The
+# deploy that showed a blank page exited zero, published the repository root,
+# and handed browsers `/src/main.tsx`, which they refuse to execute:
+#
+#   Failed to load module script: Expected a JavaScript-or-Wasm module script
+#   but the server responded with a MIME type of "application/octet-stream".
+#
+# This inspects what is actually about to ship and FAILS the build if it is not
+# the Next.js app. A failed build keeps the previous deploy online, which beats
+# publishing a site that cannot work.
+#
+# Declared AFTER the Next runtime so it sees the swapped publish directory —
+# though the plugin resolves that itself rather than trusting the order.
+[[plugins]]
+  package = "./netlify/plugins/verify-publish"
+
 # A second layer, not the only one: next.config.ts sets the same headers, and
 # those survive `next start`, App Hosting and local review — none of which read
 # this file.
@@ -114,3 +132,18 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# PROOF OF WHICH APP ANSWERED — remove once the deploy is confirmed.
+#
+# A blank page looks identical whichever app served it. This header does not,
+# and it is visible in one line without opening a browser:
+#
+#   curl -sI https://<site>.netlify.app/ | grep -i x-fpvarabic
+#
+# `next-web` means the Next.js app under web/ answered. If the header is
+# missing, something else is being served — almost certainly the repository
+# root, and `/src/main.tsx` will be in the page source to confirm it.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-FPVARABIC-Surface = "next-web"
