@@ -234,6 +234,249 @@ console.log('\n[9] The section is independent of lessons, store and encyclopedia
   }
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * The three layers that turn a project page into a starting point.
+ *
+ * WHY THESE CHECKS IMPORT THE OTHER SECTIONS' REGISTRIES
+ * ------------------------------------------------------
+ * Section [9] above proves the project DATA imports nothing from the store or
+ * the encyclopedia — that independence is the point of modelling a reference as
+ * `{ to, id }` rather than as a path. But an id that names nothing is exactly as
+ * broken as a hardcoded path that 404s, and the only way to know is to look the
+ * id up. So the check lives here, in the suite, where importing everything is
+ * free and a failure stops the build.
+ *
+ * The rule being enforced, in the owner's words:
+ *   «إذا لم يوجد المحتوى بعد، فاعرضه بوضوح على أنه "سيضاف لاحقاً" ولا تنشئ
+ *    رابطاً ميتاً.»
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const { getArticle, getModule } = await import('../src/data/kb/registry');
+const { kbTerms } = await import('../src/data/kb/glossary/terms');
+const { allDxTrees } = await import('../src/data/kb/diagnostics/trees');
+const { STORE_PRODUCTS } = await import('../src/data/store/catalogue');
+const { STORE_CATEGORIES } = await import('../src/data/store/categories');
+const { getLessonJourneyDefinition } = await import('../src/data/lessons/journeyRegistry');
+const { refIsLinkable } = await import('../src/data/projects/types');
+type Ref = import('../src/data/projects/types').PlatformRef;
+
+/**
+ * The software-centre entry ids.
+ *
+ * Written out rather than imported: `web/lib/softwareHub.ts` is a web module
+ * that imports `server-only` transitively through nothing today but could
+ * tomorrow, and a suite that breaks for that reason teaches people to delete
+ * assertions. The list is short and a wrong entry fails the very next check.
+ */
+const SOFTWARE_IDS = new Set([
+  'betaflight', 'inav', 'ardupilot', 'ground-stations',
+  'expresslrs', 'edgetx', 'esc-tools', 'video-tools', 'blackbox',
+]);
+
+const PROJECT_IDS = new Set(ALL_PROJECTS.map(p => p.id));
+const CATEGORY_IDS = new Set(STORE_CATEGORIES.map(c => c.id));
+const PRODUCT_IDS = new Set(STORE_PRODUCTS.map(p => p.id));
+const PLANNED_SECTIONS = new Set([
+  'الموسوعة', 'مركز البرامج', 'الدروس', 'المتجر', 'المشاريع', 'التشخيص',
+]);
+
+/** Whether a reference names something that exists. The whole point. */
+function refResolves(r: Ref): boolean {
+  switch (r.to) {
+    case 'kb-article': return !!getArticle(r.id);
+    case 'kb-module': return !!getModule(r.id);
+    case 'glossary': return kbTerms.some(t => t.id === r.id);
+    case 'dx': return allDxTrees.some(t => t.id === r.id);
+    case 'software': return SOFTWARE_IDS.has(r.id);
+    case 'store-product': return PRODUCT_IDS.has(r.id);
+    case 'store-category': return CATEGORY_IDS.has(r.id);
+    case 'project': return PROJECT_IDS.has(r.id);
+    case 'lesson': return !!getLessonJourneyDefinition(r.id);
+    case 'planned': return PLANNED_SECTIONS.has(r.sectionAr);
+    case 'elsewhere': return r.whereAr.trim().length >= 8;
+    default: return false;
+  }
+}
+
+function allRefs(p: typeof ALL_PROJECTS[number]): { where: string; ref: Ref }[] {
+  return [
+    ...p.prerequisites.map((q, i) => ({ where: `prereq[${i}] ${q.titleAr}`, ref: q.ref })),
+    ...p.glossary.map((g, i) => ({ where: `term[${i}] ${g.termEn}`, ref: g.ref })),
+    ...p.parts.map((x, i) => ({ where: `part[${i}] ${x.nameEn}`, ref: x.ref })),
+    ...p.software.map((x, i) => ({ where: `software[${i}] ${x.nameEn}`, ref: x.ref })),
+  ];
+}
+
+console.log('\n[10] Layer one: «ماذا سيتعلّم المستخدم» is a real list');
+{
+  for (const p of ALL_PROJECTS) {
+    const o = p.learningOutcomesAr;
+    // A list, not a sentence. Four is the floor because three reads as an
+    // afterthought and the brief's own example carried five.
+    ok(`${p.id}: at least five outcomes`, o.length >= 5, `${o.length}`);
+    ok(`${p.id}: every outcome is a phrase, not a word`,
+      o.every(x => x.length >= 25), o.find(x => x.length < 25) ?? '');
+    ok(`${p.id}: no outcome is a sentence-long paragraph`,
+      o.every(x => x.length <= 160), o.find(x => x.length > 160)?.slice(0, 40) ?? '');
+    ok(`${p.id}: outcomes are distinct`, new Set(o).size === o.length);
+    // It must not simply restate the summary — that is the failure mode this
+    // section replaced.
+    ok(`${p.id}: no outcome repeats the summary`,
+      o.every(x => x !== p.summaryAr));
+  }
+}
+
+console.log('\n[11] Layer two: prerequisites, each pointed somewhere real');
+{
+  for (const p of ALL_PROJECTS) {
+    const q = p.prerequisites;
+    ok(`${p.id}: has prerequisites`, q.length >= 4, `${q.length}`);
+    ok(`${p.id}: at least one is essential`, q.some(x => x.essential));
+    // «لا تبدأ بدونه» for absolutely everything is the same as saying nothing.
+    ok(`${p.id}: not everything is marked essential`, q.some(x => !x.essential),
+      `${q.filter(x => x.essential).length}/${q.length}`);
+    ok(`${p.id}: every prerequisite says why THIS project needs it`,
+      q.every(x => x.whyAr.length >= 50),
+      q.find(x => x.whyAr.length < 50)?.titleAr ?? '');
+    ok(`${p.id}: prerequisite titles are Arabic`,
+      q.every(x => AR.test(x.titleAr)),
+      q.find(x => !AR.test(x.titleAr))?.titleAr ?? '');
+    ok(`${p.id}: prerequisite titles are distinct`,
+      new Set(q.map(x => x.titleAr)).size === q.length);
+    // The layer's whole purpose: a route out of the wall.
+    ok(`${p.id}: at least two prerequisites open real platform content`,
+      q.filter(x => refIsLinkable(x.ref)).length >= 2,
+      `${q.filter(x => refIsLinkable(x.ref)).length}/${q.length}`);
+  }
+}
+
+console.log('\n[12] Layer three: everything linkable is linked, nothing is duplicated');
+{
+  for (const p of ALL_PROJECTS) {
+    ok(`${p.id}: every part has a source`, p.parts.every(x => !!x.ref));
+    ok(`${p.id}: every program has a coverage pointer`, p.software.every(x => !!x.ref));
+    ok(`${p.id}: has a glossary`, p.glossary.length >= 5, `${p.glossary.length}`);
+    ok(`${p.id}: glossary terms are distinct`,
+      new Set(p.glossary.map(t => t.termEn)).size === p.glossary.length);
+    ok(`${p.id}: every term carries both languages`,
+      p.glossary.every(t => AR.test(t.termAr) && t.termEn.length >= 2));
+
+    // THE NO-DUPLICATION RULE. A term the encyclopedia explains gets a link and
+    // nothing else; a hint here would be a second explanation to keep correct.
+    const duplicated = p.glossary.filter(t => t.hintAr && refIsLinkable(t.ref));
+    ok(`${p.id}: no term re-explains what the encyclopedia already explains`,
+      duplicated.length === 0, duplicated.map(t => t.termEn).join(', '));
+
+    // …and an UNLINKED term must not become a shadow encyclopedia either.
+    const long = p.glossary.filter(t => (t.hintAr?.length ?? 0) > 160);
+    ok(`${p.id}: every hint stays one line`, long.length === 0,
+      long.map(t => `${t.termEn}=${t.hintAr?.length}`).join(', '));
+
+    // A term with no article and no hint leaves the reader with a bare acronym.
+    const bare = p.glossary.filter(t => !refIsLinkable(t.ref) && !t.hintAr?.trim());
+    ok(`${p.id}: an unlinked term still says what it means`, bare.length === 0,
+      bare.map(t => t.termEn).join(', '));
+
+    // At least SOME of the vocabulary must land in the encyclopedia, or the
+    // section is a list of promises rather than a door.
+    ok(`${p.id}: at least three terms open the encyclopedia`,
+      p.glossary.filter(t => t.ref.to === 'glossary' || t.ref.to === 'kb-article').length >= 3,
+      `${p.glossary.filter(t => refIsLinkable(t.ref)).length}/${p.glossary.length}`);
+  }
+}
+
+console.log('\n[13] Not one reference in the library is dead');
+{
+  let checked = 0;
+  const dead: string[] = [];
+  for (const p of ALL_PROJECTS) {
+    for (const { where, ref } of allRefs(p)) {
+      checked += 1;
+      if (!refResolves(ref)) dead.push(`${p.id}/${where} → ${JSON.stringify(ref)}`);
+    }
+  }
+  ok('references were actually inspected', checked >= 200, `${checked} references`);
+  ok('every reference names something that exists', dead.length === 0,
+    dead.slice(0, 6).join(' · '));
+
+  // Controls. Without these the check above passes just as happily on a
+  // resolver that returns true for everything.
+  ok('the check would catch a bad article (control)',
+    !refResolves({ to: 'kb-article', id: 'definitely-not-an-article' }));
+  ok('the check would catch a bad product (control)',
+    !refResolves({ to: 'store-product', id: 'definitely-not-a-product' }));
+  ok('the check would catch a bad glossary term (control)',
+    !refResolves({ to: 'glossary', id: 'definitely-not-a-term' }));
+  ok('the check would catch an invented section (control)',
+    !refResolves({ to: 'planned', sectionAr: 'قسم لا وجود له' as never }));
+  ok('the check would catch an empty «elsewhere» (control)',
+    !refResolves({ to: 'elsewhere', whereAr: '  ' }));
+  // …and a positive control, so a resolver that returns false for everything
+  // cannot pass the five above.
+  ok('the check accepts a real article (control)',
+    refResolves({ to: 'kb-article', id: 'fc-what-is' }));
+
+  // «سيضاف لاحقاً» must be an honest state, not the default that swallowed the
+  // work. If nothing in the library resolves, the layers did nothing.
+  const flat = ALL_PROJECTS.flatMap(allRefs).map(x => x.ref);
+  const live = flat.filter(refIsLinkable).length;
+  ok('a substantial share of references open real pages',
+    live >= flat.length * 0.4, `${live}/${flat.length}`);
+  // And the converse: if NOTHING is marked forthcoming across ten AI projects
+  // and an FPV encyclopedia, somebody has been inventing coverage.
+  ok('the honest absences are recorded rather than hidden',
+    flat.length - live > 0, `${flat.length - live} absences`);
+}
+
+console.log('\n[14] The page renders the sections in the order the brief asked for');
+{
+  const { readFileSync } = await import('node:fs');
+  const { join, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const page = readFileSync(join(ROOT, 'web/app/projects/[projectId]/page.tsx'), 'utf8');
+
+  // Read the order off the rendered `<Section id=…>` calls, not off the index
+  // array — the index is a table of contents and could agree with itself while
+  // the body renders something else.
+  const rendered = [...page.matchAll(/<Section id="([a-z]+)"/g)].map(m => m[1]);
+
+  // The brief's thirteen, in its order. The three extra sections — the build
+  // diagram, how it works, and the applications — are kept from the first batch
+  // and are checked separately below: nothing was deleted to make room.
+  const required = [
+    'idea', 'outcomes', 'prerequisites', 'difficulty', 'skills',
+    'parts', 'software', 'glossary', 'stages', 'challenges', 'future', 'references',
+  ];
+  const positions = required.map(id => rendered.indexOf(id));
+  ok('every required section is rendered', positions.every(i => i >= 0),
+    required.filter((_, i) => positions[i] < 0).join(', '));
+  ok('…and in the order the brief specified',
+    positions.every((v, i) => i === 0 || v > positions[i - 1]),
+    rendered.join(' → '));
+
+  for (const kept of ['architecture', 'flow', 'applications']) {
+    ok(`the earlier «${kept}» section was kept, not replaced`, rendered.includes(kept));
+  }
+
+  // Prerequisites BEFORE parts. Putting the bill of materials first means
+  // somebody prices a €600 build before finding out it needs ROS.
+  ok('«ما الذي يجب أن تتعلّمه» comes before the parts list',
+    rendered.indexOf('prerequisites') < rendered.indexOf('parts'));
+
+  // The index and the body must agree, or the sidebar links to nothing.
+  const indexed = [...page.matchAll(/\{ id: '([a-z]+)', titleAr:/g)].map(m => m[1]);
+  ok('the side index lists exactly what is rendered',
+    indexed.join('|') === rendered.join('|'), `${indexed.join(' ')} vs ${rendered.join(' ')}`);
+
+  // No hand-written content path. Every cross-section link goes through the
+  // resolver, which is what makes the dead-link guarantee mechanical.
+  ok('the page writes no content path by hand',
+    !/href="\/(kb|glossary|store\/p|programming|diagnose)\//.test(page));
+  ok('…and resolves references through the shared component',
+    page.includes('PlatformRefLink'));
+}
+
 console.log(`\n${failures.length ? '❌' : '✅'} testProjects: ${passed} passed, ${failures.length} failed`);
 for (const f of failures) console.log(`   ✗ ${f}`);
 process.exit(failures.length ? 1 : 0);

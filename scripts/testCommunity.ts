@@ -929,7 +929,21 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('src/data/project/') &&
     f !== 'scripts/grantOwner.ts' &&
     !f.startsWith('docs/platform/') &&
-    f !== 'RULES_FOR_PUBLISH.md',
+    f !== 'RULES_FOR_PUBLISH.md' &&
+    // ── المشاريع, the project library ─────────────────────────────────────
+    // Its own section with its own model, registry and suite. It is listed
+    // here for the same reason `src/data/project/` is: this guard asks «did
+    // this batch wander into Community by accident», and a whole new section
+    // is neither an accident nor Community.
+    //
+    // `src/data/lessons/journeyRegistry.ts` is named individually rather than
+    // waved through as a folder: the projects admin panel needs to OFFER a
+    // lesson as a prerequisite, so the registry gained one export — the list
+    // of its own ids — and nothing else. Naming the file keeps «one export was
+    // added» distinct from «the lessons were rewritten».
+    !f.startsWith('src/data/projects/') &&
+    f !== 'scripts/testProjects.ts' &&
+    f !== 'src/data/lessons/journeyRegistry.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

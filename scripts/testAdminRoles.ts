@@ -357,6 +357,66 @@ console.log('\n[10] The audit log records what an audit log must');
   ok('the log is written with the Admin SDK from the server', /import 'server-only'/.test(audit));
 }
 
+/* ────────────────────────────────────────────────────────────────────────── */
+console.log('\n[11] Every admin screen and every admin action gates itself');
+{
+  // WHY THIS IS A SWEEP AND NOT A LIST
+  //
+  // A list of admin pages is a list that goes stale the moment somebody adds
+  // one — and the page that gets forgotten is, by construction, the page nobody
+  // reviewed. Walking the directory means a new screen is covered the moment it
+  // exists, and an ungated one fails the build rather than shipping.
+  //
+  // The middleware already turns away requests with no session cookie. That is
+  // not what is checked here: middleware is a filter, not an authorisation
+  // decision, and every one of these files must still be correct if it were
+  // deleted.
+  const { readdirSync } = await import('node:fs');
+  const walk = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const n of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${n.name}`;
+      if (n.isDirectory()) out.push(...walk(rel));
+      else out.push(rel);
+    }
+    return out;
+  };
+
+  const files = walk('web/app/admin');
+  const pages = files.filter(f => f.endsWith('/page.tsx'));
+  const actions = files.filter(f => f.endsWith('/actions.ts') || f.endsWith('Action.ts'));
+
+  ok('admin pages were actually found', pages.length >= 10, `${pages.length} pages`);
+  ok('admin actions were actually found', actions.length >= 5, `${actions.length} action files`);
+
+  for (const f of pages) {
+    const src = read(f);
+    ok(`${f}: reads the verified session`, /getSession\(\)/.test(src));
+    // A capability, not a truthy session. `if (session)` lets any signed-in
+    // reader into the panel, which is the whole failure this checks for.
+    ok(`${f}: checks a capability, not merely that somebody is signed in`,
+      /sessionCan\(session, '[a-zA-Z.]+'\)|can\(session\.role, '[a-zA-Z.]+'\)/.test(src));
+    // Turned away rather than told what they are missing: a message confirms
+    // the screen exists to whoever is probing for it.
+    ok(`${f}: sends an unauthorised caller away`, /redirect\('\//.test(src));
+    // A cached admin screen serves one administrator's view to another.
+    ok(`${f}: is never statically cached`, /dynamic = 'force-dynamic'/.test(src));
+  }
+
+  for (const f of actions) {
+    const src = read(f);
+    ok(`${f}: is a server action`, /^'use server';/m.test(src));
+    ok(`${f}: gates on a capability before it writes`,
+      /sessionCan\([^)]*'[a-zA-Z.]+'\)|requireCapability\(/.test(src));
+  }
+
+  // A control: the sweep must be able to fail. If every regex above matched
+  // anything, this would pass on an empty file too.
+  ok('the capability check would reject a bare session test (control)',
+    !/sessionCan\(session, '[a-zA-Z.]+'\)|can\(session\.role, '[a-zA-Z.]+'\)/
+      .test('const s = await getSession(); if (!s) redirect("/");'));
+}
+
 console.log(`\n${failures.length === 0 ? '✅' : '❌'} testAdminRoles: ${passed} assertions passed, ${failures.length} failed\n`);
 failures.forEach(f => console.log(`   - ${f}`));
 assert.equal(failures.length, 0, `${failures.length} assertion(s) failed`);

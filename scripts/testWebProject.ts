@@ -19,7 +19,7 @@
  * end-to-end run drives the real page in a real browser.
  */
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -52,7 +52,48 @@ const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
 const stripComments = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-/** Every project-related source under web/, as comment-free code. */
+/**
+ * «مشروعي» — the reader's OWN build — as comment-free code.
+ *
+ * WHY THE PLURAL SECTION IS EXCLUDED, AND WHY THAT IS NOT A LOOPHOLE
+ * ------------------------------------------------------------------
+ * This suite's subject is the private workspace: the parts a reader records,
+ * the compatibility verdicts computed from them, stored IN THEIR BROWSER. Every
+ * rule below follows from that — no storage key of its own, no schema number,
+ * no Firestore, because the whole point is that the shared engine and the
+ * browser hold the state.
+ *
+ * «المشاريع» is a different section that happens to share a word. It is a
+ * curated public library, its documents live in Firestore precisely so the
+ * admin panel can edit them without a deployment, and `web/lib/server/projects.ts`
+ * calling `adminDb()` is that design working rather than a leak.
+ *
+ * The path filter used to be `/project/i`, which swept the plural in the moment
+ * it was written and failed it for reading its own database. Excluding the
+ * plural by name — rather than loosening the Firestore rule — keeps the rule
+ * absolute for the surface it is about. `scripts/testProjects.ts` is the
+ * library's own suite and enforces its own, different, invariants.
+ *
+ * The control below is what stops this exclusion from quietly emptying the
+ * sweep: if the workspace's files ever stop matching, the suite fails rather
+ * than passing vacuously on nothing.
+ */
+const LIBRARY_FILES = (rel: string): boolean =>
+  rel.startsWith('web/app/projects/')
+  || rel.startsWith('web/app/admin/projects/')
+  || rel.startsWith('web/components/projects/')
+  // Two helpers whose names carry the singular but whose subject is the
+  // library: the reference resolver and the admin panel's list of legal
+  // targets. Named rather than pattern-matched, because «anything containing
+  // projectLink» is the kind of rule that quietly swallows a workspace file
+  // called `projectLinkPreview.tsx` two years from now.
+  || rel === 'web/lib/projectLinks.ts'
+  || rel === 'web/lib/projectRefOptions.ts'
+  || rel === 'web/lib/server/projects.ts'
+  || rel === 'web/components/admin/ProjectEditor.tsx'
+  || rel === 'web/components/admin/ProjectImageField.tsx'
+  || rel === 'web/components/admin/ProjectPublishToggle.tsx';
+
 function projectSources(): Map<string, string> {
   const out = new Map<string, string>();
   const walk = (dir: string) => {
@@ -64,8 +105,9 @@ function projectSources(): Map<string, string> {
         continue;
       }
       if (!/\.tsx?$/.test(entry)) continue;
-      const rel = relative(ROOT, full);
+      const rel = relative(ROOT, full).split('\\').join('/');
       if (!/project/i.test(rel)) continue;
+      if (LIBRARY_FILES(rel)) continue;
       out.set(rel, stripComments(readFileSync(full, 'utf8')));
     }
   };
@@ -79,6 +121,31 @@ const SOURCES = projectSources();
 console.log('\n[1] The web has project files, and they import the shared core');
 {
   ok(`web project sources exist (${SOURCES.size})`, SOURCES.size >= 5);
+
+  // The sweep must contain the files it is ABOUT. Narrowing the path filter to
+  // exclude «المشاريع» is only safe if «مشروعي» is still caught by it — an
+  // exclusion that emptied the map would turn every «does not contain» rule
+  // below into a vacuous pass.
+  for (const required of [
+    'web/lib/project.ts',
+    'web/app/project/page.tsx',
+    'web/components/project/ProjectWorkspace.tsx',
+  ]) {
+    ok(`the sweep still covers ${required}`, SOURCES.has(required));
+  }
+  // …and it must NOT contain the public library, whose Firestore reads are its
+  // design rather than a leak. `scripts/testProjects.ts` covers that section.
+  ok('the sweep excludes the public project library',
+    ![...SOURCES.keys()].some(LIBRARY_FILES),
+    );
+  // The exclusion list must name files that EXIST. A stale entry is an
+  // exclusion that silently stops excluding, or worse, one that hides a file
+  // somebody moved back into the workspace.
+  for (const named of [
+    'web/lib/projectLinks.ts', 'web/lib/projectRefOptions.ts', 'web/lib/server/projects.ts',
+  ]) {
+    ok(`the excluded ${named} still exists`, existsSync(join(ROOT, named)));
+  }
 
   const adapter = read('web/lib/project.ts');
   for (const fn of ['readProjectSnapshot', 'computeFindings', 'computeNextStep',
