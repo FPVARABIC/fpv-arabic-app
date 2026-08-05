@@ -8,6 +8,9 @@ import { mergeCatalogue, applyOverride, type ProductOverride } from '@core/data/
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import type { PricedProduct } from '@core/data/store/cart';
 import type { StoreProduct } from '@core/data/store/types';
+import { isPriceStale } from '@core/data/store/publication';
+import { readAllSupply } from './storeSupply';
+import { privateStoreSettings } from './storeSettings';
 
 /**
  * The catalogue the storefront actually renders.
@@ -52,7 +55,49 @@ export const productOverrides = cache(async (): Promise<Record<string, ProductOv
 
 /** Every product, merged. Includes unpublished ones — callers filter. */
 export const resolvedProducts = cache(async (): Promise<StoreProduct[]> =>
-  mergeCatalogue(STORE_PRODUCTS, await productOverrides()));
+  withFreshPricesOnly(mergeCatalogue(STORE_PRODUCTS, await productOverrides())));
+
+/**
+ * Strips the price off any variant whose supply record has gone stale.
+ *
+ * WHY THIS IS HERE AND NOT AT THE CHECKOUT
+ * ----------------------------------------
+ * `isPriceStale` existed, was tested, and its own comment promised that a
+ * product whose cost went stale «must stop accepting orders without waiting for
+ * somebody to unpublish it». Nothing enforced it: the only caller was the
+ * admin review queue, which FLAGS stale prices for staff. A shop could sell all
+ * year from a cost nobody had looked at since spring — which is how a margin
+ * goes negative and the owner finds out from a bank statement.
+ *
+ * Putting it at the single source rather than at the checkout is what keeps the
+ * surfaces honest with each other. Applied at the checkout, the product page
+ * would still show a price the basket then refused; applied here, the price
+ * disappears everywhere at once — the page says «قيد التحديث», the basket drops
+ * the line with that same sentence, and `placeOrder` re-reads this same
+ * function and refuses too.
+ *
+ * NULLING THE PRICE RATHER THAN UNPUBLISHING
+ * ------------------------------------------
+ * Because it is not the same fact. The product is still real, still stocked and
+ * still worth reading about; what is missing is a price we are willing to
+ * stand behind. `resolveCart` already words that case exactly right, so a stale
+ * cost reuses it instead of inventing a second vocabulary for the same idea.
+ *
+ * The supply record itself never leaves the server. Only a boolean derived from
+ * it does — cost divided into price is the margin, which is why supply is
+ * staff-only in the first place.
+ */
+async function withFreshPricesOnly(products: StoreProduct[]): Promise<StoreProduct[]> {
+  const [supply, settings] = await Promise.all([readAllSupply(), privateStoreSettings()]);
+  const now = new Date().toISOString();
+  const reviewDays = settings.priceReviewDays;
+
+  return products.map(p => {
+    const variants = p.variants.map(v =>
+      isPriceStale(supply[v.id], now, reviewDays) ? { ...v, priceMinor: null } : v);
+    return variants.some((v, i) => v !== p.variants[i]) ? { ...p, variants } : p;
+  });
+}
 
 /** Only what a customer may see. */
 export async function publishedProducts(): Promise<StoreProduct[]> {
@@ -62,7 +107,12 @@ export async function publishedProducts(): Promise<StoreProduct[]> {
 export async function resolvedProduct(productId: string): Promise<StoreProduct | undefined> {
   const seed = seedProduct(productId);
   if (!seed) return undefined;
-  return applyOverride(seed, (await productOverrides())[productId]);
+  // Through the SAME freshness pass as the plural lookup. It used to skip it,
+  // which meant a product page could quote a price the basket then refused —
+  // the exact disagreement between surfaces that `withFreshPricesOnly` exists
+  // to prevent. One product in, one product out.
+  const merged = applyOverride(seed, (await productOverrides())[productId]);
+  return (await withFreshPricesOnly([merged]))[0];
 }
 
 /**

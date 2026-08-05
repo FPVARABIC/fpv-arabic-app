@@ -237,6 +237,40 @@ console.log('\n[10] The provider stays swappable');
     && /fetchStatus/.test(provider) && /refund\?/.test(provider));
 }
 
+console.log('\n[11] A stale price cannot be sold from');
+{
+  // `isPriceStale` was tested and documented as stopping orders, but its only
+  // caller was the admin review queue — it FLAGGED stale prices for staff and
+  // stopped nothing. These assert the enforcement, not the helper.
+  const catalogue = stripComments(read('web/lib/server/storeCatalogue.ts'));
+
+  ok('the catalogue applies a freshness pass',
+    /function withFreshPricesOnly/.test(catalogue));
+  ok('…driven by isPriceStale', /isPriceStale\(supply\[v\.id\]/.test(catalogue));
+  ok('…using the admin\'s own review window, not a constant',
+    /settings\.priceReviewDays/.test(catalogue));
+  ok('a stale variant loses its price rather than being unpublished',
+    /priceMinor: null/.test(catalogue));
+
+  // Both lookups must go through it, or the product page and the basket
+  // disagree about whether something is buyable.
+  ok('the plural lookup is wrapped',
+    /resolvedProducts = cache\([\s\S]{0,160}withFreshPricesOnly\(/.test(catalogue));
+  ok('the singular lookup is wrapped too',
+    /withFreshPricesOnly\(\[merged\]\)/.test(catalogue));
+
+  // The supply record is staff-only: cost ÷ price is the margin.
+  ok('no cost or margin field reaches the basket projection',
+    !/unitCostMinor|inboundShippingMinor|marginPercent/.test(
+      catalogue.slice(catalogue.indexOf('cartProductViews'))));
+
+  // And the customer gets the sentence that already existed for this case.
+  const cart = stripComments(read('src/data/store/cart.ts'));
+  ok('the basket drops a priceless line with an honest reason',
+    /priceMinor === null|price == null|!product\.priceMinor/.test(cart)
+    || /سعر هذه النسخة قيد التحديث/.test(cart));
+}
+
 console.log(`\n${failures.length ? '❌' : '✅'} testPayments: ${passed} passed, ${failures.length} failed`);
 for (const f of failures) console.log(`   ✗ ${f}`);
 process.exit(failures.length ? 1 : 0);
