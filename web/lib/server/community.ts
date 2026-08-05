@@ -1,6 +1,9 @@
 import 'server-only';
 
 import { Timestamp } from 'firebase-admin/firestore';
+import type {
+  DocumentData, DocumentReference, DocumentSnapshot, Query, QuerySnapshot,
+} from 'firebase-admin/firestore';
 import { adminDb, isAdminConfigured } from './firebaseAdmin';
 // Pure cursor logic lives outside this server-only module so it can be tested
 // directly — see lib/cursor.ts for why that split exists.
@@ -122,6 +125,41 @@ export interface PostPage {
   nextCursor: string | null;
 }
 
+/*
+ * READING FIRESTORE NEVER THROWS OUT OF THIS MODULE.
+ *
+ * `isAdminConfigured()` answers «are the variables present», which is not the
+ * same question as «does the credential work». A key that is present but
+ * malformed, a project that cannot be reached, a network that is down — all of
+ * them get past the guard and then throw from `.get()`.
+ *
+ * That throw used to escape into the page. In production, with no error
+ * boundary, Next answered it with twenty-one bytes: `Internal Server Error`.
+ * Every dynamic route failed the same opaque way while the prerendered home
+ * page looked perfectly healthy, because a static file never runs this code.
+ *
+ * So a failed read is a VALUE here, not an exception: the caller gets an empty
+ * result and the page renders its «not connected» state. The reason goes to
+ * the function log, where it belongs, instead of taking the page down.
+ */
+async function safeQuery(
+  q: Query<DocumentData>, where: string,
+): Promise<QuerySnapshot<DocumentData> | null> {
+  try { return await q.get(); } catch (e) {
+    console.error(`[community] ${where} failed`, e);
+    return null;
+  }
+}
+
+async function safeDoc(
+  ref: DocumentReference<DocumentData>, where: string,
+): Promise<DocumentSnapshot<DocumentData> | null> {
+  try { return await ref.get(); } catch (e) {
+    console.error(`[community] ${where} failed`, e);
+    return null;
+  }
+}
+
 /**
  * One page of the public feed.
  *
@@ -155,7 +193,8 @@ export async function listPosts(opts: {
 
   // Fetch one extra row to learn whether another page exists, without a second
   // query and without a count that would drift.
-  const snap = await q.limit(limit + 1).get();
+  const snap = await safeQuery(q.limit(limit + 1), 'listPosts');
+  if (!snap) return { posts: [], nextCursor: null };
   const docs = snap.docs.slice(0, limit);
   const hasMore = snap.docs.length > limit;
 
@@ -183,8 +222,8 @@ export async function getPost(postId: string): Promise<PostSummary | null> {
   if (!isAdminConfigured()) return null;
   if (!postId || postId.length > 128) return null;
 
-  const snap = await adminDb().collection('posts').doc(postId).get();
-  if (!snap.exists) return null;
+  const snap = await safeDoc(adminDb().collection('posts').doc(postId), 'getPost');
+  if (!snap || !snap.exists) return null;
 
   const post = toPostSummary(snap.id, snap.data()!);
   return post.status === 'active' ? post : null;
@@ -214,7 +253,8 @@ export async function listComments(postId: string, opts: {
     q = q.startAfter(Timestamp.fromMillis(cursor.createdAtMs), cursor.id) as typeof q;
   }
 
-  const snap = await q.limit(limit + 1).get();
+  const snap = await safeQuery(q.limit(limit + 1), 'listComments');
+  if (!snap) return { comments: [], nextCursor: null };
   const docs = snap.docs.slice(0, limit);
   const hasMore = snap.docs.length > limit;
 

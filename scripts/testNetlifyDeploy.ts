@@ -316,6 +316,106 @@ if (process.env.SKIP_NETLIFY_RUNTIME === '1') {
       wanted.length > 0 && missing.length === 0);
 
     /*
+     * [3b] THE THREE ROUTES THAT RETURNED 500 IN PRODUCTION
+     * ----------------------------------------------------
+     * `/community`, `/projects` and `/search` are the routes that are NOT
+     * prerendered — they run the server function on every request, while `/`
+     * is a static file that never does. That is the whole line between the
+     * page that worked in production and the three that answered
+     * `Internal Server Error`.
+     *
+     * They are driven here in BOTH environment shapes, because passing in one
+     * says nothing about the other and the deployed site was in the second:
+     *
+     *   · no Firebase variables at all — the public content must still render
+     *   · Firebase variables present but not usable — the shape a real deploy
+     *     is in when a key is mangled or the project is unreachable. This is
+     *     the case that used to throw out of `community.ts` and take the page
+     *     down; a failed read is now a value.
+     *
+     * A 500 in either column is a failure. So is a 200 with no content — that
+     * was the original bug wearing a different mask.
+     */
+    console.log('\n[3b] The three function-rendered routes, in both Firebase states');
+    {
+      const ROUTES = ['/community', '/projects', '/search?q=%D8%A8%D8%B7%D8%A7%D8%B1%D9%8A%D8%A9'];
+
+      // A syntactically valid PEM that belongs to nothing, so `cert()` parses
+      // and the failure lands where a real broken deploy's does: the read.
+      const { generateKeyPairSync } = await import('node:crypto');
+      const { privateKey } = generateKeyPairSync('rsa', {
+        modulusLength: 2048,
+        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+      });
+
+      const STATES: Array<{ label: string; env: Record<string, string | undefined> }> = [
+        {
+          label: 'no Firebase variables',
+          env: {
+            FIREBASE_PROJECT_ID: undefined,
+            FIREBASE_CLIENT_EMAIL: undefined,
+            FIREBASE_PRIVATE_KEY: undefined,
+          },
+        },
+        {
+          label: 'Firebase configured but unreachable',
+          env: {
+            FIREBASE_PROJECT_ID: 'fpvarabic-unreachable',
+            FIREBASE_CLIENT_EMAIL: 'sa@fpvarabic-unreachable.iam.gserviceaccount.com',
+            FIREBASE_PRIVATE_KEY: privateKey as string,
+          },
+        },
+      ];
+
+      for (const state of STATES) {
+        const saved: Record<string, string | undefined> = {};
+        for (const k of Object.keys(state.env)) saved[k] = process.env[k];
+        for (const [k, v] of Object.entries(state.env)) {
+          if (v === undefined) delete process.env[k]; else process.env[k] = v;
+        }
+
+        for (const route of ROUTES) {
+          const r = await fetchPath(route);
+          const name = route.split('?')[0];
+          ok(`[${state.label}] ${name} answers 200 (got ${r.status})`, r.status === 200);
+          ok(`[${state.label}] ${name} renders content (${r.body.length} bytes)`,
+            r.body.length > 10_000);
+          // The bare production fallback, which is what a missing error
+          // boundary produces. Twenty-one bytes and no Arabic.
+          ok(`[${state.label}] ${name} is not the bare Internal Server Error`,
+            !/^Internal Server Error$/.test(r.body.trim()));
+        }
+
+        for (const [k, v] of Object.entries(saved)) {
+          if (v === undefined) delete process.env[k]; else process.env[k] = v;
+        }
+      }
+    }
+
+    console.log('\n[3c] A failed render has somewhere to land');
+    {
+      // Without these files, ANY server exception becomes twenty-one bytes of
+      // `Internal Server Error` — no message, no digest, no Arabic. That is
+      // why the production failure could not be diagnosed from outside.
+      ok('web/app/error.tsx exists', existsSync(path.join(ROOT, 'web/app/error.tsx')));
+      ok('web/app/global-error.tsx exists — the root layout has a boundary too',
+        existsSync(path.join(ROOT, 'web/app/global-error.tsx')));
+
+      const routeErr = read('web/app/error.tsx');
+      const globalErr = read('web/app/global-error.tsx');
+      ok('the route boundary shows the digest that ties the page to the log',
+        /error\.digest/.test(routeErr));
+      ok('the global boundary shows it too', /error\.digest/.test(globalErr));
+      ok('both speak Arabic rather than English',
+        /تعذّر/.test(routeErr) && /المنصّة/.test(globalErr));
+      ok('the route boundary offers a retry', /reset\(\)|onClick=\{reset\}/.test(routeErr));
+      // global-error replaces the root layout, so it must bring its own html.
+      ok('the global boundary supplies its own <html> and <body>',
+        /<html/.test(globalErr) && /<body/.test(globalErr));
+    }
+
+    /*
      * [4] A REAL BROWSER, BECAUSE «WHITE PAGE» IS A BROWSER FACT
      * ---------------------------------------------------------
      * Every assertion above could pass while a visitor still saw nothing: the
