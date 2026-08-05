@@ -980,7 +980,16 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // exist, and a `STAGING: "1"` the parser ignored. The suite that now
     // hands every declared value to the real function is deployment
     // configuration, not Community.
-    f !== 'scripts/testStaging.ts',
+    f !== 'scripts/testStaging.ts' &&
+    // ── The Netlify deployment ────────────────────────────────────────────
+    // `Base directory: web` installs only `web/package.json`, and `firebase`
+    // deliberately is not in it — so the build failed at `firebase/app`, which
+    // is to say it failed at sign-in, posting and comments while every static
+    // page built fine. `netlify.toml` adds the root install; the bundle scan
+    // proves no service-account value reaches a browser. Hosting, not
+    // Community — even though Community is what it rescues.
+    f !== 'netlify.toml' &&
+    f !== 'scripts/testClientBundleSecrets.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

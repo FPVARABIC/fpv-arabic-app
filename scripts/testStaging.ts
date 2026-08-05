@@ -28,7 +28,7 @@
  * the real provider factory, and the real Next config.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isStagingFromEnv, STAGING_BADGE_AR } from '../web/lib/staging';
@@ -273,6 +273,79 @@ console.log('\n[4b] The BASE config on its own already deploys a safe staging si
       try { return paymentProvider() === null; } catch { return false; }
       finally { resetPaymentProviderCache(); }
     }));
+}
+
+console.log('\n[4c] The Netlify config installs the root, or the community cannot compile');
+{
+  /*
+   * THE BUG THIS SECTION EXISTS FOR
+   * -------------------------------
+   * `Base directory: web` makes Netlify install `web/package.json` and nothing
+   * else. `firebase`, `browser-image-compression` and `tailwindcss` are not in
+   * it — they are in the ROOT manifest, and `web/next.config.ts` explains at
+   * length why a second copy under `web/node_modules` must never exist.
+   *
+   * So the build failed with ten errors, and it failed at exactly the pillar
+   * that was called mandatory: `firebase/app` is imported by the sign-in form,
+   * by `communityWrites.ts`, and by the whole of `src/components/Community/`.
+   * The static pages would have built fine — which is the worst version of
+   * this failure, because the deploy looks like a success.
+   */
+  ok('netlify.toml exists at the repository root', existsSync(path.join(ROOT, 'netlify.toml')));
+  const toml = read('netlify.toml');
+
+  ok('it keeps the declared base directory', /^\s*base\s*=\s*"web"/m.test(toml));
+  ok('it publishes the Next build output', /^\s*publish\s*=\s*"\.next"/m.test(toml));
+
+  const command = /^\s*command\s*=\s*"([^"]+)"/m.exec(toml)?.[1] ?? '';
+  ok('the build command installs the repository root as well as web/',
+    /cd\s+\.\.\s*&&\s*npm\s+ci/.test(command));
+  ok('…and still runs the build inside web/ afterwards',
+    /npm run build\s*$/.test(command));
+
+  // Without the runtime plugin Netlify publishes `.next` as static files and
+  // every server action, dynamic page and route handler 404s.
+  ok('the Next.js runtime plugin is declared rather than left to detection',
+    /package\s*=\s*"@netlify\/plugin-nextjs"/.test(toml));
+
+  // The generalised form of the bug: at least one package the web build needs
+  // lives only in the root manifest. If that ever stops being true the command
+  // above is harmless; while it IS true, the command is load-bearing.
+  const webPkg = JSON.parse(read('web/package.json')) as { dependencies?: Record<string, string> };
+  const rootPkg = JSON.parse(read('package.json')) as {
+    dependencies?: Record<string, string>; devDependencies?: Record<string, string>;
+  };
+  const inWeb = new Set(Object.keys(webPkg.dependencies ?? {}));
+  const inRoot = new Set([
+    ...Object.keys(rootPkg.dependencies ?? {}),
+    ...Object.keys(rootPkg.devDependencies ?? {}),
+  ]);
+  const rootOnly = ['firebase', 'browser-image-compression', 'tailwindcss']
+    .filter(p => !inWeb.has(p) && inRoot.has(p));
+  ok(`packages the web build needs that ONLY the root provides: ${rootOnly.join(', ') || 'none'}`,
+    rootOnly.length > 0);
+
+  // Netlify's secrets scanner fails a build when an env value appears in the
+  // output. The six public ones are supposed to appear; the private key is
+  // exactly what the scanner is for.
+  const omit = /SECRETS_SCAN_OMIT_KEYS\s*=\s*"([^"]*)"/.exec(toml)?.[1] ?? '';
+  const omitted = omit.split(',').map(s => s.trim()).filter(Boolean);
+  ok(`the scanner exemption lists the six public values (${omitted.length})`,
+    omitted.length === 6 && omitted.every(k => k.startsWith('NEXT_PUBLIC_FIREBASE_')));
+  ok('…and exempts no server-only value',
+    !omitted.some(k => /PRIVATE_KEY|CLIENT_EMAIL|MOLLIE/.test(k)));
+  ok('…and uses no wildcard, which would have exempted the private key too',
+    !/SECRETS_SCAN_OMIT_KEYS\s*=\s*"[^"]*\*/.test(toml));
+
+  // The same staging guarantees, asked of the value this file actually sets.
+  const tomlStaging = /^\s*STAGING\s*=\s*"([^"]*)"/m.exec(toml)?.[1];
+  ok(`netlify.toml declares a STAGING value (${tomlStaging}) that reads as staging`,
+    !!tomlStaging && isStagingFromEnv({ STAGING: tomlStaging, NEXT_PUBLIC_SITE_URL: BRAND_ORIGIN }));
+  // Comments explain these rules — including by naming the very variables the
+  // rules forbid — so they must not be able to satisfy or violate them.
+  const tomlLive = toml.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
+  ok('netlify.toml sets no Mollie key and no site URL',
+    !/MOLLIE_API_KEY\s*=/.test(tomlLive) && !/NEXT_PUBLIC_SITE_URL\s*=/.test(tomlLive));
 }
 
 console.log('\n[5] The badge names the environment AND what is not real about it');
