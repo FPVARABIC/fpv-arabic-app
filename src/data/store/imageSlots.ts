@@ -1,4 +1,4 @@
-import type { StoreProduct, StoreVariant } from './types';
+import type { StoreProduct, ProductVariant } from './types';
 
 /**
  * Which image files a product expects, and where they live.
@@ -25,10 +25,14 @@ import type { StoreProduct, StoreVariant } from './types';
  * -----------------------------------
  * Because a variant is what you buy. The analogue and the DJI build of the same
  * airframe are different objects in the hand, and showing one photograph for
- * both is the kind of small dishonesty that produces a return. A variant with no
- * photographs of its own falls back to the product's default variant, so the
- * owner can supply one set now and refine later — the fallback is explicit and
- * reported, never silent.
+ * both is the kind of small dishonesty that produces a return.
+ *
+ * There is deliberately NO fallback from a variant to its product's default. A
+ * missing photograph shows as missing — the publication gate holds the variant
+ * back and the admin panel names it — rather than quietly borrowing a picture of
+ * a different object. Borrowing would make the shop look complete while showing
+ * customers the wrong thing, which is the failure this whole file exists to
+ * prevent.
  */
 
 /** The roles a photograph can play, in the order a gallery shows them. */
@@ -129,7 +133,7 @@ const BOXED_CATEGORIES = new Set([
  * taken yet. It names the thing and the variant, which is what a screen-reader
  * user needs to tell two builds of one airframe apart.
  */
-export function altFor(product: StoreProduct, variant: StoreVariant, role: ImageRole): string {
+export function altFor(product: StoreProduct, variant: ProductVariant, role: ImageRole): string {
   const base = `${product.titleAr} — ${variant.nameAr}`;
   switch (role) {
     case 'main': return base;
@@ -141,7 +145,7 @@ export function altFor(product: StoreProduct, variant: StoreVariant, role: Image
 }
 
 /** Every slot a single variant expects. */
-export function slotsForVariant(product: StoreProduct, variant: StoreVariant): ImageSlot[] {
+export function slotsForVariant(product: StoreProduct, variant: ProductVariant): ImageSlot[] {
   const slug = variantSlug(variant.id);
   return rolesFor(product).map((role, i) => {
     const index = i + 1;
