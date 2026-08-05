@@ -108,21 +108,6 @@ export default async function BetaflightPage(
         {page.summaryAr}
       </p>
 
-      {/* Version and provenance, before the content rather than after it. */}
-      <dl className="admin-kv card-sm" data-testid="bf-provenance" style={{ padding: '13px 15px', marginTop: 14 }}>
-        <div><dt>إصدار الفيرموير</dt><dd className="ltr">{page.firmwareVersionRange}</dd></div>
-        <div><dt>إصدار البرنامج</dt><dd className="ltr">{page.appVersionRange}</dd></div>
-        <div><dt>تاريخ المراجعة</dt><dd className="ltr">{page.reviewedAt}</dd></div>
-        <div>
-          <dt>المصدر</dt>
-          <dd className="ltr">
-            <a href={page.source.url} target="_blank" rel="noreferrer noopener">{page.source.title}</a>
-            {page.source.repoPath && <> · {page.source.repoPath}</>}
-            {page.source.commit && <> @ {page.source.commit.slice(0, 7)}</>}
-          </dd>
-        </div>
-      </dl>
-
       {page.conditionNote && (
         <p className="card-sm" style={{ padding: '12px 14px', marginTop: 12, fontSize: 13, color: 'var(--sev-warning)', lineHeight: 1.95 }}>
           {page.conditionNote}
@@ -233,6 +218,32 @@ export default async function BetaflightPage(
           </div>
         </section>
       )}
+
+      {/*
+        Version and provenance, at the END.
+        It used to sit above the content, and the comment beside it said so
+        approvingly. That was wrong: a reader who opened «PID Tuning» came to
+        read about PID tuning, and the first block they met was three version
+        ranges and a commit hash. Nothing here is deleted — every figure is
+        still on the page, and a reader checking whether it applies to their
+        firmware now finds it where provenance belongs.
+      */}
+      <section className="admin-section" aria-labelledby="bf-provenance-h">
+        <h2 id="bf-provenance-h" style={{ fontSize: 15 }}>الإصدارات والمصدر</h2>
+        <dl className="admin-kv card-sm" data-testid="bf-provenance" style={{ padding: '13px 15px' }}>
+          <div><dt>إصدار الفيرموير</dt><dd className="ltr">{page.firmwareVersionRange}</dd></div>
+          <div><dt>إصدار البرنامج</dt><dd className="ltr">{page.appVersionRange}</dd></div>
+          <div><dt>تاريخ المراجعة</dt><dd className="ltr">{page.reviewedAt}</dd></div>
+          <div>
+            <dt>المصدر</dt>
+            <dd className="ltr">
+              <a href={page.source.url} target="_blank" rel="noreferrer noopener">{page.source.title}</a>
+              {page.source.repoPath && <> · {page.source.repoPath}</>}
+              {page.source.commit && <> @ {page.source.commit.slice(0, 7)}</>}
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       <p style={{ marginTop: 26, fontSize: 13 }}>
         <Link href={BF_HUB} className="btn-ghost">← كل صفحات Betaflight</Link>{' '}

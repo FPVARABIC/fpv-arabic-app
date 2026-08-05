@@ -306,7 +306,39 @@ console.log('\n[5] Every result type has a shelf, and every shelf is reachable')
   }
 }
 
-console.log('\n[6] Every result the engine can produce has somewhere to go');
+console.log('\n[6] The payment-help page answers the query that motivated it');
+{
+  /*
+   * The gap this closed: «فشل الدفع» reached firmware-flashing failures,
+   * because the platform had no payment help at all and «الدفع» ALSO means
+   * thrust in this vocabulary — «نسبة الدفع إلى الوزن».
+   *
+   * So both directions are asserted. The page must win the payment questions,
+   * and it must not have stolen the propeller ones.
+   */
+  for (const q of [
+    'فشل الدفع', 'مشكلة في الدفع', 'خصم المبلغ ولم يتأكد الطلب',
+    'دفعت مرتين', 'إلغاء الدفع', 'رفضت البطاقة',
+  ]) {
+    const r = retrieve(q, { limit: 3 });
+    ok(`«${q}» reaches the payment help page first`,
+      r.official[0]?.id === 'page:payment-help',
+      r.official.slice(0, 2).map(x => `${x.type}:${x.titleAr.slice(0, 22)}`).join(' | '));
+  }
+  // The control that keeps the symptom tokens honest: «الدفع» as THRUST must
+  // still reach the engineering content.
+  for (const [q, wantType] of [
+    ['نسبة الدفع إلى الوزن', 'term'],
+    ['المروحة والدفع', 'article'],
+  ] as const) {
+    const r = retrieve(q, { limit: 2 });
+    ok(`«${q}» still reaches the ${wantType} (control)`,
+      r.official[0]?.type === wantType,
+      r.official.slice(0, 2).map(x => `${x.type}:${x.titleAr.slice(0, 22)}`).join(' | '));
+  }
+}
+
+console.log('\n[7] Every result the engine can produce has somewhere to go');
 {
   const noRoute = index.filter(d => !d.route || !d.route.startsWith('/'));
   ok('every document has an absolute route', noRoute.length === 0,
@@ -327,7 +359,7 @@ console.log('\n[6] Every result the engine can produce has somewhere to go');
     stray.slice(0, 4).map(d => `${d.key}→${d.route}`).join(', '));
 }
 
-console.log('\n[7] Arabic clitics are matched, and only where they should be');
+console.log('\n[8] Arabic clitics are matched, and only where they should be');
 {
   // The fix itself.
   ok('«ال» is offered as a second form', articleVariants('الهبوط').includes('هبوط'));
@@ -352,7 +384,7 @@ console.log('\n[7] Arabic clitics are matched, and only where they should be');
     r.official.slice(0, 2).map(x => x.titleAr.slice(0, 26)).join(' | '));
 }
 
-console.log('\n[8] The page actually calls the registration');
+console.log('\n[9] The page actually calls the registration');
 {
   const src = read('web/app/search/page.tsx');
   ok('the search page registers the web sources', src.includes('registerWebSearchSources()'));

@@ -278,6 +278,37 @@ a:hover { text-decoration: none; }
 .scroll-x {
   overflow-x: auto;
   max-width: 100%;
+  /*
+   * A scroll container inside a flex or grid track will not shrink below its
+   * CONTENT's width unless it is told it may. Without this, `overflow-x: auto`
+   * is decoration: the box grows to the table's intrinsic width and the page
+   * scrolls instead of the table.
+   */
+  min-width: 0;
+}
+
+/*
+ * The wrapper the table actually sits in.
+ *
+ * Found by driving `/kb/esc/esc-ratings/` at 390px: the page scrolled
+ * horizontally to 486px. `.scroll-x` was doing its job — the table scrolled
+ * inside it — but the `<figure>` AROUND it had no width constraint, so the
+ * figure grew to 466px and pushed the document. The overflow was one element
+ * outside the only element anybody had thought to constrain.
+ *
+ * Every article that carries a table has the same shape, so this is not one
+ * page's fix.
+ */
+figure {
+  max-width: 100%;
+  min-width: 0;
+  margin-inline: 0;
+}
+
+/* An image in a figure must not reintroduce the same problem. */
+figure img {
+  max-width: 100%;
+  height: auto;
 }
 
 .shell {

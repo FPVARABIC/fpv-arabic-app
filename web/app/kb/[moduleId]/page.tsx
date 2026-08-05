@@ -89,7 +89,7 @@ export default async function ModulePage(
                       {a.summaryAr}
                     </p>
                     <p style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '9px 0 0' }}>
-                      روجع {a.lastReviewed} · {a.sources.length} مصدراً
+                      {a.sources.length} مصدراً
                     </p>
                   </Link>
                 </li>

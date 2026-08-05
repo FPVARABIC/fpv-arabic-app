@@ -8,6 +8,7 @@ import {
 } from '@core/data/store/payment';
 import { ORDER_STATUS_LABEL_AR } from '@core/data/store/types';
 import { RetryPaymentButton } from '@/components/store/RetryPaymentButton';
+import { paymentHelpHref } from '@/lib/store';
 
 export const metadata: Metadata = {
   title: 'حالة الدفع',
@@ -196,6 +197,12 @@ export default async function PaymentDonePage(
           <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '12px 0 0' }} dir="ltr">
             {mine.id}
           </p>
+          <p style={{ margin: '14px 0 0' }}>
+            <Link href={paymentHelpHref()} data-testid="pay-unreadable-help"
+              style={{ fontSize: 13, color: 'var(--accent-ink)', fontWeight: 700 }}>
+              خُصم المبلغ ولم يتأكّد الطلب؟ اقرأ ماذا تفعل ←
+            </Link>
+          </p>
         </div>
       )}
 
@@ -260,6 +267,18 @@ export default async function PaymentDonePage(
             {showRetry && <RetryPaymentButton orderId={mine.id} />}
             <Link href="/store" className="btn-ghost">تابع التسوّق</Link>
           </div>
+
+          {/* The general answer, for the states where the reader has a question
+              this page deliberately does not try to answer in full. Offered
+              rather than pushed: somebody whose order is paid does not need it. */}
+          {(!payment || payment.status !== 'paid') && (
+            <p style={{ margin: '14px 0 0' }}>
+              <Link href={paymentHelpHref()} data-testid="pay-result-help"
+                style={{ fontSize: 13, color: 'var(--accent-ink)', fontWeight: 700 }}>
+                ماذا تعني هذه الحالة، وهل خُصم المبلغ؟ ←
+              </Link>
+            </p>
+          )}
 
           {payment && !isTerminalPayment(payment.status) && payment.status !== 'paid' && (
             <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '14px 0 0', lineHeight: 1.85 }}>

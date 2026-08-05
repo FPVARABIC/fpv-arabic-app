@@ -121,3 +121,16 @@ export function checkoutHref(): string {
 export function paymentResultHref(orderId: string): string {
   return `${checkoutHref()}/done?order=${encodeURIComponent(orderId)}`;
 }
+
+/**
+ * «فشل الدفع، ماذا أفعل؟»
+ *
+ * A helper rather than a literal for the same reason every other store route
+ * is one — and `scripts/testStore.ts` caught the literal within a minute of my
+ * writing it, which is the guard working exactly as intended. It is linked
+ * from two places on the result page and indexed by the platform search, so
+ * three copies of the string were already in play.
+ */
+export function paymentHelpHref(): string {
+  return `${SECTION_ROUTES.store}/payment-help`;
+}

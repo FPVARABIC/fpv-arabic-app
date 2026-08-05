@@ -139,9 +139,6 @@ export default async function ArticlePage(
             <p style={{ fontSize: 16, color: 'var(--text-dim)', margin: '14px 0 0', lineHeight: 2 }}>
               {a.summaryAr}
             </p>
-            <p style={{ fontSize: 11.5, color: 'var(--text-dimmer)', margin: '12px 0 0' }}>
-              روجع {a.lastReviewed} · {a.reviewStatus === 'reviewed' ? 'مُراجَع' : 'مسوّدة'}
-            </p>
           </header>
 
           {a.objectives.length > 0 && (
@@ -206,6 +203,16 @@ export default async function ArticlePage(
             <h2 id="sources-h" style={{ fontSize: 20, fontWeight: 900, margin: '0 0 14px' }}>
               المصادر
             </h2>
+            {/*
+              The review date, moved down to join the sources it belongs with.
+              It sat under the summary, which put a provenance line in the first
+              7% of every article — the first thing a reader met after «what is
+              this about». It answers a question nobody has that early, and it
+              answers it perfectly well next to the sources.
+            */}
+            <p data-testid="kb-reviewed" style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '-6px 0 14px' }}>
+              روجع {a.lastReviewed} · {a.reviewStatus === 'reviewed' ? 'مُراجَع' : 'مسوّدة'}
+            </p>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 12 }}>
               {a.sources.map((s, i) => (
                 <li key={i} className="card-sm" style={{ padding: '12px 15px' }}>

@@ -1,5 +1,6 @@
 import type { SearchDoc } from '@core/data/kb/search/buildIndex';
 import { normalizeText } from '@core/data/kb/search/buildIndex';
+import { PAYMENT_HELP_CASES } from '@core/data/store/paymentHelp';
 import { SECTION_ROUTES } from '../webRoutes';
 
 /**
@@ -35,6 +36,26 @@ interface StandingPage {
   summaryAr: string;
   /** The words somebody would actually type to look for it. */
   findByAr: string[];
+  /**
+   * The page's own content, for the few standing pages that HAVE content.
+   *
+   * Most of these are doors: a title and nothing else, which is why they rank
+   * last by construction. «مشاكل الدفع» is different — it is eight written
+   * cases — and indexing only its title would make it lose to any firmware
+   * page that happens to contain the word «فشل».
+   */
+  bodyAr?: string[];
+  /**
+   * The phrasings somebody uses when something has GONE WRONG.
+   *
+   * Scored in their own tier, far above keywords, because a symptom is a
+   * different kind of evidence from a word appearing in prose. Almost no
+   * standing page has any — a door is not a fault report — but «مشاكل الدفع»
+   * is nothing but fault reports, and without this it lost «فشل الدفع» to a
+   * firmware page and to an article about propeller THRUST, which is what
+   * «الدفع» also means in this vocabulary.
+   */
+  symptomsAr?: string[];
 }
 
 const PAGES: StandingPage[] = [
@@ -68,6 +89,28 @@ const PAGES: StandingPage[] = [
     route: `${SECTION_ROUTES.store}/cart`,
     summaryAr: 'تكلفة الشحن تُحسب في السلة بعد اختيار بلد التوصيل.',
     findByAr: ['الشحن', 'تكلفة الشحن', 'التوصيل', 'كم الشحن', 'هولندا', 'بلجيكا', 'ألمانيا', 'أوروبا'],
+  },
+  {
+    id: 'payment-help',
+    titleAr: 'مشاكل الدفع — ماذا أفعل',
+    route: `${SECTION_ROUTES.store}/payment-help`,
+    summaryAr: 'ماذا يعني ما حدث، وهل خُصم المبلغ، وما الخطوة التالية.',
+    // Written out rather than derived, because these are the words a customer
+    // TYPES — «انخصم المبلغ» is not a phrase that appears in our own copy, and
+    // the page would be unfindable by the exact query that motivated it.
+    findByAr: [
+      'فشل الدفع', 'الدفع فشل', 'الدفع لم ينجح', 'مشكلة في الدفع', 'مشاكل الدفع',
+      'الدفع معلق', 'إلغاء الدفع', 'انتهت المهلة', 'خصم المبلغ', 'انخصم المبلغ',
+      'دفعت ولم يتأكد الطلب', 'استرجاع', 'إعادة المحاولة', 'الدفع',
+    ],
+    bodyAr: PAYMENT_HELP_CASES.flatMap(c => [c.titleAr, c.meaningAr, c.moneyAr, c.nextStepAr]),
+    symptomsAr: [
+      'فشل الدفع', 'الدفع فشل', 'ما نجح الدفع', 'الدفع لم يكتمل',
+      'خصم المبلغ ولم يتأكد الطلب', 'انخصم المبلغ ولم يصل الطلب',
+      'دفعت ولم يتأكد الطلب', 'دفعت مرتين', 'خصم مرتين',
+      'الدفع معلق', 'الدفع ما زال مفتوحا', 'انتهت مهلة الدفع',
+      'ألغيت العملية', 'رفض المصرف', 'رفضت البطاقة',
+    ],
   },
   {
     id: 'community-front',
@@ -108,8 +151,8 @@ export function pageSearchDocs(): SearchDoc[] {
     contentClass: 'reference' as const,
     exactNames: norm(p.titleAr),
     titleTokens: norm(p.titleAr, ...p.findByAr),
-    keywordTokens: norm(...p.findByAr),
-    bodyTokens: norm(p.summaryAr),
-    symptomTokens: [],
+    keywordTokens: norm(...p.findByAr, ...(p.bodyAr ?? [])),
+    bodyTokens: norm(p.summaryAr, ...(p.bodyAr ?? [])),
+    symptomTokens: norm(...(p.symptomsAr ?? [])),
   }));
 }

@@ -954,7 +954,12 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('src/platform/retrieval/') &&
     f !== 'scripts/testRetrieval.ts' &&
     f !== 'scripts/testKbSearch.ts' &&
-    f !== 'scripts/testSearchSources.ts',
+    f !== 'scripts/testSearchSources.ts' &&
+    // ── The tidy-up round ─────────────────────────────────────────────────
+    // Reading order across every page, and the payment-help content the search
+    // gap analysis asked for. Neither is Community.
+    f !== 'scripts/testPageOrder.mjs' &&
+    f !== 'src/data/store/paymentHelp.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
