@@ -989,7 +989,19 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // proves no service-account value reaches a browser. Hosting, not
     // Community — even though Community is what it rescues.
     f !== 'netlify.toml' &&
-    f !== 'scripts/testClientBundleSecrets.ts',
+    f !== 'scripts/testClientBundleSecrets.ts' &&
+    // ── The white-page fix ────────────────────────────────────────────────
+    // A site whose base directory is set in the Netlify UI reads netlify.toml
+    // from INSIDE that directory, so the root copy was never read and the
+    // site went on serving an auto-detected build of the Vite app at the
+    // repository root. `index.html` is that app's shell: it now reports why
+    // it failed instead of rendering nothing, which is the only reason it is
+    // touched here. Deployment, not Community.
+    f !== 'web/netlify.toml' &&
+    f !== 'index.html' &&
+    f !== '.gitignore' &&
+    f !== 'web/.gitignore' &&
+    f !== 'scripts/testNetlifyDeploy.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

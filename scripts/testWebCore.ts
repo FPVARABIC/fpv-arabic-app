@@ -53,7 +53,15 @@ function webSourceFiles(): string[] {
   const out: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
-      if (entry === 'node_modules' || entry === '.next' || entry === 'out') continue;
+      // Build output, not source. `.netlify` joined this list when the Netlify
+      // deployment was set up: the runtime writes a 35 MB function bundle and a
+      // copy of the client chunks under `web/.netlify`, and every article in
+      // the encyclopedia is compiled into them. Walking it made the
+      // «no article prose is copied into web source» check fail against the
+      // build's own output — a true statement about a generated file and a
+      // meaningless one about this repository.
+      if (entry === 'node_modules' || entry === '.next' || entry === 'out'
+        || entry === '.netlify') continue;
       const full = path.join(dir, entry);
       if (statSync(full).isDirectory()) walk(full);
       else if (/\.(ts|tsx|js|jsx|css)$/.test(entry)) out.push(full);

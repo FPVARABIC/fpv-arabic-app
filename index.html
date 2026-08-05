@@ -9,5 +9,71 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!--
+      A BLANK SCREEN MUST NEVER BE THE MESSAGE.
+
+      This shell belongs to the Android surface, built by Vite. If its bundle
+      throws while the browser is still evaluating modules, React never mounts,
+      `#root` stays empty, and the page is white with nothing in it — no error,
+      no hint, nothing to search for. That is exactly what happened when this
+      app was accidentally published as the website: `src/lib/firebase.ts`
+      calls `getAuth()` at module scope, which throws `auth/invalid-api-key`
+      when the `VITE_FIREBASE_*` values are absent, and a whole afternoon goes
+      into guessing why a deploy "worked" and showed nothing.
+
+      So the shell watches itself. If `#root` is still empty shortly after
+      load, it says what it knows and what to check. It costs nothing when the
+      app boots normally: the timer finds content and does nothing at all.
+
+      Deliberately inline and framework-free — the whole point is that it runs
+      when the bundle does not.
+    -->
+    <script>
+      (function () {
+        var reason = null;
+        window.addEventListener('error', function (e) {
+          if (!reason && e && e.message) reason = e.message;
+        }, true);
+
+        function stillEmpty() {
+          var root = document.getElementById('root');
+          return !root || root.children.length === 0;
+        }
+
+        function report() {
+          if (!stillEmpty()) return;
+          var isBuiltSite = location.protocol === 'http:' || location.protocol === 'https:';
+          document.getElementById('root').innerHTML =
+            '<div style="max-width:640px;margin:12vh auto;padding:0 24px;' +
+            'font:400 15px/1.9 system-ui,-apple-system,Segoe UI,Cairo,sans-serif;' +
+            'color:#152232">' +
+            '<p style="font-size:12px;font-weight:800;color:#0B6E7D;margin:0">FPVARABIC</p>' +
+            '<h1 style="font-size:24px;font-weight:900;margin:10px 0 0">' +
+            'التطبيق لم يبدأ</h1>' +
+            '<p style="color:#55636F;margin:14px 0 0">' +
+            'واجهة الهاتف لم تُقلع في هذا المتصفّح. الصفحة ليست فارغة لأن ' +
+            'المحتوى ناقص، بل لأن تحميل الشيفرة توقّف قبل أن يبدأ العرض.' +
+            '</p>' +
+            (reason
+              ? '<pre dir="ltr" style="margin:16px 0 0;padding:12px;overflow:auto;' +
+                'background:#F2EEE6;border-radius:8px;font-size:12.5px;text-align:left">' +
+                String(reason).replace(/[<>&]/g, '') + '</pre>'
+              : '') +
+            (isBuiltSite
+              ? '<p style="color:#55636F;margin:16px 0 0">' +
+                'إن كنت تتصفّح موقع FPVARABIC، فهذه ليست الصفحة الصحيحة: ' +
+                'الموقع هو تطبيق Next.js داخل مجلد <code dir="ltr">web/</code>، ' +
+                'وما تراه هنا هو واجهة الهاتف. راجع ' +
+                '<code dir="ltr">web/netlify.toml</code> و<code dir="ltr">Base directory</code>.' +
+                '</p>'
+              : '') +
+            '</div>';
+        }
+
+        if (document.readyState === 'complete') setTimeout(report, 4000);
+        else window.addEventListener('load', function () { setTimeout(report, 4000); });
+      })();
+    </script>
   </body>
 </html>

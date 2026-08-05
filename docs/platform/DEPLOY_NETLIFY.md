@@ -8,6 +8,74 @@
 
 ---
 
+## صفر: لماذا كانت الصفحة بيضاء — السبب الجذري
+
+**`netlify.toml` في جذر المستودع لم يُقرأ أصلاً.**
+
+عندما يُضبط **Base directory** من لوحة Netlify، يبحث Netlify عن `netlify.toml`
+**داخل ذلك المجلد**. أنت ضبطتَه على `web`، ولم يكن هناك `web/netlify.toml` —
+فسقط كل ما في الملف الجذري: تثبيت تبعيات الجذر، وplugin الـNext، واستثناء فاحص
+الأسرار.
+
+فنُفِّذت إعدادات اللوحة الخام: `npm run build` داخل `web/` بتبعيات `web` وحدها.
+وهذا يفشل — وقد أثبتُّه بإخفاء `node_modules` الجذري:
+
+```
+Error: Turbopack build failed with 10 errors:
+  Cannot find module 'tailwindcss'
+  Module not found: Can't resolve 'browser-image-compression'
+  Module not found: Can't resolve 'firebase/app'
+```
+
+والبناء الفاشل **لا ينشر شيئاً**، فيبقى الموقع يخدم النشر السابق له — وهو
+النشر الذي أنتجه Netlify يوم أنشأتَ الموقع، حين اكتشف تلقائياً تطبيق **Vite في
+جذر المستودع**. ذاك التطبيق هو واجهة الهاتف (Android)، وعند تقديمه كموقع بلا
+قيم `VITE_FIREBASE_*` يعرض شاشة بيضاء تماماً:
+
+```ts
+// src/lib/firebase.ts — على نطاق الوحدة، لا داخل دالة
+export const firebaseApp  = initializeApp(cfg);
+export const firebaseAuth = getAuth(firebaseApp);   // ← يرمي هنا
+```
+
+مثبت بالتشغيل:
+
+```
+initializeApp  : OK (لا يتحقّق من القيم)
+getAuth        : THREW — FirebaseError: Firebase: Error (auth/invalid-api-key)
+```
+
+الرمية تحدث أثناء تقييم الوحدات، أي **قبل** `createRoot`. فلا يُركَّب React،
+ويبقى `<div id="root"></div>` فارغاً. لا رسالة، لا خطأ ظاهر — صفحة بيضاء.
+
+**ولم يكن تطبيق Next مسؤولاً عن ذلك إطلاقاً.** شغّلتُ دالة Netlify المولَّدة
+فعلياً وطلبتُ منها `/`:
+
+```
+STATUS   : 200
+BODYBYTES: 70444
+BODYHEAD : <!DOCTYPE html><html lang="ar" dir="rtl">…
+```
+
+### الإصلاح
+
+1. `web/netlify.toml` — النسخة التي يقرؤها موقع قاعدته `web`. بلا `base` (فهو
+   بالفعل داخله؛ إعلانه ثانيةً يعطي `web/web`).
+2. `netlify.toml` الجذري بقي — وهو ما يُقرأ إن كانت خانة Base فارغة، ويعلن
+   `base = "web"` فيصحّح نفسه.
+3. `index.html` الجذري صار يشخّص نفسه: إن بقي `#root` فارغاً بعد التحميل، يعرض
+   سبب التوقّف ونصّ الخطأ بدل لا شيء. الشاشة البيضاء الصامتة لم تعد ممكنة.
+4. `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` و`PUPPETEER_SKIP_DOWNLOAD` — تثبيت الجذر
+   يسحب `playwright` (تبعية إنتاج بسبب سكربتات مراجعة الواجهة)، وتنزيل
+   المتصفّحات وحده كان يمكن أن يُفشل البناء.
+
+### ما عليك فعله الآن
+
+**أعد النشر** (Deploys → Trigger deploy → Clear cache and deploy site). لا شيء
+غير ذلك: ملفات الإعداد تتجاوز إعدادات اللوحة، وقيم اللوحة كما هي صحيحة.
+
+---
+
 ## أولاً: العطلان اللذان كانا سيقتلان المجتمع
 
 ### 1. البناء نفسه كان سيفشل عند المجتمع بالذات

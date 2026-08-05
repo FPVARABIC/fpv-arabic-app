@@ -1,0 +1,116 @@
+# FPVARABIC — Netlify configuration, in the directory Netlify actually reads
+#
+# WHY THIS FILE IS HERE AND NOT ONLY AT THE REPOSITORY ROOT
+# ---------------------------------------------------------
+# Because a root `netlify.toml` is IGNORED by a site whose base directory is
+# set in the Netlify UI. When the UI says `Base directory: web`, Netlify looks
+# for `netlify.toml` inside `web/` — and there was none, so none of the root
+# file's settings applied: not the root dependency install, not the Next.js
+# runtime plugin, not the secrets-scanner exemption.
+#
+# What ran instead were the raw UI settings — `npm run build` inside `web/`
+# with only `web/package.json` installed — which fails:
+#
+#     Error: Turbopack build failed with 10 errors:
+#       Cannot find module 'tailwindcss'
+#       Module not found: Can't resolve 'browser-image-compression'
+#       Module not found: Can't resolve 'firebase/app'
+#
+# A failed build publishes nothing, so the site kept serving the deploy before
+# it — the one Netlify produced when the site was first created and it
+# auto-detected the Vite app at the repository root. That app is the Android
+# surface, and served as a website with no `VITE_FIREBASE_*` values it renders
+# a blank screen: `src/lib/firebase.ts` calls `getAuth()` at module scope, that
+# throws `auth/invalid-api-key` during module evaluation, and `createRoot`
+# never runs. `<div id="root">` stays empty.
+#
+# That is the white page. It was never the Next.js app — that app, run through
+# the real generated Netlify function, answers `/` with 200 and 70KB of HTML.
+#
+# TWO FILES, ONE SET OF VALUES
+# ----------------------------
+# The root copy still matters: it is the one Netlify reads when the UI's base
+# directory is EMPTY, and it declares `base = "web"` so the site self-corrects.
+# This copy is the one read when the UI names `web`. They must agree, and
+# `scripts/testStaging.ts` asserts they do rather than trusting them to.
+#
+# The only difference is this file declares no `base` — Netlify is already in
+# `web/` when it reads it, and naming the base again would resolve to
+# `web/web`.
+
+[build]
+  # Netlify installs web/package.json on its own before this runs. The subshell
+  # adds the root install, which nothing else would do, and keeps the directory
+  # change from leaking into `npm run build` — that must run in web/ so Next
+  # finds its own config.
+  #
+  # `firebase`, `browser-image-compression` and `tailwindcss` are DELIBERATELY
+  # absent from web/package.json. They live in the root manifest so this app
+  # and the shared core in ../src resolve ONE copy between them; web/next.config.ts
+  # explains what a second copy breaks and why the build passes anyway when it
+  # happens.
+  command = "(cd .. && npm ci --no-audit --no-fund) && npm run build"
+
+  # Relative to this directory. The runtime swaps this for `.netlify/static`
+  # at the end of the build, so what reaches the CDN is the client chunks and
+  # `public/`, not the server output.
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+  # ── Keep the root install from downloading half a gigabyte of browsers ────
+  # `playwright` and `puppeteer-core` are runtime dependencies of the root
+  # manifest because the UI-review scripts drive a real browser. Their
+  # postinstall fetches browser binaries, which the web build never uses and
+  # which turn a 40-second install into a multi-minute one that can fail
+  # outright on a build image with no writable cache.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+  PUPPETEER_SKIP_DOWNLOAD = "true"
+
+  # ── The staging switches ──────────────────────────────────────────────────
+  # Neither is secret and both decide whether this deployment behaves as a
+  # trial copy, so they are reviewable in the diff instead of being two more
+  # things to remember in the env panel.
+  #
+  # STAGING=true turns on the «نسخة تجريبية» badge and the site-wide
+  # `X-Robots-Tag: noindex, nofollow, noarchive`, and makes `isCanonicalOrigin()`
+  # answer «no» so robots.txt disallows every crawler.
+  STAGING = "true"
+
+  # Named explicitly so a future change to the default cannot quietly point
+  # this deployment at another provider. There is NO MOLLIE_API_KEY anywhere:
+  # that absence IS the off switch. `paymentProvider()` returns null, the
+  # basket and the order form keep working, and the pay step says
+  # «الدفع غير مفعّل».
+  PAYMENT_PROVIDER = "mollie"
+
+  # ── Netlify's secrets scanner ─────────────────────────────────────────────
+  # It fails a build when an environment variable's VALUE appears in the build
+  # output. Six of ours are supposed to appear there: `NEXT_PUBLIC_` is the
+  # prefix that means «compile this into the browser bundle», and Firebase's
+  # web config is public by design — access is controlled by firestore.rules
+  # and storage.rules, not by hiding an API key every visitor's browser must
+  # have to connect at all.
+  #
+  # Listed one by one. A wildcard would also exempt FIREBASE_PRIVATE_KEY,
+  # which is the exact thing the scanner exists to catch.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
+
+# What turns the 26 force-dynamic pages, the server actions behind checkout and
+# the payment webhook into functions. Without it Netlify publishes `.next` as
+# static files and every interactive part — sign-in, posting, commenting, the
+# admin panel — 404s.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# A second layer, not the only one: next.config.ts sets the same headers, and
+# those survive `next start`, App Hosting and local review — none of which read
+# this file.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

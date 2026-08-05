@@ -46,3 +46,8 @@ dist-video-uitest
 .final.mts
 .verify.mts
 .review-site/
+
+# Netlify build output and the local deploy reproduction (scripts/testNetlifyDeploy.ts).
+# Both are generated; the 35 MB function bundle in particular must never be committed.
+.netlify/
+.netlify-repro/

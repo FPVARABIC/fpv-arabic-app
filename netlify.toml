@@ -1,7 +1,24 @@
-# FPVARABIC — Netlify
+# FPVARABIC — Netlify (repository root copy)
 #
-# WHY THIS FILE EXISTS AT ALL, WHEN THE SETTINGS ARE ALREADY IN THE UI
-# --------------------------------------------------------------------
+# THIS FILE IS ONLY READ WHEN THE UI's BASE DIRECTORY IS EMPTY
+# ------------------------------------------------------------
+# That is the whole reason `web/netlify.toml` exists as well, and the reason
+# the first deploy was a blank page. When a site's base directory is set in the
+# Netlify UI — and it was, to `web` — Netlify looks for `netlify.toml` INSIDE
+# that directory. This file was never read, so none of it applied: not the root
+# dependency install, not the runtime plugin, not the scanner exemption.
+#
+# The raw UI settings ran instead and failed with ten module errors, a failed
+# build publishes nothing, and the site went on serving the deploy Netlify made
+# when it first auto-detected the Vite app at THIS directory — the Android
+# surface, which renders blank as a website because `src/lib/firebase.ts` calls
+# `getAuth()` at module scope and that throws without `VITE_FIREBASE_*`.
+#
+# So: both copies exist, they must agree, and `scripts/testStaging.ts` asserts
+# they do. The only intended difference is that this one declares `base`.
+#
+# WHY THE SETTINGS BELOW ARE NEEDED AT ALL
+# ----------------------------------------
 # Because the UI settings alone produce a build that fails, and it fails on the
 # one pillar that was called mandatory.
 #
@@ -52,6 +69,15 @@
   # Next 16 requires Node 20+. Pinned so a change to Netlify's default cannot
   # move the build under us.
   NODE_VERSION = "22"
+
+  # ── Keep the root install from downloading half a gigabyte of browsers ────
+  # `playwright` and `puppeteer-core` are runtime dependencies of the root
+  # manifest because the UI-review scripts drive a real browser. Their
+  # postinstall fetches browser binaries the web build never uses, turning a
+  # 40-second install into a multi-minute one that can fail outright on a build
+  # image with no writable cache.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+  PUPPETEER_SKIP_DOWNLOAD = "true"
 
   # ── The staging switches, kept OUT of the env-var panel on purpose ────────
   # Neither is a secret, and both decide whether this deployment behaves as a
