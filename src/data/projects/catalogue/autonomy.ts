@@ -37,6 +37,96 @@ export const AUTONOMY_PROJECTS: Project[] = [
       'دمج قرار التجنّب مع أوامر الطيّار بدل تجاهل أحدهما الآخر',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python أو C++ مع مصفوفات كبيرة',
+        titleEn: 'Python / C++',
+        whyAr:
+          'خريطة العمق مصفوفة بمئات الآلاف من القيم تُعالَج عشرات المرّات في الثانية. '
+          + 'الحلقات الساذجة هنا تُنتج نظاماً يعمل ببطء يجعله عديم الفائدة.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'ناقل الرسائل ونظام إحداثيات الروبوت',
+        titleEn: 'ROS 2 / TF',
+        whyAr:
+          'ستُسقط نقاط العمق من إحداثيات الكاميرا إلى إحداثيات العالم لتعرف أيّها '
+          + 'أرض وأيّها عائق. هذا هو التحويل الذي يقوم عليه ترشيح الأرض كلّه.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+        essential: true,
+      },
+      {
+        titleAr: 'هندسة ثلاثية الأبعاد: الإسقاط والتحويل',
+        whyAr:
+          'بدون فهم كيف يصير البكسل نقطةً في الفراغ، سيبقى ترشيح الأرض حيلةً تُضبط '
+          + 'بالتجربة وتنكسر عند أول ميل غير معتاد.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'ما هو متحكّم الطيران وكيف تُحدّ سرعته',
+        whyAr:
+          'أنت لا تُوقف الطائرة — أنت تخبر متحكّم الطيران بحدّ لسرعتها في اتّجاه ما. '
+          + 'الفرق بين الاثنين هو الفرق بين طبقة أمان وطبقة تعطيل.',
+        ref: { to: 'kb-article', id: 'fc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'حسّاسات متحكّم الطيران ومصادر الارتفاع',
+        whyAr:
+          'ترشيح الأرض يحتاج معرفة ارتفاعك ووضعيّتك. من أين يأتيان وما دقّتهما سؤال '
+          + 'يقرّر هل سينجح المرشّح.',
+        ref: { to: 'kb-article', id: 'fc-sensors' },
+        essential: true,
+      },
+      {
+        titleAr: 'منافذ متحكّم الطيران والتوصيل التسلسلي',
+        whyAr: 'المسافات تصل إليه عبر منفذ تسلسلي بسرعة ورسائل يجب أن تتّفقا عليهما.',
+        ref: { to: 'kb-article', id: 'fc-ports' },
+        essential: true,
+      },
+      {
+        titleAr: 'مشروع أخفّ يسبق هذا: الهبوط الدقيق',
+        whyAr:
+          'يعلّمك المعايرة وإرسال الرسائل إلى متحكّم الطيران بمخاطر أقلّ بكثير، وهما '
+          + 'نصف العمل هنا.',
+        ref: { to: 'project', id: 'precision-landing-marker' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'البارومتر', termEn: 'Barometer', ref: { to: 'glossary', id: 'barometer' } },
+      { termAr: 'المنفذ التسلسلي', termEn: 'UART', ref: { to: 'glossary', id: 'uart' } },
+      { termAr: 'محاذاة اللوحة', termEn: 'Board alignment', ref: { to: 'glossary', id: 'board-alignment' } },
+      {
+        termAr: 'خريطة العمق',
+        termEn: 'Depth map',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'صورة تحمل في كل بكسل مسافةً بدل لون.',
+      },
+      {
+        termAr: 'الاختلاف الاستريوي',
+        termEn: 'Stereo disparity',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'فرق موضع النقطة نفسها بين صورتَي كاميرتين متجاورتين — ومنه تُحسب المسافة.',
+      },
+      {
+        termAr: 'شبكة الاحتلال',
+        termEn: 'Occupancy grid',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'تقسيم الفراغ إلى خلايا، كلٌّ منها مشغولة أو خالية أو مجهولة.',
+      },
+      {
+        termAr: 'منع الاصطدام',
+        termEn: 'Collision prevention',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'حدّ للسرعة في اتّجاه عائق، وليس تخطيط مسار يلتفّ حوله.',
+      },
+    ],
+
     difficulty: 'advanced',
     categoryIds: ['autonomous-flight', 'computer-vision', 'ros', 'jetson', 'raspberry-pi'],
     estimatedWeeks: { min: 6, max: 14 },
@@ -51,12 +141,20 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'المصدر الأساسي للمسافة. مداها الفعّال يحدّد أقصى سرعة آمنة: كاميرا تصل '
           + 'إلى عشرة أمتار لا تحمي طائرة تطير بسرعة تقطعها في ثانية.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي كاميرات العمق — ليست من فئة كاميرات FPV التي يبيعها المتجر',
+        },
       },
       {
         nameAr: 'حاسوب مرافق',
         nameEn: 'Jetson Orin Nano / Raspberry Pi 5',
         whyAr: 'معالجة العمق مستمرّة ولا تحتمل تأخيراً، فهي في مسار السلامة.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA وRaspberry Pi المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'متحكّم طيران يدعم منع الاصطدام',
@@ -65,6 +163,7 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'كلاهما يقبل بيانات عوائق من مصدر خارجي ويطبّق منع اصطدام مدمجاً — أأمن '
           + 'من بناء الحلقة فوقهما.',
         critical: true,
+        ref: { to: 'kb-module', id: 'flight-controller' },
       },
       {
         nameAr: 'مقياس مسافة إضافي',
@@ -72,16 +171,31 @@ export const AUTONOMY_PROJECTS: Project[] = [
         whyAr:
           'يغطّي ما تفشل فيه الكاميرا: الزجاج، والجدران البيضاء، والإضاءة المنخفضة.',
         critical: false,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي حسّاسات القياس بالليزر — ليس ضمن أقسام المتجر',
+        },
       },
     ],
 
     software: [
-      { nameEn: 'ROS 2', roleAr: 'نقل خرائط العمق والقرارات بين العقد.', url: 'https://docs.ros.org/' },
-      { nameEn: 'OpenCV', roleAr: 'معالجة الصورة وحساب الاختلاف في الاستريو.', url: 'https://opencv.org/' },
+      {
+        nameEn: 'ROS 2',
+        roleAr: 'نقل خرائط العمق والقرارات بين العقد.',
+        url: 'https://docs.ros.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'OpenCV',
+        roleAr: 'معالجة الصورة وحساب الاختلاف في الاستريو.',
+        url: 'https://opencv.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
       {
         nameEn: 'PX4 Collision Prevention',
         roleAr: 'الطبقة التي تستقبل مسافات العوائق وتحدّ من السرعة نحوها.',
         url: 'https://docs.px4.io/main/en/computer_vision/collision_prevention.html',
+        ref: { to: 'software', id: 'ground-stations' },
       },
     ],
 
@@ -244,6 +358,89 @@ export const AUTONOMY_PROJECTS: Project[] = [
       'حدود الحسّاس الليزري: المطر، والزجاج، والأسطح السوداء',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'بناء مشاريع C++ من المصدر على لينكس',
+        titleEn: 'C++ / CMake',
+        whyAr:
+          'أطر SLAM الجادّة تُبنى من المصدر بتبعيّات كثيرة. أول أسبوع من هذا المشروع '
+          + 'يمرّ في المُصرِّف لا في الجوّ.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'ناقل الرسائل وتسجيل البيانات وإعادة تشغيلها',
+        titleEn: 'ROS 2 / rosbag',
+        whyAr:
+          'ستُسجّل طيراناً واحداً وتُعيد تشغيله عشرين مرّة بمعاملات مختلفة. من لا يتقن '
+          + 'هذا سيُعيد الطيران في كل تجربة، وهو ما يجعل المشروع مستحيلاً عملياً.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+        essential: true,
+      },
+      {
+        titleAr: 'معالجة سحب النقاط: التصفية والتسجيل',
+        titleEn: 'PCL / Open3D',
+        whyAr:
+          'الناتج الخام سحابة فيها شواذّ وتكرار. تحويلها إلى نموذج قابل للقياس هو '
+          + 'نصف قيمة المشروع.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'حساب الحمولة النافعة وزمن الطيران',
+        whyAr:
+          'الليزر والحاسوب يستهلكان الحمولة كلها. من لم يحسب هذا مسبقاً سيبني طائرة '
+          + 'تطير ستّ دقائق ولا تكفي لمسح غرفة.',
+        ref: { to: 'kb-article', id: 'power-math' },
+        essential: true,
+      },
+      {
+        titleAr: 'اختيار المحرّكات لهيكل كبير',
+        whyAr:
+          'هيكل سبع إنشات بحمولة ثقيلة اختيار محرّكات مختلف تماماً عن هيكل خمس إنشات '
+          + 'للحرّية، وهو قرار يُتّخذ قبل الشراء لا بعده.',
+        ref: { to: 'kb-article', id: 'motor-selection' },
+        essential: true,
+      },
+      {
+        titleAr: 'الاهتزاز وأثره على القياس القصوري',
+        whyAr: 'مطابقة المسحات تعتمد على تخمين أوّلي من القصور الذاتي، والاهتزاز يُفسده.',
+        ref: { to: 'kb-article', id: 'prop-balance' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'المغناطومتر', termEn: 'Magnetometer', ref: { to: 'glossary', id: 'magnetometer' } },
+      { termAr: 'نسبة الدفع إلى الوزن', termEn: 'Thrust-to-weight', ref: { to: 'glossary', id: 'thrust-to-weight' } },
+      { termAr: 'سعة البطارية', termEn: 'Capacity (mAh)', ref: { to: 'glossary', id: 'capacity-mah' } },
+      {
+        termAr: 'التموضع والخرائط الآني',
+        termEn: 'SLAM',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'بناء خريطة للمكان وتحديد موضعك داخلها في الوقت نفسه.',
+      },
+      {
+        termAr: 'سحابة النقاط',
+        termEn: 'Point cloud',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'مجموعة نقاط ثلاثية الإحداثيات تمثّل سطوح المكان كما قاسها الحسّاس.',
+      },
+      {
+        termAr: 'تسجيل المسحات',
+        termEn: 'Scan registration (ICP)',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'إيجاد التحويل الذي يُطابق مسحةً بأخرى، ومنه تُستنتج الحركة بينهما.',
+      },
+      {
+        termAr: 'إغلاق الحلقة',
+        termEn: 'Loop closure',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'التعرّف على مكان مزار سابقاً لإعادة توزيع الخطأ المتراكم على المسار كلّه.',
+      },
+    ],
+
     difficulty: 'research',
     categoryIds: ['autonomous-flight', 'ros', 'jetson', 'research', 'open-source'],
     estimatedWeeks: { min: 10, max: 20 },
@@ -257,24 +454,37 @@ export const AUTONOMY_PROJECTS: Project[] = [
         whyAr:
           'القلب. عدد الأشعّة ومداها يحدّدان كثافة الخريطة، ووزنه يحدّد حجم الطائرة كلها.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من مصنّعي حسّاسات المسح الليزري مباشرةً أو موزّعيهم — ليس ضمن أقسام المتجر',
+        },
       },
       {
         nameAr: 'حاسوب مرافق بذاكرة كافية',
         nameEn: 'Jetson Orin / Intel NUC',
         whyAr: 'سحب النقاط تستهلك ذاكرة ومعالجة أكثر ممّا يتوقّع أغلب المبتدئين.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA أو Intel المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'وحدة قصور ذاتي جيّدة',
         nameEn: 'Tactical-grade IMU',
         whyAr: 'تملأ ما بين المسحات وتحفظ الاتّجاه أثناء الحركة السريعة.',
         critical: true,
+        // Rule 2: the shop sells flight controllers with IMUs on board, not
+        // standalone survey-grade units. What we have is the explanation of what
+        // an IMU is and what its grade changes.
+        ref: { to: 'glossary', id: 'imu' },
       },
       {
         nameAr: 'هيكل يحمل الوزن',
         nameEn: '7-inch or larger airframe',
         whyAr: 'الليزر والحاسوب معاً يتجاوزان قدرة هيكل خمس إنشات على حمل مفيد.',
         critical: true,
+        ref: { to: 'store-category', id: 'size-7' },
       },
     ],
 
@@ -283,9 +493,19 @@ export const AUTONOMY_PROJECTS: Project[] = [
         nameEn: 'ROS 2',
         roleAr: 'نقل سحب النقاط والوضعيات، وتسجيلها لإعادة التشغيل.',
         url: 'https://docs.ros.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
-      { nameEn: 'PCL', roleAr: 'مكتبة معالجة سحب النقاط: تصفية وتسجيل واختزال.' },
-      { nameEn: 'Open3D', roleAr: 'عرض النتائج وقياسها بعد الطيران.', url: 'https://www.open3d.org/' },
+      {
+        nameEn: 'PCL',
+        roleAr: 'مكتبة معالجة سحب النقاط: تصفية وتسجيل واختزال.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'Open3D',
+        roleAr: 'عرض النتائج وقياسها بعد الطيران.',
+        url: 'https://www.open3d.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
     ],
 
     architectureIntroAr:
@@ -424,6 +644,94 @@ export const AUTONOMY_PROJECTS: Project[] = [
       'التعامل مع فشل عقدة واحدة دون انهيار المهمّة',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python أو C++ مع تزامن وخيوط',
+        titleEn: 'Python / C++',
+        whyAr:
+          'كل طائرة تستقبل وترسل وتحسب في الوقت نفسه. من لم يتعامل مع التزامن سيرى '
+          + 'أخطاءً تظهر مرّة كل عشرين تشغيلاً ولا يعرف مصدرها.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'نمط النشر والاشتراك ومساحات الأسماء',
+        titleEn: 'ROS 2',
+        whyAr:
+          'ثلاث طائرات تعني ثلاث مجموعات عقد يجب ألّا تتداخل أسماؤها. هذا وحده يوقف '
+          + 'كثيرين قبل أن يبدأوا.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+        essential: true,
+      },
+      {
+        titleAr: 'أساسيات الشبكات: الفقد والتأخير والبثّ',
+        whyAr:
+          'أكثر ما يبدو خطأً في خوارزمية السرب هو في الحقيقة حزمة ضائعة. من لا يعرف '
+          + 'كيف يقيس ذلك سيصحّح الشيء الخطأ.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'المحاكاة قبل الطيران',
+        titleEn: 'Gazebo',
+        whyAr:
+          'هذا المشروع تحديداً يُبنى في المحاكاة ويُؤكَّد في الجوّ. من يبدأ بالعتاد '
+          + 'سيُتلف طائرات ولن يتعلّم أسرع.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+        essential: true,
+      },
+      {
+        titleAr: 'رابط التحكّم وحدود مداه',
+        whyAr:
+          'قطع فوري للجميع شرط سلامة لا يُتفاوض عليه، ومداه يحدّ من مساحة التجربة كلها.',
+        ref: { to: 'kb-article', id: 'rc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'جودة الرابط وكيف تُقاس',
+        whyAr:
+          'ستحكم على شبكتك بالأرقام لا بالانطباع، والمفاهيم نفسها — الفقد وقوّة الإشارة — '
+          + 'هي المستعملة هنا. ليست شرطاً للبدء، لكنها الفرق بين تشخيص ساعة وتشخيص أسبوع '
+          + 'حين يتصرّف السرب تصرّفاً لا يفسّره المنطق.',
+        ref: { to: 'kb-article', id: 'rc-link-quality' },
+        essential: false,
+      },
+      {
+        titleAr: 'الحماية عند فقدان الإشارة على كل طائرة',
+        whyAr:
+          'سلوك الطائرة المعزولة هو ما يقرّر هل ينتهي عطل الشبكة بهبوط هادئ أم '
+          + 'بتصادم في الجوّ.',
+        ref: { to: 'kb-article', id: 'rc-failsafe' },
+        essential: true,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'رابط التحكّم', termEn: 'RC link', ref: { to: 'glossary', id: 'rc-link' } },
+      { termAr: 'جودة الرابط', termEn: 'Link quality', ref: { to: 'glossary', id: 'link-quality' } },
+      { termAr: 'معدّل الحزم', termEn: 'Packet rate', ref: { to: 'glossary', id: 'packet-rate' } },
+      { termAr: 'الحماية عند فقدان الإشارة', termEn: 'Failsafe', ref: { to: 'glossary', id: 'failsafe' } },
+      { termAr: 'قناة القياس العائدة', termEn: 'Telemetry downlink', ref: { to: 'glossary', id: 'telemetry-downlink' } },
+      {
+        termAr: 'شبكة متداخلة',
+        termEn: 'Mesh network',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'شبكة تمرّر الرسائل عبر العقد نفسها بدل نقطة وصول مركزية واحدة.',
+      },
+      {
+        termAr: 'التموضع التفاضلي الدقيق',
+        termEn: 'RTK GPS',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'تصحيح إشارة الأقمار بمحطّة مرجعية ثابتة، فينزل الخطأ من أمتار إلى سنتيمترات.',
+      },
+      {
+        termAr: 'ضمان الفصل',
+        termEn: 'Separation assurance',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'قاعدة محلّية على كل طائرة تمنعها من الاقتراب من جارتها أكثر من حدّ.',
+      },
+    ],
+
     difficulty: 'research',
     categoryIds: ['autonomous-flight', 'ros', 'research', 'open-source', 'ai'],
     estimatedWeeks: { min: 12, max: 24 },
@@ -438,12 +746,19 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'اثنتان لا تكفيان لظهور مشاكل التنسيق الحقيقية، والتطابق يجعل المشكلة '
           + 'واحدة بدل ثلاث.',
         critical: true,
+        // Rule 1: this one IS in the shop. Any small identical airframe works,
+        // and the 3-inch section is the cheapest way to own three of them.
+        ref: { to: 'store-category', id: 'size-3' },
       },
       {
         nameAr: 'حاسوب مرافق على كل طائرة',
         nameEn: 'Companion computer per aircraft',
         whyAr: 'التنسيق الموزّع يحتاج قدرة قرار محلّية على المتن لا على الأرض.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي Raspberry Pi أو NVIDIA المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'شبكة لاسلكية موثوقة',
@@ -452,6 +767,10 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'الشبكة هي العصب. شبكة سيّئة تُنتج سلوكاً يبدو خطأ في الخوارزمية وهو خطأ '
           + 'في الحزم.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'وحدات راديو شبكي أو نقطة وصول مخصّصة — من موردي معدّات الشبكات',
+        },
       },
       {
         nameAr: 'موضع دقيق لكل طائرة',
@@ -460,14 +779,38 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'الفصل الآمن يحتاج دقّة أفضل من GPS العادي، وإلا صارت مسافات الأمان '
           + 'كبيرة إلى حدّ يُلغي فائدة السرب.',
         critical: true,
+        // The shop stocks single-band GPS modules — useful to understand the
+        // difference, not a substitute for RTK. The section is the honest link:
+        // it shows what we DO sell beside what this project needs.
+        ref: { to: 'store-category', id: 'gps' },
       },
     ],
 
     software: [
-      { nameEn: 'ROS 2', roleAr: 'ناقل الرسائل بين الطائرات والمحطّة الأرضية.', url: 'https://docs.ros.org/' },
-      { nameEn: 'PX4', roleAr: 'برنامج الطيران، ويدعم محاكاة عدّة مركبات.', url: 'https://docs.px4.io/' },
-      { nameEn: 'Gazebo', roleAr: 'محاكاة السرب قبل أي طيران حقيقي.', url: 'https://gazebosim.org/' },
-      { nameEn: 'QGroundControl', roleAr: 'مراقبة الحالة وقطع المهمّة عند اللزوم.', url: 'http://qgroundcontrol.com/' },
+      {
+        nameEn: 'ROS 2',
+        roleAr: 'ناقل الرسائل بين الطائرات والمحطّة الأرضية.',
+        url: 'https://docs.ros.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'PX4',
+        roleAr: 'برنامج الطيران، ويدعم محاكاة عدّة مركبات.',
+        url: 'https://docs.px4.io/',
+        ref: { to: 'software', id: 'ardupilot' },
+      },
+      {
+        nameEn: 'Gazebo',
+        roleAr: 'محاكاة السرب قبل أي طيران حقيقي.',
+        url: 'https://gazebosim.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'QGroundControl',
+        roleAr: 'مراقبة الحالة وقطع المهمّة عند اللزوم.',
+        url: 'http://qgroundcontrol.com/',
+        ref: { to: 'software', id: 'ground-stations' },
+      },
     ],
 
     architectureIntroAr:
@@ -609,6 +952,87 @@ export const AUTONOMY_PROJECTS: Project[] = [
       'منهجية بحثية: قياس، وتغيير عامل واحد، وإعادة القياس',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'خبرة طيران FPV يدوي حقيقية',
+        whyAr:
+          'الشرط الذي يتجاهله الجميع. من لم يطر بنفسه بسرعة لا يعرف ماذا يعني «الطائرة '
+          + 'متأخّرة في الاستجابة»، ولن يفهم ما يُقاس ولا لماذا يفشل النظام.',
+        ref: { to: 'kb-module', id: 'flight-controller' },
+        essential: true,
+      },
+      {
+        titleAr: 'C++ لأداء زمني حرج',
+        titleEn: 'C++',
+        whyAr:
+          'الميزانية الزمنية للحلقة كلها بضع عشرات من الميلي ثانية. لغة تفسيرية في '
+          + 'المسار الحرج تستهلكها وحدها.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'نظرية التحكّم عند حدود المركبة',
+        whyAr:
+          'ما تتعلّمه في ضبط PID لطيران هادئ يبقى صحيحاً ويصير غير كافٍ: عند التشبّع '
+          + 'تسقط الافتراضات الخطّية.',
+        ref: { to: 'kb-article', id: 'fc-control-loop' },
+        essential: true,
+      },
+      {
+        titleAr: 'حساب نسبة الدفع إلى الوزن واختيار الطاقة',
+        whyAr:
+          'مناورات السباق ممكنة أو مستحيلة قبل أن تُكتب سطراً واحداً — القرار في اختيار '
+          + 'المحرّك والمروحة والبطارية.',
+        ref: { to: 'kb-article', id: 'motor-sizing' },
+        essential: true,
+      },
+      {
+        titleAr: 'المراوح: الخطوة والقطر وأثرهما',
+        whyAr:
+          'المروحة هي ما يحوّل قدرة المحرّك إلى تسارع فعلي، وهي أرخص متغيّر تجربه وأكثره '
+          + 'أثراً على زمن اللفّة.',
+        ref: { to: 'kb-article', id: 'prop-pitch' },
+        essential: true,
+      },
+      {
+        titleAr: 'الاهتزاز وموازنة المراوح',
+        whyAr:
+          'عند هذه السرعات يُشبع الاهتزاز وحدة القصور الذاتي في أسوأ لحظة ممكنة — أثناء '
+          + 'المناورة نفسها.',
+        ref: { to: 'kb-article', id: 'prop-balance' },
+        essential: true,
+      },
+      {
+        titleAr: 'مشروع أخفّ يسبق هذا: تتبّع هدف بصرياً',
+        whyAr:
+          'يعلّمك تشغيل نموذج على المتن وقياس التأخير الحقيقي — وهما القيدان اللذان '
+          + 'يقرّران هذا المشروع كلّه — بسرعات لا تُتلف عتاداً.',
+        ref: { to: 'project', id: 'visual-target-tracking' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'نسبة الدفع إلى الوزن', termEn: 'Thrust-to-weight', ref: { to: 'glossary', id: 'thrust-to-weight' } },
+      { termAr: 'خطوة المروحة', termEn: 'Prop pitch', ref: { to: 'glossary', id: 'prop-pitch' } },
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'حلقة التحكّم', termEn: 'PID', ref: { to: 'glossary', id: 'pid' } },
+      { termAr: 'معدّل الحلقة', termEn: 'Loop rate', ref: { to: 'glossary', id: 'loop-rate' } },
+      { termAr: 'سرعة أطراف المروحة', termEn: 'Tip speed', ref: { to: 'glossary', id: 'tip-speed' } },
+      {
+        termAr: 'الضبابية الحركية',
+        termEn: 'Motion blur',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'امتداد الجسم في الصورة لأنه تحرّك أثناء زمن التعريض.',
+      },
+      {
+        termAr: 'التحكّم التنبّئي النموذجي',
+        termEn: 'MPC — Model Predictive Control',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'حلّ مسألة أمثلية قصيرة الأفق في كل دورة بدل تطبيق قاعدة ثابتة.',
+      },
+    ],
+
     difficulty: 'research',
     categoryIds: ['research', 'computer-vision', 'autonomous-flight', 'ai', 'fpv', 'jetson'],
     estimatedWeeks: { min: 16, max: 40 },
@@ -621,6 +1045,7 @@ export const AUTONOMY_PROJECTS: Project[] = [
         nameEn: '5-inch racing airframe with high thrust-to-weight',
         whyAr: 'نسبة دفع إلى وزن عالية هي ما يسمح أصلاً بمناورات السباق.',
         critical: true,
+        ref: { to: 'store-category', id: 'freestyle' },
       },
       {
         nameAr: 'حاسوب مرافق خفيف',
@@ -629,6 +1054,10 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'كل غرام يقلّل الرشاقة. المقايضة بين قدرة الحساب والوزن هي قرار التصميم '
           + 'المركزي في هذا المشروع.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'كاميرا بغالق عام وتعريض قصير',
@@ -637,20 +1066,48 @@ export const AUTONOMY_PROJECTS: Project[] = [
           'الضبابية الحركية تمحو البوّابة عند السرعة. الغالق العام والتعريض القصير '
           + 'شرطان لا خيار.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي كاميرات الرؤية الصناعية — كاميرا FPV لا تُخرج إطاراً رقمياً للمعالجة',
+        },
       },
       {
         nameAr: 'بوّابات سباق قياسية',
         nameEn: 'Racing gates',
         whyAr: 'لون وشكل ثابتان يجعلان الكشف مسألة قابلة للحلّ.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي معدّات سباقات FPV، أو تُصنع محلّياً بأنابيب ملوّنة',
+        },
       },
     ],
 
     software: [
-      { nameEn: 'ROS 2', roleAr: 'ربط الإدراك بالتخطيط بالتحكّم.', url: 'https://docs.ros.org/' },
-      { nameEn: 'PX4 أو متحكّم مخصّص', roleAr: 'حلقة التحكّم منخفضة المستوى.', url: 'https://docs.px4.io/' },
-      { nameEn: 'OpenCV', roleAr: 'المعالجة البصرية وكشف البوّابات.', url: 'https://opencv.org/' },
-      { nameEn: 'Gazebo', roleAr: 'تطوير المسار والتحكّم بلا تحطيم عتاد.', url: 'https://gazebosim.org/' },
+      {
+        nameEn: 'ROS 2',
+        roleAr: 'ربط الإدراك بالتخطيط بالتحكّم.',
+        url: 'https://docs.ros.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'PX4 أو متحكّم مخصّص',
+        roleAr: 'حلقة التحكّم منخفضة المستوى.',
+        url: 'https://docs.px4.io/',
+        ref: { to: 'software', id: 'ardupilot' },
+      },
+      {
+        nameEn: 'OpenCV',
+        roleAr: 'المعالجة البصرية وكشف البوّابات.',
+        url: 'https://opencv.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'Gazebo',
+        roleAr: 'تطوير المسار والتحكّم بلا تحطيم عتاد.',
+        url: 'https://gazebosim.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
     ],
 
     architectureIntroAr:

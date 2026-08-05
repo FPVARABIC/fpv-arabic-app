@@ -37,6 +37,88 @@ export const APPLIED_PROJECTS: Project[] = [
       'مقارنة خرائط زمنية لاستخراج اتّجاه لا لقطة',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python مع المصفوفات العددية',
+        titleEn: 'Python / NumPy',
+        whyAr:
+          'الدليل النباتي عملية حسابية على مصفوفتين. من يعرف NumPy يكتبها في سطر، '
+          + 'ومن لا يعرفها يكتب حلقة تستغرق ساعة لكل خريطة.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'أساسيات نظم المعلومات الجغرافية',
+        titleEn: 'GIS / QGIS',
+        whyAr:
+          'الخريطة الناتجة موضوعة جغرافياً، ومقارنتها بطلعة سابقة تعني محاذاة نظامي '
+          + 'إحداثيات. من دون هذا تبقى الخرائط صوراً جميلة غير قابلة للمقارنة.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'تخطيط مهمّة مسح وتنفيذها ذاتياً',
+        whyAr:
+          'التراكب الأمامي والجانبي والارتفاع ليست تفضيلات — إن أخطأت فيها فلن تُدمج '
+          + 'الصور أصلاً وستعيد الطلعة كلها.',
+        ref: { to: 'software', id: 'ground-stations' },
+        essential: true,
+      },
+      {
+        titleAr: 'ما هو متحكّم الطيران وأوضاع المهمّة عنده',
+        whyAr:
+          'المسح يُنفَّذ في وضع مهمّة ذاتي لا بعصا التحكّم: تُحمَّل نقاط المسار، وتُقلع '
+          + 'الطائرة وتنفّذ وتعود وحدها. من لم يفهم كيف ينتقل المتحكّم بين الأوضاع لن '
+          + 'يعرف كيف يقطع مهمّةً انحرفت.',
+        ref: { to: 'kb-article', id: 'fc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'حساب زمن الطيران والحمولة',
+        whyAr:
+          'حقل واحد قد يحتاج ثلاث طلعات. من لم يحسب هذا سيكتشف في الميدان أن البطارية '
+          + 'تنتهي في منتصف المسح فتضيع الطلعة كلها.',
+        ref: { to: 'kb-article', id: 'power-math' },
+        essential: true,
+      },
+      {
+        titleAr: 'شحن البطاريات وتخزينها بأمان',
+        whyAr: 'يوم مسح ميداني يعني ستّ بطاريات أو أكثر تُشحن وتُنقل وتُخزَّن.',
+        ref: { to: 'kb-article', id: 'battery-charging' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'سعة البطارية', termEn: 'Capacity (mAh)', ref: { to: 'glossary', id: 'capacity-mah' } },
+      { termAr: 'الواط·ساعة', termEn: 'Watt-hour', ref: { to: 'glossary', id: 'watt-hour' } },
+      { termAr: 'كاميرا FPV', termEn: 'FPV camera', ref: { to: 'glossary', id: 'fpv-camera' } },
+      {
+        termAr: 'الدليل النباتي الطبيعي المطبَّع',
+        termEn: 'NDVI',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'نسبة تُحسب من قناتَي الأحمر والأشعّة تحت الحمراء القريبة، تعبّر عن نشاط النبات.',
+      },
+      {
+        termAr: 'التصوير متعدّد الأطياف',
+        termEn: 'Multispectral imaging',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'التقاط قنوات ضوئية ضيّقة منفصلة بدل ثلاث قنوات لون واسعة.',
+      },
+      {
+        termAr: 'المسح التصويري',
+        termEn: 'Photogrammetry',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'استخراج قياسات وخرائط من صور متراكبة بمطابقة النقاط المشتركة بينها.',
+      },
+      {
+        termAr: 'المعايرة الانعكاسية',
+        termEn: 'Reflectance calibration',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'تحويل قراءة الحسّاس إلى نسبة انعكاس مطلقة، فتصير قابلة للمقارنة بين يومين.',
+      },
+    ],
+
     difficulty: 'intermediate',
     categoryIds: ['autonomous-flight', 'computer-vision', 'education', 'research'],
     estimatedWeeks: { min: 4, max: 10 },
@@ -51,6 +133,10 @@ export const APPLIED_PROJECTS: Project[] = [
           'كاميرا عادية معدّلة قد تعطي مؤشّراً تقريبياً، لكن القنوات المفصولة '
           + 'بمرشّحات ضيّقة هي ما يجعل الرقم قابلاً للمقارنة عبر الزمن.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من مصنّعي كاميرات الاستشعار الزراعي — ليست من فئة كاميرات FPV',
+        },
       },
       {
         nameAr: 'حسّاس الإضاءة الساقطة',
@@ -59,26 +145,64 @@ export const APPLIED_PROJECTS: Project[] = [
           'يقيس ضوء الشمس لحظياً فتُصحَّح القراءات مع تغيّر الغيوم. بدونه تختلف '
           + 'الخريطة بين أوّل الطلعة وآخرها لسبب لا علاقة له بالنبات.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'يُباع عادةً مع الكاميرا متعدّدة الأطياف نفسها ومن المصنّع ذاته',
+        },
       },
       {
-        nameAr: 'طائرة بزمن طيران معقول و GPS دقيق',
-        nameEn: 'Survey-capable UAV with GNSS',
-        whyAr: 'المسح يحتاج تغطية منتظمة، والدقّة الموضعية تحدّد جودة الدمج.',
+        nameAr: 'طائرة بزمن طيران معقول',
+        nameEn: 'Survey-capable UAV',
+        whyAr: 'المسح يحتاج تغطية منتظمة، وزمن الطيران هو ما يحدّد مساحة الطلعة الواحدة.',
         critical: true,
+        ref: { to: 'store-category', id: 'long-range' },
+      },
+      {
+        nameAr: 'وحدة تموضع عبر الأقمار على متن الطائرة',
+        nameEn: 'GNSS module',
+        whyAr:
+          'كل صورة تُحفظ بموضعها، ومن هذه المواضع يبني برنامج الدمج الخريطة. دقّة '
+          + 'الموضع هي سقف دقّة الخريطة كلها، ووحدة رديئة تُنتج خريطة لا تنطبق على '
+          + 'حدود الحقل.',
+        critical: true,
+        ref: { to: 'store-product', id: 'matek-m10-gps' },
       },
       {
         nameAr: 'لوحة معايرة مرجعية',
         nameEn: 'Calibrated reflectance panel',
         whyAr: 'تُصوَّر قبل الطلعة وبعدها لتحويل القراءات إلى انعكاس مطلق.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي معدّات الاستشعار عن بُعد — لوحة بانعكاس موثَّق ومُعايَر',
+        },
       },
     ],
 
     software: [
-      { nameEn: 'Mission Planner / QGroundControl', roleAr: 'تخطيط مسار المسح وتنفيذه ذاتياً.', url: 'http://qgroundcontrol.com/' },
-      { nameEn: 'OpenDroneMap', roleAr: 'دمج الصور في خريطة ونموذج، مفتوح المصدر.', url: 'https://www.opendronemap.org/' },
-      { nameEn: 'Python + rasterio/NumPy', roleAr: 'حساب الأدلّة النباتية وتحليل الخرائط.' },
-      { nameEn: 'QGIS', roleAr: 'عرض النتائج وربطها بحدود الحقل.', url: 'https://qgis.org/' },
+      {
+        nameEn: 'Mission Planner / QGroundControl',
+        roleAr: 'تخطيط مسار المسح وتنفيذه ذاتياً.',
+        url: 'http://qgroundcontrol.com/',
+        ref: { to: 'software', id: 'ground-stations' },
+      },
+      {
+        nameEn: 'OpenDroneMap',
+        roleAr: 'دمج الصور في خريطة ونموذج، مفتوح المصدر.',
+        url: 'https://www.opendronemap.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'Python + rasterio/NumPy',
+        roleAr: 'حساب الأدلّة النباتية وتحليل الخرائط.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'QGIS',
+        roleAr: 'عرض النتائج وربطها بحدود الحقل.',
+        url: 'https://qgis.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
     ],
 
     architectureIntroAr:
@@ -208,6 +332,93 @@ export const APPLIED_PROJECTS: Project[] = [
       'تصميم واجهة لا تُرهق مشغّلاً تحت ضغط',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python وتشغيل نموذج مدرَّب',
+        titleEn: 'Python',
+        whyAr:
+          'لن تدرّب نموذجاً من الصفر في البداية، لكنك ستُشغّل واحداً وتقرأ مخرجاته '
+          + 'وتضبط حدّ الثقة — وهذا هو القرار المركزي في المشروع كلّه.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'معالجة الصور ومحاذاة قناتين',
+        titleEn: 'OpenCV',
+        whyAr:
+          'الكاميرتان ترَيان المشهد نفسه بزاويتين مختلفتين. من دون محاذاة تصير النتيجة '
+          + 'قائمتَي كشف منفصلتين لا دليلاً واحداً مؤكَّداً.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'أنظمة الإحداثيات وحساب موضع أرضي',
+        whyAr:
+          'ترشيح بلا إحداثيات لا يُرسَل إلى فريق. تحويل بكسل إلى نقطة على الأرض يحتاج '
+          + 'وضعية الطائرة وارتفاعها ومجال رؤية الكاميرا.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'تخطيط مهمّة مسح تغطّي المساحة بضمان',
+        whyAr:
+          'بحث بلا ضمان تغطية هو بحث لا تعرف ما فاتك منه — وهو أخطر ما في مهمّة إنقاذ.',
+        ref: { to: 'software', id: 'ground-stations' },
+        essential: true,
+      },
+      {
+        titleAr: 'حساب زمن الطيران ومساحة التغطية',
+        whyAr: 'مساحة البحث دالّة في زمن الطيران قبل أي شيء آخر. هذا حساب يُعمل قبل الشراء.',
+        ref: { to: 'kb-article', id: 'power-math' },
+        essential: true,
+      },
+      {
+        titleAr: 'رابط التحكّم ومداه الحقيقي',
+        whyAr:
+          'مهمّة بحث تخرج بعيداً. حدّ المدى هو حدّ المهمّة، ومعرفته مسبقاً تمنع فقد '
+          + 'الطائرة في المنطقة التي تبحث فيها عن إنسان.',
+        ref: { to: 'kb-article', id: 'rc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'مشروع أسهل يسبق هذا: تتبّع هدف بصرياً',
+        whyAr: 'يعلّمك تشغيل الكشف على المتن وقياس أدائه فعلياً، وهو نصف هذا المشروع.',
+        ref: { to: 'project', id: 'visual-target-tracking' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'كاميرا FPV', termEn: 'FPV camera', ref: { to: 'glossary', id: 'fpv-camera' } },
+      { termAr: 'رابط التحكّم', termEn: 'RC link', ref: { to: 'glossary', id: 'rc-link' } },
+      { termAr: 'قناة القياس العائدة', termEn: 'Telemetry downlink', ref: { to: 'glossary', id: 'telemetry-downlink' } },
+      { termAr: 'الواط·ساعة', termEn: 'Watt-hour', ref: { to: 'glossary', id: 'watt-hour' } },
+      {
+        termAr: 'التصوير الحراري',
+        termEn: 'Thermal imaging',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'قياس الأشعّة تحت الحمراء المنبعثة من الأجسام، فتُرى فروق الحرارة لا الضوء المنعكس.',
+      },
+      {
+        termAr: 'الإنذار الكاذب مقابل الفقد',
+        termEn: 'False positive vs false negative',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'خطآن متعاكسان: أن ترى ما ليس موجوداً، أو ألّا ترى ما هو موجود. وأحدهما أغلى.',
+      },
+      {
+        termAr: 'حدّ الثقة',
+        termEn: 'Confidence threshold',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'الدرجة التي يُعتبر فوقها الكشف جديراً بعرضه — وخفضها يزيد الإنذارات ويقلّل الفقد.',
+      },
+      {
+        termAr: 'محاذاة القناتين',
+        termEn: 'Image registration',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'مطابقة صورتين من حسّاسين مختلفين ليدلّ البكسل نفسه على النقطة نفسها.',
+      },
+    ],
+
     difficulty: 'advanced',
     categoryIds: ['ai', 'computer-vision', 'autonomous-flight', 'jetson', 'education'],
     estimatedWeeks: { min: 8, max: 16 },
@@ -222,32 +433,71 @@ export const APPLIED_PROJECTS: Project[] = [
           'الحسّاس الوحيد الذي يميّز إنساناً في الظلام أو تحت غطاء نباتي خفيف. '
           + 'دقّتها تحدّد أقصى ارتفاع مفيد.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من مصنّعي الحسّاسات الحرارية أو موزّعيهم — وتخضع لقيود تصدير في بعض الدول',
+        },
       },
       {
         nameAr: 'كاميرا بصرية',
         nameEn: 'Visible-light camera',
         whyAr: 'للتأكيد البشري ولكشف ما لا يميّزه الحراري نهاراً.',
         critical: true,
+        ref: { to: 'store-category', id: 'cameras' },
       },
       {
         nameAr: 'حاسوب مرافق',
         nameEn: 'Jetson Orin Nano',
         whyAr: 'كشفان متوازيان في الزمن الحقيقي عبء يحتاج تسريعاً.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'طائرة بزمن طيران طويل',
         nameEn: 'Long-endurance airframe',
         whyAr: 'البحث مسألة مساحة، والمساحة مسألة زمن طيران قبل أي شيء آخر.',
         critical: true,
+        ref: { to: 'store-category', id: 'long-range' },
+      },
+      {
+        nameAr: 'وحدة تموضع عبر الأقمار',
+        nameEn: 'GNSS module',
+        whyAr:
+          'ترشيح بلا إحداثيات لا يُرسَل إلى فريق أرضي، وهو نصف قيمة المشروع. كل كشف '
+          + 'يجب أن يُحفظ بموضع يستطيع أحد الوصول إليه.',
+        critical: true,
+        ref: { to: 'store-product', id: 'holybro-m10-gps' },
       },
     ],
 
     software: [
-      { nameEn: 'OpenCV', roleAr: 'معالجة القناتين ومحاذاتهما.', url: 'https://opencv.org/' },
-      { nameEn: 'YOLO (Ultralytics)', roleAr: 'كشف الأشخاص في القناة البصرية.', url: 'https://github.com/ultralytics/ultralytics' },
-      { nameEn: 'QGroundControl', roleAr: 'تخطيط مسار البحث ومتابعة التغطية.', url: 'http://qgroundcontrol.com/' },
-      { nameEn: 'MAVSDK', roleAr: 'قراءة الموضع لربط كل كشف بإحداثيات.', url: 'https://mavsdk.mavlink.io/' },
+      {
+        nameEn: 'OpenCV',
+        roleAr: 'معالجة القناتين ومحاذاتهما.',
+        url: 'https://opencv.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'YOLO (Ultralytics)',
+        roleAr: 'كشف الأشخاص في القناة البصرية.',
+        url: 'https://github.com/ultralytics/ultralytics',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'QGroundControl',
+        roleAr: 'تخطيط مسار البحث ومتابعة التغطية.',
+        url: 'http://qgroundcontrol.com/',
+        ref: { to: 'software', id: 'ground-stations' },
+      },
+      {
+        nameEn: 'MAVSDK',
+        roleAr: 'قراءة الموضع لربط كل كشف بإحداثيات.',
+        url: 'https://mavsdk.mavlink.io/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
     ],
 
     architectureIntroAr:
@@ -397,6 +647,90 @@ export const APPLIED_PROJECTS: Project[] = [
       'قراءة رخصة مشروع مفتوح وفهم ما تسمح به قبل البناء عليه',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'كيف يطير الكوادكوبتر أصلاً',
+        whyAr:
+          'ستكتب الحلقة التي تجعله يطير. من لا يعرف لماذا يدور محرّكان في اتّجاه '
+          + 'ومحرّكان في العكس لن يفهم مُوزِّع الدفع ولا سطراً منه.',
+        ref: { to: 'lesson', id: 'lesson-quadcopter-how-it-works' },
+        essential: true,
+      },
+      {
+        titleAr: 'أساسيات الكهرباء: الجهد والتيّار والمقاومة',
+        whyAr:
+          'ستقود محرّكات بترانزستورات وتغذّي لوحة من بطارية خليّة واحدة. خطأ هنا '
+          + 'يُحرق اللوحة قبل أن تُقلع.',
+        ref: { to: 'lesson', id: 'lesson-electricity-basics' },
+        essential: true,
+      },
+      {
+        titleAr: 'بطاريات الليثيوم وتعاملها الآمن',
+        whyAr:
+          'بطارية خليّة واحدة صغيرة تبقى بطارية ليثيوم. الشحن والتخزين والتلف كلها '
+          + 'مسائل سلامة حقيقية بحجم أصغر.',
+        ref: { to: 'lesson', id: 'lesson-lipo-batteries' },
+        essential: true,
+      },
+      {
+        titleAr: 'لغة C وبيئة تطوير مدمجة',
+        titleEn: 'C / ESP-IDF',
+        whyAr:
+          'البرنامج المرجعي مكتوب بـC ويُبنى بـESP-IDF. لست مضطرّاً لكتابته من الصفر، '
+          + 'لكنك ستقرأه وتعدّله وتُعيد بناءه عشرات المرّات.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'لحام أسلاك رفيعة',
+        whyAr:
+          'محرّكات مصغّرة بأسلاك شعرية. لحام رديء هنا يُنتج محرّكاً يتوقّف في الجوّ، '
+          + 'وهو عطل يبدو برمجياً تماماً.',
+        ref: { to: 'lesson', id: 'lesson-motor-install' },
+        essential: true,
+      },
+      {
+        titleAr: 'ما يفعله متحكّم الطيران، لتقارنه بما ستكتبه',
+        whyAr:
+          'قيمة هذا المشروع كلها في المقارنة: أنت تبني نسخةً مصغّرة ومقروءة ممّا يفعله '
+          + 'Betaflight في الصندوق المغلق.',
+        ref: { to: 'kb-article', id: 'fc-control-loop' },
+        essential: true,
+      },
+      {
+        titleAr: 'حسّاسات متحكّم الطيران وما تقيسه',
+        whyAr: 'ستقرأ وحدة القصور الذاتي بنفسك. اعرف ماذا تقيس قبل أن تحاول ترشيحها.',
+        ref: { to: 'kb-article', id: 'fc-sensors' },
+        essential: true,
+      },
+      {
+        titleAr: 'مركز Betaflight — ما يبدو عليه هذا كلّه في نظام ناضج',
+        whyAr:
+          'بعد أن تكتب حلقتك، افتح صفحات الضبط في مركز البرامج وستتعرّف على كل مصطلح '
+          + 'فيها. هذا هو المقصود من المشروع.',
+        ref: { to: 'software', id: 'betaflight' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'المتحكّم الدقيق', termEn: 'MCU', ref: { to: 'glossary', id: 'mcu' } },
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'الجيروسكوب ومقياس التسارع', termEn: 'Accelerometer', ref: { to: 'glossary', id: 'accelerometer' } },
+      { termAr: 'البارومتر', termEn: 'Barometer', ref: { to: 'glossary', id: 'barometer' } },
+      { termAr: 'حلقة التحكّم', termEn: 'PID', ref: { to: 'glossary', id: 'pid' } },
+      { termAr: 'معدّل الحلقة', termEn: 'Loop rate', ref: { to: 'glossary', id: 'loop-rate' } },
+      { termAr: 'مُوزِّع الدفع', termEn: 'Mixer', ref: { to: 'glossary', id: 'mixer' } },
+      { termAr: 'ترتيب المحرّكات', termEn: 'Motor order', ref: { to: 'glossary', id: 'motor-order' } },
+      { termAr: 'التسليح', termEn: 'Arming', ref: { to: 'glossary', id: 'arming' } },
+      {
+        termAr: 'نظام تشغيل زمن حقيقي',
+        termEn: 'RTOS',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'نظام يضمن أن مهمّةً ما تعمل في موعدها، لا في أقرب وقت متاح.',
+      },
+    ],
+
     difficulty: 'beginner',
     categoryIds: ['esp32', 'education', 'open-source', 'fpv'],
     estimatedWeeks: { min: 2, max: 6 },
@@ -409,30 +743,41 @@ export const APPLIED_PROJECTS: Project[] = [
         nameEn: 'ESP32 / ESP32-S2 / ESP32-S3 board',
         whyAr: 'المتحكّم والاتصال اللاسلكي في شريحة واحدة، وهو ما يجعل المشروع بهذا الرخص.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'لوحات تطوير ESP32 من موزّعي الإلكترونيات — متجرنا لا يبيع لوحات تطوير',
+        },
       },
       {
         nameAr: 'وحدة قصور ذاتي',
         nameEn: 'IMU (accelerometer + gyroscope)',
         whyAr: 'مصدر الإحساس بالوضعية. جودتها تحدّد سقف استقرار الطائرة.',
         critical: true,
+        ref: { to: 'glossary', id: 'imu' },
       },
       {
         nameAr: 'محرّكات مصغّرة ومراوح',
         nameEn: 'Coreless motors and propellers',
         whyAr: 'محرّكات فرشية صغيرة تُقاد مباشرةً بترانزستورات، وهي الأبسط للبدء.',
         critical: true,
+        // Deliberately the encyclopedia and not the shop: our motors section is
+        // brushless FPV motors, and sending somebody there to buy a coreless
+        // micro motor would be selling them the wrong thing.
+        ref: { to: 'kb-article', id: 'motor-what-is' },
       },
       {
         nameAr: 'هيكل صغير وبطارية',
         nameEn: 'Micro frame and 1S LiPo',
         whyAr: 'الوزن الخفيف يجعل التحطّم بلا ضرر — وهو شرط للتعلّم بالتجربة.',
         critical: true,
+        ref: { to: 'store-category', id: 'tiny-whoop' },
       },
       {
         nameAr: 'حسّاس ارتفاع بالضغط',
         nameEn: 'Barometer',
         whyAr: 'لتفعيل وضع تثبيت الارتفاع في المراحل المتقدّمة.',
         critical: false,
+        ref: { to: 'glossary', id: 'barometer' },
       },
     ],
 
@@ -441,9 +786,24 @@ export const APPLIED_PROJECTS: Project[] = [
         nameEn: 'ESP-Drone',
         roleAr: 'البرنامج المرجعي مفتوح المصدر من Espressif، بتوثيق رسمي كامل.',
         url: 'https://docs.espressif.com/projects/espressif-esp-drone/en/latest/index.html',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
-      { nameEn: 'ESP-IDF', roleAr: 'إطار التطوير الرسمي لشرائح ESP32.', url: 'https://docs.espressif.com/projects/esp-idf/' },
-      { nameEn: 'FreeRTOS', roleAr: 'نظام المهامّ الذي تعمل عليه حلقة التحكّم.' },
+      {
+        nameEn: 'ESP-IDF',
+        roleAr: 'إطار التطوير الرسمي لشرائح ESP32.',
+        url: 'https://docs.espressif.com/projects/esp-idf/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'FreeRTOS',
+        roleAr: 'نظام المهامّ الذي تعمل عليه حلقة التحكّم.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+      },
+      {
+        nameEn: 'Betaflight Configurator',
+        roleAr: 'ليس جزءاً من البناء — بل المرجع الذي تقارن به ما كتبته بعد أن يطير.',
+        ref: { to: 'software', id: 'betaflight' },
+      },
     ],
 
     architectureIntroAr:

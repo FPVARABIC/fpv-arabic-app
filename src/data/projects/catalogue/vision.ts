@@ -8,6 +8,23 @@ import type { Project } from '../types';
  * Nothing invents a benchmark, a frame rate on unnamed hardware, or a result a
  * paper did not report — where a number depends on the reader's build, the text
  * says what it depends on instead of picking one.
+ *
+ * HOW A `ref` IS CHOSEN, IN EVERY FILE IN THIS FOLDER
+ * ---------------------------------------------------
+ * Three rules, applied in order, and never skipped for convenience:
+ *
+ *   1. Our shop sells this exact thing        → `store-product` / `store-category`
+ *   2. Our platform EXPLAINS it               → the encyclopedia, the software centre
+ *   3. Neither                                → `elsewhere` naming where it really
+ *                                               comes from, or `planned` naming the
+ *                                               section that will one day cover it
+ *
+ * Rule 3 is the one that keeps the section honest. A Jetson is not «سيضاف
+ * لاحقاً إلى المتجر» — we have no plan to stock companion computers, and
+ * writing that would be a promise nobody made. It is `elsewhere`, and it says
+ * so. `planned` is reserved for things this platform genuinely intends to
+ * cover, which makes the set of `planned` refs a countable backlog rather than
+ * a way of avoiding the word «no».
  */
 
 export const VISION_PROJECTS: Project[] = [
@@ -49,6 +66,107 @@ export const VISION_PROJECTS: Project[] = [
       'موازنة الدقّة مقابل الإطارات في الثانية، وهي مقايضة تُحسم بالقياس لا بالرأي',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python على مستوى الحلقات والمصفوفات',
+        titleEn: 'Python',
+        whyAr:
+          'ستكتب حلقة تقرأ إطاراً وتُخرج أمراً كل بضع عشرات من الميلي ثانية. '
+          + 'المطلوب ليس إتقان اللغة بل الراحة مع المصفوفات والزمن والاستثناءات.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'أساسيات معالجة الصورة',
+        titleEn: 'OpenCV',
+        whyAr:
+          'قراءة إطار، وتغيير مقاسه، وتحويل فضاء ألوانه، ورسم مستطيل عليه. هذه '
+          + 'العمليات الأربع هي كل ما تحتاجه في البداية، وبدونها لن تفهم مخرجات النموذج.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'طرفية لينكس والاتصال البعيد بلوحة',
+        titleEn: 'Linux / SSH',
+        whyAr:
+          'الحاسوب المرافق بلا شاشة. ستُدير كل شيء عبر SSH، وتقرأ سجلّاته، وتُشغّل '
+          + 'خدمة تبدأ تلقائياً مع الإقلاع.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'ما هو متحكّم الطيران وماذا يفعل',
+        whyAr:
+          'أنت لا تقود المحرّكات — أنت ترسل رغبةً إلى شيء يقودها. الفرق بين الاثنين '
+          + 'هو الفرق بين مشروع يطير ومشروع يسقط في أوّل ثانية.',
+        ref: { to: 'kb-article', id: 'fc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'حلقة التحكّم ومعنى معاملات PID',
+        whyAr:
+          'ستضبط حلقة تحكّم بيديك على مُدخل بصري. من لم يفهم معنى كل معامل سيضبطها '
+          + 'بالتجربة العمياء ولن يعرف لماذا نجحت حين تنجح.',
+        ref: { to: 'kb-article', id: 'fc-control-loop' },
+        essential: true,
+      },
+      {
+        titleAr: 'منافذ UART والتوصيل التسلسلي',
+        whyAr:
+          'الحاسوب المرافق يتحدّث إلى متحكّم الطيران عبر منفذ تسلسلي. سرعة خاطئة أو '
+          + 'سلكان مقلوبان يُنتجان «لا شيء يعمل» بلا رسالة خطأ واحدة.',
+        ref: { to: 'kb-article', id: 'fc-ports' },
+        essential: true,
+      },
+      {
+        titleAr: 'الحماية عند فقدان الإشارة',
+        whyAr:
+          'أنت على وشك بناء نظام يُصدر أوامر طيران من تلقاء نفسه. اعرف كيف تنتزع '
+          + 'التحكّم منه قبل أن تعطيه إيّاه.',
+        ref: { to: 'kb-article', id: 'rc-failsafe' },
+        essential: true,
+      },
+      {
+        titleAr: 'موازنة المراوح وأثر الاهتزاز',
+        whyAr:
+          'الاهتزاز يصل إلى الكاميرا قبل أن يصل إلى الطيران، ويظهر كضجيج في مخرجات '
+          + 'النموذج يبدو وكأنه خلل برمجي.',
+        ref: { to: 'kb-article', id: 'prop-balance' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'حلقة التحكّم التناسبية التكاملية التفاضلية', termEn: 'PID', ref: { to: 'glossary', id: 'pid' } },
+      { termAr: 'المنفذ التسلسلي', termEn: 'UART', ref: { to: 'glossary', id: 'uart' } },
+      { termAr: 'الجيمبال', termEn: 'Gimbal', ref: { to: 'glossary', id: 'gimbal' } },
+      {
+        termAr: 'بروتوكول رسائل الطائرات المسيّرة',
+        termEn: 'MAVLink',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'صيغة رسائل قياسية يتبادلها متحكّم الطيران والحاسوب المرافق والمحطّة الأرضية.',
+      },
+      {
+        termAr: 'زمن الاستدلال',
+        termEn: 'Inference latency',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'الزمن بين دخول الإطار إلى النموذج وخروج نتيجته — وهو تأخير داخل حلقة التحكّم.',
+      },
+      {
+        termAr: 'مستطيل الإحاطة',
+        termEn: 'Bounding box',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'المستطيل الذي يُخرجه نموذج الكشف حول الجسم، بإحداثيات بالبكسل.',
+      },
+      {
+        termAr: 'الغالق العام',
+        termEn: 'Global shutter',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'كاميرا تلتقط كل الصورة في لحظة واحدة، فلا تشوّه الأجسام المتحرّكة.',
+      },
+    ],
+
     difficulty: 'advanced',
     categoryIds: ['computer-vision', 'ai', 'autonomous-flight', 'jetson', 'fpv'],
     estimatedWeeks: { min: 6, max: 12 },
@@ -63,6 +181,10 @@ export const VISION_PROJECTS: Project[] = [
           'الكشف العصبي في الزمن الحقيقي هو العبء الأكبر. معالج عام بلا تسريع يُنتج '
           + 'إطارات قليلة في الثانية، وهو ما يكفي للعرض ولا يكفي للتحكّم.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA وRaspberry Pi المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'كاميرا بغالق عام',
@@ -71,12 +193,20 @@ export const VISION_PROJECTS: Project[] = [
           'الغالق المتدحرج (rolling shutter) يشوّه الأجسام المتحرّكة ويجعل المستطيل '
           + 'يهتزّ حتى والهدف ثابت — وهو مصدر ضجيج يدخل مباشرةً في حلقة التحكّم.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي كاميرات الرؤية الصناعية — كاميرات المتجر كاميرات FPV وليست كاميرات قياس',
+        },
       },
       {
         nameAr: 'متحكّم طيران يدعم MAVLink',
         nameEn: 'Pixhawk-class flight controller',
         whyAr: 'الحاسوب المرافق يحتاج قناة رسائل قياسية ليقرأ الوضع ويرسل الأوامر.',
         critical: true,
+        // Rule 2: our shop stocks Betaflight stacks, not Pixhawk-class boards.
+        // The encyclopedia's flight-controller module is what we DO have, and it
+        // is what a reader choosing one actually needs.
+        ref: { to: 'kb-module', id: 'flight-controller' },
       },
       {
         nameAr: 'جيمبال بمحرّكات بلا فرش',
@@ -85,12 +215,17 @@ export const VISION_PROJECTS: Project[] = [
           'تحريك الكاميرا أرخص وأسرع من تحريك الطائرة كلها. يمكن الاستغناء عنه في '
           + 'النسخة الأولى بتدوير الطائرة، مقابل استجابة أبطأ.',
         critical: false,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي معدّات التصوير الجوي — ليس ضمن أقسام المتجر',
+        },
       },
       {
         nameAr: 'هيكل ٥ إنشات فأكبر',
         nameEn: '5-inch or larger airframe',
         whyAr: 'ليحمل الحاسوب المرافق والكاميرا مع زمن طيران معقول.',
         critical: false,
+        ref: { to: 'store-category', id: 'frames' },
       },
     ],
 
@@ -99,21 +234,28 @@ export const VISION_PROJECTS: Project[] = [
         nameEn: 'OpenCV',
         roleAr: 'قراءة الإطارات، والمعالجة الأوّلية، والمتتبّعات الكلاسيكية.',
         url: 'https://opencv.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'YOLO (Ultralytics)',
         roleAr: 'نموذج الكشف. النسخ الصغيرة منه هي المناسبة للمتن.',
         url: 'https://github.com/ultralytics/ultralytics',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'MAVSDK / pymavlink',
         roleAr: 'قناة الرسائل بين الحاسوب المرافق ومتحكّم الطيران.',
         url: 'https://mavsdk.mavlink.io/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'PX4 أو ArduPilot',
         roleAr: 'برنامج متحكّم الطيران الذي يستقبل الأوامر ويحافظ على الاستقرار.',
         url: 'https://docs.px4.io/main/en/companion_computer/',
+        // The hub carries ArduPilot as a scope entry: a page whose subject is
+        // exactly what this platform covers and what it does not. Linking there
+        // is more useful than «سيضاف لاحقاً», because it names the alternative.
+        ref: { to: 'software', id: 'ardupilot' },
       },
     ],
 
@@ -330,6 +472,104 @@ export const VISION_PROJECTS: Project[] = [
       'قياس جودة تقدير الموضع بدل الحكم عليه بالنظر',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'بناء وتشغيل مشاريع C++ على لينكس',
+        titleEn: 'C++ / CMake',
+        whyAr:
+          'أطر VIO الجادّة مكتوبة بـC++ وتُبنى من المصدر. ستقرأ رسائل مُصرِّف قبل أن '
+          + 'ترى أول إطار، وهذه أكثر مرحلة يتوقّف عندها المبتدئون.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'ناقل الرسائل ونمط النشر والاشتراك',
+        titleEn: 'ROS 2',
+        whyAr:
+          'كل قطعة في هذا النظام عقدة مستقلّة تنشر وتشترك. من لا يفهم الطوابع الزمنية '
+          + 'والتحويلات في ROS سيقضي أسابيع في تشخيص انحراف سببه ترتيب رسائل.',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
+        essential: true,
+      },
+      {
+        titleAr: 'جبر خطّي: المصفوفات والدوران',
+        whyAr:
+          'الوضعية دوران وإزاحة، والانتقال بين إحداثيات الكاميرا والجسم والعالم ضربُ '
+          + 'مصفوفات. من دون هذا يصير التشخيص تخميناً.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'حسّاسات متحكّم الطيران وما تقيسه فعلاً',
+        whyAr:
+          'أنت على وشك أن تُطعم متحكّم الطيران موضعاً من مصدر خارجي. لتفعل ذلك يجب '
+          + 'أن تعرف ماذا يقيس أصلاً وأين تدخل معلومتك.',
+        ref: { to: 'kb-article', id: 'fc-sensors' },
+        essential: true,
+      },
+      {
+        titleAr: 'محاذاة اللوحة واصطلاح المحاور',
+        whyAr:
+          'أشهر عطل في هذا المشروع طائرة تنجرف في اتّجاه ثابت، وسببه محور مقلوب لا '
+          + 'خوارزمية خاطئة. المفهوم نفسه موجود في ضبط متحكّم الطيران.',
+        ref: { to: 'kb-article', id: 'fc-mounting' },
+        essential: true,
+      },
+      {
+        titleAr: 'منافذ متحكّم الطيران وسرعات الاتصال',
+        whyAr: 'الجسر بين الحاسوب المرافق والمتحكّم منفذ تسلسلي بسرعة يجب أن تتّفقا عليها.',
+        ref: { to: 'kb-article', id: 'fc-ports' },
+        essential: true,
+      },
+      {
+        titleAr: 'الاهتزاز: مصدره وقياسه',
+        whyAr:
+          'الاهتزاز هنا ليس مسألة راحة بل يُشبع وحدة القصور الذاتي فتصير قراءاتها '
+          + 'بلا معنى، والتقدير ينهار بطريقة تشبه خطأً برمجياً.',
+        ref: { to: 'kb-article', id: 'prop-balance' },
+        essential: true,
+      },
+      {
+        titleAr: 'مشروع أسهل يسبق هذا: الهبوط الدقيق',
+        whyAr:
+          'يستعمل الأدوات نفسها — كاميرا، ومعايرة، ورسائل إلى متحكّم الطيران — بمخاطر '
+          + 'أقلّ كثيراً. من لم ينجح فيه سيجد هذا المشروع جداراً.',
+        ref: { to: 'project', id: 'precision-landing-marker' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'وحدة القصور الذاتي', termEn: 'IMU', ref: { to: 'glossary', id: 'imu' } },
+      { termAr: 'مقياس التسارع', termEn: 'Accelerometer', ref: { to: 'glossary', id: 'accelerometer' } },
+      { termAr: 'البارومتر', termEn: 'Barometer', ref: { to: 'glossary', id: 'barometer' } },
+      { termAr: 'محاذاة اللوحة', termEn: 'Board alignment', ref: { to: 'glossary', id: 'board-alignment' } },
+      {
+        termAr: 'قياس المسافة البصري القصوري',
+        termEn: 'VIO — Visual-Inertial Odometry',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'تقدير حركة الجسم بدمج مطابقة الصور مع قياسات القصور الذاتي.',
+      },
+      {
+        termAr: 'التموضع والخرائط الآني',
+        termEn: 'SLAM',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'بناء خريطة للمكان وتحديد موضعك داخلها في الوقت نفسه.',
+      },
+      {
+        termAr: 'الانحراف التراكمي',
+        termEn: 'Drift',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'خطأ يزداد مع الزمن لأن كل تقدير يُبنى على سابقه، لا خطأ لحظي.',
+      },
+      {
+        termAr: 'إغلاق الحلقة',
+        termEn: 'Loop closure',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'التعرّف على مكان سبقت زيارته لتصحيح الانحراف المتراكم دفعةً واحدة.',
+      },
+    ],
+
     difficulty: 'research',
     categoryIds: ['autonomous-flight', 'computer-vision', 'ros', 'jetson', 'research', 'open-source'],
     estimatedWeeks: { min: 10, max: 24 },
@@ -344,6 +584,10 @@ export const VISION_PROJECTS: Project[] = [
           'خوارزميات VIO ثقيلة حسابياً وتعمل باستمرار لا على دفعات. ضعف المعالج '
           + 'يظهر كتأخّر في التقدير، والتأخّر في الموضع أخطر منه في الرؤية.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي NVIDIA أو Intel المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'كاميرا استريو بغالق عام ووحدة قصور ذاتي مدمجة',
@@ -352,12 +596,17 @@ export const VISION_PROJECTS: Project[] = [
           'المزامنة الأجهزية بين الصورة والقصور الذاتي هي الفرق بين نظام يعمل وآخر '
           + 'ينجرف بلا سبب مفهوم. كاميرا بغالق متدحرج تُفسد الهندسة نفسها.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي كاميرات العمق والرؤية الصناعية — ليست من فئة كاميرات FPV',
+        },
       },
       {
         nameAr: 'متحكّم طيران يقبل موضعاً خارجياً',
         nameEn: 'PX4 or ArduPilot flight controller',
         whyAr: 'يجب أن يدعم استقبال تقدير موضع من مصدر خارجي ودمجه في مُقدِّره.',
         critical: true,
+        ref: { to: 'kb-module', id: 'flight-controller' },
       },
       {
         nameAr: 'مقياس ارتفاع بالليزر',
@@ -366,6 +615,10 @@ export const VISION_PROJECTS: Project[] = [
           'الارتفاع أضعف محاور التقدير البصري. مقياس مباشر يثبّته ويخفّف الانجراف '
           + 'الرأسي كثيراً.',
         critical: false,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي حسّاسات القياس بالليزر — ليس ضمن أقسام المتجر',
+        },
       },
     ],
 
@@ -374,21 +627,25 @@ export const VISION_PROJECTS: Project[] = [
         nameEn: 'VINS-Fusion',
         roleAr: 'إطار VIO قائم على التحسين، يدعم أحادية واستريو مع قصور ذاتي.',
         url: 'https://github.com/HKUST-Aerial-Robotics/VINS-Fusion',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'OpenVINS',
         roleAr: 'إطار VIO قائم على مرشّح، أخفّ حسابياً وأوضح توثيقاً للتجارب.',
         url: 'https://docs.openvins.com/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'ROS 2',
         roleAr: 'ناقل الرسائل بين الكاميرا والمُقدِّر وجسر متحكّم الطيران.',
         url: 'https://docs.ros.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'PX4',
         roleAr: 'يستقبل التقدير الخارجي ويدمجه في مُقدِّر الحالة عنده.',
         url: 'https://docs.px4.io/main/en/companion_computer/',
+        ref: { to: 'software', id: 'ground-stations' },
       },
     ],
 
@@ -595,6 +852,95 @@ export const VISION_PROJECTS: Project[] = [
       'اختبار نظام ذاتي بأمان عبر تصعيد تدريجي',
     ],
 
+    prerequisites: [
+      {
+        titleAr: 'برمجة Python كافية لكتابة برنامج صغير يعمل باستمرار',
+        titleEn: 'Python',
+        whyAr:
+          'المشروع كله برنامج واحد من نحو مئتَي سطر. لا يحتاج خبرة عميقة، لكنه يحتاج '
+          + 'أن تكون قادراً على قراءة خطأ وتصحيحه بنفسك.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'كشف العلامات ومعايرة العدسة',
+        titleEn: 'OpenCV ArUco',
+        whyAr:
+          'الوحدتان اللتان يقوم عليهما المشروع. المعايرة تحديداً ليست خطوة اختيارية: '
+          + 'بدونها يكون القياس مشوّهاً عند أطراف الصورة، وهو موضع العلامة عند الاقتراب.',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        essential: true,
+      },
+      {
+        titleAr: 'طرفية لينكس على لوحة بلا شاشة',
+        titleEn: 'Linux / SSH',
+        whyAr: 'ستُشغّل البرنامج وتقرأ سجلّاته على Raspberry Pi عبر الشبكة.',
+        ref: { to: 'planned', sectionAr: 'الدروس' },
+        essential: true,
+      },
+      {
+        titleAr: 'ما هو متحكّم الطيران وأي أوضاع طيران عنده',
+        whyAr:
+          'الهبوط الدقيق وضع داخل متحكّم الطيران، لا برنامج تكتبه. دورك أن تُطعمه '
+          + 'قياساً صحيحاً وتضبط معاملاته.',
+        ref: { to: 'kb-article', id: 'fc-what-is' },
+        essential: true,
+      },
+      {
+        titleAr: 'المنافذ التسلسلية وتوصيلها',
+        whyAr: 'ثلاثة أسلاك بين اللوحتين، وسرعة يجب أن تتّفقا عليها. أكثر من نصف الأعطال هنا.',
+        ref: { to: 'kb-article', id: 'fc-ports' },
+        essential: true,
+      },
+      {
+        titleAr: 'الحماية عند فقدان الإشارة ومفتاح قطع الوضع الذاتي',
+        whyAr:
+          'أول هبوط ذاتي يجب أن يكون قابلاً للإلغاء بحركة إبهام واحدة. اختبر ذلك قبل '
+          + 'أن تحتاجه لا بعده.',
+        ref: { to: 'kb-article', id: 'rc-failsafe' },
+        essential: true,
+      },
+      {
+        titleAr: 'أول ضبط لمتحكّم الطيران',
+        whyAr:
+          'ستغيّر معاملات وتعيد الإقلاع مرّات كثيرة. من لم يفعل هذا من قبل سيخاف من '
+          + 'الشاشة أكثر مما يخاف من الطيران.',
+        ref: { to: 'kb-article', id: 'fc-first-setup' },
+        essential: false,
+      },
+    ],
+
+    glossary: [
+      { termAr: 'الأوضاع وتفعيل التسليح', termEn: 'Arming', ref: { to: 'glossary', id: 'arming' } },
+      { termAr: 'الحماية عند فقدان الإشارة', termEn: 'Failsafe', ref: { to: 'glossary', id: 'failsafe' } },
+      { termAr: 'المنفذ التسلسلي', termEn: 'UART', ref: { to: 'glossary', id: 'uart' } },
+      { termAr: 'سرعة الاتصال التسلسلي', termEn: 'Baud rate', ref: { to: 'glossary', id: 'baud-rate' } },
+      {
+        termAr: 'العلامة المرجعية',
+        termEn: 'Fiducial marker (AprilTag / ArUco)',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'نقش مطبوع معلوم الأبعاد والهويّة، صُمّم ليُكشف ويُقاس من صورة واحدة.',
+      },
+      {
+        termAr: 'تقدير الوضعية من صورة واحدة',
+        termEn: 'PnP — Perspective-n-Point',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'حساب موضع الكاميرا واتّجاهها من مواضع نقاط معلومة الأبعاد في الصورة.',
+      },
+      {
+        termAr: 'معايرة العدسة',
+        termEn: 'Camera calibration',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'قياس البعد البؤري ومعاملات التشوّه لعدستك أنت، لا لعدسة نموذجية.',
+      },
+      {
+        termAr: 'أثر الأرض',
+        termEn: 'Ground effect',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr: 'اضطراب الهواء المرتدّ عن السطح قرب الهبوط، يحرّك الطائرة جانبياً بلا أمر.',
+      },
+    ],
+
     difficulty: 'intermediate',
     categoryIds: ['autonomous-flight', 'computer-vision', 'raspberry-pi', 'open-source', 'education'],
     estimatedWeeks: { min: 3, max: 8 },
@@ -609,18 +955,27 @@ export const VISION_PROJECTS: Project[] = [
           'كشف علامة أخفّ كثيراً من الكشف العصبي، ولوحة متواضعة تكفي — وهذا سبب '
           + 'وجيه لاختيار هذا المشروع أوّلاً.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موزّعي Raspberry Pi المعتمدين — متجرنا لا يبيع حواسيب مرافقة',
+        },
       },
       {
         nameAr: 'كاميرا موجّهة إلى الأسفل',
         nameEn: 'Downward-facing camera',
         whyAr: 'يجب أن ترى المنصّة أثناء النزول، ومجال رؤيتها يحدّد ارتفاع بدء التتبّع.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'وحدة كاميرا للوحة المرافقة — من موزّعي اللوحة نفسها، لا من قسم كاميرات FPV',
+        },
       },
       {
         nameAr: 'متحكّم طيران بدعم الهبوط الدقيق',
         nameEn: 'ArduPilot or PX4 flight controller',
         whyAr: 'حلقة الهبوط جاهزة داخله؛ بناؤها من الصفر عمل مضاعف وأخطر.',
         critical: true,
+        ref: { to: 'kb-module', id: 'flight-controller' },
       },
       {
         nameAr: 'مقياس مسافة إلى الأسفل',
@@ -629,6 +984,10 @@ export const VISION_PROJECTS: Project[] = [
           'ارتفاع دقيق يُحسّن الهبوط كثيراً في آخر متر، حيث يصير الضغط الجوّي '
           + 'غير كافٍ.',
         critical: false,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'من موردي حسّاسات القياس بالليزر — ليس ضمن أقسام المتجر',
+        },
       },
       {
         nameAr: 'علامة مطبوعة على سطح غير عاكس',
@@ -637,6 +996,10 @@ export const VISION_PROJECTS: Project[] = [
           'الطباعة اللامعة تعكس الشمس فتختفي العلامة تماماً في وقت من النهار — عطل '
           + 'يبدو عشوائياً وسببه الورق.',
         critical: true,
+        ref: {
+          to: 'elsewhere',
+          whereAr: 'تُولَّد وتُطبع بنفسك — مولّدات العلامات مجانية ومفتوحة',
+        },
       },
     ],
 
@@ -645,21 +1008,25 @@ export const VISION_PROJECTS: Project[] = [
         nameEn: 'OpenCV (ArUco)',
         roleAr: 'كشف العلامة وحساب وضعيّتها.',
         url: 'https://opencv.org/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'AprilTag',
         roleAr: 'مكتبة علامات بديلة، أمتن في الإضاءة الصعبة.',
         url: 'https://github.com/AprilRobotics/apriltag',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
       {
         nameEn: 'ArduPilot',
         roleAr: 'يستقبل رسائل الهدف الأرضي وينفّذ الهبوط.',
         url: 'https://ardupilot.org/copter/docs/precision-landing-and-loiter.html',
+        ref: { to: 'software', id: 'ardupilot' },
       },
       {
         nameEn: 'pymavlink / MAVSDK',
         roleAr: 'إرسال رسائل الهدف من الحاسوب المرافق.',
         url: 'https://mavsdk.mavlink.io/',
+        ref: { to: 'planned', sectionAr: 'مركز البرامج' },
       },
     ],
 
