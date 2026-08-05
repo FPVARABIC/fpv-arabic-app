@@ -33,6 +33,7 @@
 
 import {
   normalizeText, tokenize, allowedDistance, editDistance, contentTokens,
+  articleVariants,
 } from './normalize';
 import { expandQueryTokens } from './synonyms';
 import { getSearchIndex, type SearchDoc, type SearchDocType, type SearchContentClass } from './buildIndex';
@@ -159,6 +160,36 @@ const TYPE_BIAS: Record<SearchDocType, number> = {
   // does the title weights carry it there without any bias.
   'bf-field': 0,
   'edgetx-setting': 0,
+
+  /*
+   * The surface-contributed types.
+   *
+   * WHY A PROJECT SITS BESIDE A LESSON AND NOT ABOVE AN ARTICLE
+   * ----------------------------------------------------------
+   * A project is a long build guide. Someone who types «تتبّع بصري» probably
+   * wants the project; someone who types «PID» wants the article that explains
+   * PID, not the project that happens to tune one. Title weights carry the
+   * first case on their own; a bias would break the second.
+   *
+   * WHY THE SHOP IS THE LOWEST NON-ZERO TIER
+   * ----------------------------------------
+   * Deliberately, and this is the important line in the table. A shop that
+   * ranks its own stock above the encyclopedia is a shop that answers «كيف
+   * أختار نظارة» with a product. The reader gets the article first and the
+   * things they could buy after it — and the grouping on the results page makes
+   * the separation visible as well as ordinal.
+   *
+   * A variant is below its product: it is the same page reached by a narrower
+   * name, so it should surface only when the query names the variant.
+   */
+  project: 6,
+  'project-section': 2,
+  product: 1,
+  service: 1,
+  'product-variant': 0,
+  // A door, not a destination. It exists so «اتصل بنا» finds something, and it
+  // must never outrank content about the subject somebody actually asked about.
+  page: 0,
 };
 
 /**
@@ -178,6 +209,7 @@ interface DocSets {
   keyword: Set<string>;
   body: Set<string>;
   symptom: Set<string>;
+  stems: Set<string>;
   titleJoined: string;
   titleEnNorm: string;
   titleArNorm: string;
@@ -185,12 +217,96 @@ interface DocSets {
 
 const SETS = new WeakMap<SearchDoc, DocSets>();
 
+/**
+ * Whether a token set contains a query word in ANY of its clitic forms.
+ *
+ * THE MISS THIS FIXES
+ * -------------------
+ * «هبوط دقيق» did not find «الهبوط الذاتي الدقيق على علامة بصرية». Every match
+ * test compares whole normalised tokens, and «الهبوط» is not «هبوط»; the prefix
+ * rule does not help either, because it asks whether a TITLE token starts with
+ * a QUERY token and here the extra letters are on the title's side. The reader
+ * typed the exact words in the title and got nothing.
+ *
+ * WHY IT IS A MATCH-TIME TEST RATHER THAN AN EXPANDED SET
+ * -------------------------------------------------------
+ * Both obvious alternatives were tried and measured, and both were worse:
+ *
+ *   - Expanding the DOCUMENT's token sets inflates long documents. A diagnostic
+ *     tree carries dozens of «ال»-prefixed words in its symptom list, so
+ *     doubling that set gives it extra ways to match generic query words.
+ *     `scripts/testKbSearch.ts` caught it immediately: «متحكم الطيران» pushed
+ *     `article:fc-what-is` out of its own top eight.
+ *   - Expanding the QUERY's token list makes one word score twice whenever a
+ *     document happens to contain both forms.
+ *
+ * Testing the forms here scores each ORIGINAL query word at most once, whichever
+ * form hit, and adds nothing to any set. The cost is a few string comparisons on
+ * words that actually start with a clitic.
+ */
+function hasClitic(set: Set<string>, token: string, stems?: Set<string>): boolean {
+  if (set.has(token)) return true;
+
+  // Direction one: the QUERY carries a clitic, the DOCUMENT is bare.
+  //   «الهبوط» typed, «هبوط» indexed.
+  const variants = articleVariants(token);
+  for (let i = 1; i < variants.length; i += 1) if (set.has(variants[i])) return true;
+
+  // Direction two: the DOCUMENT carries a clitic, the QUERY is bare.
+  //   «هبوط» typed, «الهبوط» indexed — the case that started this.
+  //   «انقاذ» typed, «والإنقاذ» indexed — the case that ranked a project's own
+  //   sections above the project, because only the sections repeated the word
+  //   without its conjunction.
+  //
+  // Reconstruction rather than guessing: each of these is a real prefix that
+  // would have produced the bare token, so a hit is exact.
+  for (const p of CLITIC_PREFIXES) if (set.has(p + token)) return true;
+
+  // Direction three: BOTH sides carry a clitic, and they are different ones.
+  //   «وإنقاذ» typed, «والإنقاذ» indexed. Neither is a prefix of the other, so
+  //   only reducing both to a stem can see that they are the same word.
+  if (stems) {
+    const stem = cliticStem(token);
+    if (stem && stems.has(stem)) return true;
+  }
+  return false;
+}
+
+/**
+ * A token with ONE leading clitic removed, or null when it carries none.
+ *
+ * Deliberately single-pass and floored at four remaining characters: the floor
+ * is what leaves «وحدة», «وقت», «وزن» and «ولا» alone, and one pass is what
+ * stops «والا…» chains from reducing to something meaningless.
+ */
+function cliticStem(token: string): string | null {
+  for (const p of CLITIC_STEM_PREFIXES) {
+    if (token.startsWith(p) && token.length - p.length >= 4) return token.slice(p.length);
+  }
+  return null;
+}
+
+/** Longest first, so «وال» is tried before «و». */
+const CLITIC_STEM_PREFIXES = ['وال', 'بال', 'كال', 'فال', 'ال', 'لل', 'و'];
+
+/** Every clitic that can sit in front of a bare noun. Mirrors `articleVariants`. */
+const CLITIC_PREFIXES = ['ال', 'وال', 'بال', 'كال', 'فال', 'لل', 'و'];
+
 function setsFor(doc: SearchDoc): DocSets {
   let cached = SETS.get(doc);
   if (!cached) {
     cached = {
       title: new Set(doc.titleTokens),
       keyword: new Set(doc.keywordTokens),
+      // Stems of the CLITIC-BEARING title and keyword tokens only.
+      //
+      // Small by construction — most tokens carry no clitic and contribute
+      // nothing — and consulted only after every direct test has failed. It is
+      // what lets «وإنقاذ» (query) match «والإنقاذ» (title): both reduce to
+      // «إنقاذ», and neither is a prefix of the other, so no amount of
+      // prefixing one side could have found it.
+      stems: new Set([...doc.titleTokens, ...doc.keywordTokens]
+        .map(cliticStem).filter((t): t is string => !!t)),
       body: new Set(doc.bodyTokens),
       symptom: new Set(doc.symptomTokens ?? []),
       titleJoined: doc.titleTokens.join(' '),
@@ -307,6 +423,7 @@ function scoreDoc(
   const keySet = sets.keyword;
   const bodySet = sets.body;
   const sympSet = sets.symptom;
+  const stemSet = sets.stems;
 
   let score = 0;
   const reasons = new Reasons();
@@ -369,8 +486,11 @@ function scoreDoc(
   }
 
   for (const t of original) {
-    if (titleSet.has(t)) { score += W_TITLE_EXACT; reasons.add('title', t); continue; }
-    if (keySet.has(t)) { score += W_KEYWORD_EXACT; reasons.add('keyword', t); continue; }
+    // Matched through the clitic variants — see `hasClitic`. Each ORIGINAL
+    // query word is still scored at most once, whichever of its forms hit, so
+    // the expansion can never turn one word into two matches.
+    if (hasClitic(titleSet, t, stemSet)) { score += W_TITLE_EXACT; reasons.add('title', t); continue; }
+    if (hasClitic(keySet, t, stemSet)) { score += W_KEYWORD_EXACT; reasons.add('keyword', t); continue; }
     if (bodySet.has(t)) { score += W_BODY_EXACT; reasons.add('body', t); }
   }
 

@@ -5,6 +5,7 @@ import { allDxTrees } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
+import { ALL_PROJECTS } from '@core/data/projects/registry';
 import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
 import { navItem } from '@/lib/siteNav';
@@ -39,14 +40,26 @@ function sectionHref(id: string): string {
  *
  * HOW THIS ONE IS BUILT INSTEAD
  * -----------------------------
- * Four pillars, rendered from ONE array through ONE component, so they are
+ * Five pillars, rendered from ONE array through ONE component, so they are
  * equal by construction rather than by my remembering to keep them equal. Same
  * card, same icon size, same number treatment, same call to action. If a future
- * edit makes one of them louder, it makes all four louder — which is the only
+ * edit makes one of them louder, it makes all five louder — which is the only
  * way «وزناً متقارباً» survives contact with later changes.
  *
- * The order of the four follows the navigation bar, so the page and the bar
- * teach the same shape: المجتمع · المتجر · البرامج · الموسوعة.
+ * The order follows the navigation bar, so the page and the bar teach the same
+ * shape: المجتمع · المتجر · البرامج · الموسوعة · المشاريع. That correspondence
+ * is now checked rather than remembered — this page carried four pillars for a
+ * while after the bar grew to six tabs, and a visitor who meets a section on
+ * the bar that the page never mentioned has been told, quietly, that the page
+ * is not a map of the platform. That is the one job it has.
+ *
+ * WHAT IS DELIBERATELY NOT ON THIS PAGE
+ * -------------------------------------
+ * Any section's own detail. The instruction was «هدفها أن تقود المستخدم، لا أن
+ * تشرح كل المنصة»: a landing page that explains each section is a page nobody
+ * finishes. «أحدث ما رُوجع» is real and useful and is therefore kept — folded
+ * shut, near the bottom, where somebody who wants it can open it and nobody
+ * else has to scroll past it.
  *
  * EVERY NUMBER IS COUNTED, NONE IS WRITTEN
  * ----------------------------------------
@@ -80,11 +93,12 @@ interface Pillar {
 export default function HomePage() {
   const modules = allKbModules;
   const articleCount = modules.reduce((n, m) => n + m.articles.length, 0);
+  const publishedProjectCount = ALL_PROJECTS.filter(p => p.published).length;
 
   const softwarePages =
     HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
 
-  /* The four load-bearing sections, in navigation order. One array, one
+  /* The five load-bearing sections, in navigation order. One array, one
      renderer — see the note above on why that matters more than it looks. */
   const pillars: Pillar[] = [
     {
@@ -134,6 +148,26 @@ export default function HomePage() {
       count: articleCount,
       countLabelAr: `مقالاً في ${modules.length} منظومات`,
       ctaAr: 'افتح الموسوعة',
+    },
+    /*
+     * المشاريع, added because the tab bar had six tabs and this page had four
+     * pillars.
+     *
+     * A visitor who arrives on the home page and then meets a section on the
+     * bar that the page never mentioned has been told, quietly, that the page
+     * is not a map of the platform. That is the one job it has.
+     */
+    {
+      id: 'projects',
+      labelAr: 'المشاريع',
+      href: '/projects',
+      Icon: Hammer,
+      blurbAr:
+        'مشاريع كاملة ومراجَعة — ما ستتعلّمه، وما يجب أن تعرفه قبلها، والقطع '
+        + 'والبرامج مربوطة بأماكنها داخل المنصّة.',
+      count: publishedProjectCount,
+      countLabelAr: 'مشروعاً مراجَعاً',
+      ctaAr: 'تصفّح المشاريع',
     },
   ];
 
@@ -331,17 +365,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Real content, with the dates it already carries ──────────────── */}
+      {/* ── Real content, folded shut ────────────────────────────────────
+          Kept, because the review dates are a fact this platform can prove and
+          few others can. Folded, because a landing page's job is to point at
+          the sections rather than to sample one of them — and this sampled the
+          encyclopedia, which is the imbalance the page was rebuilt to fix. */}
       {recentlyReviewed.length > 0 && (
-        <section aria-labelledby="recent-h" style={{ marginTop: 52 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14 }}>
-            <h2 id="recent-h" style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>
-              أحدث ما رُوجع
-            </h2>
+        <details data-testid="home-recent" style={{ marginTop: 52 }}>
+          <summary style={{ cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+            <span style={{ fontSize: 17, fontWeight: 900 }}>أحدث ما رُوجع</span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
+              آخر <span dir="ltr">{recentlyReviewed.length}</span> مقالات أُعيد فحصها
+            </span>
+          </summary>
+          <p style={{ margin: '10px 0 14px' }}>
             <Link href={sectionHref('kb')} style={{ fontSize: 13, color: 'var(--accent-ink)' }}>
               كل الموسوعة ←
             </Link>
-          </div>
+          </p>
           <div
             style={{
               display: 'grid',
@@ -373,7 +414,7 @@ export default function HomePage() {
               );
             })}
           </div>
-        </section>
+        </details>
       )}
 
       {/* ── Honest about what this is ────────────────────────────────────── */}

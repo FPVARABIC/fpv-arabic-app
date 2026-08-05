@@ -78,7 +78,21 @@ export type SearchDocType =
   | 'path'
   | 'dx-node'
   | 'drone-type'
-  | 'troubleshooting';
+  | 'troubleshooting'
+  /*
+   * Contributed by a surface rather than built here — see `registerSearchDocs`.
+   *
+   * The TYPES live in the shared union because the contract is shared: the
+   * ranking, the filters and the result badges all switch on this, and a type
+   * the engine does not know about is a result nobody can filter. The DOCUMENTS
+   * live wherever the section does, which for these five is the web.
+   */
+  | 'project'
+  | 'project-section'
+  | 'product'
+  | 'product-variant'
+  | 'service'
+  | 'page';
 
 export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   article: 'موسوعة',
@@ -102,6 +116,12 @@ export const SEARCH_TYPE_LABEL_AR: Record<SearchDocType, string> = {
   'dx-node': 'خطوة تشخيص',
   'drone-type': 'نوع بناء',
   troubleshooting: 'مشكلة وحل',
+  project: 'مشروع',
+  'project-section': 'قسم في مشروع',
+  product: 'منتج',
+  'product-variant': 'خيار منتج',
+  service: 'خدمة',
+  page: 'صفحة',
 };
 
 /** Broad content class, used by the "تعليمي / مرجعي / تشخيصي" filter. */
@@ -788,10 +808,76 @@ function buildDocs(): SearchDoc[] {
   return docs;
 }
 
+/* ── Documents a SURFACE contributes ──────────────────────────────────────── */
+
+/**
+ * Sections that exist on one surface only, registered rather than imported.
+ *
+ * THE PROBLEM THIS SOLVES
+ * -----------------------
+ * Two whole sections — المتجر and المشاريع — exist on the web and nowhere else.
+ * A reader searching FPVARABIC expects to find a product and a project, so both
+ * have to be in the index. But this file is compiled into the PHONE bundle, and
+ * importing a 2,700-line catalogue and ten long project documents here would
+ * ship both to an app that has no storefront and no project library.
+ *
+ * So the CONTRACT is shared and the CONTENT is not. `SearchDoc`, the ranking,
+ * the Arabic normalisation and the synonym expansion stay in one place — there
+ * is still exactly one search engine — and the web hands it the documents only
+ * the web has. The phone registers nothing and its index is byte-identical to
+ * what it was.
+ *
+ * WHY A PROVIDER AND NOT AN ARRAY
+ * -------------------------------
+ * Because the documents are derived from registries that are themselves lazily
+ * built. A provider is called once, when the index is first needed, so
+ * registering costs nothing until somebody searches.
+ *
+ * WHY REGISTRATION IS KEYED
+ * -------------------------
+ * A module registering itself twice — two imports, a hot reload, a server
+ * component rendering twice — would otherwise double every product in the
+ * results. The key makes registration idempotent, and re-registering under the
+ * same key REPLACES rather than appends.
+ */
+export type SearchDocProvider = () => SearchDoc[];
+
+const providers = new Map<string, SearchDocProvider>();
+
+export function registerSearchDocs(sourceKey: string, provider: SearchDocProvider): void {
+  const existing = providers.get(sourceKey);
+  // Re-registering the identical function is the common case (a module
+  // evaluated twice) and must not throw away a warm cache.
+  if (existing === provider) return;
+  providers.set(sourceKey, provider);
+  cached = null;
+}
+
+/** Which surfaces have contributed. Used by the suite, not by app code. */
+export function registeredDocSources(): string[] {
+  return [...providers.keys()].sort();
+}
+
+/** Test-only: forget every contributed source. */
+export function clearRegisteredDocs(): void {
+  providers.clear();
+  cached = null;
+}
+
 let cached: SearchDoc[] | null = null;
 
 export function getSearchIndex(): SearchDoc[] {
-  if (!cached) cached = buildDocs();
+  if (!cached) {
+    const core = buildDocs();
+    const extra: SearchDoc[] = [];
+    for (const provide of providers.values()) extra.push(...provide());
+    // A contributed document whose key collides with a core one would silently
+    // shadow reviewed content. Core wins, and the collision is dropped rather
+    // than merged — a duplicate key in a search index is a result that appears
+    // twice with two different destinations.
+    const coreKeys = new Set(core.map(d => d.key));
+    cached = [...core, ...extra.filter(d => !coreKeys.has(d.key))];
+  }
   return cached;
 }
 

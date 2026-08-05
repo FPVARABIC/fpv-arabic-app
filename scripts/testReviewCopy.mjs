@@ -127,18 +127,32 @@ console.log('\n[2] Search: one door, not three');
 /* ── 3. The home page is not the encyclopedia ─────────────────────────────── */
 console.log('\n[3] The home page is a platform entrance, not a second encyclopedia');
 {
+  // FIVE, not four. المشاريع became a section with its own tab, and the home
+  // page carried four pillars for a while afterwards — so a visitor could read
+  // the whole page, then meet a sixth tab on the bar that the page had never
+  // mentioned. The count is pinned here so the next section to be added has to
+  // pass through this line rather than being forgotten.
   const pillars = [...new Set([...home.html.matchAll(/home-pillar-(\w+)/g)].map(m => m[1]))];
-  ok('all four pillars are present', pillars.length === 4, pillars.join(' · '));
+  ok('all five pillars are present', pillars.length === 5, pillars.join(' · '));
   ok('…community among them', pillars.includes('community'));
   ok('…store among them', pillars.includes('store'));
   ok('…the software centre among them', pillars.includes('programming'));
   ok('…the encyclopedia among them', pillars.includes('kb'));
+  ok('…the project library among them', pillars.includes('projects'));
+
+  // Every section on the tab bar must appear on the page. This is the rule the
+  // count above is a shorthand for, and it is the one that actually matters.
+  const barLabels = [...new Set([...home.html.matchAll(/nav-tab-label">([^<]+)</g)].map(m => m[1]))]
+    .filter(l => l !== 'الرئيسية');
+  ok('every section on the bar is named on the home page',
+    barLabels.every(l => home.text.includes(l)),
+    barLabels.filter(l => !home.text.includes(l)).join(' · '));
 
   // EQUAL WEIGHT, MEASURED. Each pillar renders from one array through one
   // class, so the check is that no pillar got a bespoke style attribute that
   // the others did not — the only way one could grow louder than the rest.
   const pillarBlocks = home.html.split('class="card pillar"').slice(1);
-  ok('every pillar uses the same card class', pillarBlocks.length === 4,
+  ok('every pillar uses the same card class', pillarBlocks.length === 5,
     `${pillarBlocks.length} blocks`);
 
   // The old page led with encyclopedia module cards. If those return, the

@@ -525,10 +525,21 @@ console.log('\n[11] Performance stays inside its budget');
 
   // The index must stay lazy. A module that builds it at import time would make
   // every page that touches the core pay for it.
+  //
+  // The shape changed when surfaces gained the ability to CONTRIBUTE documents:
+  // the cache is now filled from `buildDocs()` plus whatever the registered
+  // providers return. What matters — and what this still checks — is that
+  // nothing is built until somebody asks, and that a registration invalidates
+  // what was built before it.
   const buildIndexSrc = readFileSync(join(ROOT, 'src/data/kb/search/buildIndex.ts'), 'utf8');
   ok('the index is built lazily, on first use',
     /let cached: SearchDoc\[\] \| null = null/.test(buildIndexSrc)
-    && /if \(!cached\) cached = buildDocs\(\)/.test(buildIndexSrc));
+    && /if \(!cached\) \{[\s\S]{0,400}buildDocs\(\)/.test(buildIndexSrc));
+  ok('a provider is not invoked until the index is needed',
+    // `provide()` appears only inside the `getSearchIndex` cache-miss branch.
+    /if \(!cached\) \{[\s\S]{0,400}provide\(\)/.test(buildIndexSrc));
+  ok('registering a source discards a stale index',
+    /providers\.set\(sourceKey, provider\);\s*\n\s*cached = null;/.test(buildIndexSrc));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

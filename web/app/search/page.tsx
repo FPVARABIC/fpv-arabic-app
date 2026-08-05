@@ -4,9 +4,13 @@ import type { Metadata } from 'next';
 import { retrieve, INTENT_LABEL_AR, type RetrievalResult } from '@core/platform/retrieval';
 import type { SearchDocType } from '@core/data/kb/search/buildIndex';
 import { searchCommunity } from '@/lib/server/communitySearch';
-import { RESULT_TYPE_LABEL_AR, topReasons, resultHref } from '@/lib/searchView';
+import {
+  RESULT_TYPE_LABEL_AR, topReasons, resultHref,
+  RESULT_GROUPS, GROUP_OF_TYPE, groupOf, type ResultGroupId,
+} from '@/lib/searchView';
 import { SECTION_ROUTES } from '@/lib/webRoutes';
 import { ProjectResults } from '@/components/search/ProjectResults';
+import { registerWebSearchSources } from '@/lib/search/register';
 
 export const metadata: Metadata = {
   title: 'البحث',
@@ -65,22 +69,62 @@ const PAGE_SIZE = 20;
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; g?: string; page?: string }>;
 }) {
+  /*
+   * The shop, the project library and the standing pages, taught to the one
+   * engine before it is asked anything.
+   *
+   * Called here rather than as an import side effect: a side effect is what
+   * somebody deletes because the import "looks unused", and the failure is
+   * silent — the shop simply stops being findable.
+   */
+  registerWebSearchSources();
+
   const sp = await searchParams;
   const query = (sp.q ?? '').trim();
-  const typeFilter = (sp.type ?? '').trim();
+  const groupFilter = (sp.g ?? '').trim() as ResultGroupId | '';
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
 
   const active = query.length >= 2;
+
+  /*
+   * Filtering by SHELF rather than by document type.
+   *
+   * The chips used to be one per type, which produced eight of them —
+   * «موسوعة»، «مصطلح»، «Betaflight — صفحة»، «Betaflight — إعداد»… — for a
+   * distinction the reader was not making. A shelf is the question somebody
+   * actually has: do I want to read about this, fix it, configure it, build it,
+   * or buy it.
+   */
+  const typesInGroup = (g: ResultGroupId): SearchDocType[] =>
+    (Object.entries(GROUP_OF_TYPE) as [SearchDocType, ResultGroupId][])
+      .filter(([, gid]) => gid === g).map(([t]) => t);
 
   const result = active
     ? retrieve(query, {
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      filters: typeFilter ? { types: [typeFilter as SearchDocType] } : undefined,
+      filters: groupFilter ? { types: typesInGroup(groupFilter) } : undefined,
     })
     : null;
+
+  /*
+   * The page's results, on their shelves.
+   *
+   * Built from THIS page of results, while the header count comes from
+   * `countsByType` over the whole match set — so a shelf showing three of
+   * eleven says so rather than implying there are three.
+   */
+  const shelves = RESULT_GROUPS
+    .map(g => ({
+      ...g,
+      results: (result?.official ?? []).filter(r => groupOf(r.type) === g.id),
+      total: Object.entries(result?.countsByType ?? {})
+        .filter(([t]) => groupOf(t) === g.id)
+        .reduce((n, [, c]) => n + c, 0),
+    }))
+    .filter(g => g.results.length > 0);
 
   // Community runs in parallel with nothing else blocking on it, and returns []
   // rather than throwing if Firestore is unreachable.
@@ -91,8 +135,8 @@ export default async function SearchPage({
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     if (query) p.set('q', query);
-    const t = over.type !== undefined ? over.type : typeFilter;
-    if (t) p.set('type', t);
+    const g = over.g !== undefined ? over.g : groupFilter;
+    if (g) p.set('g', g);
     const pg = over.page !== undefined ? over.page : String(page);
     if (pg && pg !== '1') p.set('page', pg);
     return `${SECTION_ROUTES.search}?${p.toString()}`;
@@ -184,29 +228,37 @@ export default async function SearchPage({
             </p>
           )}
 
-          {/* Filters — counted from the real result set, so a chip never
-              promises results it cannot deliver. */}
-          {Object.keys(result.countsByType).length > 1 && (
-            <nav aria-label="تصفية حسب النوع" data-testid="search-filters"
-              style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
-              <Link href={qs({ type: '', page: '1' })}
-                className={typeFilter ? 'btn-ghost' : 'btn-primary'}
-                style={{ fontSize: 12, padding: '5px 12px' }}>
-                الكل <span dir="ltr">({result.totalOfficial})</span>
-              </Link>
-              {Object.entries(result.countsByType)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 8)
-                .map(([t, n]) => (
-                  <Link key={t} href={qs({ type: t, page: '1' })}
-                    data-testid={`search-filter-${t}`}
-                    className={typeFilter === t ? 'btn-primary' : 'btn-ghost'}
+          {/* Filters — one per SHELF, counted from the real result set, so a
+              chip never promises results it cannot deliver. */}
+          {(() => {
+            const counts = RESULT_GROUPS
+              .map(g => ({
+                g,
+                n: Object.entries(result.countsByType)
+                  .filter(([t]) => groupOf(t) === g.id)
+                  .reduce((a, [, c]) => a + c, 0),
+              }))
+              .filter(x => x.n > 0);
+            if (counts.length < 2) return null;
+            return (
+              <nav aria-label="تصفية حسب القسم" data-testid="search-filters"
+                style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+                <Link href={qs({ g: '', page: '1' })}
+                  className={groupFilter ? 'btn-ghost' : 'btn-primary'}
+                  style={{ fontSize: 12, padding: '5px 12px' }}>
+                  الكل <span dir="ltr">({result.totalOfficial})</span>
+                </Link>
+                {counts.map(({ g, n }) => (
+                  <Link key={g.id} href={qs({ g: g.id, page: '1' })}
+                    data-testid={`search-filter-${g.id}`}
+                    className={groupFilter === g.id ? 'btn-primary' : 'btn-ghost'}
                     style={{ fontSize: 12, padding: '5px 12px' }}>
-                    {RESULT_TYPE_LABEL_AR[t] ?? t} <span dir="ltr">({n})</span>
+                    {g.titleAr} <span dir="ltr">({n})</span>
                   </Link>
                 ))}
-            </nav>
-          )}
+              </nav>
+            );
+          })()}
 
           {/* What a judgement would still need. Retrieval does not judge — but
               saying what is missing is the difference between an honest gap and
@@ -228,24 +280,45 @@ export default async function SearchPage({
           {/* ── The reader's own build. Client-only, never in this HTML. ──── */}
           <ProjectResults query={query} />
 
-          {/* ── Reviewed knowledge ────────────────────────────────────────── */}
-          <section aria-labelledby="official-h" style={{ marginTop: 24 }}>
-            <h2 id="official-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 4px' }}>
-              محتوى موثّق
-            </h2>
-            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-dimmer)' }}>
-              مكتوب ومراجَع في المنصة، بمصادر وتواريخ مراجعة.
-            </p>
-
-            {result.official.length === 0 ? (
-              <EmptyState query={query} />
-            ) : (
-              <ol data-testid="search-results"
-                style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
-                {result.official.map(r => <ResultCard key={r.id} result={r} />)}
-              </ol>
-            )}
-          </section>
+          {/* ── The shelves ───────────────────────────────────────────────── */}
+          {result.official.length === 0 ? (
+            <div style={{ marginTop: 24 }}><EmptyState query={query} /></div>
+          ) : (
+            <div data-testid="search-results" style={{ marginTop: 24 }}>
+              {shelves.map(shelf => (
+                <section
+                  key={shelf.id}
+                  aria-labelledby={`shelf-${shelf.id}`}
+                  data-testid={`search-shelf-${shelf.id}`}
+                  style={{ marginTop: 26 }}
+                >
+                  <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <h2 id={`shelf-${shelf.id}`} style={{ fontSize: 15, fontWeight: 900, margin: 0 }}>
+                      {shelf.titleAr}
+                    </h2>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }} dir="ltr">
+                      {shelf.results.length < shelf.total
+                        ? `${shelf.results.length} / ${shelf.total}`
+                        : shelf.total}
+                    </span>
+                    {!groupFilter && shelf.results.length < shelf.total && (
+                      <Link href={qs({ g: shelf.id, page: '1' })}
+                        data-testid={`search-shelf-more-${shelf.id}`}
+                        style={{ fontSize: 11.5, color: 'var(--accent-ink)', fontWeight: 800 }}>
+                        اعرضها كلها ←
+                      </Link>
+                    )}
+                  </div>
+                  <p style={{ margin: '3px 0 11px', fontSize: 12, color: 'var(--text-dimmer)', lineHeight: 1.85 }}>
+                    {shelf.blurbAr}
+                  </p>
+                  <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
+                    {shelf.results.map(r => <ResultCard key={r.id} result={r} />)}
+                  </ol>
+                </section>
+              ))}
+            </div>
+          )}
 
           {totalPages > 1 && (
             <nav aria-label="صفحات النتائج" data-testid="search-pagination"
@@ -402,9 +475,9 @@ const SearchIntro: React.FC = () => (
       {[
         'الموسوعة ومنظوماتها ومسارات التعلّم والمصطلحات',
         'أشجار التشخيص وخطواتها — ابحث بالعرَض كما تصفه أنت',
-        'صفحات Betaflight وحقولها بأسمائها الإنجليزية',
-        'خطوات ExpressLRS ومشكلاته، ومواضيع EdgeTX وإعداداتها',
-        'برامج الفيديو، وما لا تغطّيه المنصة بصراحة',
+        'صفحات Betaflight وحقولها، وخطوات ExpressLRS ومشكلاته، وEdgeTX، وأدوات الفيديو',
+        'المشاريع وأقسامها — القطع والمتطلّبات والمصطلحات والمراحل والتحدّيات',
+        'منتجات المتجر المنشورة وخياراتها وخدماتها',
         'قطعك وأحكام مشروعك — تظهر لك وحدك',
         'منشورات المجتمع، في مجموعة منفصلة وموسومة',
       ].map(t => (

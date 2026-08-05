@@ -109,3 +109,113 @@ export function resultHref(
   }
   return { href: null };
 }
+
+/* ── Grouping ─────────────────────────────────────────────────────────────── */
+
+/**
+ * The six shelves a result can land on.
+ *
+ * WHY GROUPS AND NOT ONE RANKED LIST
+ * ----------------------------------
+ * One list is honest about relevance and useless for deciding. A search for
+ * «ExpressLRS» legitimately matches an article, a setup step, a diagnosis, four
+ * receivers and a project — and interleaved by score they read as one
+ * undifferentiated wall in which the reader cannot tell an engineering
+ * reference from something we would like to sell them.
+ *
+ * Grouping also carries a claim the platform has to make anyway: a member's
+ * post and a reviewed article are not the same kind of statement. That is
+ * already in `Provenance`; this puts it on the screen.
+ *
+ * THE ORDER IS THE PLATFORM'S PRIORITIES, NOT ALPHABETICAL
+ * --------------------------------------------------------
+ * Knowledge first — somebody who does not know what to buy needs to understand
+ * before they choose. Diagnosis second, because a person describing a fault
+ * needs it now. The shop is fourth: it earns its place by being useful, not by
+ * being first.
+ */
+export type ResultGroupId =
+  | 'knowledge' | 'diagnostics' | 'software' | 'projects' | 'store' | 'pages';
+
+export interface ResultGroup {
+  id: ResultGroupId;
+  titleAr: string;
+  /** One line saying what KIND of thing is on this shelf. */
+  blurbAr: string;
+}
+
+export const RESULT_GROUPS: ResultGroup[] = [
+  {
+    id: 'knowledge', titleAr: 'المعرفة',
+    blurbAr: 'مقالات ومصطلحات ودروس — مكتوبة ومراجَعة، بمصادر وتواريخ مراجعة.',
+  },
+  {
+    id: 'diagnostics', titleAr: 'التشخيص',
+    blurbAr: 'أشجار تقودك من العرَض إلى السبب خطوةً خطوة.',
+  },
+  {
+    id: 'software', titleAr: 'البرامج',
+    blurbAr: 'صفحات الإعداد داخل Betaflight وExpressLRS وEdgeTX وأدوات الفيديو.',
+  },
+  {
+    id: 'projects', titleAr: 'المشاريع',
+    blurbAr: 'مشاريع كاملة وأقسامها — تفتح عند القسم المطابق لا عند أعلى الصفحة.',
+  },
+  {
+    id: 'store', titleAr: 'المتجر',
+    blurbAr: 'منتجات وخيارات وخدمات معروضة للبيع.',
+  },
+  {
+    id: 'pages', titleAr: 'صفحات المنصّة',
+    blurbAr: 'مداخل الأقسام والصفحات الثابتة.',
+  },
+];
+
+/**
+ * Which shelf a result type belongs on.
+ *
+ * A map rather than a chain of `if`s so the set is auditable in one glance and
+ * `scripts/testSearchSources.ts` can assert that EVERY type has a shelf — an
+ * unmapped type would silently vanish from a grouped view, which is worse than
+ * an ugly one.
+ */
+export const GROUP_OF_TYPE: Record<string, ResultGroupId> = {
+  article: 'knowledge',
+  module: 'knowledge',
+  path: 'knowledge',
+  term: 'knowledge',
+  lesson: 'knowledge',
+  part: 'knowledge',
+  'drone-type': 'knowledge',
+  'assembly-stage': 'knowledge',
+  roadmap: 'knowledge',
+  checklist: 'knowledge',
+
+  dx: 'diagnostics',
+  'dx-node': 'diagnostics',
+  troubleshooting: 'diagnostics',
+  'elrs-issue': 'diagnostics',
+
+  'bf-page': 'software',
+  'bf-field': 'software',
+  'elrs-step': 'software',
+  'edgetx-topic': 'software',
+  'edgetx-setting': 'software',
+  'video-tool': 'software',
+  'software-scope': 'software',
+
+  project: 'projects',
+  'project-section': 'projects',
+
+  product: 'store',
+  'product-variant': 'store',
+  service: 'store',
+
+  page: 'pages',
+};
+
+export function groupOf(type: string): ResultGroupId {
+  // An unknown type lands on «صفحات المنصّة» rather than disappearing. The
+  // suite fails the build when one exists, so this is a floor, not a plan.
+  return GROUP_OF_TYPE[type] ?? 'pages';
+}

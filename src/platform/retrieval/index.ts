@@ -78,6 +78,17 @@ export function destinationFor(doc: SearchDoc): Destination | null {
     // content the phone has a page for. The caller renders `route` for these.
     case 'software-scope': return null;
     case 'troubleshooting': return null;
+    // Contributed by a surface. They resolve by ROUTE for the same reason the
+    // scope pages do: a product for sale and a project in the library are not
+    // things the shared `Destination` model knows about, and inventing kinds
+    // for them would push shop concepts into a model the phone also compiles.
+    case 'project':
+    case 'project-section':
+    case 'product':
+    case 'product-variant':
+    case 'service':
+    case 'page':
+      return null;
     default: return null;
   }
 }
@@ -95,7 +106,13 @@ export function destinationFor(doc: SearchDoc): Destination | null {
  * link to a page this surface has never had. It resolves to no destination, and
  * the surface decides how to say so.
  */
-export const ROUTE_ONLY_TYPES = new Set<SearchDocType>(['software-scope']);
+export const ROUTE_ONLY_TYPES = new Set<SearchDocType>([
+  'software-scope',
+  // The web-contributed sections. Same reasoning as the scope pages: no shared
+  // `Destination` kind, so the document carries the route the surface that
+  // registered it built through its own helpers.
+  'project', 'project-section', 'product', 'product-variant', 'service', 'page',
+]);
 
 /**
  * Types whose index route points INSIDE the page its destination names.
@@ -299,6 +316,18 @@ function suggestSpelling(content: string[], resultCount: number): string | undef
 
 const DEFAULT_LIMIT = 30;
 
+/**
+ * Result types that exist only in a `RetrievalResult`, never in the index.
+ *
+ * `project-part` and `project-finding` are computed from the reader's own
+ * build; `community-post` arrives from Firestore through a separate channel.
+ * Asking `search()` to filter on any of them would return nothing, which reads
+ * to a caller exactly like "there is nothing there".
+ */
+const SYNTHETIC_TYPES = new Set<string>([
+  'project-part', 'project-finding', 'community-post',
+]);
+
 export function retrieve(rawQuery: string, options: RetrievalOptions = {}): RetrievalResponse {
   const queryNorm = normalizeText(rawQuery);
   const original = tokenize(rawQuery);
@@ -322,9 +351,20 @@ export function retrieve(rawQuery: string, options: RetrievalOptions = {}): Retr
     ...(options.filters?.system ? { system: options.filters.system } : {}),
     ...(options.filters?.software ? { software: options.filters.software } : {}),
     ...(options.filters?.level ? { level: options.filters.level } : {}),
+    // The three RETRIEVAL-ONLY types are stripped before the index sees them:
+    // they name results this layer synthesises (the reader's own parts and
+    // findings) or that arrive from a database (a member's post), and none of
+    // them is a document `search()` could match.
+    //
+    // Named explicitly rather than by prefix. The prefix test was
+    // `!t.startsWith('project-')`, which was correct while `project-part` and
+    // `project-finding` were the only two — and silently began discarding
+    // `project-section`, a real indexed type, the moment the project library
+    // started contributing documents. A filter that drops a legitimate type
+    // returns fewer results with no error anywhere.
     ...(options.filters?.types
       ? { types: options.filters.types.filter((t): t is SearchDocType =>
-          !t.startsWith('project-') && t !== 'community-post') }
+          !SYNTHETIC_TYPES.has(t)) }
       : {}),
   };
 

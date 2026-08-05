@@ -51,6 +51,83 @@ export function tokenize(input: string): string[] {
 }
 
 /**
+ * The Arabic definite article, as a SECOND form rather than a replacement.
+ *
+ * THE BUG THIS FIXES
+ * ------------------
+ * A search for «هبوط دقيق» did not find «الهبوط الذاتي الدقيق على علامة بصرية».
+ * Every match test compares whole normalised tokens, and «الهبوط» is not
+ * «هبوط»; even the prefix rule fails, because it asks whether a TITLE token
+ * starts with a QUERY token and here the extra letters are on the title's side.
+ * The reader typed the words that are in the title and got nothing.
+ *
+ * WHY IT ADDS A FORM INSTEAD OF STRIPPING ONE
+ * -------------------------------------------
+ * Because «ال» is not always an article. «الياف» (fibres) and «التزام»
+ * (commitment) begin with those two letters as part of the word, and stripping
+ * them would silently damage every query containing one. Emitting both forms
+ * costs one short string per affected token and cannot lose a match: the
+ * original is still there.
+ *
+ * Applied to BOTH sides — the query and the index — so it works in both
+ * directions: «هبوط» finds «الهبوط», and «الهبوط» finds «هبوط».
+ *
+ * The four-letter floor is what keeps it from generating noise: «الف» would
+ * yield «ف», which matches nothing useful and everything badly.
+ */
+export function articleVariants(token: string): string[] {
+  const out = [token];
+
+  // A clitic PLUS the article. Unambiguous: no Arabic root begins with any of
+  // these three-letter sequences, so both the article-only and the bare form
+  // are safe to add.
+  //
+  //   وال — «والإنقاذ»  → الإنقاذ, إنقاذ
+  //   لل  — «للمبتدئ»   → المبتدئ (reconstructed), مبتدئ
+  //   بال — «بالمحرك»   → المحرك, محرك
+  //   كال — «كالبطارية» → البطارية, بطارية
+  //   فال — «فالمشكلة»  → المشكلة, مشكلة
+  //
+  // Each was found the same way: a query that used the platform's own words and
+  // returned nothing. «مشروع بحث وإنقاذ» ranked a project's own SECTIONS above
+  // the project, because the title says «والإنقاذ» and only the sections
+  // happened to repeat the word bare.
+  if (token.length >= 6 && CLITIC_AL.some(c => token.startsWith(c))) {
+    out.push(`ال${token.slice(3)}`, token.slice(3));
+  } else if (token.length >= 5 && token.startsWith('لل')) {
+    // «لل» is the one written with two letters rather than three, because the
+    // preposition's lām and the article's lām merge in the orthography.
+    out.push(`ال${token.slice(2)}`, token.slice(2));
+  } else if (token.length >= 5 && token.startsWith('ال')) {
+    out.push(token.slice(2));
+  }
+
+  // A leading «و» on its own, with a floor.
+  //
+  // This one IS ambiguous — «وحدة», «وقت», «وزن», «وصلة» all begin with a wāw
+  // that belongs to the word. The four-character floor on the REMAINDER is what
+  // makes it safe in practice: those four yield remainders of three characters
+  // or fewer and are left alone, while «وإنقاذ» → «إنقاذ» and «وتشخيص» →
+  // «تشخيص» are exactly the case that was failing.
+  //
+  // And it ADDS rather than replaces, so the worst outcome is one extra weak
+  // token in a set. Losing a match is impossible.
+  if (token.startsWith('و') && token.length >= 5) out.push(token.slice(1));
+
+  return out.length === 1 ? out : [...new Set(out)];
+}
+
+/** Clitics that merge with the definite article, longest first. */
+const CLITIC_AL = ['وال', 'بال', 'كال', 'فال'];
+
+/** Expand a token list with the article-stripped forms. Order is preserved. */
+export function withArticleVariants(tokens: string[]): string[] {
+  const out = new Set<string>();
+  for (const t of tokens) for (const v of articleVariants(t)) out.add(v);
+  return [...out];
+}
+
+/**
  * Damerau–Levenshtein distance, capped early once `max` is exceeded so a long
  * query against a long document field cannot become quadratic hot work.
  * Transpositions matter here specifically: adjacent-key typos ("btaflight",

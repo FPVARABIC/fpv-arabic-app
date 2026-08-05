@@ -943,7 +943,18 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // added» distinct from «the lessons were rewritten».
     !f.startsWith('src/data/projects/') &&
     f !== 'scripts/testProjects.ts' &&
-    f !== 'src/data/lessons/journeyRegistry.ts',
+    f !== 'src/data/lessons/journeyRegistry.ts' &&
+    // ── The one search ────────────────────────────────────────────────────
+    // Making the platform's single search field reach every public section:
+    // the index gained a registration hook so a SURFACE can contribute the
+    // documents only it has (the shop, the project library), and Arabic clitic
+    // matching was fixed so «هبوط» finds «الهبوط». All of it is the search
+    // engine, none of it is Community.
+    !f.startsWith('src/data/kb/search/') &&
+    !f.startsWith('src/platform/retrieval/') &&
+    f !== 'scripts/testRetrieval.ts' &&
+    f !== 'scripts/testKbSearch.ts' &&
+    f !== 'scripts/testSearchSources.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
