@@ -959,7 +959,15 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // Reading order across every page, and the payment-help content the search
     // gap analysis asked for. Neither is Community.
     f !== 'scripts/testPageOrder.mjs' &&
-    f !== 'src/data/store/paymentHelp.ts',
+    f !== 'src/data/store/paymentHelp.ts' &&
+    // ── The store image package ───────────────────────────────────────────
+    // Folder tree, manifests and the resolver that finds an uploaded file with
+    // no data edit. Shop assets, not Community.
+    !f.startsWith('web/public/assets/store/') &&
+    !f.startsWith('docs/store/') &&
+    f !== 'src/data/store/imageSlots.ts' &&
+    f !== 'scripts/buildImageManifest.ts' &&
+    f !== 'scripts/testStoreImages.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

@@ -20,7 +20,11 @@ import { join, dirname, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { STORE_PRODUCTS } from '../src/data/store/catalogue';
-import { allImageSlots, rolesFor, variantSlug } from '../src/data/store/imageSlots';
+import {
+  allImageSlots, allImageDirs, slotsForProduct, rolesFor, variantSlug,
+  imageScopeFor, fileNameFor, IMAGE_ROLES, IMAGE_FILE_PATTERN, ROLE_INDEX,
+  SHARED_VARIANT_SLUG,
+} from '../src/data/store/imageSlots';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const STORE_IMAGES = join(ROOT, 'web/public/assets/store');
@@ -63,13 +67,38 @@ console.log('\n[1] The expected set is coherent');
   ok('slots were generated', slots.length > 0, `${slots.length}`);
   ok('every expected path is unique',
     new Set(slots.map(s => s.relPath)).size === slots.length);
-  ok('every variant that needs images has exactly one required main',
-    STORE_PRODUCTS.filter(p => rolesFor(p).length > 0).every(p =>
-      p.variants.every(v =>
-        slots.filter(s => s.variantId === v.id && s.required).length === 1)));
+  /*
+   * Exactly one required main per FOLDER, not per variant.
+   *
+   * This asserted per variant, which was right while every variant had its own
+   * directory. Products whose variants are visually identical — two capacities
+   * of one battery, three KV of one motor — now photograph once into `_shared`
+   * and every variant resolves there. That is a declared decision recorded in
+   * the manifest, not a silent fallback: a `per-variant` product still gets a
+   * folder each, and a missing file there still shows as missing.
+   *
+   * The invariant that actually matters is unchanged and is what is checked:
+   * every directory the owner is asked to fill expects exactly one `01-main`.
+   */
+  const byDir = new Map<string, number>();
+  for (const s of slots.filter(x => x.required)) {
+    const d = `${s.productId}/${s.variantSlug}`;
+    byDir.set(d, (byDir.get(d) ?? 0) + 1);
+  }
+  ok('every image folder expects exactly one required main image',
+    [...byDir.values()].every(n => n === 1),
+    [...byDir].filter(([, n]) => n !== 1).slice(0, 3).map(([d, n]) => `${d}=${n}`).join(', '));
+  ok('…and every folder the catalogue names has one',
+    byDir.size === allImageDirs(STORE_PRODUCTS).length,
+    `${byDir.size} vs ${allImageDirs(STORE_PRODUCTS).length}`);
+  // Underscore allowed for exactly one reason: `_shared`, the folder a product
+  // uses when its variants are the same object in two sizes. It leads with an
+  // underscore so it sorts above the variant folders and reads as «not a
+  // variant id» at a glance.
+  const SAFE = /^[a-z0-9_\-/.]+$/;
   ok('no path contains a space, a capital, or a non-ASCII character',
-    slots.every(s => /^[a-z0-9\-/.]+$/.test(s.relPath)),
-    slots.find(s => !/^[a-z0-9\-/.]+$/.test(s.relPath))?.relPath ?? '');
+    slots.every(s => SAFE.test(s.relPath)),
+    slots.find(s => !SAFE.test(s.relPath))?.relPath ?? '');
   ok('every expected file is .webp', slots.every(s => s.relPath.endsWith('.webp')));
   ok('services are excluded — a service has nothing to photograph',
     STORE_PRODUCTS.filter(p => p.categoryId === 'services')
@@ -161,16 +190,100 @@ console.log('\n[3] The checks can actually fail (controls)');
 
 console.log('\n[4] The manifest on disk matches what the code would generate now');
 {
-  const manifest = join(ROOT, 'docs/store/product-image-manifest.json');
+  // All three formats, named consistently in capitals so the three sit together
+  // in the directory listing. The generator writes them in one pass, so they
+  // cannot disagree with each other — this checks they agree with the CODE.
+  const dir = join(ROOT, 'docs/store');
+  const manifest = join(dir, 'PRODUCT_IMAGE_MANIFEST.json');
   ok('the machine-readable manifest exists', existsSync(manifest));
+  ok('the Markdown manifest exists', existsSync(join(dir, 'PRODUCT_IMAGE_MANIFEST.md')));
+  ok('the CSV manifest exists', existsSync(join(dir, 'PRODUCT_IMAGE_MANIFEST.csv')));
+
   if (existsSync(manifest)) {
     const parsed = JSON.parse(readFileSync(manifest, 'utf8'));
-    ok('its image count matches the generator', parsed.totals?.images === slots.length,
-      `${parsed.totals?.images} vs ${slots.length}`);
+    ok('its image count matches the generator', parsed.totals?.imagesTotal === slots.length,
+      `${parsed.totals?.imagesTotal} vs ${slots.length}`);
     ok('its required count matches the generator',
-      parsed.totals?.required === slots.filter(s => s.required).length);
-    ok('it names the upload directory', parsed.uploadDirectory === 'web/public/assets/store');
+      parsed.totals?.imagesRequired === slots.filter(s => s.required).length);
+    ok('its directory count matches the generator',
+      parsed.totals?.directories === allImageDirs(STORE_PRODUCTS).length);
+    ok('it names the upload directory', parsed.uploadRoot === 'web/public/assets/store');
+
+    // Every path in the document is one the code generates. This is the check
+    // that catches a manifest somebody edited by hand, or one left stale after
+    // a rule changed — either produces a document that sends the owner to a
+    // folder nothing reads.
+    const docPaths = new Set((parsed.images ?? []).map((i: { repoPath: string }) => i.repoPath));
+    const drifted = slots.filter(s => !docPaths.has(s.repoPath));
+    ok('every generated path is present in the manifest',
+      drifted.length === 0, drifted.slice(0, 3).map(s => s.repoPath).join(', '));
+    ok('…and the manifest names nothing the code does not',
+      docPaths.size === slots.length, `${docPaths.size} vs ${slots.length}`);
   }
+}
+
+console.log('\n[5] The naming scheme is fixed, so seven names are learned once');
+{
+  // The number belongs to the ROLE, on every product in the shop. Numbering
+  // sequentially per product would make the box shot `03-box` on a camera and
+  // `06-box` on a drone — a table to consult for every single file, and a
+  // silent renumber of files already uploaded the day a role is added.
+  for (const role of IMAGE_ROLES) {
+    const forRole = slots.filter(s => s.role === role);
+    if (forRole.length === 0) continue;
+    const names = new Set(forRole.map(s => s.fileName));
+    ok(`«${role}» is ${fileNameFor(role)} everywhere`,
+      names.size === 1 && [...names][0] === fileNameFor(role), [...names].join(', '));
+  }
+  const idx = Object.values(ROLE_INDEX);
+  ok('every role has a distinct number', new Set(idx).size === idx.length);
+
+  // The generator and the validator must agree, or every uploaded file reads
+  // as «invalid» and the owner is told their correct work is wrong.
+  const unmatched = slots.filter(s => !IMAGE_FILE_PATTERN.test(s.fileName));
+  ok('every expected filename matches the validation pattern',
+    unmatched.length === 0, unmatched.slice(0, 3).map(s => s.fileName).join(', '));
+  for (const bad of ['01-mian.webp', '1-main.webp', '01-main.jpg', '01 main.webp', 'main.webp']) {
+    ok(`the pattern rejects «${bad}» (control)`, !IMAGE_FILE_PATTERN.test(bad));
+  }
+  ok('…and accepts a correct one (control)', IMAGE_FILE_PATTERN.test('06-box.webp'));
+}
+
+console.log('\n[6] The folders are already there, so nobody creates one by hand');
+{
+  const dirs = allImageDirs(STORE_PRODUCTS);
+  const absent = dirs.filter(d => !existsSync(join(STORE_IMAGES, d)));
+  ok('every expected directory exists', absent.length === 0, absent.slice(0, 5).join(', '));
+  const noKeep = dirs.filter(d => !existsSync(join(STORE_IMAGES, d, '.gitkeep')));
+  ok('…each with a .gitkeep so GitHub shows it before any upload',
+    noKeep.length === 0, noKeep.slice(0, 5).join(', '));
+  ok('the upload README is present', existsSync(join(STORE_IMAGES, 'README.md')));
+}
+
+/* ── The four states, reported rather than failed ─────────────────────────── */
+{
+  const disk = filesOnDisk(STORE_IMAGES);
+  const expectedPaths = new Set(slots.map(s => s.relPath));
+  const dirs = new Set(allImageDirs(STORE_PRODUCTS));
+  let valid = 0; let orphan = 0; let bad = 0;
+  for (const f of disk) {
+    const name = f.split('/').pop() ?? '';
+    const d = f.split('/').slice(0, -1).join('/');
+    if (!IMAGE_FILE_PATTERN.test(name)) { bad += 1; continue; }
+    if (!dirs.has(d) || !expectedPaths.has(f)) { orphan += 1; continue; }
+    valid += 1;
+  }
+  const goods = STORE_PRODUCTS.filter(p => rolesFor(p).length > 0);
+  console.log('\n── الحالة الآن ─────────────────────────────────────────────');
+  console.log(`  expected but not uploaded : ${slots.length - valid}`);
+  console.log(`  uploaded and valid        : ${valid}`);
+  console.log(`  orphan                    : ${orphan}`);
+  console.log(`  invalid                   : ${bad}`);
+  console.log(`  ─ directories prepared    : ${dirs.size}`);
+  console.log(`  ─ required (01-main)      : ${slots.filter(s => s.required).length}`);
+  console.log(`  ─ per-variant products    : ${goods.filter(p => imageScopeFor(p) === 'per-variant').length}`);
+  console.log(`  ─ shared-image products   : ${goods.filter(p => imageScopeFor(p) === 'shared').length}`);
+  console.log(`  ─ shared folder name      : ${SHARED_VARIANT_SLUG}`);
 }
 
 function hasAnyImage(onDisk: string[], productId: string, variantId: string): boolean {

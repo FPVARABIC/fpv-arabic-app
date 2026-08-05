@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { uploadedImagesFor } from '@/lib/server/storeImages';
 import type {
   ProductImage as ProductImageData, StoreProduct, StorePublicSettings, ChoiceAxis,
 } from '@core/data/store/types';
@@ -116,7 +117,7 @@ export const ProductImage: React.FC<{ product: StoreProduct; height?: number }> 
   // image somebody can defend. An unlicensed file sitting in the database
   // renders as the placeholder, which is the honest answer and also the one
   // that keeps it from being published by accident.
-  const img = publishableImages(product)[0];
+  const img = galleryImages(product)[0];
   if (!img) {
     return (
       <div
@@ -151,7 +152,7 @@ export const ProductImage: React.FC<{ product: StoreProduct; height?: number }> 
       /* The thumbnail where there is one. A section grid shows eight of these,
          and eight full-size photographs is the difference between a shop that
          opens on a phone and one that is still opening. */
-      src={img.thumbnailUrl || img.url}
+      src={img.thumbnailUrl ?? img.url}
       alt={img.altAr}
       loading="lazy"
       width={320}
@@ -221,6 +222,38 @@ export function publishableImages(product: StoreProduct): ProductImageData[] {
 }
 
 /**
+ * Every image to show, from BOTH sources, in gallery order.
+ *
+ * TWO SOURCES, ONE ORDER, AND THE FILE WINS
+ * -----------------------------------------
+ * A photograph reaches the shop by one of two routes: the owner drops a file
+ * into `web/public/assets/store/…` and pushes it, or somebody uploads one
+ * through the admin panel into Storage. Both are legitimate and both must
+ * work, so this merges them rather than choosing.
+ *
+ * The FILE comes first when both exist. It is the deliberate, reviewed,
+ * version-controlled one — it arrived in a commit somebody can read — while a
+ * panel upload is a quick fix made at a keyboard. Where they disagree, the
+ * committed file is the answer.
+ *
+ * WHY THE FILES NEED NO LICENCE RECORD AND THE UPLOADS DO
+ * -------------------------------------------------------
+ * `isImagePublishable` refuses a database image without provenance, because
+ * nobody can tell where it came from. A file in the repository came through a
+ * commit by the owner, which is the provenance — the same standard the rest of
+ * `src/data/` is held to.
+ */
+export function galleryImages(
+  product: StoreProduct, variantId: string | null = null,
+): { url: string; altAr: string; thumbnailUrl?: string; credit?: ProductImageData['credit'] }[] {
+  const fromFiles = uploadedImagesFor(product, variantId)
+    .map(i => ({ url: i.url, altAr: i.altAr }));
+  const fromPanel = publishableImages(product)
+    .map(i => ({ url: i.url, altAr: i.altAr, thumbnailUrl: i.thumbnailUrl, credit: i.credit }));
+  return [...fromFiles, ...fromPanel];
+}
+
+/**
  * The product gallery.
  *
  * A server component with no JavaScript: the first image is large, the rest are
@@ -232,8 +265,12 @@ export function publishableImages(product: StoreProduct): ProductImageData[] {
  * about and lazy-loading it is how a product page renders empty for a moment;
  * the rest are below the fold by construction.
  */
-export const ProductGallery: React.FC<{ product: StoreProduct }> = ({ product }) => {
-  const images = publishableImages(product);
+export const ProductGallery: React.FC<{
+  product: StoreProduct;
+  /** Which variant's folder to read. Null uses the default variant's. */
+  variantId?: string | null;
+}> = ({ product, variantId = null }) => {
+  const images = galleryImages(product, variantId);
   if (images.length === 0) return <ProductImage product={product} height={300} />;
 
   return (
