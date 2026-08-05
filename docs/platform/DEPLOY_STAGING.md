@@ -36,11 +36,14 @@ npx firebase use --add
 ```
 
 `firebase use --add` يعرض قائمة مشاريعك. **اختر نفس المشروع الذي يستخدمه تطبيق
-Android**، وليس مشروعاً جديداً. إن لم تكن متأكداً أيّها هو:
+Android**، وليس مشروعاً جديداً.
 
-```bash
-grep project_id android/app/google-services.json
-```
+إن لم تكن متأكداً أيّها هو: Console → ⚙ Project settings → General → Your apps
+→ تطبيق Android → `Package name` يجب أن يكون `com.fpvarabic.app`. الـ
+`Project ID` المكتوب في أعلى الصفحة هو ما تختاره.
+
+> `android/app/google-services.json` غير موجود في المستودع (وهو مستبعَد في
+> `android/.gitignore`)، لذلك لا يمكن قراءة المعرّف منه هنا.
 
 أعطِ الاسم المستعار `default` عندما يسأل.
 
