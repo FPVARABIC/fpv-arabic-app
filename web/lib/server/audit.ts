@@ -86,12 +86,22 @@ export type AuditAction =
   | 'store.decision'
   // A bulk edit of supplier costs. Audited as one entry naming how many rows
   // moved, because fifty separate entries is a log nobody reads.
-  | 'store.import';
+  | 'store.import'
+  // The project library. Writing a project and publishing it are separate
+  // entries for the same reason the store's are: one is authorship, the other
+  // is the decision that put it in front of readers, and «who published that»
+  // is the question somebody asks when a page turns out to be wrong.
+  | 'project.edit'
+  | 'project.publish';
 
 export type AuditResult = 'ok' | 'denied' | 'error';
 
 export type AuditTargetType =
-  'user' | 'post' | 'comment' | 'report' | 'media' | 'order' | 'product';
+  'user' | 'post' | 'comment' | 'report' | 'media' | 'order' | 'product'
+  // A project in the library. Not `product`: they live in different
+  // collections, are edited by different roles, and conflating them would make
+  // «every action on product X» return somebody else's article.
+  | 'project';
 
 export interface AuditEntry {
   action: AuditAction;

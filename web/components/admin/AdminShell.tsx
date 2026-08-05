@@ -37,6 +37,10 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   { href: '/admin/store/shipping', labelAr: 'الشحن', capability: 'store.viewSupply' },
   { href: '/admin/store/decisions', labelAr: 'قرارات تنتظرك', capability: 'store.viewProducts' },
   { href: '/admin/store/settings', labelAr: 'إعدادات المتجر', capability: 'store.viewSupply' },
+  // The project library. Gated on `content.edit` rather than a store capability,
+  // because it is teaching content: an editor may write it without ever seeing
+  // an order, and a fulfilment role may see orders without touching it.
+  { href: '/admin/projects', labelAr: 'المشاريع', capability: 'content.edit' },
   { href: '/admin/audit', labelAr: 'سجل التدقيق', capability: 'audit.view' },
 ];
 
