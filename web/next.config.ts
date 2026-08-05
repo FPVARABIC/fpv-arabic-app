@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import { isStagingFromEnv } from './lib/staging';
 
 /**
  * The web surface of FPVARABIC.
@@ -67,6 +68,24 @@ const nextConfig: NextConfig = {
         source: '/admin/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }],
       },
+      // A staging deployment says the same thing about EVERY path.
+      //
+      // WHY, WHEN robots.txt AND THE META TAG ALREADY SAY IT
+      // ----------------------------------------------------
+      // Because those two cover different things and both have holes. The
+      // `<meta>` tag exists only on pages Next renders as HTML — it is absent
+      // from `/sitemap.xml`, from the OG image, from every file under
+      // `/assets`, and from any route that answers with JSON. And robots.txt
+      // is a request: a crawler that ignores it is exactly the crawler this
+      // matters for. A response header covers every one of those and is the
+      // only one of the three a crawler cannot skip.
+      //
+      // `noarchive` is included on purpose. Without it a cached copy of a
+      // staging page outlives the deployment itself.
+      ...(isStagingFromEnv(process.env) ? [{
+        source: '/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }],
+      }] : []),
     ];
   },
 };

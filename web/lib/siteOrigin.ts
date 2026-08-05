@@ -1,4 +1,5 @@
 import { BRAND_ORIGIN } from '@core/data/brand';
+import { isStagingFromEnv } from './staging';
 
 /**
  * Where this deployment thinks it lives.
@@ -60,6 +61,23 @@ export function siteOrigin(): string {
  * site competing with a copy of itself, which takes weeks to undo.
  */
 export function isCanonicalOrigin(): boolean {
+  // A deployment that declares itself staging is never the official site, no
+  // matter what origin it was handed.
+  //
+  // THIS IS NOT BELT AND BRACES — IT CLOSES A REAL HOLE
+  // ---------------------------------------------------
+  // App Hosting MERGES `apphosting.staging.yaml` over `apphosting.yaml` key by
+  // key (`firebase-tools`' own `AppHostingYamlConfig.merge` is a spread), so a
+  // variable the staging file does not mention is INHERITED from production —
+  // including `NEXT_PUBLIC_SITE_URL`. Without this line the staging copy would
+  // read the canonical origin out of the production config, answer «yes, I am
+  // the official site», and serve `robots.txt: allow` and `<meta robots:
+  // index, follow>` from a URL nobody meant to publish.
+  //
+  // The staging flag is the one signal that cannot be inherited by accident:
+  // it is set deliberately, in the staging file, and it means exactly this.
+  if (isStagingFromEnv(process.env)) return false;
+
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (!explicit) return false;
   return stripTrailingSlash(explicit) === BRAND_ORIGIN;

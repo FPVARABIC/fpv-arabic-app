@@ -52,7 +52,9 @@
     "test:assembly-ui": "npx tsx scripts/testAssemblyUI.ts",
     "test:platform": "npm run test:platform-core && npm run test:kb && npm run test:kb-ui && npm run test:project && npm run test:project-ui && npm run test:video && npm run test:video-ui && npm run test:navigation-regression",
     "test:feed-ranking-batch": "firebase emulators:exec --project demo-community-rules-test --only firestore \"npx tsx functions/testFeedRankingBatch.ts\"",
-    "test:store-e2e": "npx tsx scripts/testStoreE2E.ts"
+    "test:store-e2e": "npx tsx scripts/testStoreE2E.ts",
+    "test:staging": "npx tsx scripts/testStaging.ts",
+    "preflight": "npx tsx scripts/preflightDeploy.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

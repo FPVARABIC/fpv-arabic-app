@@ -56,9 +56,26 @@ env:
     secret: fpvarabic-web-app-id
     availability: [BUILD, RUNTIME]
 
-  - variable: NEXT_PUBLIC_SITE_URL
-    value: https://fpvarabic.com
-    availability: [BUILD, RUNTIME]
+  # DELIBERATELY COMMENTED OUT UNTIL THE DOMAIN IS CONNECTED.
+  #
+  # This variable is the ONLY thing that makes a deployment indexable:
+  # `isCanonicalOrigin()` requires it to be set AND to equal the brand origin.
+  # While it is absent every deployment is noindex, which is the correct state
+  # for a site whose domain does not point at it yet.
+  #
+  # WHY THAT MATTERS MORE THAN IT LOOKS
+  # -----------------------------------
+  # App Hosting merges `apphosting.<env>.yaml` OVER this file key by key, so a
+  # variable set here is INHERITED by every environment that does not override
+  # it. With `https://fpvarabic.com` sitting here, a staging backend that had
+  # not been pointed at its environment file would have read the canonical
+  # origin out of this one and published itself as the official site.
+  #
+  # Uncomment on the day `fpvarabic.com` resolves to the production backend,
+  # and not before:
+  #   - variable: NEXT_PUBLIC_SITE_URL
+  #     value: https://fpvarabic.com
+  #     availability: [BUILD, RUNTIME]
 
   # ── Private: server only, never in a browser bundle ──────────────────────
   # The service account bypasses every Firestore and Storage rule by design.
@@ -74,12 +91,33 @@ env:
     secret: fpvarabic-admin-private-key
     availability: [RUNTIME]
 
-  # The payment provider. `fake` until a real key exists — the store then runs
-  # the whole journey against FakeProvider and says so on screen, rather than
-  # failing at checkout.
+  # ── Payment: OFF, by omission ────────────────────────────────────────────
+  # This file used to say `PAYMENT_PROVIDER: fake` and name a Mollie secret,
+  # and both were wrong in a way reading could not show:
+  #
+  #   `fake` is not a branch `paymentProvider()` has. It builds Mollie or it
+  #   throws `unknown PAYMENT_PROVIDER`. `FakeProvider` is a test double that
+  #   `scripts/testPurchaseJourney.ts` constructs directly; nothing in the app
+  #   imports it, and nothing should — a provider that cannot take money is a
+  #   provider that must not be reachable from a production config.
+  #
+  #   `fpvarabic-mollie-api-key` does not exist in Secret Manager. App Hosting
+  #   resolves every `secret:` before it starts a build, so naming one that is
+  #   absent fails the rollout outright rather than degrading to no payment.
+  #
+  # `scripts/preflightDeploy.ts` now runs both values through the real code, so
+  # neither can come back quietly.
+  #
+  # Payment stays off here until the owner has a Mollie account. Absence is the
+  # off switch: no key means `paymentProvider()` returns null, the catalogue and
+  # the basket work, and the pay step says «الدفع غير مفعّل».
   - variable: PAYMENT_PROVIDER
-    value: fake
+    value: mollie
     availability: [RUNTIME]
-  - variable: MOLLIE_API_KEY
-    secret: fpvarabic-mollie-api-key
-    availability: [RUNTIME]
+  #
+  # TO TURN PAYMENT ON, once a live account exists:
+  #   firebase apphosting:secrets:set fpvarabic-mollie-api-key
+  # then add:
+  #   - variable: MOLLIE_API_KEY
+  #     secret: fpvarabic-mollie-api-key
+  #     availability: [RUNTIME]

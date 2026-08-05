@@ -973,7 +973,14 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // a repository containing a credential. Deployment, not Community.
     !f.startsWith('web/apphosting') &&
     f !== 'docs/platform/DEPLOY_FIREBASE.md' &&
-    f !== 'scripts/preflightDeploy.ts',
+    f !== 'scripts/preflightDeploy.ts' &&
+    // ── The staging deployment ────────────────────────────────────────────
+    // Three values in the App Hosting config were wrong in ways only running
+    // them showed — an unknown payment provider, a secret that does not
+    // exist, and a `STAGING: "1"` the parser ignored. The suite that now
+    // hands every declared value to the real function is deployment
+    // configuration, not Community.
+    f !== 'scripts/testStaging.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

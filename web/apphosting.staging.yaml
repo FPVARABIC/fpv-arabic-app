@@ -1,9 +1,34 @@
 # FPVARABIC — Firebase App Hosting (STAGING)
 #
-# Identical to production except for the three lines that make it staging:
-# STAGING=1 turns on the «نسخة تجريبية» badge and the noindex header,
-# NEXT_PUBLIC_SITE_URL points at the staging domain, and the payment provider
-# is pinned to `fake` so no real money can move whatever key is present.
+# Identical to production except for the lines that make it staging:
+# STAGING=true turns on the «نسخة تجريبية» badge and the site-wide noindex
+# header, and NO payment key is present at all, so the checkout reaches the pay
+# step and says «الدفع غير مفعّل» instead of contacting anybody's money.
+#
+# THREE THINGS THIS FILE USED TO SAY, AND WHY THEY ARE GONE
+# ---------------------------------------------------------
+# They were written from the shape of the code rather than from running it, and
+# each one would have failed the first rollout:
+#
+#   PAYMENT_PROVIDER: fake       `paymentProvider()` handles `mollie` and
+#                                throws on anything else — there is no `fake`
+#                                branch; `FakeProvider` is a test double that
+#                                `scripts/testPurchaseJourney.ts` constructs
+#                                directly and nothing else imports. The value
+#                                threw `unknown PAYMENT_PROVIDER: fake` on
+#                                every page that touches payment.
+#
+#   MOLLIE_API_KEY               named the secret `fpvarabic-mollie-test-key`,
+#                                which does not exist. App Hosting resolves
+#                                every `secret:` before it starts a build, so
+#                                the rollout fails on a key nobody wanted yet.
+#
+#   STAGING: "1"                 `isStagingEnvironment()` compared against the
+#                                literals `'true'`/`'false'` and ignored `"1"`
+#                                entirely. It looked like it worked only
+#                                because the origin check answered «staging»
+#                                on its own. The parser now accepts it; the
+#                                value is spelled `true` here regardless.
 #
 # WHY APP HOSTING AND NOT STATIC HOSTING
 # --------------------------------------
@@ -61,9 +86,25 @@ env:
     secret: fpvarabic-web-app-id
     availability: [BUILD, RUNTIME]
 
-  - variable: NEXT_PUBLIC_SITE_URL
-    value: https://staging.fpvarabic.com
-    availability: [BUILD, RUNTIME]
+  # DELIBERATELY ABSENT: NEXT_PUBLIC_SITE_URL.
+  #
+  # The first rollout does not know its own address — App Hosting mints the
+  # `*.hosted.app` domain when the backend is created, which is after this file
+  # is read. Naming a domain nobody owns yet (`staging.fpvarabic.com` was the
+  # placeholder here) points every canonical tag, Open Graph card and sitemap
+  # entry at a host that does not resolve.
+  #
+  # Leaving it unset is not a gap, it is the safe branch: `isCanonicalOrigin()`
+  # answers «no» for an unset value, so the whole deployment is noindex, and
+  # `isStagingFromEnv()` answers «staging» — the badge appears with no help
+  # from this file. Canonical URLs fall back to the brand origin, which costs
+  # nothing on a copy no crawler is allowed to read.
+  #
+  # AFTER the first rollout prints the real URL, add it here and redeploy, so
+  # the OG cards a reviewer shares point at the site they are looking at:
+  #   - variable: NEXT_PUBLIC_SITE_URL
+  #     value: https://<backend>--<project>.<region>.hosted.app
+  #     availability: [BUILD, RUNTIME]
 
   # ── Private: server only, never in a browser bundle ──────────────────────
   # The service account bypasses every Firestore and Storage rule by design.
@@ -79,18 +120,30 @@ env:
     secret: fpvarabic-admin-private-key
     availability: [RUNTIME]
 
-  # The payment provider. `fake` until a real key exists — the store then runs
-  # the whole journey against FakeProvider and says so on screen, rather than
-  # failing at checkout.
+  # ── Payment: OFF, by omission ────────────────────────────────────────────
+  # There is no MOLLIE_API_KEY here and that is the whole mechanism.
+  # `paymentProvider()` returns null without a key, `isPaymentConfigured()`
+  # answers false, and the checkout renders «الدفع غير مفعّل» at the pay step
+  # while the basket, the address form and the order record all keep working.
+  # That is what «اترك الدفع معطلاً برسالة واضحة» asks for, and it needs no
+  # flag: absence is the off switch, so there is no variable to set wrongly.
+  #
+  # `PAYMENT_PROVIDER` is named explicitly rather than left to its default so a
+  # future change to that default cannot quietly point staging somewhere else.
   - variable: PAYMENT_PROVIDER
-    value: fake
+    value: mollie
     availability: [RUNTIME]
-  # NOT the production key. A staging deployment that can charge a real card is
-  # a staging deployment somebody will eventually charge a real card from.
-  - variable: MOLLIE_API_KEY
-    secret: fpvarabic-mollie-test-key
-    availability: [RUNTIME]
+  #
+  # TO TURN PAYMENT ON LATER, with a TEST key and nothing else:
+  #   firebase apphosting:secrets:set fpvarabic-mollie-test-key
+  # then add:
+  #   - variable: MOLLIE_API_KEY
+  #     secret: fpvarabic-mollie-test-key
+  #     availability: [RUNTIME]
+  # `paymentProvider()` throws rather than starts if that key begins with
+  # `live_` while STAGING is on, so a production key pasted here fails loudly
+  # instead of charging somebody.
 
   - variable: STAGING
-    value: "1"
+    value: "true"
     availability: [BUILD, RUNTIME]
