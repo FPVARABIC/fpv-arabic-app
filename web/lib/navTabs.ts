@@ -76,7 +76,13 @@ export const NAV_TABS: NavTab[] = [
     activeMatch: ['/programming', '/betaflight'] },
   { id: 'kb', labelAr: 'الموسوعة', href: '/kb', Icon: Library,
     activeMatch: ['/kb', '/glossary', '/diagnose'] },
-  { id: 'project', labelAr: 'مشروعي', href: '/project', Icon: Hammer },
+  { id: 'projects', labelAr: 'المشاريع', href: '/projects', Icon: Hammer,
+    // «مشروعي» — the reader's OWN build — keeps its route and is reachable from
+    // the home page and the account rail. It is not deleted and not merged: one
+    // is a private workspace holding their parts, the other is a public library
+    // of builds to learn from, and a tab bar with both is a tab bar that makes
+    // somebody read it.
+    activeMatch: ['/projects', '/project'] },
 ];
 
 /**

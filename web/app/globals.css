@@ -1202,3 +1202,90 @@ details.card-sm > summary:focus-visible {
   text-align: center;
   line-height: 1.6;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THE PROJECT LIBRARY
+ *
+ * Cards of unequal text length must still line their buttons up, or the
+ * shortest card reads as the least finished one. `align-items: stretch` plus a
+ * column flex inside does that — the same rule the home page's pillars use, and
+ * for the same reason.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+.project-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (min-width: 700px) {
+  .project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1180px) {
+  .project-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (hover: none) {
+  .project-card:hover { transform: none; }
+}
+
+.project-card-media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+/* A typed panel rather than a grey rectangle: a grey box reads as a broken
+   image and makes a finished section look unfinished. */
+.project-card-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--bg-sunk) 100%);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.project-card-placeholder span {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--accent-ink);
+  opacity: 0.32;
+}
+
+.project-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px 18px 18px;
+}
+
+.project-badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card, .project-card:hover { transition: none; transform: none; }
+}

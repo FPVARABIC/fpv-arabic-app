@@ -171,14 +171,26 @@ console.log('\n[4] The tab bar is the phone app\'s tab bar');
   ok(`the web reuses the app's own tab icons (${shared.length}/${webIcons.length})`,
     shared.length >= webIcons.length - 1);
 
-  // The single approved difference, in both directions.
+  // THE APPROVED DIFFERENCES — two now, each deliberate and each named here so
+  // a third cannot appear by accident.
+  //
+  // 1. «التجميع» → «المتجر». The phone's assembly flow is built around a phone
+  //    held at a bench; the web has a shop instead.
   ok('the phone\'s seventh tab is «التجميع»', phoneNav.includes("label: 'التجميع'"));
   ok('the web replaces exactly that one with «المتجر»',
     webTabs.includes("labelAr: 'المتجر'") && !webTabs.includes("labelAr: 'التجميع'"));
 
+  // 2. «مشروعي» → «المشاريع». These are not the same tab renamed: the phone's
+  //    is the reader's OWN build, and the web's is a curated library of builds
+  //    to learn from. «مشروعي» still exists on the web at `/project` and the
+  //    tab's activeMatch keeps it lit — it was neither deleted nor merged.
+  ok('the web tab is «المشاريع»', webTabs.includes("labelAr: 'المشاريع'"));
+  ok('…and «مشروعي» is still reachable rather than replaced',
+    webTabs.includes("'/project'"));
+
   // Labels the two surfaces share must be spelled identically — a tab called
   // «الموسوعة» here and «الموسوعه» there is two products.
-  for (const label of ['الرئيسية', 'مشروعي', 'الموسوعة']) {
+  for (const label of ['الرئيسية', 'الموسوعة']) {
     ok(`«${label}» is spelled the same on both surfaces`,
       phoneNav.includes(`'${label}'`) && webTabs.includes(`'${label}'`));
   }

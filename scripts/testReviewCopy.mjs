@@ -81,8 +81,11 @@ console.log('\n[1] Navigation: home, then community, then the rest');
   ok('the bar has six tabs', labels.length === 12, `${labels.length} label nodes (2 bars × 6)`);
   ok('«الرئيسية» is first', first[0] === 'الرئيسية', first.join(' · '));
   ok('«المجتمع» is second', first[1] === 'المجتمع', first.join(' · '));
-  ok('the order is home · community · store · programming · kb · project',
-    first.join('|') === ['الرئيسية', 'المجتمع', 'المتجر', 'البرامج', 'الموسوعة', 'مشروعي'].join('|'),
+  // The sixth tab became «المشاريع» — the project library — when that section
+  // was built. «مشروعي», the reader's own build, keeps its route and stays lit
+  // through the same tab; it was not deleted. See navTabs.ts.
+  ok('the order is home · community · store · programming · kb · projects',
+    first.join('|') === ['الرئيسية', 'المجتمع', 'المتجر', 'البرامج', 'الموسوعة', 'المشاريع'].join('|'),
     first.join(' · '));
 
   // Both bars must agree — one component, so disagreement means a stale render.
