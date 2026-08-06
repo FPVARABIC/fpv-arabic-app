@@ -70,8 +70,12 @@ export const ProjectEditor: React.FC<{
   const [components, setComponents] = useState(
     (project.components ?? []).map(c => ({ nameAr: c.nameAr, roleAr: c.roleAr })),
   );
+  // `bodyAr` became optional on a merged stage — the plan carries the phase and
+  // the paragraph is context beneath it, so a phase may legitimately have none.
+  // The editor still edits a seed, where the paragraph is the whole field, so
+  // an absent one becomes an empty textarea rather than `undefined`.
   const [stages, setStages] = useState(
-    (project.stages ?? []).map(s => ({ titleAr: s.titleAr, bodyAr: s.bodyAr })),
+    (project.stages ?? []).map(s => ({ titleAr: s.titleAr, bodyAr: s.bodyAr ?? '' })),
   );
   const [challenges, setChallenges] = useState(
     (project.challenges ?? []).map(c => ({

@@ -1,0 +1,463 @@
+{
+  "spec": {
+    "aspect": "16:9",
+    "preferredPx": 1920,
+    "minPx": 1280,
+    "maxBytes": 512000,
+    "ext": "webp"
+  },
+  "repoDir": "web/public/assets/projects",
+  "generatedFrom": "src/data/projects/registry.ts",
+  "projects": [
+    {
+      "projectId": "visual-target-tracking",
+      "titleAr": "تتبّع هدف متحرّك بصرياً من طائرة مسيّرة",
+      "titleEn": "Vision-Based Moving Target Tracking from a UAV",
+      "difficultyAr": "متقدّم",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/visual-target-tracking/01-cover.webp",
+          "url": "/assets/projects/visual-target-tracking/01-cover.webp",
+          "altAr": "مشروع تتبّع هدف متحرّك بصرياً من طائرة مسيّرة",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/visual-target-tracking/02-build.webp",
+          "url": "/assets/projects/visual-target-tracking/02-build.webp",
+          "altAr": "تجميع مشروع تتبّع هدف متحرّك بصرياً من طائرة مسيّرة",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/visual-target-tracking/03-result.webp",
+          "url": "/assets/projects/visual-target-tracking/03-result.webp",
+          "altAr": "ناتج مشروع تتبّع هدف متحرّك بصرياً من طائرة مسيّرة",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/visual-target-tracking/04-diagram.webp",
+          "url": "/assets/projects/visual-target-tracking/04-diagram.webp",
+          "altAr": "مخطّط مشروع تتبّع هدف متحرّك بصرياً من طائرة مسيّرة",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "gps-denied-vio",
+      "titleAr": "الطيران بلا GPS: تحديد الموضع بالرؤية والقصور الذاتي",
+      "titleEn": "GPS-Denied Flight with Visual-Inertial Odometry",
+      "difficultyAr": "بحثي",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/gps-denied-vio/01-cover.webp",
+          "url": "/assets/projects/gps-denied-vio/01-cover.webp",
+          "altAr": "مشروع الطيران بلا GPS: تحديد الموضع بالرؤية والقصور الذاتي",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/gps-denied-vio/02-build.webp",
+          "url": "/assets/projects/gps-denied-vio/02-build.webp",
+          "altAr": "تجميع مشروع الطيران بلا GPS: تحديد الموضع بالرؤية والقصور الذاتي",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/gps-denied-vio/03-result.webp",
+          "url": "/assets/projects/gps-denied-vio/03-result.webp",
+          "altAr": "ناتج مشروع الطيران بلا GPS: تحديد الموضع بالرؤية والقصور الذاتي",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/gps-denied-vio/04-diagram.webp",
+          "url": "/assets/projects/gps-denied-vio/04-diagram.webp",
+          "altAr": "مخطّط مشروع الطيران بلا GPS: تحديد الموضع بالرؤية والقصور الذاتي",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "precision-landing-marker",
+      "titleAr": "الهبوط الذاتي الدقيق على علامة بصرية",
+      "titleEn": "Autonomous Precision Landing on a Fiducial Marker",
+      "difficultyAr": "متوسّط",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/precision-landing-marker/01-cover.webp",
+          "url": "/assets/projects/precision-landing-marker/01-cover.webp",
+          "altAr": "مشروع الهبوط الذاتي الدقيق على علامة بصرية",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/precision-landing-marker/02-build.webp",
+          "url": "/assets/projects/precision-landing-marker/02-build.webp",
+          "altAr": "تجميع مشروع الهبوط الذاتي الدقيق على علامة بصرية",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/precision-landing-marker/03-result.webp",
+          "url": "/assets/projects/precision-landing-marker/03-result.webp",
+          "altAr": "ناتج مشروع الهبوط الذاتي الدقيق على علامة بصرية",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/precision-landing-marker/04-diagram.webp",
+          "url": "/assets/projects/precision-landing-marker/04-diagram.webp",
+          "altAr": "مخطّط مشروع الهبوط الذاتي الدقيق على علامة بصرية",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "depth-obstacle-avoidance",
+      "titleAr": "تجنّب العوائق باستشعار العمق",
+      "titleEn": "Depth-Based Obstacle Avoidance",
+      "difficultyAr": "متقدّم",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/depth-obstacle-avoidance/01-cover.webp",
+          "url": "/assets/projects/depth-obstacle-avoidance/01-cover.webp",
+          "altAr": "مشروع تجنّب العوائق باستشعار العمق",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/depth-obstacle-avoidance/02-build.webp",
+          "url": "/assets/projects/depth-obstacle-avoidance/02-build.webp",
+          "altAr": "تجميع مشروع تجنّب العوائق باستشعار العمق",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/depth-obstacle-avoidance/03-result.webp",
+          "url": "/assets/projects/depth-obstacle-avoidance/03-result.webp",
+          "altAr": "ناتج مشروع تجنّب العوائق باستشعار العمق",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/depth-obstacle-avoidance/04-diagram.webp",
+          "url": "/assets/projects/depth-obstacle-avoidance/04-diagram.webp",
+          "altAr": "مخطّط مشروع تجنّب العوائق باستشعار العمق",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "lidar-slam-mapping",
+      "titleAr": "رسم خرائط ثلاثية الأبعاد بالليزر و SLAM",
+      "titleEn": "3D Mapping with LiDAR SLAM",
+      "difficultyAr": "بحثي",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/lidar-slam-mapping/01-cover.webp",
+          "url": "/assets/projects/lidar-slam-mapping/01-cover.webp",
+          "altAr": "مشروع رسم خرائط ثلاثية الأبعاد بالليزر و SLAM",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/lidar-slam-mapping/02-build.webp",
+          "url": "/assets/projects/lidar-slam-mapping/02-build.webp",
+          "altAr": "تجميع مشروع رسم خرائط ثلاثية الأبعاد بالليزر و SLAM",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/lidar-slam-mapping/03-result.webp",
+          "url": "/assets/projects/lidar-slam-mapping/03-result.webp",
+          "altAr": "ناتج مشروع رسم خرائط ثلاثية الأبعاد بالليزر و SLAM",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/lidar-slam-mapping/04-diagram.webp",
+          "url": "/assets/projects/lidar-slam-mapping/04-diagram.webp",
+          "altAr": "مخطّط مشروع رسم خرائط ثلاثية الأبعاد بالليزر و SLAM",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "multi-drone-swarm",
+      "titleAr": "سرب طائرات متناسق",
+      "titleEn": "Coordinated Multi-Drone Swarm",
+      "difficultyAr": "بحثي",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/multi-drone-swarm/01-cover.webp",
+          "url": "/assets/projects/multi-drone-swarm/01-cover.webp",
+          "altAr": "مشروع سرب طائرات متناسق",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/multi-drone-swarm/02-build.webp",
+          "url": "/assets/projects/multi-drone-swarm/02-build.webp",
+          "altAr": "تجميع مشروع سرب طائرات متناسق",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/multi-drone-swarm/03-result.webp",
+          "url": "/assets/projects/multi-drone-swarm/03-result.webp",
+          "altAr": "ناتج مشروع سرب طائرات متناسق",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/multi-drone-swarm/04-diagram.webp",
+          "url": "/assets/projects/multi-drone-swarm/04-diagram.webp",
+          "altAr": "مخطّط مشروع سرب طائرات متناسق",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "autonomous-drone-racing",
+      "titleAr": "السباق الذاتي: طيران عالي السرعة عبر بوّابات",
+      "titleEn": "Autonomous Drone Racing",
+      "difficultyAr": "بحثي",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/autonomous-drone-racing/01-cover.webp",
+          "url": "/assets/projects/autonomous-drone-racing/01-cover.webp",
+          "altAr": "مشروع السباق الذاتي: طيران عالي السرعة عبر بوّابات",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/autonomous-drone-racing/02-build.webp",
+          "url": "/assets/projects/autonomous-drone-racing/02-build.webp",
+          "altAr": "تجميع مشروع السباق الذاتي: طيران عالي السرعة عبر بوّابات",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/autonomous-drone-racing/03-result.webp",
+          "url": "/assets/projects/autonomous-drone-racing/03-result.webp",
+          "altAr": "ناتج مشروع السباق الذاتي: طيران عالي السرعة عبر بوّابات",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/autonomous-drone-racing/04-diagram.webp",
+          "url": "/assets/projects/autonomous-drone-racing/04-diagram.webp",
+          "altAr": "مخطّط مشروع السباق الذاتي: طيران عالي السرعة عبر بوّابات",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "crop-health-ndvi",
+      "titleAr": "مسح صحّة المحاصيل بالتصوير متعدّد الأطياف",
+      "titleEn": "Crop Health Mapping with Multispectral Imaging",
+      "difficultyAr": "متوسّط",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/crop-health-ndvi/01-cover.webp",
+          "url": "/assets/projects/crop-health-ndvi/01-cover.webp",
+          "altAr": "مشروع مسح صحّة المحاصيل بالتصوير متعدّد الأطياف",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/crop-health-ndvi/02-build.webp",
+          "url": "/assets/projects/crop-health-ndvi/02-build.webp",
+          "altAr": "تجميع مشروع مسح صحّة المحاصيل بالتصوير متعدّد الأطياف",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/crop-health-ndvi/03-result.webp",
+          "url": "/assets/projects/crop-health-ndvi/03-result.webp",
+          "altAr": "ناتج مشروع مسح صحّة المحاصيل بالتصوير متعدّد الأطياف",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/crop-health-ndvi/04-diagram.webp",
+          "url": "/assets/projects/crop-health-ndvi/04-diagram.webp",
+          "altAr": "مخطّط مشروع مسح صحّة المحاصيل بالتصوير متعدّد الأطياف",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "thermal-search-rescue",
+      "titleAr": "البحث والإنقاذ: كشف الأشخاص حرارياً وبصرياً",
+      "titleEn": "Search and Rescue with Thermal and Visual Person Detection",
+      "difficultyAr": "متقدّم",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/thermal-search-rescue/01-cover.webp",
+          "url": "/assets/projects/thermal-search-rescue/01-cover.webp",
+          "altAr": "مشروع البحث والإنقاذ: كشف الأشخاص حرارياً وبصرياً",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/thermal-search-rescue/02-build.webp",
+          "url": "/assets/projects/thermal-search-rescue/02-build.webp",
+          "altAr": "تجميع مشروع البحث والإنقاذ: كشف الأشخاص حرارياً وبصرياً",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/thermal-search-rescue/03-result.webp",
+          "url": "/assets/projects/thermal-search-rescue/03-result.webp",
+          "altAr": "ناتج مشروع البحث والإنقاذ: كشف الأشخاص حرارياً وبصرياً",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/thermal-search-rescue/04-diagram.webp",
+          "url": "/assets/projects/thermal-search-rescue/04-diagram.webp",
+          "altAr": "مخطّط مشروع البحث والإنقاذ: كشف الأشخاص حرارياً وبصرياً",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    },
+    {
+      "projectId": "esp32-mini-drone",
+      "titleAr": "بناء طائرة صغيرة كاملة على ESP32",
+      "titleEn": "Building a Complete Mini Drone on ESP32",
+      "difficultyAr": "مبتدئ",
+      "published": true,
+      "images": [
+        {
+          "role": "cover",
+          "fileName": "01-cover.webp",
+          "repoPath": "web/public/assets/projects/esp32-mini-drone/01-cover.webp",
+          "url": "/assets/projects/esp32-mini-drone/01-cover.webp",
+          "altAr": "مشروع بناء طائرة صغيرة كاملة على ESP32",
+          "required": true,
+          "briefAr": "الصورة الرئيسية. تظهر في بطاقة المشروع وأعلى صفحته. أوضح صورة تُظهر الطائرة أو المنظومة كاملة."
+        },
+        {
+          "role": "build",
+          "fileName": "02-build.webp",
+          "repoPath": "web/public/assets/projects/esp32-mini-drone/02-build.webp",
+          "url": "/assets/projects/esp32-mini-drone/02-build.webp",
+          "altAr": "تجميع مشروع بناء طائرة صغيرة كاملة على ESP32",
+          "required": false,
+          "briefAr": "التجميع: القطع مركّبة، أو لقطة أثناء البناء تُظهر كيف تتصل ببعضها."
+        },
+        {
+          "role": "result",
+          "fileName": "03-result.webp",
+          "repoPath": "web/public/assets/projects/esp32-mini-drone/03-result.webp",
+          "url": "/assets/projects/esp32-mini-drone/03-result.webp",
+          "altAr": "ناتج مشروع بناء طائرة صغيرة كاملة على ESP32",
+          "required": false,
+          "briefAr": "الناتج: ما ينتجه المشروع فعلاً — خريطة، أو شاشة كشف، أو مسار طيران."
+        },
+        {
+          "role": "diagram",
+          "fileName": "04-diagram.webp",
+          "repoPath": "web/public/assets/projects/esp32-mini-drone/04-diagram.webp",
+          "url": "/assets/projects/esp32-mini-drone/04-diagram.webp",
+          "altAr": "مخطّط مشروع بناء طائرة صغيرة كاملة على ESP32",
+          "required": false,
+          "briefAr": "مخطّط: رسم للتوصيل أو لتدفّق البيانات. مرسوم بيدك أو ببرنامج رسم — لا صورة مولّدة."
+        }
+      ]
+    }
+  ]
+}

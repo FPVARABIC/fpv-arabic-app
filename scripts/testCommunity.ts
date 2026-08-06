@@ -944,6 +944,16 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('src/data/projects/') &&
     f !== 'scripts/testProjects.ts' &&
     f !== 'src/data/lessons/journeyRegistry.ts' &&
+    // ── The project build plans and their images ──────────────────────────
+    // The build section was five paragraphs that began after every decision
+    // had already been made; it is now a phased plan with steps and exit
+    // conditions, and the images follow the store's upload system so the
+    // owner has one convention rather than two. Project library, not
+    // Community.
+    !f.startsWith('docs/projects/') &&
+    !f.startsWith('web/public/assets/projects/') &&
+    f !== 'scripts/buildProjectImageManifest.ts' &&
+    f !== 'scripts/testProjectPlans.ts' &&
     // ── The one search ────────────────────────────────────────────────────
     // Making the platform's single search field reach every public section:
     // the index gained a registration hook so a SURFACE can contribute the

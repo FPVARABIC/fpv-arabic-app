@@ -234,9 +234,79 @@ export interface ProjectSoftware {
 }
 
 /** One stage of the build. Not every screw — the shape of the work. */
-export interface ProjectStage {
+/**
+ * One action a reader takes, written as an instruction.
+ *
+ * WHY A STEP IS NOT A SENTENCE OF PROSE
+ * -------------------------------------
+ * The build section used to be five paragraphs. Each was accurate and each
+ * began in the middle: «شغّل الكاميرا والنموذج على الحاسوب المرافق» assumes the
+ * reader already owns a companion computer, already chose it, and already knows
+ * why that one. Somebody meeting the project for the first time cannot act on
+ * any of it — they can only agree that it sounds correct.
+ *
+ * A step is the smallest thing a person can go and DO, in the imperative, with
+ * the decision it contains made explicit. `detailAr` carries the one line that
+ * makes the choice possible — the trade-off, the number to aim for, or what
+ * «done» looks like — and nothing else.
+ */
+export interface ProjectStep {
+  /** The action, imperative and singular. «اختر منصة الطيران.» */
+  actionAr: string;
+  /**
+   * One line on HOW to decide, or what finishing looks like.
+   *
+   * Optional because some steps genuinely need nothing more, and padding every
+   * one of them is how a plan turns back into prose.
+   */
+  detailAr?: string;
+}
+
+/**
+ * One phase of building the project.
+ *
+ * THE THREE REQUIRED PARTS, AND WHY EACH EXISTS
+ * ---------------------------------------------
+ *   `goalAr`     what this phase is FOR, in one sentence, before any detail.
+ *                A reader deciding whether the project suits them reads only
+ *                these and should still understand the shape of the work.
+ *
+ *   `steps`      what to actually do. The part that was missing.
+ *
+ *   `doneWhenAr` the gate. Without it the commonest failure in a build like
+ *                this is invisible: moving to the next phase on top of
+ *                something that only half works, and then debugging two
+ *                problems at once for a week. Naming the exit condition turns
+ *                that into a decision the reader can make.
+ */
+/**
+ * A phase as the CATALOGUE authors it: a title and its paragraph.
+ *
+ * The plan — goal, steps, exit condition — lives in `buildPlans.ts` and is
+ * merged on in `registry.ts`. Keeping the two apart is what lets all ten plans
+ * be written and reviewed side by side, which is the only way «المرحلة الأولى»
+ * comes to mean the same kind of thing in every project.
+ */
+export interface ProjectStageSeed {
   titleAr: string;
   bodyAr: string;
+}
+
+export interface ProjectStage {
+  titleAr: string;
+  /** What this phase achieves. One sentence, no jargon that is not explained. */
+  goalAr: string;
+  /** The actions, in order. */
+  steps: ProjectStep[];
+  /** What must be true before starting the next phase. */
+  doneWhenAr: string;
+  /**
+   * The original explanatory paragraph, kept as context beneath the steps.
+   *
+   * Optional: the steps carry the plan, and a phase that needs no further
+   * narration should not invent one.
+   */
+  bodyAr?: string;
 }
 
 /** A part of the architecture, explained rather than merely drawn. */
@@ -403,3 +473,13 @@ export const PROJECT_CATEGORIES: ProjectCategory[] = [
 export function projectCategory(id: string): ProjectCategory | undefined {
   return PROJECT_CATEGORIES.find(c => c.id === id);
 }
+
+/**
+ * A project as written in the catalogue, before its build plan is merged on.
+ *
+ * The distinction is enforced by the type rather than by a test: a catalogue
+ * entry CANNOT accidentally satisfy `Project`, so a project that gains a phase
+ * without gaining a plan for it fails the build instead of shipping a phase
+ * with no steps.
+ */
+export type ProjectSeed = Omit<Project, 'stages'> & { stages: ProjectStageSeed[] };

@@ -97,7 +97,27 @@ console.log('\n[4] Parts and challenges carry their reasons');
       p.challenges.find(c => c.mitigationAr.length < 40)?.titleAr ?? '');
     ok(`${p.id}: every software entry states its role`,
       p.software.every(s => s.roleAr.length >= 15));
-    ok(`${p.id}: every stage has a body`, p.stages.every(s => s.bodyAr.length >= 50));
+    /*
+     * A PHASE IS NO LONGER A PARAGRAPH, SO THE PARAGRAPH IS NO LONGER REQUIRED.
+     *
+     * This used to demand `bodyAr` on every phase, because a phase WAS a title
+     * and a paragraph. That is exactly what was wrong with the build section:
+     * accurate prose that began in the middle and told nobody what to do. A
+     * phase now carries a goal, ordered steps and an exit condition — checked
+     * in `scripts/testProjectPlans.ts` — and the paragraph survives as optional
+     * context beneath them.
+     *
+     * The opening «الاختيار والتجهيز» phase has none by design: it is nothing
+     * but decisions, and a narration on top of them would be the old defect
+     * returning through the back door.
+     *
+     * So the rule inverts: a body is optional, and one that EXISTS must still
+     * be worth reading. A two-word paragraph is worse than none.
+     */
+    ok(`${p.id}: every stage body, where present, is substantial`,
+      p.stages.every(s => s.bodyAr === undefined || s.bodyAr.length >= 50));
+    ok(`${p.id}: every stage carries a goal and an exit condition`,
+      p.stages.every(s => s.goalAr.length >= 20 && s.doneWhenAr.length >= 20));
   }
 }
 
@@ -439,14 +459,30 @@ console.log('\n[14] The page renders the sections in the order the brief asked f
   // Read the order off the rendered `<Section id=…>` calls, not off the index
   // array — the index is a table of contents and could agree with itself while
   // the body renders something else.
-  const rendered = [...page.matchAll(/<Section id="([a-z]+)"/g)].map(m => m[1]);
+  const rendered = [...page.matchAll(/<Section id="([a-z-]+)"/g)].map(m => m[1]);
 
-  // The brief's thirteen, in its order. The three extra sections — the build
-  // diagram, how it works, and the applications — are kept from the first batch
-  // and are checked separately below: nothing was deleted to make room.
+  /*
+   * THE ORDER CHANGED, AND THIS IS THE SECOND VERSION OF IT.
+   *
+   * The first brief asked for thirteen sections in one order. The second asked
+   * for a different one, for a reason the first got wrong: the build plan sat
+   * three sections from the bottom, after the parts, the software and the
+   * glossary — so a reader met a bill of materials before ever learning what
+   * the work looked like. It now follows «what you must learn first».
+   *
+   * Three sections stopped being sections and did NOT stop existing, which is
+   * the distinction this block has to police:
+   *
+   *   difficulty  → the header, where the decision to keep reading is made
+   *   skills      → inside «ماذا ستتعلّم», whose vocabulary they are
+   *   architecture, flow, stages → inside «خطة البناء», because a diagram
+   *                 belongs beside the plan it explains
+   *
+   * Each is asserted separately below. Folding is allowed; deleting is not.
+   */
   const required = [
-    'idea', 'outcomes', 'prerequisites', 'difficulty', 'skills',
-    'parts', 'software', 'glossary', 'stages', 'challenges', 'future', 'references',
+    'idea', 'purpose', 'outcomes', 'prerequisites', 'plan',
+    'parts', 'software', 'glossary', 'applications', 'challenges', 'future', 'references',
   ];
   const positions = required.map(id => rendered.indexOf(id));
   ok('every required section is rendered', positions.every(i => i >= 0),
@@ -454,9 +490,34 @@ console.log('\n[14] The page renders the sections in the order the brief asked f
   ok('…and in the order the brief specified',
     positions.every((v, i) => i === 0 || v > positions[i - 1]),
     rendered.join(' → '));
+  ok('nothing else is rendered alongside them',
+    rendered.length === required.length, rendered.join(' → '));
 
-  for (const kept of ['architecture', 'flow', 'applications']) {
-    ok(`the earlier «${kept}» section was kept, not replaced`, rendered.includes(kept));
+  // The build plan must precede the shopping list. This is the whole point of
+  // the reorder and the one line that would silently regress.
+  ok('the build plan comes before the parts list',
+    rendered.indexOf('plan') < rendered.indexOf('parts'));
+
+  /*
+   * NOTHING WAS DELETED TO MAKE ROOM.
+   *
+   * These used to be sections of their own. Each is now inside another one, so
+   * `rendered` can no longer see them — and a check that only looked at the
+   * section list would report success for a page that had quietly dropped the
+   * architecture diagram entirely. So each is asserted on the CONTENT.
+   */
+  const FOLDED: Array<[string, RegExp]> = [
+    ['difficulty', /DIFFICULTY_MEANS_AR\[p\.difficulty\]/],
+    ['estimated duration', /p\.estimatedWeeks\.min/],
+    ['skills', /p\.skillsAr\.map/],
+    ['architecture', /p\.architectureIntroAr/],
+    ['components', /p\.components\.map/],
+    ['data flow', /p\.dataFlowAr/],
+    ['stages', /p\.stages\.map/],
+  ];
+  for (const [what, pattern] of FOLDED) {
+    ok(`«${what}» survived the reorder — folded into another section, not deleted`,
+      pattern.test(page));
   }
 
   // Prerequisites BEFORE parts. Putting the bill of materials first means
@@ -465,7 +526,7 @@ console.log('\n[14] The page renders the sections in the order the brief asked f
     rendered.indexOf('prerequisites') < rendered.indexOf('parts'));
 
   // The index and the body must agree, or the sidebar links to nothing.
-  const indexed = [...page.matchAll(/\{ id: '([a-z]+)', titleAr:/g)].map(m => m[1]);
+  const indexed = [...page.matchAll(/\{ id: '([a-z-]+)', titleAr:/g)].map(m => m[1]);
   ok('the side index lists exactly what is rendered',
     indexed.join('|') === rendered.join('|'), `${indexed.join(' ')} vs ${rendered.join(' ')}`);
 

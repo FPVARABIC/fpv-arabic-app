@@ -96,17 +96,14 @@ export default async function ProjectPage(
   };
 
   const sections: { id: string; titleAr: string }[] = [
-    { id: 'idea', titleAr: 'الفكرة والهدف' },
+    { id: 'idea', titleAr: 'فكرة المشروع' },
+    { id: 'purpose', titleAr: 'لماذا هذا المشروع' },
     { id: 'outcomes', titleAr: 'ماذا ستتعلّم من هذا المشروع' },
     { id: 'prerequisites', titleAr: 'ما الذي يجب أن تتعلّمه أوّلاً' },
-    { id: 'difficulty', titleAr: 'مستوى الصعوبة' },
-    { id: 'skills', titleAr: 'التقنيات المستخدمة' },
+    { id: 'plan', titleAr: 'خطة البناء' },
     { id: 'parts', titleAr: 'القطع المطلوبة' },
     { id: 'software', titleAr: 'البرامج المطلوبة' },
     { id: 'glossary', titleAr: 'المصطلحات المهمّة' },
-    { id: 'architecture', titleAr: 'مخطّط البناء' },
-    { id: 'flow', titleAr: 'طريقة العمل' },
-    { id: 'stages', titleAr: 'مراحل التنفيذ' },
     { id: 'applications', titleAr: 'التطبيقات العملية' },
     { id: 'challenges', titleAr: 'التحدّيات' },
     { id: 'future', titleAr: 'التطوير المستقبلي' },
@@ -160,13 +157,41 @@ export default async function ProjectPage(
             <p style={{ fontSize: 16, color: 'var(--text)', margin: '20px 0 0', lineHeight: 2.05 }}>
               {p.definitionAr}
             </p>
+
+            {/* Difficulty and duration used to be a section of their own,
+                between «what you must learn first» and the parts list. That
+                is the wrong place for them: they are what a reader uses to
+                decide whether to read AT ALL, and by the time they appeared
+                the decision had already been made. Same words, moved to where
+                the decision happens. */}
+            <div className="card" style={{ padding: '15px 17px', marginTop: 22 }} data-testid="project-difficulty-card">
+              <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: 17 }}>{DIFFICULTY_LABEL_AR[p.difficulty]}</strong>
+                <span className="project-badge">
+                  <span dir="ltr">{p.estimatedWeeks.min}–{p.estimatedWeeks.max}</span> أسبوعاً
+                </span>
+              </div>
+              <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '9px 0 0', lineHeight: 2 }}>
+                {DIFFICULTY_MEANS_AR[p.difficulty]}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '10px 0 0', lineHeight: 1.9 }}>
+                المدّة تقدير لساعات فراغ لا لدوام كامل، وتفترض أنك تملك ما في
+                قسم «ما الذي يجب أن تتعلّمه أوّلاً». من ينقصه شرط أساسي فليضف زمن تعلّمه.
+              </p>
+            </div>
           </header>
 
-          {/* 2 — the idea */}
-          <Section id="idea" titleAr="الفكرة والهدف">
-            <h3 style={H3}>الفكرة</h3>
+          {/* 2 — the idea, on its own. It used to share a section with the
+              motive, and the two answer different questions: «what is this»
+              and «why would I spend six weeks on it». A reader deciding
+              needs the second as a heading, not as a paragraph inside the
+              first. */}
+          <Section id="idea" titleAr="فكرة المشروع">
             <p>{p.ideaAr}</p>
-            <h3 style={H3}>لماذا بُني</h3>
+          </Section>
+
+          {/* 3 — the motive */}
+          <Section id="purpose" titleAr="لماذا هذا المشروع">
             <p>{p.purposeAr}</p>
           </Section>
 
@@ -177,6 +202,15 @@ export default async function ProjectPage(
               على فعله بعده، لا ما سيثير إعجابك أثناءه.
             </p>
             <Bullets items={p.learningOutcomesAr} testId="project-outcome" />
+
+            {/* The technologies used to be their own section between «what you
+                must learn first» and the parts list, which put a row of
+                unexplained names in the middle of the reader's decision. They
+                belong here: they are the vocabulary of what you just read. */}
+            <h3 style={H3}>التقنيات التي ستستخدمها</h3>
+            <p style={{ display: 'flex', gap: 7, flexWrap: 'wrap', margin: 0 }}>
+              {p.skillsAr.map(s => <span key={s} className="project-badge">{s}</span>)}
+            </p>
           </Section>
 
           {/* 4 — what the reader must arrive with */}
@@ -200,30 +234,126 @@ export default async function ProjectPage(
             )}
           </Section>
 
-          {/* 5 — difficulty, as a promise rather than a badge */}
-          <Section id="difficulty" titleAr="مستوى الصعوبة">
-            <div className="card" style={{ padding: '15px 17px' }}>
-              <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                <strong style={{ fontSize: 17 }}>{DIFFICULTY_LABEL_AR[p.difficulty]}</strong>
-                <span className="project-badge">
-                  <span dir="ltr">{p.estimatedWeeks.min}–{p.estimatedWeeks.max}</span> أسبوعاً
-                </span>
-              </div>
-              <p style={{ fontSize: 13.5, color: 'var(--text-dim)', margin: '9px 0 0', lineHeight: 2 }}>
-                {DIFFICULTY_MEANS_AR[p.difficulty]}
-              </p>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '10px 0 0', lineHeight: 1.9 }}>
-              المدّة تقدير لساعات فراغ لا لدوام كامل، وتفترض أنك تملك ما في القسم
-              السابق. من ينقصه شرط أساسي فليضف زمن تعلّمه.
-            </p>
-          </Section>
+          {/* 6 — HOW IT IS BUILT.
+              This used to sit three sections from the bottom, after the parts,
+              the software and the glossary — so a reader met a bill of
+              materials before ever learning what the work looked like. It is
+              the section people actually came for, and it now follows «what
+              you must learn first», which is exactly where the question
+              «so what do I do?» arrives.
 
-          {/* 6 — the technologies */}
-          <Section id="skills" titleAr="التقنيات المستخدمة">
-            <p style={{ display: 'flex', gap: 7, flexWrap: 'wrap', margin: 0 }}>
-              {p.skillsAr.map(s => <span key={s} className="project-badge">{s}</span>)}
+              The architecture and the data flow moved INSIDE it rather than
+              being deleted: they are the picture the phases refer to, and a
+              picture belongs beside the plan it explains, not two screens
+              away from it. */}
+          <Section id="plan" titleAr="خطة البناء">
+            <p style={LEAD}>
+              المشروع مقسّم إلى مراحل، ولكل مرحلة هدف وخطوات وشرط انتقال. لا
+              تنتقل إلى مرحلة قبل أن يتحقّق شرط التي قبلها — أكثر ما يُفشل هذه
+              المشاريع هو البناء فوق شيء يعمل نصف عمل.
             </p>
+
+            <h3 style={H3}>كيف تتركّب القطع معاً</h3>
+            <p>{p.architectureIntroAr}</p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'grid', gap: 10 }}>
+              {p.components.map((c, i) => (
+                <li key={c.nameAr} className="card-sm" style={{ padding: '13px 15px' }}>
+                  <div style={{ display: 'flex', gap: 9, alignItems: 'baseline' }}>
+                    <span dir="ltr" style={{ fontSize: 11, fontWeight: 900, color: 'var(--accent-ink)' }}>
+                      {i + 1}
+                    </span>
+                    <strong style={{ fontSize: 14 }}>{c.nameAr}</strong>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.9 }}>
+                    {c.roleAr}
+                  </p>
+                </li>
+              ))}
+            </ul>
+
+            <h3 style={H3}>كيف تسير البيانات</h3>
+            <p>{p.dataFlowAr}</p>
+
+            <h3 style={H3}>المراحل، بالترتيب</h3>
+            <ol
+              data-testid="project-plan"
+              style={{ padding: 0, margin: 0, listStyle: 'none', display: 'grid', gap: 14 }}
+            >
+              {p.stages.map((s, i) => (
+                <li
+                  key={s.titleAr}
+                  className="card"
+                  style={{ padding: '16px 18px' }}
+                  data-testid="project-stage"
+                >
+                  <h4 style={{ fontSize: 15, fontWeight: 900, margin: 0 }}>
+                    <span dir="ltr" style={{ color: 'var(--accent-ink)' }}>{i + 1}.</span>{' '}
+                    {s.titleAr}
+                  </h4>
+
+                  {/* The goal first, so somebody skimming only the goals still
+                      understands the shape of the whole build. */}
+                  <p
+                    data-testid="project-stage-goal"
+                    style={{ fontSize: 13.5, color: 'var(--text)', margin: '8px 0 0', lineHeight: 1.95 }}
+                  >
+                    {s.goalAr}
+                  </p>
+
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '13px 0 0', display: 'grid', gap: 9 }}>
+                    {s.steps.map((step, n) => (
+                      <li
+                        key={step.actionAr}
+                        data-testid="project-step"
+                        style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}
+                      >
+                        <span
+                          aria-hidden
+                          dir="ltr"
+                          style={{
+                            flexShrink: 0, fontSize: 11, fontWeight: 900,
+                            color: 'var(--accent-ink)', minWidth: 18,
+                          }}
+                        >
+                          {i + 1}.{n + 1}
+                        </span>
+                        <span>
+                          <strong style={{ fontSize: 13.5, fontWeight: 700 }}>{step.actionAr}</strong>
+                          {step.detailAr && (
+                            <span style={{
+                              display: 'block', fontSize: 12.5, color: 'var(--text-dim)',
+                              margin: '4px 0 0', lineHeight: 1.9,
+                            }}>
+                              {step.detailAr}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* The exit condition. Without it the commonest failure is
+                      invisible: moving on top of something that half works. */}
+                  <p
+                    data-testid="project-stage-done"
+                    style={{
+                      fontSize: 12.5, margin: '13px 0 0', padding: '9px 12px',
+                      background: 'var(--surface-2)', borderRadius: 8,
+                      color: 'var(--text)', lineHeight: 1.9,
+                    }}
+                  >
+                    <strong style={{ color: 'var(--sev-ok)' }}>تنتقل حين:</strong>{' '}
+                    {s.doneWhenAr}
+                  </p>
+
+                  {s.bodyAr && (
+                    <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '11px 0 0', lineHeight: 1.95 }}>
+                      {s.bodyAr}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
           </Section>
 
           {/* 7 — the parts, pointed at the shop */}
@@ -304,48 +434,6 @@ export default async function ProjectPage(
                 </li>
               ))}
             </ul>
-          </Section>
-
-          {/* 10 — the architecture (kept from the first batch) */}
-          <Section id="architecture" titleAr="مخطّط البناء">
-            <p>{p.architectureIntroAr}</p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'grid', gap: 10 }}>
-              {p.components.map((c, i) => (
-                <li key={c.nameAr} className="card-sm" style={{ padding: '13px 15px' }}>
-                  <div style={{ display: 'flex', gap: 9, alignItems: 'baseline' }}>
-                    <span dir="ltr" style={{ fontSize: 11, fontWeight: 900, color: 'var(--accent-ink)' }}>
-                      {i + 1}
-                    </span>
-                    <strong style={{ fontSize: 14 }}>{c.nameAr}</strong>
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.9 }}>
-                    {c.roleAr}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </Section>
-
-          {/* 11 — how it actually works (kept) */}
-          <Section id="flow" titleAr="طريقة العمل">
-            <p>{p.dataFlowAr}</p>
-          </Section>
-
-          {/* 12 — the stages */}
-          <Section id="stages" titleAr="مراحل التنفيذ">
-            <ol style={{ padding: 0, margin: 0, listStyle: 'none', display: 'grid', gap: 12 }}>
-              {p.stages.map((s, i) => (
-                <li key={s.titleAr} className="card" style={{ padding: '15px 17px' }}>
-                  <h3 style={{ fontSize: 14.5, fontWeight: 900, margin: 0 }}>
-                    <span dir="ltr" style={{ color: 'var(--accent-ink)' }}>{i + 1}.</span>{' '}
-                    {s.titleAr}
-                  </h3>
-                  <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '7px 0 0', lineHeight: 1.95 }}>
-                    {s.bodyAr}
-                  </p>
-                </li>
-              ))}
-            </ol>
           </Section>
 
           {/* 13 — what it is for (kept) */}

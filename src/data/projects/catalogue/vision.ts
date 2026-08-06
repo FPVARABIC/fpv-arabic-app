@@ -1,4 +1,4 @@
-import type { Project } from '../types';
+import type { ProjectSeed } from '../types';
 
 /**
  * Projects whose core problem is «understand the image».
@@ -27,7 +27,7 @@ import type { Project } from '../types';
  * a way of avoiding the word «no».
  */
 
-export const VISION_PROJECTS: Project[] = [
+export const VISION_PROJECTS: ProjectSeed[] = [
   /* ─────────────────────────────────────────────────────────────────────── */
   {
     id: 'visual-target-tracking',

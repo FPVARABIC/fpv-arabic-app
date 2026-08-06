@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
 import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
+import type { ProjectSeed } from '@core/data/projects/types';
 import { getProject } from '@core/data/projects/registry';
 import { resolvedProject } from '@/lib/server/projects';
 import { isKnownRef, PLANNED_SECTIONS } from '@/lib/projectRefOptions';
@@ -118,7 +119,7 @@ export async function saveProject(input: SaveProjectInput): Promise<ProjectActio
   // «حفظ» while still writing it.
   const existing = await readPublished(id);
 
-  const doc: Partial<Project> = {
+  const doc: Partial<ProjectSeed> = {
     ...built.value,
     published: existing ?? false,
     lastReviewed: monthStamp(),
@@ -235,7 +236,16 @@ export async function setProjectImage(
 
 type Built<T> = { value: T } | { errorAr: string };
 
-function buildProject(id: string, i: SaveProjectInput): Built<Partial<Project>> {
+/*
+ * The admin panel edits the SEED shape — a phase's title and its paragraph.
+ *
+ * The plan (goal, steps, exit condition) is authored in
+ * `src/data/projects/buildPlans.ts` and merged in the registry, because all ten
+ * plans must stay in the same shape and that is only reviewable when they sit
+ * in one file. An editor that let one project's phases drift into a different
+ * shape would undo exactly what this batch fixed.
+ */
+function buildProject(id: string, i: SaveProjectInput): Built<Partial<ProjectSeed>> {
   const titleAr = i.titleAr.trim();
   if (titleAr.length < 8) return { errorAr: 'العنوان العربي قصير جداً.' };
   const titleEn = i.titleEn.trim();

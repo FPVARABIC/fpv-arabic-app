@@ -1,8 +1,8 @@
-import type { Project } from '../types';
+import type { ProjectSeed } from '../types';
 
 /** Projects defined by the problem they solve rather than by the technique. */
 
-export const APPLIED_PROJECTS: Project[] = [
+export const APPLIED_PROJECTS: ProjectSeed[] = [
   /* ─────────────────────────────────────────────────────────────────────── */
   {
     id: 'crop-health-ndvi',

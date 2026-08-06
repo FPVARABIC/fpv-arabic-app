@@ -1,8 +1,8 @@
-import type { Project } from '../types';
+import type { ProjectSeed } from '../types';
 
 /** Projects whose core problem is «decide where to go, and get there safely». */
 
-export const AUTONOMY_PROJECTS: Project[] = [
+export const AUTONOMY_PROJECTS: ProjectSeed[] = [
   /* ─────────────────────────────────────────────────────────────────────── */
   {
     id: 'depth-obstacle-avoidance',

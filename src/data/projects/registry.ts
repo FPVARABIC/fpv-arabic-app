@@ -2,6 +2,7 @@ import type { Project, ProjectCategoryId, ProjectDifficulty } from './types';
 import { VISION_PROJECTS } from './catalogue/vision';
 import { AUTONOMY_PROJECTS } from './catalogue/autonomy';
 import { APPLIED_PROJECTS } from './catalogue/applied';
+import { stagesWithPlan } from './buildPlans';
 
 /**
  * The project library, assembled.
@@ -24,11 +25,24 @@ import { APPLIED_PROJECTS } from './catalogue/applied';
  * pattern twice is worth more than each half being independently clever.
  */
 
+/**
+ * THE BUILD PLAN IS MERGED HERE, NOT WRITTEN INTO THE CATALOGUE FILES
+ * ------------------------------------------------------------------
+ * The catalogue says what each project IS. `buildPlans.ts` says how it is
+ * BUILT, for all ten in one file, so the plans can be read against each other
+ * and kept in the same shape — which is the only way «المرحلة الأولى» means the
+ * same kind of thing in every project.
+ *
+ * Merging rather than replacing is deliberate: each original phase keeps its
+ * paragraph as context beneath its new steps. The old prose was accurate; what
+ * it lacked was a beginning and an exit condition, and that is what the plan
+ * adds.
+ */
 export const ALL_PROJECTS: Project[] = [
   ...VISION_PROJECTS,
   ...AUTONOMY_PROJECTS,
   ...APPLIED_PROJECTS,
-];
+].map(p => ({ ...p, stages: stagesWithPlan(p.id, p.stages) }));
 
 export function getProject(id: string): Project | undefined {
   return ALL_PROJECTS.find(p => p.id === id);
