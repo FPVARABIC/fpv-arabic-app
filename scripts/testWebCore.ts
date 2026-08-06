@@ -270,22 +270,23 @@ console.log('\n[5] Content ids are identical across surfaces');
 console.log('\n[6] Secrets never reach the browser');
 {
   /**
-   * The catastrophic failure mode for this codebase: firebase-admin bundled
-   * into client JavaScript, shipping a service account to every visitor.
+   * The catastrophic failure mode for this codebase: the service key bundled
+   * into client JavaScript, handing every visitor a credential that is exempt
+   * from row-level security entirely.
    *
-   * Two independent defences are asserted. First, every module that touches
-   * Admin opens with `import 'server-only'`, which makes the BUILD fail if a
-   * client component imports it. Second, no file carrying `'use client'` may
-   * import Admin at all.
+   * Phase six removed Firebase from the web wholesale, and this section now
+   * asserts that REMOVAL as well as the Supabase boundary: no web source may
+   * import the Firebase SDKs at all.
    */
-  const adminFiles = [...SOURCES.entries()]
-    .filter(([, s]) => s.includes('firebase-admin'));
-  ok(`admin-touching files exist to check (${adminFiles.length})`, adminFiles.length > 0);
-
-  for (const [f, s] of adminFiles) {
-    ok(`${f}: declares server-only`, /import\s+['"]server-only['"]/.test(s));
-    ok(`${f}: is not a client component`, !s.includes("'use client'"));
-  }
+  // On CODE lines only: this repository documents its decisions in prose,
+  // and ports.ts QUOTES the import it refuses to make.
+  const firebaseFiles = [...SOURCES.entries()]
+    .filter(([, s]) => s.split('\n').some(l =>
+      !/^\s*(\/\/|\*|\/\*)/.test(l) && /from\s+['"]firebase(-admin)?\//.test(l)))
+    .map(([f]) => f);
+  if (firebaseFiles.length) console.error('  FIREBASE IMPORT:', firebaseFiles);
+  ok('no web source imports any Firebase SDK', firebaseFiles.length === 0);
+  ok(`…and there were sources to check (${SOURCES.size})`, SOURCES.size > 50);
 
   /*
    * THE SAME TWO DEFENCES, FOR THE SECOND PROVIDER.
@@ -333,8 +334,8 @@ console.log('\n[6] Secrets never reach the browser');
 
   // The example env file must document names without values.
   const example = readFileSync(path.join(WEB, '.env.example'), 'utf8');
-  ok('.env.example exists and documents the server variables',
-    example.includes('FIREBASE_PRIVATE_KEY') && example.includes('NEXT_PUBLIC_FIREBASE_API_KEY'));
+  ok('.env.example documents no Firebase variable any more',
+    !example.includes('FIREBASE'));
   // Both providers, for as long as both exist. A variable the deployment needs
   // and the example file does not name is a variable somebody discovers by
   // watching production fail.
@@ -342,8 +343,11 @@ console.log('\n[6] Secrets never reach the browser');
     example.includes('NEXT_PUBLIC_SUPABASE_URL')
     && example.includes('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
     && example.includes('SUPABASE_SECRET_KEY'));
+  // Variable LINES only — the prose may mention `PAYMENT_PROVIDER=mollie` as
+  // documentation without that being a value anybody could paste-commit.
   ok('.env.example carries no values',
-    !/=\S/.test(example.replace(/^NEXT_PUBLIC_SITE_URL=.*$/m, '')));
+    !example.split('\n').some(l =>
+      !l.trim().startsWith('#') && !l.startsWith('NEXT_PUBLIC_SITE_URL=') && /=\S/.test(l)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -472,54 +476,79 @@ console.log('\n[9] The phone app is untouched by the web surface');
 /* ────────────────────────────────────────────────────────────────────────────
  * [10] Media — one pipeline, one Firebase, no second uploader
  * ──────────────────────────────────────────────────────────────────────────── */
-console.log('\n[10] The media pipeline is shared, not duplicated');
+console.log('\n[10] The media limits agree across the two pipelines');
 {
   const pipeline = readFileSync(path.join(ROOT, 'src/components/Community/Composer/mediaPipeline.ts'), 'utf8');
-  const webBinding = readFileSync(path.join(ROOT, 'web/lib/mediaUpload.ts'), 'utf8');
+  const webPipeline = readFileSync(path.join(ROOT, 'web/lib/mediaUpload.ts'), 'utf8');
   const phoneBinding = readFileSync(path.join(ROOT, 'src/components/Community/Composer/MediaUploader.ts'), 'utf8');
 
-  ok('the web binds the SHARED pipeline rather than importing firebase/storage itself',
-    webBinding.includes("@core/community/Composer/mediaPipeline"));
-  ok('the phone binds the same shared pipeline',
-    phoneBinding.includes("./mediaPipeline"));
+  /*
+   * THE RULE INVERTED IN PHASE FIVE, AND THE CHECK MOVED WITH IT.
+   *
+   * The shared pipeline opens with `import ... from 'firebase/storage'`, and
+   * importing ANY value from a module executes all of it — one line from that
+   * file in the web graph puts the Firebase SDK back in the web bundle. The
+   * phone keeps binding it untouched (Android is frozen); the web now carries
+   * its own pipeline on the storage port.
+   *
+   * What must not happen is the two surfaces disagreeing about «what may be
+   * uploaded». So the LIMITS are asserted EQUAL — by reading the core file as
+   * text and comparing the literal definitions, never by importing it. The
+   * duplication is checked, not trusted.
+   */
+  ok('the web pipeline does NOT import the Firebase-coupled shared one',
+    !webPipeline.split('\n').some(l =>
+      /^\s*import\b/.test(l) || /from\s+['"]/.test(l)
+        ? /Composer\/mediaPipeline/.test(l) && !/^\s*(\/\/|\*)/.test(l)
+        : false));
+  ok('the phone still binds the shared pipeline, untouched',
+    phoneBinding.includes('./mediaPipeline'));
 
-  // The limits must exist in exactly one place. A second copy is how the two
-  // surfaces start disagreeing with storage.rules.
-  for (const [name, pattern] of [
-    ['the image MIME allow-list', /ALLOWED_IMAGE_MIME_TYPES\s*=\s*\[/],
-    ['the video MIME allow-list', /ALLOWED_VIDEO_MIME_TYPES\s*=\s*\[/],
-    ['the compressed-image ceiling', /MAX_MEDIA_SIZE_BYTES\s*=/],
-    ['the raw-input ceiling', /MAX_RAW_INPUT_BYTES\s*=/],
-    ['the video byte ceiling', /MAX_VIDEO_SIZE_BYTES\s*=/],
-    ['the video duration ceiling', /MAX_VIDEO_DURATION_SECONDS\s*=/],
-  ] as const) {
-    ok(`${name} is DEFINED in the shared pipeline`, pattern.test(pipeline));
-    ok(`${name} is not re-defined in the web binding`, !pattern.test(webBinding));
-    ok(`${name} is not re-defined in the phone binding`, !pattern.test(phoneBinding));
+  const defOf = (src: string, name: string): string | null => {
+    const m = src.match(new RegExp(`${name}\\s*=\\s*([^;]+);`));
+    return m ? m[1].replace(/\s+/g, ' ').trim() : null;
+  };
+  for (const name of [
+    'MAX_MEDIA_SIZE_BYTES', 'MAX_RAW_INPUT_BYTES',
+    'MAX_VIDEO_SIZE_BYTES', 'MAX_VIDEO_DURATION_SECONDS',
+  ]) {
+    const core = defOf(pipeline, name);
+    const web = defOf(webPipeline, name);
+    ok(`${name}: defined on both surfaces and EQUAL (${core})`,
+      core !== null && web !== null && core === web);
+  }
+  for (const name of ['ALLOWED_IMAGE_MIME_TYPES', 'ALLOWED_VIDEO_MIME_TYPES']) {
+    const core = pipeline.match(new RegExp(`${name}\\s*=\\s*\\[([^\\]]+)\\]`))?.[1].replace(/\s+/g, '');
+    const web = webPipeline.match(new RegExp(`${name}\\s*=\\s*\\[([^\\]]+)\\]`))?.[1].replace(/\s+/g, '');
+    ok(`${name}: the allow-lists are identical (${core})`,
+      !!core && !!web && core === web);
   }
 
-  ok('the shared pipeline takes the storage handle as a parameter — that is what makes it shareable',
-    /uploadMediaWith\s*=\s*async\s*\(\s*\n?\s*storage:\s*FirebaseStorage/.test(pipeline));
-  ok('the shared pipeline imports no app-specific Firebase singleton',
-    !/lib\/firebase'|firebaseClient/.test(pipeline));
   ok('the shared pipeline imports no React', !/from 'react'/.test(pipeline));
+  ok('the web pipeline names no Firebase API on any code line',
+    !webPipeline.split('\n').some(l =>
+      !/^\s*(\/\/|\*|\/\*)/.test(l) && /firebase/i.test(l)));
 
   // The dual-instance trap. A runtime package imported by ../src MUST resolve
   // to one copy, or objects made by one half are unrecognisable to the other.
   const webPkg = JSON.parse(readFileSync(path.join(ROOT, 'web/package.json'), 'utf8')) as
     { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
   const webDeps = { ...webPkg.dependencies, ...webPkg.devDependencies };
-  for (const shared of ['firebase', 'browser-image-compression']) {
-    ok(`${shared} is NOT duplicated in web/package.json — the shared core imports it, so one copy must serve both`,
-      !(shared in webDeps));
-  }
-  ok('the web still declares firebase-admin, which only it uses',
-    'firebase-admin' in webDeps);
+  // INVERTED with phase six: the web imports nothing that the shared core
+  // couples to Firebase any more, so the dual-instance risk is gone — and a
+  // standalone `root=web` deploy resolves from web/package.json alone, so the
+  // web must carry its own compressor and no Firebase whatsoever.
+  ok('firebase is absent from web/package.json', !('firebase' in webDeps));
+  ok('firebase-admin is absent from web/package.json', !('firebase-admin' in webDeps));
+  ok('the web declares its own image compressor', 'browser-image-compression' in webDeps);
 
-  // The web must never invent its own storage path — the path IS the
-  // authorization in storage.rules.
-  ok('the folder path comes from the shared helper, never rebuilt in web code',
-    !/community\/posts\/\$\{/.test(readFileSync(path.join(ROOT, 'web/lib/communityWrites.ts'), 'utf8')));
+  // The Firebase-era `community/posts/…` STORAGE prefix must not be rebuilt
+  // anywhere: the bucket name is the prefix now, and the policies authorise on
+  // `{uid}/{postId}` alone. The `/community/posts/` URL ROUTE — leading slash
+  // — is a page path and entirely legitimate.
+  ok('no web source rebuilds the old community/posts storage prefix',
+    ![...SOURCES.values()].some(t =>
+      t.split('\n').some(l => /[^/]community\/posts\/\$\{|[`'"]community\/posts\//.test(l))));
 }
 
 console.log(`\n✅ testWebCore: ${passed} assertions passed\n`);

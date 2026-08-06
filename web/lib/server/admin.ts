@@ -498,11 +498,11 @@ export async function hideComment(actor: Session, requestId: string, input: Mode
  *
  * THE CLIENT NEVER NAMES A FILE
  * -----------------------------
- * The only input is a post id. The path deleted is read from THAT POST'S OWN
- * `mediaPath` field, which `firestore.rules` validated at creation time to
- * equal exactly `community/posts/{authorUid}/{postId}` — so it is structurally
- * impossible for this to touch another user's files, whatever a caller sends.
- * A forged URL or a hand-written path has nowhere to enter.
+ * The only input is a post id. The folder deleted is DERIVED from that post's
+ * own author and id — `{authorUid}/{postId}`, the only shape the storage
+ * policies ever accepted — so it is structurally impossible for this to touch
+ * another user's files, whatever a caller sends. A forged URL or a
+ * hand-written path has nowhere to enter.
  *
  * The stored path is re-derived and compared before anything is removed, so
  * even a post document corrupted by some other route cannot redirect this at a

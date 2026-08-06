@@ -71,9 +71,9 @@ function ok(label: string, cond: boolean): void {
  * caught this, and it stays for that reason.
  */
 const SERVER_SENTINELS: Record<string, string> = {
-  FIREBASE_CLIENT_EMAIL: 'sentinel-server-a1b2c3@sentinel-proj.iam.gserviceaccount.com',
-  FIREBASE_PRIVATE_KEY:
-    '-----BEGIN PRIVATE KEY-----\\nSENTINELSERVERKEYd4e5f6NOTAREALKEY==\\n-----END PRIVATE KEY-----\\n',
+  // Supabase's service key. `sb_secret_` is the real prefix, so the shape
+  // scanner below and the sentinel exercise the same pattern.
+  SUPABASE_SECRET_KEY: 'sb_secret_SENTINELSERVERKEYd4e5f6NOTAREALKEY',
 };
 
 /*
@@ -87,12 +87,8 @@ const SERVER_SENTINELS: Record<string, string> = {
  * assertion only asks whether that string reaches the browser.
  */
 const PUBLIC_SENTINELS: Record<string, string> = {
-  NEXT_PUBLIC_FIREBASE_API_KEY: 'SENTINEL-PUBLIC-APIKEY-j1k2l3m4n5o6p7q8r9s0t',
-  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: 'sentinel-public-u1v2w3.firebaseapp.com',
-  NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'sentinel-public-x4y5z6',
-  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: 'sentinel-public-x4y5z6.appspot.com',
-  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '901234567890',
-  NEXT_PUBLIC_FIREBASE_APP_ID: '1:901234567890:web:sentinelpublica7b8c9',
+  NEXT_PUBLIC_SUPABASE_URL: 'https://sentinel-public-x4y5z6.supabase.co',
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_SENTINELPUBLICj1k2l3m4n5o6',
 };
 
 /** Just the distinctive core, so line wrapping or escaping cannot hide a hit. */
@@ -167,9 +163,9 @@ const hits = (needle: string) => corpus.filter(c => c.text.includes(needle)).map
 console.log('\n[2] THE CONTROL — the public values ARE in the bundle, as they must be');
 {
   /*
-   * Firebase's web config is not a secret and cannot be one: the browser needs
-   * it to open a connection at all. Access is controlled by firestore.rules
-   * and storage.rules. If these were absent the site could not sign anybody
+   * The Supabase URL and publishable key are not secrets and cannot be: the
+   * browser needs them to open a connection at all. Access is controlled by
+   * row-level security. If these were absent the site could not sign anybody
    * in — and, more to the point here, section 3 below would be measuring an
    * empty directory and calling it safe.
    */
@@ -202,6 +198,13 @@ console.log('\n[3] No server-only credential is in anything a browser receives')
   const sa = corpus.filter(c => /[\w.-]+@[\w-]+\.iam\.gserviceaccount\.com/.test(c.text)).map(c => c.file);
   if (sa.length > 0) console.log(`      service account in: ${sa.slice(0, 5).join(', ')}`);
   ok('no service-account address anywhere in the bundle', sa.length === 0);
+
+  // The Supabase secret's SHAPE, independent of the sentinel — this catches a
+  // real key somebody hard-coded rather than read from the env. `sb_secret_`
+  // is the documented prefix of the new-format keys.
+  const sbSecret = corpus.filter(c => /sb_secret_[A-Za-z0-9]{8,}/.test(c.text)).map(c => c.file);
+  if (sbSecret.length > 0) console.log(`      sb_secret in: ${sbSecret.slice(0, 5).join(', ')}`);
+  ok('no Supabase secret-shaped key anywhere in the bundle', sbSecret.length === 0);
 }
 
 console.log('\n[4] The staging guarantees survive a real build');

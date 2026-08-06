@@ -1,6 +1,0 @@
-# Netlify requires this file for a local (path-declared) build plugin.
-# Without it the build fails at config resolution with:
-#   The plugin "./netlify/plugins/verify-publish" is missing a "manifest.yml".
-# Found by running the real pipeline; declaring the plugin in netlify.toml is
-# not enough on its own.
-name: verify-publish

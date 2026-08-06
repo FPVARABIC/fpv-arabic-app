@@ -374,10 +374,16 @@ console.log('\n[10] The dependency rule still holds');
     { dependencies?: Record<string, string> };
   const deps = webPkg.dependencies ?? {};
 
-  // Unchanged: a runtime package the SHARED CORE imports must have one copy.
-  for (const shared of ['firebase', 'browser-image-compression']) {
-    ok(`${shared} is still absent from web/package.json`, !(shared in deps));
-  }
+  // The rule INVERTED with phase six, and knowingly: the web no longer
+  // imports any module the shared core couples to Firebase, so the
+  // dual-instance risk the old rule guarded against cannot occur. What must
+  // be true now is the opposite pair — no Firebase at all, and the web's OWN
+  // copy of the compressor, because a standalone `root=web` deploy resolves
+  // dependencies from web/package.json alone (the Netlify build proved what
+  // happens otherwise: ten module-not-found errors).
+  ok('firebase is absent from web/package.json', !('firebase' in deps));
+  ok('firebase-admin is absent from web/package.json', !('firebase-admin' in deps));
+  ok('the web declares its own image compressor', 'browser-image-compression' in deps);
 
   // lucide-react is a different case and the difference is the whole rule:
   // nothing under ../src/data (the shared core) imports it, so the web having

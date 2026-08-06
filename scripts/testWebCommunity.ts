@@ -73,66 +73,77 @@ console.log('\n[1] One community — no parallel collection or second model');
 {
   ok(`community files exist (${FILES.length})`, FILES.length >= 5);
 
-  // The collection names must be exactly the ones the phone app already uses.
+  // One community means one set of tables, reached one way.
   const server = read('lib/server/community.ts');
-  ok('posts are read from the existing `posts` collection',
-    server.includes("collection('posts')"));
-  ok('comments are read from the existing `posts/{id}/comments` subcollection',
-    server.includes("collection('comments')"));
+  ok('server reads go through the backend adapter',
+    server.includes('serverSupabase') && server.includes('makeRead'));
 
   const writes = read('lib/communityWrites.ts');
-  ok('writes target `posts`', writes.includes("collection(db(), 'posts')"));
-  ok('comments are written to the same subcollection',
-    writes.includes("'posts', postId, 'comments'"));
-  ok('reports go to the existing `reports` collection',
-    writes.includes("collection(db(), 'reports')"));
+  ok('browser writes go through the write port',
+    writes.includes('browserBackend()'));
+  ok('neither file touches an SDK directly',
+    !server.includes('@supabase/') && !writes.includes('@supabase/'));
 
-  // No invented collection anywhere.
-  const INVENTED = /collection\((?:db\(\),\s*)?['"](webPosts|posts_web|communityWeb|feed|threads)['"]/;
+  const adapter = read('lib/backend/supabase/client.ts');
+  ok('the adapter reads the `posts` and `comments` tables the schema defines',
+    adapter.includes("from('posts')") && adapter.includes("from('comments')"));
+
+  // No invented table anywhere.
+  const INVENTED = /from\(['"](web_posts|posts_web|community_web|feed|threads)['"]\)/;
   const bad = FILES.filter(f => INVENTED.test(f.src)).map(f => f.rel);
-  if (bad.length) console.error('  PARALLEL COLLECTION:', bad);
-  ok('no parallel collection is introduced', bad.length === 0);
+  if (bad.length) console.error('  PARALLEL TABLE:', bad);
+  ok('no parallel table is introduced', bad.length === 0);
 
-  // The post/comment shape comes from the shared types, not a local redefinition.
-  ok('the shared community types are imported rather than redeclared',
-    server.includes('@core/community/') || writes.includes('@core/community/'));
-  ok('the search tokeniser is the shared one, not a second implementation',
-    writes.includes('normalizeDisplayName') && !/function normalizeToken/.test(writes));
+  // The category vocabulary is the shared one — checked equal, element for
+  // element, by the adapter suite; here it is enough that the page imports it.
+  ok('the shared category labels are imported rather than redeclared',
+    read('app/community/page.tsx').includes('@core/community/utils/categories')
+    || read('components/community/NewPostForm.tsx').includes('@core/community/utils/categories'));
+  ok('the search tokeniser is the shared one, inside the adapter',
+    adapter.includes('normalizeDisplayName') && !/function normalizeToken/.test(adapter));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[2] Reads restate the Firestore read rule the Admin SDK bypasses');
+console.log('\n[2] Reads carry the visitor\'s own session — the policy IS the filter');
 {
+  /*
+   * THE INVERSION THAT DEFINES THE MIGRATION. The Firebase version read
+   * through the Admin SDK, which bypassed the rules — so every query had to
+   * restate `status == 'active'` and THIS SUITE existed to check the
+   * restatements. The Supabase server client carries the visitor's own
+   * session, `posts_read_active` applies to it like any browser, and a
+   * restated filter would be a second copy of the rule that can drift. So
+   * the assertion flipped: the queries must NOT restate it.
+   */
+  const adapter = stripComments(read('lib/backend/supabase/client.ts'));
+  ok('no adapter read restates the status filter by hand',
+    !/eq\('status'/.test(adapter));
+  ok('the policy that does the filtering is real and proven',
+    readFileSync(path.join(ROOT, 'supabase/migrations/0002_rls_policies.sql'), 'utf8')
+      .includes('posts_read_active'));
+
   const server = read('lib/server/community.ts');
-
-  // The Admin SDK ignores rules. Every query MUST filter on status itself or
-  // hidden and deleted posts become public.
-  const queryCount = (server.match(/\.collection\(/g) ?? []).length;
-  const statusFilters = (server.match(/where\('status', '==', 'active'\)/g) ?? []).length;
-  ok(`every list query filters on status (${statusFilters} filters)`, statusFilters >= 2);
-  ok('there is at least one query per filter', queryCount >= statusFilters);
-
-  ok('a single post read also refuses non-active documents',
-    server.includes("post.status === 'active' ? post : null"));
-
-  ok('the module is server-only, so the Admin SDK cannot reach a browser',
-    /import\s+['"]server-only['"]/.test(server));
+  ok('a single post read still refuses non-active documents at the surface',
+    adapter.includes("post.status === 'active' ? post : null"));
+  ok('the module is server-only', /import\s+['"]server-only['"]/.test(server));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n[3] Pagination cannot duplicate or lose a post');
 {
-  const server = read('lib/server/community.ts');
+  const adapter = read('lib/backend/supabase/client.ts');
 
-  // A total order is what makes a cursor safe. createdAt alone is not total.
-  ok('posts are ordered by createdAt AND document id (a total order)',
-    server.includes("orderBy('createdAt', 'desc')") && server.includes("orderBy('__name__', 'desc')"));
-  ok('comments are ordered by createdAt AND document id',
-    server.includes("orderBy('createdAt', 'asc')") && server.includes("orderBy('__name__', 'asc')"));
-  ok('paging uses startAfter on that composite, not an offset',
-    server.includes('startAfter(') && !/\.offset\(/.test(server));
+  // A total order is what makes a cursor safe. created_at alone is not total.
+  ok('posts are ordered by created_at AND id (a total order)',
+    adapter.includes("order('created_at', { ascending: false })")
+    && adapter.includes("order('id', { ascending: false })"));
+  ok('comments are ordered by created_at AND id, oldest first',
+    adapter.includes("order('created_at', { ascending: true })")
+    && adapter.includes("order('id', { ascending: true })"));
+  ok('paging uses a keyset filter on that composite, not an offset',
+    adapter.includes('keysetFilter(') && !/\.range\(|\.offset\(/.test(adapter));
   ok('the "is there more" answer comes from an extra row, not a separate count',
-    server.includes('limit + 1'));
+    adapter.includes('limit + 1'));
 
   // Behavioural: the cursor must survive a round trip and reject hostile input.
   //
@@ -208,69 +219,51 @@ console.log('\n[4] User content can never become HTML');
 console.log('\n[5] Writes cannot forge identity, status or ranking');
 {
   const writes = read('lib/communityWrites.ts');
+  const adapter = stripComments(read('lib/backend/supabase/client.ts'));
 
-  ok('the author is taken from the verified Firebase user, never an argument',
-    writes.includes('authorId: user.uid') && !/authorId:\s*input\./.test(writes));
   ok('no write function accepts an authorId parameter',
     !/authorId[?]?:\s*string/.test(writes));
-  ok('timestamps are the server\'s, never a client clock',
-    writes.includes('serverTimestamp()') && !/createdAt:\s*new Date/.test(writes));
-  ok('a new post is always created active', writes.includes("status: 'active'"));
-  ok('a report is always created unresolved — a reporter cannot pre-close it',
-    writes.includes('resolved: false'));
-  /**
-   * Extracts ONE function's body.
-   *
-   * A character-window regex around a function name reads into whichever
-   * function happens to follow it — which is how the first version of this
-   * check reported that `editPostText` sends a `status` field when in fact the
-   * NEXT function, softDeletePost, does. Bounding the slice at the next
-   * top-level `export` makes the assertion about the function it names.
-   */
-  const bodyOf = (src: string, name: string): string => {
-    const start = src.indexOf(`export async function ${name}`);
-    if (start < 0) return '';
-    const after = src.indexOf('\nexport ', start + 1);
-    return src.slice(start, after < 0 ? src.length : after);
-  };
-
-  // Comments stripped first: the slice between one function and the next
-  // `export` also contains the NEXT function's doc comment, and that comment
-  // legitimately explains what soft-deletion writes.
-  const editBody = bodyOf(stripComments(writes), 'editPostText');
-  ok('an edit sends exactly text, searchTokens and editedAt — in that shape',
-    /text:[\s\S]*?searchTokens:[\s\S]*?editedAt:/.test(editBody));
-  ok('an edit sends no status, category or media field',
-    !/(status:|category:|mediaType:|authorId:)/.test(editBody));
-  ok('…and nothing about likes or ranking',
-    !/(likesCount|feedScore)/.test(editBody));
+  ok('the adapter sends the SESSION\'s id — and the policy re-checks it',
+    adapter.includes('author_id: user'));
+  ok('timestamps are the database\'s, never a client clock',
+    !/created_at:\s*new Date|createdAt:\s*new Date/.test(adapter + writes));
+  ok('no write names a status other than the soft-delete',
+    !/status:\s*'(?!deleted)/.test(stripComments(writes)));
+  ok('nothing about likes or ranking is writable from here',
+    !/(likes_count|likesCount|feed_score|feedScore)\s*:/.test(adapter + stripComments(writes)));
   ok('deletion is soft only — no hard delete anywhere',
-    writes.includes("status: 'deleted'") && !/deleteDoc\(/.test(writes));
+    adapter.includes("update({ status: 'deleted' })") && !/\.delete\(\)\.eq\('id', postId\)/.test(adapter));
 
-  // Every mutating helper requires a signed-in user before it does anything.
-  const helpers = ['createPost', 'editPostText', 'softDeletePost', 'createComment',
-    'softDeleteComment', 'reportContent'];
-  for (const h of helpers) {
-    const body = writes.slice(writes.indexOf(`export async function ${h}`));
-    ok(`${h} requires a signed-in user first`,
-      body.slice(0, 400).includes('requireUser()'));
-  }
+  // The author denorm and the counters are the DATABASE\'s job now; a client
+  // copy would be the forgeable one.
+  ok('the client sends no author_name — the trigger fills it',
+    !/author_name\s*:/.test(adapter));
+  ok('the client bumps no counter — the triggers maintain them',
+    !/comments_count|likes_count/.test(adapter.replace(/select\([^)]*\)/g, '')));
+
+  // createPost refuses an anonymous browser before any upload starts.
+  const createBody = writes.slice(writes.indexOf('export async function createPost'));
+  ok('createPost resolves the signed-in user first',
+    createBody.slice(0, 600).includes('auth.currentUser()'));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 console.log('\n[6] The rules — not the UI — are the authority');
 {
-  const rules = readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8');
+  const policies = readFileSync(path.join(ROOT, 'supabase/migrations/0002_rls_policies.sql'), 'utf8');
+  const grants = readFileSync(path.join(ROOT, 'supabase/migrations/0006_community_web.sql'), 'utf8');
 
-  // The edit branch this batch ADDED, and the constraints that make it safe.
-  ok('an owner-edit branch exists', rules.includes("hasOnly(['text', 'searchTokens', 'editedAt'])"));
-  ok('…restricted to the author', /resource\.data\.authorId == request\.auth\.uid/.test(rules));
-  ok('…and to a non-banned caller', rules.includes('isActiveCaller()'));
-  ok('…and only while the post is active',
-    /resource\.data\.status == 'active'\s*\n\s*&& request\.resource\.data\.diff/.test(rules));
-  ok('…with a server-clock editedAt, so an edit cannot be backdated',
-    rules.includes('request.resource.data.editedAt == request.time'));
-  ok('posts are still never hard-deleted', rules.includes('allow delete: if false'));
+  // The owner-edit rule and the constraints that make it safe — in SQL now,
+  // and EXERCISED by `npm run test:rls` rather than merely read here.
+  ok('an owner-update policy exists, restricted to the author',
+    policies.includes('posts_update_own')
+    && policies.includes('author_id = auth.uid()'));
+  ok('…and to a non-banned caller', policies.includes('is_active()'));
+  ok('…and a moderated post cannot be resurrected by its author',
+    policies.includes("status in ('active', 'deleted')"));
+  ok('the hasOnly() allow-list became column-narrowed grants',
+    grants.includes('grant update (text, search_tokens, edited_at, status)'));
+  ok('posts are still never hard-deleted — no client DELETE policy at all',
+    policies.includes('NO DELETE POLICY, FOR ANYBODY'));
 
   // The UI's isOwner is presentation; the page must still pass the real uid.
   const postPage = read('app/community/posts/[postId]/page.tsx');
@@ -367,56 +360,48 @@ console.log('\n[8] Accessibility and RTL basics');
  * a regression is caught in seconds by `npm run test:web-community`, without
  * needing an emulator, a build and a browser.
  * ──────────────────────────────────────────────────────────────────────────── */
-console.log('\n[11] The write path agrees with firestore.rules');
+console.log('\n[11] The write path agrees with the DATABASE');
 {
-  const rules = readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8');
   const writes = stripComments(read('lib/communityWrites.ts'));
+  const migration = readFileSync(path.join(ROOT, 'supabase/migrations/0006_community_web.sql'), 'utf8');
 
-  // The auth-state race: reading `currentUser` synchronously writes as nobody
-  // whenever the SDK has not finished restoring from IndexedDB.
-  ok('the signed-in user is resolved only after auth state has settled',
-    /authStateReady\(\)/.test(writes));
-  ok('no code path reads currentUser without that wait',
-    !/currentUser/.test(writes.replace(/await auth\.authStateReady\(\);[\s\S]{0,120}?currentUser/, '')));
+  // The anti-spam windows live IN the insert policies now — there is no
+  // profile stamp whose omission would disarm them, which is the bug class
+  // the Firebase version had to test for. What remains client-side is the
+  // courtesy message, and its numbers must match the policy's.
+  ok('the 60-second post window is in the INSERT policy',
+    migration.includes("interval '60 seconds'") && migration.includes('post_cooldown_ok'));
+  ok('the 5-second comment window is in the INSERT policy',
+    migration.includes("interval '5 seconds'") && migration.includes('comment_cooldown_ok'));
+  ok('the UI advertises the same windows',
+    /POST_COOLDOWN_MS = 60_000/.test(writes) && /COMMENT_COOLDOWN_MS = 5_000/.test(writes));
 
-  // The anti-spam windows: the rules gate on the AUTHOR'S OWN profile write,
-  // so a surface that skips it walks past the limit entirely.
-  ok('firestore.rules really does rate-limit posting on lastPostAt',
-    /callerProfile\(\)\.lastPostAt/.test(rules));
-  ok('creating a post arms that limit by stamping lastPostAt',
-    /lastPostAt: serverTimestamp\(\)/.test(writes));
-  ok('creating a post also keeps the profile post count truthful',
-    /postsCount: increment\(1\)/.test(writes));
-  ok('the post and its rate-limit stamp are written atomically',
-    /writeBatch\(/.test(writes));
+  // A limit the UI advertises must be the limit the platform applies.
+  ok('the comment length the UI enforces is the platform\'s 500',
+    /COMMENT_TEXT_MAX = 500/.test(writes));
+  ok('the post length the UI enforces is the platform\'s 2000',
+    /POST_TEXT_MAX = 2000/.test(writes));
 
-  ok('firestore.rules really does rate-limit commenting on lastCommentAt',
-    /callerProfile\(\)\.lastCommentAt/.test(rules));
-  ok('commenting arms that limit by stamping lastCommentAt',
-    /lastCommentAt: serverTimestamp\(\)/.test(writes));
+  // The counters and the author denorm are triggers — nothing to forget.
+  ok('the comment counter is a database trigger', migration.includes('comments_count_sync'));
+  ok('the like counter is a database trigger', migration.includes('post_likes_count_sync'));
+  ok('the author name is filled by a trigger that IGNORES the client\'s value',
+    migration.includes('fill_author_denorm'));
 
-  // A limit the UI advertises must be the limit the database applies.
-  const ruleCommentMax = rules.match(/text\.size\(\) <= (\d+)/g) ?? [];
-  ok('the comment length the UI enforces equals the one the rules enforce',
-    /COMMENT_TEXT_MAX = 500/.test(writes) && ruleCommentMax.some(m => m.includes('500')));
-  ok('the post length the UI enforces equals the one the rules enforce',
-    /POST_TEXT_MAX = 2000/.test(writes) && ruleCommentMax.some(m => m.includes('2000')));
-
-  // A note is legal on exactly one reason; sending one otherwise destroys the
-  // whole report rather than being ignored.
-  ok('a report note is sent only for the one reason the rules permit it on',
+  // A note is legal on exactly one reason, and its cap is stated once.
+  ok('a report note is sent only for the one reason that takes one',
     /REPORT_REASON_WITH_NOTE/.test(writes));
-  ok('the note length matches the rules\' 200-character cap',
-    /REPORT_NOTE_MAX = 200/.test(writes));
+  ok('the note cap is 200', /REPORT_NOTE_MAX = 200/.test(writes));
   ok('the note field is hidden for every other reason',
     read('components/community/PostActions.tsx').includes('reason === REPORT_REASON_WITH_NOTE'));
 
-  // A check that swallows its own permission error always passes and proves
-  // nothing. The rules were widened so this one can genuinely run.
-  ok('a reporter may read back their own reports, so the duplicate guard can fire',
-    /resource\.data\.reporterId == request\.auth\.uid/.test(rules));
-  ok('the duplicate check no longer swallows a refusal',
-    !/getDocs\(query\([\s\S]{0,400}?\)\)\.catch\(/.test(writes));
+  // The duplicate-report guard is a UNIQUE INDEX — mechanical, not a
+  // read-back that could swallow its own refusal.
+  const schema = readFileSync(path.join(ROOT, 'supabase/migrations/0001_schema.sql'), 'utf8');
+  ok('one open report per person per target is a partial unique index',
+    schema.includes('reports_one_open_per_reporter'));
+  ok('the UI translates that refusal instead of re-querying the queue',
+    writes.includes('سبق أن أبلغت'));
 }
 
 /* ────────────────────────────────────────────────────────────────────────────

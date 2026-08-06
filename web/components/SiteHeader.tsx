@@ -3,7 +3,7 @@ import { navItem } from '@/lib/siteNav';
 import { NavTabs } from '@/components/NavTabs';
 import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { CartBadge } from '@/components/store/CartControls';
-import { isStaff, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
+import { HeaderSession } from '@/components/auth/HeaderSession';
 import { BRAND_NAME, BRAND_NAME_AR } from '@core/data/brand';
 
 /**
@@ -32,14 +32,8 @@ import { BRAND_NAME, BRAND_NAME_AR } from '@core/data/brand';
  * and the header keeps only identity, search and the basket.
  */
 
-export const SiteHeader: React.FC<{
-  signedIn: boolean;
-  displayName: string | null;
-  photoURL: string | null;
-  role: PlatformRole;
-}> = ({ signedIn, displayName, photoURL, role }) => {
+export const SiteHeader: React.FC = () => {
   const admin = navItem('admin');
-  const showAdmin = signedIn && isStaff(role);
 
   return (
     <header
@@ -123,77 +117,12 @@ export const SiteHeader: React.FC<{
             every page in the site costs no database read. */}
         <CartBadge />
 
-        {showAdmin && admin && (
-          <Link
-            href={admin.href}
-            data-testid="nav-admin"
-            style={{
-              display: 'inline-block', padding: '6px 12px', borderRadius: 9,
-              fontSize: 13, fontWeight: 800, color: 'var(--nav-ink)',
-              border: '1px solid rgba(18,34,42,0.28)', whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            {admin.labelAr}
-          </Link>
-        )}
-
-        <div style={{ flexShrink: 0 }}>
-          {signedIn ? (
-            <Link
-              href="/profile"
-              data-testid="header-account"
-              style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-            >
-              {photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoURL}
-                  alt=""
-                  width={28}
-                  height={28}
-                  style={{
-                    width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
-                    border: '2px solid rgba(255,255,255,0.7)',
-                  }}
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: 'var(--acct-blue)', color: '#fff',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 800, fontSize: 13,
-                  }}
-                >
-                  {(displayName ?? 'ح').trim().charAt(0)}
-                </span>
-              )}
-              <span
-                className="header-account-name"
-                style={{ fontSize: 13, fontWeight: 800, color: 'var(--nav-ink)' }}
-              >
-                {displayName ?? 'حسابي'}
-              </span>
-              {role !== 'user' && (
-                <span
-                  className="header-account-role"
-                  style={{
-                    fontSize: 10, fontWeight: 800, color: 'var(--nav-ink)',
-                    border: '1px solid rgba(18,34,42,0.28)', borderRadius: 999,
-                    padding: '2px 8px',
-                  }}
-                >
-                  {ROLE_LABEL_AR[role]}
-                </span>
-              )}
-            </Link>
-          ) : (
-            <Link href="/signin" className="btn-ghost" data-testid="header-signin">
-              تسجيل الدخول
-            </Link>
-          )}
+        {/* The admin link and the account chip hydrate in the browser — one
+            `cookies()` read in the layout would make every route on the site
+            request-rendered, and the account corner is presentation, not a
+            gate. See HeaderSession for the full argument. */}
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <HeaderSession adminHref={admin?.href ?? null} adminLabelAr={admin?.labelAr ?? null} />
         </div>
       </div>
     </header>

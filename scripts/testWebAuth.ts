@@ -1,5 +1,5 @@
 /**
- * The authentication and session gate.
+ * The authentication and session gate — the Supabase edition.
  *
  * WHAT THIS PROVES
  * ----------------
@@ -8,20 +8,20 @@
  * session does not count as done, so every property that makes it a real
  * session is asserted here against the source:
  *
- *   the browser's ID token is exchanged for an httpOnly cookie
- *   the cookie is verified server-side on every private request
- *   a role is never read from anything the browser sent
+ *   the session is VERIFIED against the Auth server, never trusted from a cookie
+ *   a role is never read from anything the browser sent — the profiles row is
+ *     the sole authority, re-read on every request
+ *   a banned account keeps a session and loses every capability
  *   the post-login redirect cannot be pointed off-site
- *   signing out revokes tokens rather than only clearing a cookie
+ *   signing out revokes the session with the Auth server, not just locally
  *
- * WHY SOURCE ASSERTIONS AND NOT ONLY A BROWSER RUN
- * ------------------------------------------------
- * The browser test (`testWebUI.ts`) can prove a signed-out user is redirected.
- * It cannot prove WHY, and it cannot prove that the cookie is httpOnly, that
- * the token freshness window exists, or that a banned account is refused a
- * cookie — those are properties of code paths that a passing UI run never
- * exercises. Both kinds of check are needed; this is the half that catches a
- * security property being quietly removed.
+ * WHAT CHANGED WITH THE MIGRATION, STATED RATHER THAN PAPERED OVER
+ * ----------------------------------------------------------------
+ * The Firebase design needed a token-exchange endpoint, because its browser
+ * SDK kept the token where the server could not see it. Supabase's cookies
+ * ARE the shared channel, so the endpoint is GONE — and its absence is now an
+ * assertion, because a resurrected exchange endpoint would mean somebody
+ * reintroduced the two-channel model without the design that made it safe.
  *
  * Run: npx tsx scripts/testWebAuth.ts
  */
@@ -41,76 +41,70 @@ function ok(label: string, cond: boolean) {
 }
 
 const read = (rel: string) => readFileSync(path.join(WEB, rel), 'utf8');
+const codeOf = (src: string) => src
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .split('\n').filter(l => !/^\s*(\/\/|\*)/.test(l)).join('\n');
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[1] The ID token is exchanged for a server-verified cookie');
+console.log('\n[1] The session is Supabase\'s cookies — no token exchange exists');
 {
-  const rel = 'app/api/auth/session/route.ts';
-  ok('the session exchange endpoint exists', existsSync(path.join(WEB, rel)));
-  const src = read(rel);
+  ok('the Firebase token-exchange endpoint is GONE',
+    !existsSync(path.join(WEB, 'app/api/auth/session')));
 
-  ok('it verifies the ID token with the Admin SDK', src.includes('verifyIdToken'));
-  ok('…with revocation checking enabled (a disabled or signed-out account is refused)',
-    /verifyIdToken\(\s*idToken\s*,\s*true\s*\)/.test(src));
-  ok('it mints a Firebase session cookie', src.includes('createSessionCookie'));
+  const auth = read('lib/backend/supabase/auth.ts');
+  // `getUser()` asks the Auth server whether the token is still valid;
+  // `getSession()` reads the cookie and believes it. On the server that
+  // distinction is the whole point of checking at all.
+  ok('the adapter verifies with getUser(), never trusts getSession()',
+    auth.includes('sb.auth.getUser()'));
+  ok('sign-out is implemented on the port', auth.includes('signOut'));
 
-  // A stale token must not be convertible into a long-lived session.
-  ok('it rejects a token that is not from a fresh sign-in',
-    src.includes('auth_time') && /MAX_TOKEN_AGE/.test(src));
-
-  // A banned account may authenticate with Firebase; it must not get a session.
-  ok('a banned account is refused a session at the door',
-    /status\s*===\s*'banned'/.test(src));
-
-  // The body is used ONLY for the token — no role, no uid, nothing else.
-  ok('nothing but the id token is taken from the request body',
-    !/body\?\.(role|uid|isAdmin|claims)/.test(src));
-  ok('the endpoint never writes a role', !/setCustomUserClaims|\.set\(\{[^}]*role/.test(src));
+  const server = read('lib/backend/supabase/server.ts');
+  ok('the server client is built per request, never memoised at module scope',
+    !/^let\s+\w*[Cc]lient/m.test(codeOf(server)));
+  ok('…and carries the PUBLISHABLE key — the server adapter is not privileged',
+    server.includes('SUPABASE_PUBLISHABLE_KEY') && !server.includes('SECRET'));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[2] The cookie itself carries the security properties');
+console.log('\n[2] The session module: one authority for «who is asking»');
 {
-  const src = read('app/api/auth/session/route.ts');
+  const session = read('lib/server/session.ts');
+  ok('the session module is server-only', /import\s+['"]server-only['"]/.test(session));
+  ok('it answers through the backend adapter, not through a cookie parse',
+    session.includes('serverUser()'));
+  ok('a banned account has no role whatever the row says',
+    session.includes("status === 'banned'"));
+  ok('requireCapability throws rather than returning a boolean',
+    session.includes('throw new ForbiddenError'));
+  ok('the capability check is the shared core\'s, not a local copy',
+    /from '@core\/data\/auth\/roles'/.test(session));
 
-  ok('httpOnly — script cannot read the session, so XSS cannot steal it',
-    /httpOnly:\s*true/.test(src));
-  ok('secure in production — never sent over plain HTTP',
-    /secure:\s*process\.env\.NODE_ENV === 'production'/.test(src));
-  ok('sameSite lax — a cross-site POST cannot ride the session',
-    /sameSite:\s*'lax'/.test(src));
-  ok('a bounded lifetime — no permanent key', /maxAge:/.test(src));
-  ok('scoped to the whole site so server rendering can read it', /path:\s*'\/'/.test(src));
-
-  // The raw cookie value must never be handed to the client.
-  ok('the minted cookie value is never returned in the response body',
-    !/json\(\{[^}]*sessionCookie/.test(src));
+  const auth = read('lib/backend/supabase/auth.ts');
+  ok('the role comes from the profiles table, re-read per request',
+    auth.includes("from('profiles')") && auth.includes('role, status'));
+  ok('the role is NEVER read from a JWT claim',
+    !/jwt|claims?\[/i.test(codeOf(auth)));
+  ok('a banned session collapses to `user` before the value leaves the adapter',
+    auth.includes("status === 'banned' ? 'user' : role"));
+  ok('every failure collapses to «not signed in» rather than throwing',
+    /catch\s*\{\s*\n?\s*return null;/.test(auth));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[3] Sign-out actually ends the session everywhere');
+console.log('\n[3] Sign-out actually ends the session');
 {
-  const src = read('app/api/auth/session/route.ts');
-  ok('DELETE clears the cookie', /maxAge:\s*0/.test(src));
-  ok('…and revokes refresh tokens, killing other devices\' sessions',
-    src.includes('revokeRefreshTokens'));
-
-  // Assert against the CODE, not the whole file: the doc comment above the
-  // component names both calls in the opposite order while explaining them, and
-  // an index comparison over the raw text reads the prose rather than the logic.
   const button = read('components/auth/SignOutButton.tsx');
-  const buttonCode = button.replace(/\/\*[\s\S]*?\*\//g, '');
-  ok('the client calls the server first, not local state first',
-    buttonCode.indexOf("method: 'DELETE'") >= 0
-    && buttonCode.indexOf("method: 'DELETE'") < buttonCode.indexOf('signOut()'));
-  ok('a failed sign-out surfaces an error rather than pretending to succeed',
-    button.includes('تعذّر تسجيل الخروج'));
+  ok('the button signs out through the port, never the SDK',
+    button.includes('browserBackend().auth.signOut')
+    && !button.includes('@supabase/'));
+  ok('the server components are re-rendered from the server\'s view afterwards',
+    button.includes('router.refresh()'));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n[4] Private surfaces verify server-side, not in the browser');
 {
-  // Every private page must call the server guard.
   const PRIVATE_PAGES = ['app/profile/page.tsx', 'app/admin/page.tsx'];
   for (const rel of PRIVATE_PAGES) {
     const src = read(rel);
@@ -121,36 +115,6 @@ console.log('\n[4] Private surfaces verify server-side, not in the browser');
     ok(`${rel}: is not statically cached`, src.includes("dynamic = 'force-dynamic'"));
     ok(`${rel}: is excluded from indexing`, /index:\s*false/.test(src));
   }
-
-  const session = read('lib/server/session.ts');
-  ok('the session module is server-only', /import\s+['"]server-only['"]/.test(session));
-  ok('the cookie signature is verified, with revocation checking',
-    /verifySessionCookie\([^)]*,\s*true\s*\)/.test(session));
-  ok('the role is re-read from Firestore, not taken from the cookie alone',
-    session.includes("collection('users')"));
-  // CHANGED IN BATCH 4, DELIBERATELY.
-  //
-  // This asserted that the LOWER of the custom claim and the Firestore document
-  // won. That made revocation immediate, but it also meant an account with NO
-  // claim had no role at all — so any account provisioned by seeding, by a
-  // migration, from the console or from a backup was silently powerless on the
-  // web while `firestore.rules` treated it as a full moderator. The end-to-end
-  // suite caught exactly that.
-  //
-  // The document is now the sole authority, which is the same field the rules
-  // read. Revocation is still immediate — the document is read fresh on every
-  // request — and a stale HIGH claim still cannot escalate, because the claim
-  // is not consulted at all.
-  ok('the role comes from the Firestore document, the same field firestore.rules reads',
-    session.includes('const role: PlatformRole = toRole(profile.role);'));
-  ok('the custom claim is never consulted to grant a role',
-    !/claimRole/.test(session));
-  ok('a banned account has no role whatever the document says',
-    session.includes("role: status === 'banned' ? 'user' : role"));
-  ok('a banned account loses every capability regardless of its stored role',
-    /status === 'banned' \? 'user' : role/.test(session));
-  ok('every failure collapses to "not signed in" rather than throwing',
-    /catch\s*\{\s*return null;\s*\}/.test(session));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,7 +135,7 @@ console.log('\n[5] The post-login redirect cannot be pointed off-site');
     'http://evil.example',
     '',
     'relative/path',
-    '/api/auth/session',
+    '/api/admin/users',
   ];
   for (const a of ATTACKS) {
     ok(`rejected: ${JSON.stringify(a)}`, safe(a) === '/');
@@ -193,45 +157,51 @@ console.log('\n[6] The client never learns anything it could forge');
   const form = read('components/auth/SignInForm.tsx');
 
   ok('the sign-in form is a client component', form.includes("'use client'"));
-  ok('…and does not import the Admin SDK', !form.includes('firebase-admin'));
+  ok('…and talks to the PORT, not to any SDK',
+    form.includes('browserBackend()') && !form.includes('@supabase/'));
   ok('…and does not import the server session module', !/server\/session/.test(form));
+  ok('…and cannot reach the privileged adapters',
+    !/backend\/supabase\/(admin|adminData|service|server)/.test(form));
 
-  // If the exchange fails, the browser must not be left holding a Firebase
-  // session the site does not recognise.
-  ok('a refused exchange signs the browser back out',
-    form.includes('await clientAuth().signOut()'));
-
-  // Error text must not distinguish "no such user" from "wrong password".
+  // Error text must not distinguish «no such account» from «wrong password».
+  const auth = read('lib/backend/supabase/auth.ts');
   ok('credential errors do not enumerate accounts',
-    form.includes("'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة.'"));
+    auth.includes('البريد أو كلمة المرور غير صحيحة'));
+  ok('the reset flow does not enumerate either',
+    auth.includes('resetPasswordForEmail')
+    && read('components/auth/SignInForm.tsx').includes('إن كان البريد مسجَّلاً'));
 
-  const client = read('lib/firebaseClient.ts');
-  ok('the client Firebase module holds no server secret',
-    !/FIREBASE_PRIVATE_KEY|FIREBASE_CLIENT_EMAIL|service_account/.test(client));
-  ok('it reads only NEXT_PUBLIC_ variables',
-    (client.match(/process\.env\.[A-Z_]+/g) ?? []).every(v => v.includes('NEXT_PUBLIC_')));
+  const env = read('lib/backend/supabase/env.ts');
+  ok('the public env module reads only NEXT_PUBLIC_ variables',
+    (codeOf(env).match(/process\.env\.[A-Z_]+/g) ?? []).every(v => v.includes('NEXT_PUBLIC_')));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[7] Middleware is honest about being a first filter only');
+console.log('\n[7] Middleware refreshes the session and gates — and no more');
 {
   const mw = read('middleware.ts');
-  ok('it guards the admin, admin-api and private paths',
-    /'\/admin\/:path\*'/.test(mw) && /'\/api\/admin\/:path\*'/.test(mw)
-    && /'\/profile\/:path\*'/.test(mw));
+  ok('it refreshes through the adapter, keeping the SDK confined',
+    mw.includes("from '@/lib/backend/supabase/middleware'"));
+  ok('it gates the admin, admin-api and private prefixes',
+    mw.includes("startsWith('/admin')") || /isAdmin\b/.test(mw));
   ok('an API caller gets JSON 401 rather than an HTML redirect',
     /NextResponse\.json\([^)]*401/.test(mw));
+  ok('the matcher covers every page — refresh confined to /admin was the random-logout bug',
+    mw.includes('_next/static'));
 
-  // It must NOT pretend to authorise: no role logic, no Admin SDK. Checked
-  // against the CODE only — the doc comment necessarily discusses roles while
-  // explaining that this file deliberately does not decide them, and matching
-  // prose would punish the file for documenting its own limits.
-  const mwCode = mw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  ok('it does not import the Admin SDK (it cannot run in the edge runtime)',
-    !mw.includes('firebase-admin'));
+  // It must NOT pretend to authorise: it answers «is anybody signed in»,
+  // never «may they».
+  const mwCode = codeOf(mw);
   ok('it makes no role decision', !/\brole\b|capability|isStaff|can\(/.test(mwCode));
-  ok('it documents that the real gate is server-side',
-    mw.includes('presence-only') || mw.includes('cannot verify'));
+  ok('it documents that the real gate is the page-level capability check',
+    mw.includes('requireCapability'));
+
+  const refresher = read('lib/backend/supabase/middleware.ts');
+  ok('the refresher writes cookies to BOTH the request and the response',
+    refresher.includes('request.cookies.set') && refresher.includes('response.cookies.set'));
+  ok('the refresher verifies with getUser()', refresher.includes('auth.getUser()'));
+  ok('an unconfigured environment fails CLOSED, not open',
+    refresher.includes('signedIn: false'));
 }
 
 console.log(`\n✅ testWebAuth: ${passed} assertions passed\n`);

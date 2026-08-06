@@ -134,194 +134,74 @@ function note(m: string) { notes.push(m); }
   }
 }
 
-/* ── 2. The deploy target ─────────────────────────────────────────────────── */
-{
-  if (!has('.firebaserc')) {
-    need('.firebaserc — run `npx firebase use --add` once and commit the result');
-  } else {
-    const rc = JSON.parse(read('.firebaserc')) as { projects?: Record<string, string> };
-    const def = rc.projects?.default;
-    if (!def) blocker('.firebaserc has no default project');
-    else note(`deploy target: ${def}`);
-  }
-
-  if (!has('web/apphosting.yaml')) blocker('web/apphosting.yaml is missing — App Hosting has nothing to build');
-  if (!has('web/apphosting.staging.yaml')) note('no staging config — staging deploys will use production values');
-
-  const fb = JSON.parse(read('firebase.json')) as Record<string, unknown>;
-  if (!fb.firestore) blocker('firebase.json declares no firestore rules');
-  if (!fb.storage) blocker('firebase.json declares no storage rules');
-  if (fb.hosting) {
-    blocker('firebase.json declares static `hosting` — this app is server-rendered '
-      + 'and static hosting would ship a shell whose interactive half 404s');
-  }
-
-  // Every secret the runtime asks for must be NAMED in the config, or the
-  // deploy succeeds and the site fails on its first request.
-  const yaml = read('web/apphosting.yaml');
-  const RUNTIME_VARS = [
-    'NEXT_PUBLIC_FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-    'NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-    'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID',
-    'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY',
-    'PAYMENT_PROVIDER',
-  ];
-  for (const v of RUNTIME_VARS) {
-    if (!yaml.includes(`variable: ${v}`)) blocker(`web/apphosting.yaml never declares ${v}`);
-  }
-
-  // NEXT_PUBLIC_SITE_URL is deliberately NOT in that list. It is the single
-  // switch that makes a deployment indexable, and its absence is the safe
-  // state — so it is reported as work remaining, never as a fault.
-  if (!/^\s*- variable: NEXT_PUBLIC_SITE_URL\s*$/m.test(
-    yaml.split('\n').filter(l => !/^\s*#/.test(l)).join('\n'))) {
-    need('NEXT_PUBLIC_SITE_URL is not set in web/apphosting.yaml, so EVERY deployment '
-      + 'is noindex — correct until fpvarabic.com resolves to the production backend, '
-      + 'and the one line to uncomment on the day it does');
-  }
-
-  // A private value marked BUILD is compiled into JavaScript a visitor can read.
-  for (const priv of ['FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'MOLLIE_API_KEY']) {
-    const block = yaml.slice(yaml.indexOf(`variable: ${priv}`));
-    const avail = block.slice(0, block.indexOf('\n  - variable') + 1 || 400);
-    if (/availability:.*BUILD/.test(avail)) {
-      blocker(`${priv} is marked BUILD in apphosting.yaml — it would be inlined into the browser bundle`);
-    }
-  }
-  // …and no private value may carry a literal.
-  if (/variable: FIREBASE_PRIVATE_KEY[\s\S]{0,80}value:/.test(yaml)) {
-    blocker('FIREBASE_PRIVATE_KEY has a literal value in apphosting.yaml');
-  }
-}
-
-/* ── 2b. The backend configs are checked by RUNNING them, not by reading ──── */
+/* ── 2. The deploy target — Vercel + Supabase ─────────────────────────────── */
 /*
- * WHY THIS SECTION EXISTS
- * -----------------------
- * The previous section asks whether the config MENTIONS the right variables.
- * That is not the same question as whether the values it gives them mean
- * anything, and the difference cost a rollout. `apphosting.staging.yaml` was
- * written from the shape of the code and shipped three values that read as
- * correct and were not:
- *
- *   PAYMENT_PROVIDER: fake   — no such branch; it threw on every payment path
- *   secret: …mollie-test-key — no such secret; App Hosting fails the rollout
- *   STAGING: "1"             — parsed as neither true nor false, so ignored
- *
- * None of the three is visible by reading the YAML, and all three are obvious
- * the moment the value is handed to the function that consumes it. So that is
- * what happens here: the declared values are fed to the real `paymentProvider()`
- * and the real `isStagingFromEnv()`, and the secret names are checked against
- * the list the owner is actually creating.
+ * The App Hosting and Netlify sections that used to live here died with those
+ * targets in phase six. What replaces them is smaller ON PURPOSE: Vercel's
+ * environment variables live in its dashboard, not in a committed YAML, so
+ * there is no config file whose values can be fed to the runtime from here.
+ * What CAN be checked from the repository is checked; what cannot is named as
+ * the owner's checklist rather than silently assumed.
  */
 {
-  const CONFIGS: Array<{ path: string; staging: boolean }> = [
-    { path: 'web/apphosting.yaml', staging: false },
-    { path: 'web/apphosting.staging.yaml', staging: true },
-  ];
-
-  // The names the owner creates in Secret Manager. App Hosting resolves every
-  // `secret:` BEFORE it starts a build, so one name that is not on this list
-  // does not degrade the site — it stops the rollout with nothing deployed.
-  const APPROVED_SECRETS = new Set([
-    'fpvarabic-web-api-key', 'fpvarabic-web-auth-domain', 'fpvarabic-project-id',
-    'fpvarabic-storage-bucket', 'fpvarabic-messaging-sender-id', 'fpvarabic-web-app-id',
-    'fpvarabic-admin-client-email', 'fpvarabic-admin-private-key',
-  ]);
-
-  /** `- variable: X` … `value: Y`, ignoring commented-out lines. */
-  function declaredValue(yaml: string, variable: string): string | null {
-    const live = yaml.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
-    const at = live.indexOf(`variable: ${variable}\n`);
-    if (at < 0) return null;
-    const rest = live.slice(at);
-    const end = rest.indexOf('- variable:', 1);
-    const block = end < 0 ? rest : rest.slice(0, end);
-    return /^\s*value:\s*"?([^"\n]*)"?\s*$/m.exec(block)?.[1]?.trim() ?? null;
+  if (!has('web/vercel.json')) {
+    blocker('web/vercel.json is missing — the security headers and CSP ship with it');
+  } else {
+    const v = read('web/vercel.json');
+    if (!/supabase\.co/.test(v)) {
+      blocker('web/vercel.json\'s CSP never names supabase.co — every API call would be refused by connect-src');
+    }
+    if (/firestore\.googleapis|identitytoolkit/.test(v)) {
+      blocker('web/vercel.json\'s CSP still names Firebase hosts — phase six was supposed to remove them');
+    }
+    if (/sb_secret_|SUPABASE_SECRET/.test(v)) {
+      blocker('web/vercel.json mentions the secret key — deploy config must never carry it');
+    }
+    note('web/vercel.json: CSP allows Supabase, names no Firebase host, carries no secret');
   }
 
-  for (const { path, staging } of CONFIGS) {
-    if (!has(path)) continue;
-    const yaml = read(path);
-    const live = yaml.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
-
-    // (a) Every secret named must be one that will exist.
-    for (const m of live.matchAll(/^\s*secret:\s*(\S+)\s*$/gm)) {
-      if (!APPROVED_SECRETS.has(m[1])) {
-        blocker(`${path} names secret \`${m[1]}\`, which is not one the owner is creating — `
-          + 'App Hosting resolves secrets before building, so the rollout fails with nothing deployed');
-      }
-    }
-
-    // (b) The declared PAYMENT_PROVIDER must be one the code accepts. Asked by
-    //     building it, so a future rename of a provider fails here first.
-    const provider = declaredValue(yaml, 'PAYMENT_PROVIDER');
-    if (provider) {
-      const savedProvider = process.env.PAYMENT_PROVIDER;
-      const savedKey = process.env.MOLLIE_API_KEY;
-      const savedStaging = process.env.STAGING;
-      try {
-        resetPaymentProviderCache();
-        process.env.PAYMENT_PROVIDER = provider;
-        // A test key, so the `live_` refusal is not what we are measuring here.
-        process.env.MOLLIE_API_KEY = 'test_preflight';
-        process.env.STAGING = staging ? 'true' : 'false';
-        paymentProvider();
-      } catch (e) {
-        blocker(`${path} sets PAYMENT_PROVIDER=${provider}, which the runtime rejects: `
-          + `${(e as Error).message}`);
-      } finally {
-        process.env.PAYMENT_PROVIDER = savedProvider;
-        process.env.MOLLIE_API_KEY = savedKey;
-        process.env.STAGING = savedStaging;
-        resetPaymentProviderCache();
-      }
-    }
-
-    if (!staging) continue;
-
-    // (c) Staging must actually read as staging — asked of the real parser.
-    const flag = declaredValue(yaml, 'STAGING');
-    const url = declaredValue(yaml, 'NEXT_PUBLIC_SITE_URL');
-    const env: Record<string, string | undefined> = {};
-    if (flag !== null) env.STAGING = flag;
-    if (url !== null) env.NEXT_PUBLIC_SITE_URL = url;
-    if (!isStagingFromEnv(env)) {
-      blocker(`${path} would NOT be treated as staging (STAGING=${flag ?? 'unset'}, `
-        + `NEXT_PUBLIC_SITE_URL=${url ?? 'unset'}) — no «نسخة تجريبية» badge, no noindex header, `
-        + 'and a live payment key would be accepted');
-    } else {
-      note('staging config reads as staging: badge on, site-wide noindex on, live keys refused');
-    }
-
-    // (d) Staging must carry no payment key at all, by any name.
-    if (/^\s*- variable: MOLLIE_API_KEY\s*$/m.test(live)) {
-      blocker(`${path} declares MOLLIE_API_KEY — staging is meant to run with payment `
-        + 'off until a `test_` key is deliberately added');
-    } else {
-      note('staging declares no payment key — checkout reaches the pay step and says «الدفع غير مفعّل»');
-    }
+  const envExample = read('web/.env.example');
+  for (const v of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY']) {
+    if (!envExample.includes(v)) blocker(`web/.env.example never documents ${v}`);
   }
 
-  // The control: the check above must be capable of failing. If a value the
-  // runtime genuinely rejects passes this, the section is decoration.
+  // The owner-side checklist — facts the repository cannot verify.
+  need('Vercel project: Root Directory = web, and the three variables above set '
+    + 'in the dashboard (the secret key for the server only, never NEXT_PUBLIC_)');
+  need('Supabase project: apply supabase/migrations/*.sql in order — nothing is applied yet');
+
+  // Payments must stay off until deliberately switched on, and «off» must be
+  // the runtime\'s own reading of an empty environment.
+  const savedProvider = process.env.PAYMENT_PROVIDER;
+  try {
+    resetPaymentProviderCache();
+    delete process.env.PAYMENT_PROVIDER;
+    if (paymentProvider() !== null) {
+      blocker('with no PAYMENT_PROVIDER set, paymentProvider() is not null — payments would behalf-on by default');
+    } else {
+      note('payments are OFF by default: an unset PAYMENT_PROVIDER resolves to null');
+    }
+  } finally {
+    process.env.PAYMENT_PROVIDER = savedProvider;
+    resetPaymentProviderCache();
+  }
+
+  // The control: the resolver must still REJECT an unknown provider, or the
+  // check above can never catch a typo\'d value in the dashboard.
   let rejected = false;
-  const saved = process.env.PAYMENT_PROVIDER;
   try {
     resetPaymentProviderCache();
     process.env.PAYMENT_PROVIDER = 'fake';
     paymentProvider();
   } catch { rejected = true; } finally {
-    process.env.PAYMENT_PROVIDER = saved;
+    process.env.PAYMENT_PROVIDER = savedProvider;
     resetPaymentProviderCache();
   }
   if (!rejected) {
-    blocker('preflight control failed: `PAYMENT_PROVIDER=fake` no longer throws, so check (b) '
-      + 'can no longer detect an unknown provider — fix the check, not this line');
+    blocker('preflight control failed: `PAYMENT_PROVIDER=fake` no longer throws — fix the check, not this line');
   }
   if (isStagingFromEnv({ STAGING: 'false', NEXT_PUBLIC_SITE_URL: 'https://example.invalid' })) {
-    blocker('preflight control failed: isStagingFromEnv() no longer honours an explicit opt-out, '
-      + 'so check (c) would pass for any value at all');
+    blocker('preflight control failed: isStagingFromEnv() no longer honours an explicit opt-out');
   }
 }
 

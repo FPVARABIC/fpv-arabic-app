@@ -7,7 +7,6 @@ import './globals.css';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { BottomNav } from '@/components/NavTabs';
-import { getSession } from '@/lib/server/session';
 import { siteOrigin, isCanonicalOrigin } from '@/lib/siteOrigin';
 import { BRAND_NAME, BRAND_TITLE_AR, BRAND_TITLE_SUFFIX } from '@core/data/brand';
 import { isStagingEnvironment, STAGING_BADGE_AR } from '@/lib/staging';
@@ -20,10 +19,12 @@ import { isStagingEnvironment, STAGING_BADGE_AR } from '@/lib/staging';
  * mistake: it leaves the scrollbar, the native form controls and the browser's
  * own UI laid out left-to-right around a right-to-left page.
  *
- * The session is read HERE, once per request, on the server. The header renders
- * from it directly, so a signed-in user's first paint already shows them signed
- * in — no flash of a logged-out state, no client round-trip, and no role
- * information that came from the browser.
+ * The session is deliberately NOT read here. One `cookies()` in the root
+ * layout makes every route request-rendered the moment the environment is
+ * configured — the sentinel-credential build proved it, taking the site from
+ * 260 prerendered pages to one. The header's account corner hydrates in the
+ * browser instead (see HeaderSession); every real gate stays server-side on
+ * its own page, where `requireCapability` runs per request as it always did.
  */
 
 const DESCRIPTION =
@@ -81,8 +82,6 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-
   return (
     <html lang="ar" dir="rtl">
       <body>
@@ -97,12 +96,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {STAGING_BADGE_AR}
           </p>
         )}
-        <SiteHeader
-          signedIn={!!session}
-          displayName={session?.displayName ?? null}
-          photoURL={session?.photoURL ?? null}
-          role={session?.role ?? 'user'}
-        />
+        {/* No session read here, and that is load-bearing: one `cookies()`
+            in the root layout makes EVERY route request-rendered the moment
+            the environment is configured. The account corner hydrates
+            client-side instead; every real gate stays server-side on its own
+            page. */}
+        <SiteHeader />
         <main id="main">{children}</main>
         <SiteFooter />
         {/* The thumb-reachable tab bar. CSS hides it from 900px up, where the
