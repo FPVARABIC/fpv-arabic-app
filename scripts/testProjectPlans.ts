@@ -188,6 +188,141 @@ console.log('\n[2] Every project has a real build plan');
     noSafety.length === 0);
 }
 
+console.log('\n[2b] The six questions a first-time reader asks are all answered');
+{
+  /*
+   * Read the page as somebody who has never seen it. Five of the six were
+   * already answered; the sixth was not, and its absence was invisible because
+   * a nearby field looked like it: `learningOutcomesAr` says what the reader
+   * will KNOW, which is a different question from what will be sitting on
+   * their table at the end.
+   */
+  for (const p of ALL_PROJECTS) {
+    const plan = BUILD_PLANS[p.id];
+    ok(`${p.id}: «ما الفكرة» — a real idea paragraph`, p.ideaAr.trim().length >= 60);
+    ok(`${p.id}: «لماذا أختاره» — a stated motive`, p.purposeAr.trim().length >= 100);
+    ok(`${p.id}: «ماذا سأتعلّم» — at least four outcomes`, p.learningOutcomesAr.length >= 4);
+    ok(`${p.id}: «من أين أبدأ» — an opening phase of decisions`,
+      (p.stages[0]?.steps ?? []).length >= 5);
+    ok(`${p.id}: «ماذا أحتاج من عتاد» — parts, each with a reason`,
+      p.parts.length >= 3 && p.parts.every(x => x.whyAr.trim().length >= 40));
+    ok(`${p.id}: «إلى ماذا سأصل» — a concrete end state`,
+      (plan?.finishedAr ?? '').trim().length >= 40);
+  }
+
+  // The end state must be a THING, not a feeling. If it cannot be
+  // photographed or demonstrated it is not an end state, and «ستفهم» is the
+  // word that sneaks a feeling in.
+  const vague = ALL_PROJECTS.filter(p =>
+    /^(ستفهم|ستتعلّم|ستكتسب|فهم أعمق)/.test((BUILD_PLANS[p.id]?.finishedAr ?? '').trim()));
+  ok(`every end state names a thing, not a feeling (${vague.length} vague)`, vague.length === 0);
+
+  const finished = ALL_PROJECTS.map(p => BUILD_PLANS[p.id]?.finishedAr ?? '');
+  ok('no two projects share an end state', new Set(finished).size === finished.length);
+}
+
+console.log('\n[2c] Nothing is said twice on the same screen');
+{
+  /*
+   * A phase card shows the goal, the steps, the exit condition and the
+   * paragraph together. Writing the exit condition FROM the paragraph's
+   * closing line — which is what happened twice — puts the same sentence on
+   * screen twice, a few lines apart.
+   *
+   * The shared safety steps are deliberately identical across all ten
+   * projects and are not covered here: the rule about the cut-out switch does
+   * not become truer by being reworded per project.
+   */
+  const repeated: string[] = [];
+  for (const p of ALL_PROJECTS) {
+    for (const s of p.stages) {
+      if (!s.bodyAr) continue;
+      for (const sentence of s.doneWhenAr.split(/(?<=[.؟!])\s+/)) {
+        const t = sentence.trim();
+        if (t.length >= 30 && s.bodyAr.includes(t)) {
+          repeated.push(`${p.id} · ${s.titleAr}: ${t.slice(0, 50)}`);
+        }
+      }
+    }
+  }
+  for (const r of repeated.slice(0, 5)) console.log(`      ${r}`);
+  ok(`no exit condition repeats a sentence from its own paragraph (${repeated.length})`,
+    repeated.length === 0);
+
+  const longGoal = ALL_PROJECTS.flatMap(p => p.stages.filter(s => s.goalAr.length > 130));
+  ok(`no phase goal runs over 130 characters (${longGoal.length})`, longGoal.length === 0);
+  const longStep = ALL_PROJECTS.flatMap(p => p.stages.flatMap(s =>
+    s.steps.filter(x => x.actionAr.length > 90)));
+  ok(`no step action runs over 90 characters (${longStep.length})`, longStep.length === 0);
+  const longDetail = ALL_PROJECTS.flatMap(p => p.stages.flatMap(s =>
+    s.steps.filter(x => (x.detailAr?.length ?? 0) > 190)));
+  ok(`no step detail runs over 190 characters (${longDetail.length})`, longDetail.length === 0);
+}
+
+console.log('\n[2d] Every English term a project uses, it explains');
+{
+  /*
+   * A first-time Arabic reader meeting `LiDAR` in a step and finding it
+   * nowhere in the glossary has been handed a word, not an idea. Proper nouns
+   * are exempt — «PX4» is a name and defining it is noise — so the list below
+   * is names, not an escape hatch.
+   */
+  const PROPER_NOUNS = new Set([
+    'px4', 'ardupilot', 'betaflight', 'esp32', 'esp-drone', 'espressif',
+    'crazyflie', 'gps', 'gps.', 'gpl-3.0', 'flight', 'controller', 'companion',
+    'computer', 'pid', 'uart', 'ros',
+  ]);
+  const LATIN = /[A-Za-z][A-Za-z0-9+\-.]{2,}/g;
+  const unexplained: string[] = [];
+  for (const p of ALL_PROJECTS) {
+    const glossed = new Set(p.glossary.map(t => t.termEn.toLowerCase()));
+    /*
+     * `definitionAr` is scanned too, because it is rendered in the page header
+     * and is the first prose a reader meets — a term introduced there and
+     * never explained is the worst case, not an edge case.
+     *
+     * The check is not vacuous: renaming the LiDAR glossary entry to
+     * «Rangefinder» turns it red with `lidar-slam-mapping: LiDAR`, and
+     * restoring it turns it green. (A first attempt renamed it to
+     * «ZZZ-not-lidar», which still CONTAINS «lidar» and so still matched —
+     * the mutation was wrong, not the assertion.)
+     */
+    const prose = [
+      p.definitionAr, p.ideaAr, p.purposeAr,
+      ...p.stages.flatMap(s => [s.goalAr, s.doneWhenAr,
+        ...s.steps.flatMap(x => [x.actionAr, x.detailAr ?? ''])]),
+    ].join(' ');
+    for (const raw of prose.match(LATIN) ?? []) {
+      const t = raw.toLowerCase();
+      if (PROPER_NOUNS.has(t)) continue;
+      if ([...glossed].some(g => g.includes(t))) continue;
+      unexplained.push(`${p.id}: ${raw}`);
+    }
+  }
+  for (const u of [...new Set(unexplained)].slice(0, 8)) console.log(`      ${u}`);
+  ok(`no English term is used without being glossed in its own project (${new Set(unexplained).size})`,
+    unexplained.length === 0);
+}
+
+console.log('\n[2e] The image guide describes every project, not just names files');
+{
+  const guide = readFileSync(path.join(ROOT, 'docs/projects/PROJECT_IMAGE_GUIDE.md'), 'utf8');
+  ok('docs/projects/PROJECT_IMAGE_GUIDE.md exists', guide.length > 0);
+  const missing = ALL_PROJECTS.filter(p => !guide.includes(p.id));
+  for (const m of missing) console.log(`      not described: ${m.id}`);
+  ok(`every project is described (${ALL_PROJECTS.length - missing.length}/${ALL_PROJECTS.length})`,
+    missing.length === 0);
+
+  for (const heading of ['فكرة الصورة', 'يجب أن يظهر', 'يجب ألّا يظهر', 'النوع']) {
+    const n = guide.split(heading).length - 1;
+    ok(`«${heading}» appears at least once per project (${n})`, n >= ALL_PROJECTS.length);
+  }
+  ok('the guide forbids generated and placeholder images',
+    /الذكاء الاصطناعي/.test(guide) && /مؤقتة/.test(guide));
+  ok('the search-and-rescue entry carries its consent constraint',
+    /يمكن التعرّف عليه/.test(guide));
+}
+
 console.log('\n[3] The page reads in the declared order');
 {
   const page = path.join(ROOT, 'web/app/projects/[projectId]/page.tsx');

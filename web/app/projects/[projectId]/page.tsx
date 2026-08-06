@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { BUILD_PLANS } from '@core/data/projects/buildPlans';
 import { resolvedProject, visibleProjects } from '@/lib/server/projects';
 import { publishedProducts } from '@/lib/server/storeCatalogue';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
@@ -247,6 +248,26 @@ export default async function ProjectPage(
               picture belongs beside the plan it explains, not two screens
               away from it. */}
           <Section id="plan" titleAr="خطة البناء">
+            {/* THE DESTINATION, BEFORE THE ROUTE.
+                A reader deciding whether to spend six weeks asks «إلى ماذا
+                سأصل في النهاية؟», and nothing on the page answered it: the
+                learning outcomes say what they will KNOW, which is a different
+                question from what will be sitting on their table. It goes
+                first, because a plan whose destination is unstated is a list
+                of chores. */}
+            <div
+              className="card"
+              data-testid="project-finished"
+              style={{ padding: '15px 17px', marginBottom: 18 }}
+            >
+              <h3 style={{ fontSize: 13, fontWeight: 900, margin: 0, color: 'var(--accent-ink)' }}>
+                ما ستصل إليه
+              </h3>
+              <p style={{ fontSize: 15, margin: '8px 0 0', lineHeight: 2 }}>
+                {BUILD_PLANS[p.id]?.finishedAr}
+              </p>
+            </div>
+
             <p style={LEAD}>
               المشروع مقسّم إلى مراحل، ولكل مرحلة هدف وخطوات وشرط انتقال. لا
               تنتقل إلى مرحلة قبل أن يتحقّق شرط التي قبلها — أكثر ما يُفشل هذه

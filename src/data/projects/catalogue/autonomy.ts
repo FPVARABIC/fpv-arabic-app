@@ -422,6 +422,17 @@ export const AUTONOMY_PROJECTS: ProjectSeed[] = [
         hintAr: 'بناء خريطة للمكان وتحديد موضعك داخلها في الوقت نفسه.',
       },
       {
+        // The project is NAMED after this and never defined it. A reader who
+        // does not already know what a LiDAR is cannot evaluate the very first
+        // decision the build plan asks of them — which sensor to buy.
+        termAr: 'الليزر الماسح',
+        termEn: 'LiDAR',
+        ref: { to: 'planned', sectionAr: 'الموسوعة' },
+        hintAr:
+          'حسّاس يطلق نبضات ليزر ويقيس زمن عودتها فينتج مسافات دقيقة إلى ما حوله. '
+          + 'يعمل في الظلام ولا يحتاج ملمساً على السطح، بخلاف الكاميرا.',
+      },
+      {
         termAr: 'سحابة النقاط',
         termEn: 'Point cloud',
         ref: { to: 'planned', sectionAr: 'الموسوعة' },

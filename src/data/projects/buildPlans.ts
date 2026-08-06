@@ -41,6 +41,20 @@ export interface StageUpgrade {
 }
 
 export interface ProjectBuildPlan {
+  /**
+   * What the reader ENDS UP WITH, in one concrete sentence.
+   *
+   * The six questions a first-time reader asks were answered by the page
+   * except for the last one: «إلى ماذا سأصل في النهاية؟». `learningOutcomesAr`
+   * answers what they will KNOW, which is a different question — somebody
+   * deciding whether to spend six weeks and a few hundred euros wants to know
+   * what will be sitting on their table at the end.
+   *
+   * It is deliberately a THING, not a feeling: «طائرة تتابع سيارة متحرّكة»
+   * rather than «فهم أعمق للرؤية الحاسوبية». If it cannot be photographed or
+   * demonstrated, it is not an end state.
+   */
+  finishedAr: string;
   /** The choosing-and-gathering phase, prepended to every project. */
   opening: ProjectStage;
   /** One entry per existing stage, in the order they already appear. */
@@ -63,6 +77,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   /* ── الرؤية ───────────────────────────────────────────────────────────── */
 
   'visual-target-tracking': {
+    finishedAr:
+      'طائرة تُقلع، تتعرّف على هدف متحرّك — سيارة أو شخص — وتتابعه بالكاميرا وبحركتها، وأنت تستطيع قطع الوضع الذاتي في أي لحظة.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تختار قطع المشروع وتفهم سبب كل اختيار، قبل أن تشتري أو تركّب شيئاً.',
@@ -149,6 +165,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   },
 
   'gps-denied-vio': {
+    finishedAr:
+      'طائرة تحوّم ثابتة داخل مبنى بلا GPS إطلاقاً، معتمدةً على الكاميرا ووحدة القصور الذاتي وحدهما، وتعود إلى موضعها إن دفعتها بيدك.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تجمع مجموعة حسّاسات متوافقة زمنياً — وهي نصف نجاح هذا المشروع.',
@@ -216,6 +234,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   },
 
   'precision-landing-marker': {
+    finishedAr:
+      'طائرة تهبط وحدها على علامة مطبوعة داخل دائرة قطرها عشرات السنتيمترات، ومكرّرةً لا صدفةً.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تجهّز الكاميرا السفلية والعلامة، وتفهم العلاقة بين حجمها وارتفاع الهبوط.',
@@ -284,6 +304,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   },
 
   'depth-obstacle-avoidance': {
+    finishedAr:
+      'طائرة تقترب من جدار وتتوقّف قبله بالمسافة التي حدّدتها أنت، وقائمة مكتوبة بما لا يراه حسّاسها.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تختار حسّاس العمق المناسب لبيئتك، وتفهم ما لا يستطيع رؤيته.',
@@ -353,6 +375,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   /* ── الاستقلالية ──────────────────────────────────────────────────────── */
 
   'lidar-slam-mapping': {
+    finishedAr:
+      'ملفّ ثلاثي الأبعاد لمكان مسحته بطائرتك، يفتحه غيرك ويقيس فيه بُعداً حقيقياً.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تختار الليزر والمنصة القادرة على حمله، وتفهم ما ستنتجه.',
@@ -419,6 +443,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   },
 
   'multi-drone-swarm': {
+    finishedAr:
+      'ثلاث طائرات تُقلع وتحلّق في تشكيل واحد تحت أمر واحد، وتتصرّف بأمان حين تقطع الاتصال عن إحداها عمداً.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تجهّز أسطولاً متطابقاً وشبكة تثق بها — قبل أي كلام عن السرب.',
@@ -479,12 +505,14 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
           { actionAr: 'كرّر مع بطارية منخفضة عمداً.' },
           { actionAr: 'اكتب ما حدث فعلاً، لا ما كان مفترضاً.' },
         ],
-        doneWhenAr: 'السرب يتصرّف كما صُمّم تحت العطل. النظام الذي لم يُختبر تحت العطل لم يُختبر.',
+        doneWhenAr: 'قطعتَ الاتصال عن طائرة وأفرغتَ بطارية أخرى عمداً، وسلك السرب في الحالتين كما صُمّم.',
       },
     ],
   },
 
   'autonomous-drone-racing': {
+    finishedAr:
+      'طائرة تكمل مساراً من بوّابات وحدها، ورقم مكتوب لأسرع لفّة حقّقتها، وجدول يقول أين كان الزمن يضيع.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تبني منصة سريعة وقوية بما يكفي لتتحمّل الأخطاء التي ستقع.',
@@ -551,6 +579,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   /* ── التطبيقات ───────────────────────────────────────────────────────── */
 
   'crop-health-ndvi': {
+    finishedAr:
+      'خريطتان لحقل واحد بأسبوع بينهما، وخريطة ثالثة تُظهر ما تغيّر — مصحّحة بلوحة معايرة فتُقارن بصدق.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تختار الكاميرا الطيفية وتفهم ما يعنيه الرقم الذي ستنتجه.',
@@ -615,6 +645,8 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
   },
 
   'thermal-search-rescue': {
+    finishedAr:
+      'منظومة بحث تجدها في تضاريس حقيقية أشخاصاً متطوّعين، ونسبة مكتوبة لما وجدتَه وما فاتك، وواجهة أدارها شخص غيرك.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تختار الكاميرا الحرارية وتفهم متى ترى الإنسان ومتى لا تراه.',
@@ -673,12 +705,14 @@ export const BUILD_PLANS: Record<string, ProjectBuildPlan> = {
           { actionAr: 'حدّد له وقتاً ضيّقاً.' },
           { actionAr: 'راقب أين تردّد أو أخطأ، وعدّل الواجهة لا المستخدم.' },
         ],
-        doneWhenAr: 'شخص غيرك أدار بحثاً كاملاً بلا مساعدتك. واجهة ممتازة في المكتب قد تكون عديمة الفائدة في الميدان.',
+        doneWhenAr: 'شخص غيرك أدار بحثاً كاملاً بلا مساعدتك ولا شرح منك.',
       },
     ],
   },
 
   'esp32-mini-drone': {
+    finishedAr:
+      'طائرة صغيرة بنيتَها وبرمجتَها بنفسك من الصفر، تطير في غرفة وتستقرّ — وتفهم ماذا يفعل كل معامل فيها.',
     opening: {
       titleAr: 'المرحلة الأولى: الاختيار والتجهيز',
       goalAr: 'تجمع قطع طائرة صغيرة كاملة وتجهّز بيئة برمجتها.',
