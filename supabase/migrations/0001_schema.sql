@@ -277,9 +277,18 @@ create table public.store_supply (
   lead_time_days integer,
   admin_note text,
   updated_by uuid references public.profiles(id) on delete set null,
-  updated_at timestamptz not null default now(),
-  primary key (product_id, coalesce(variant_id, ''))
+  updated_at timestamptz not null default now()
 );
+
+-- ONE SUPPLY ROW PER PRODUCT, OR PER VARIANT WHERE VARIANTS DIFFER.
+--
+-- Expressed as a unique INDEX rather than a primary key because a primary key
+-- cannot contain an expression, and `variant_id` is nullable: a product priced
+-- as a whole has one row with a null variant, and `null <> null` in a plain
+-- unique constraint would let that row be inserted twice. `coalesce` collapses
+-- the nulls so the uniqueness actually holds.
+create unique index store_supply_scope_key
+  on public.store_supply (product_id, coalesce(variant_id, ''));
 
 create table public.store_decisions (
   id text primary key,

@@ -55,6 +55,7 @@
     "test:store-e2e": "npx tsx scripts/testStoreE2E.ts",
     "gen:project-images": "npx tsx scripts/buildProjectImageManifest.ts",
     "test:project-plans": "npx tsx scripts/testProjectPlans.ts",
+    "test:rls": "npx tsx scripts/testSupabaseRls.ts",
     "test:staging": "npx tsx scripts/testStaging.ts",
     "test:bundle-secrets": "npx tsx scripts/testClientBundleSecrets.ts",
     "test:netlify": "npx tsx scripts/testNetlifyDeploy.ts",

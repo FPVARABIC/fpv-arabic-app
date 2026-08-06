@@ -1018,7 +1018,8 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // RLS enabled and no policies, which denies every row until the policy
     // migration grants it. Backend platform, not Community.
     !f.startsWith('supabase/') &&
-    f !== 'docs/platform/SUPABASE_MIGRATION.md',
+    f !== 'docs/platform/SUPABASE_MIGRATION.md' &&
+    f !== 'scripts/testSupabaseRls.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
