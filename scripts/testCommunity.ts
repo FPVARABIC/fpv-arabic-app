@@ -1011,7 +1011,14 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     f !== 'index.html' &&
     f !== '.gitignore' &&
     f !== 'web/.gitignore' &&
-    f !== 'scripts/testNetlifyDeploy.ts',
+    f !== 'scripts/testNetlifyDeploy.ts' &&
+    // ── The move to Supabase + Vercel ─────────────────────────────────────
+    // Phase zero (the inventory) and phase one (the schema). Both are new
+    // files that touch nothing existing: the migration creates tables with
+    // RLS enabled and no policies, which denies every row until the policy
+    // migration grants it. Backend platform, not Community.
+    !f.startsWith('supabase/') &&
+    f !== 'docs/platform/SUPABASE_MIGRATION.md',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
