@@ -1,4 +1,25 @@
-import type { Timestamp } from 'firebase/firestore';
+/**
+ * The structural shape of a Firestore `Timestamp`, declared here instead of
+ * imported from `firebase/firestore`.
+ *
+ * This module is the COMMUNITY DATA CONTRACT, and both surfaces read it: the
+ * phone (whose Community still runs on Firestore) and the web (which runs on
+ * Supabase and installs no Firebase SDK at all — its Vercel build has only
+ * `web/package.json`'s dependencies, so a type imported from the SDK here
+ * failed that build outright). A contract file must not need one surface's
+ * vendor SDK to be readable by the other.
+ *
+ * Structural typing keeps the phone unchanged: every real Firestore
+ * `Timestamp` instance has all four members below, so it satisfies this type
+ * wherever the contract demands one — and `.toMillis()` is the only member
+ * Community code actually calls on these fields.
+ */
+export interface Timestamp {
+  readonly seconds: number;
+  readonly nanoseconds: number;
+  toMillis(): number;
+  toDate(): Date;
+}
 
 // D7 amendment — nine ids supported in the schema/rules from day one; only four
 // are currently selectable in the composer / shown as chips. See categories.ts.

@@ -67,11 +67,11 @@ export type MediaKind = 'none' | 'image' | 'video';
 /**
  * The nine category ids, restated rather than imported.
  *
- * `@core/community/types` is where they live, and that module opens with
- * `import type { Timestamp } from 'firebase/firestore'`. Importing it here to
- * save nine lines would put a Firebase type in the file whose entire purpose is
- * that it names no provider — and would keep the web depending on the SDK we
- * are removing, through a file nobody thinks of as a Firebase file.
+ * `@core/community/types` is where they live. That module used to open with
+ * `import type { Timestamp } from 'firebase/firestore'` (it carries a
+ * structural Timestamp of its own now), and this file's whole purpose is to
+ * name no provider — so it does not import from the community contract at
+ * all, and cannot re-acquire a vendor dependency through it later.
  *
  * The duplication is safe because it is CHECKED, not trusted:
  * `scripts/testBackendAdapter.ts` asserts this array equals `ALL_CATEGORY_IDS`
