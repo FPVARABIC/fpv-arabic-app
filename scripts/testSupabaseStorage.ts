@@ -27,6 +27,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { remoteConfig, remoteSqlAsPsql, type RemoteConfig } from './lib/supabaseRemote';
+import { Transcript, transcriptMode, transcriptPath } from './lib/sqlTranscript';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PGPORT = process.env.RLS_TEST_PORT ?? '55432';
@@ -34,9 +35,14 @@ const DB = 'fpvarabic_storage_test';
 
 // REMOTE MODE — same suite, real project. See testSupabaseRls.ts for the
 // full argument; the three channel differences are identical here.
-const REMOTE = process.env.SUPABASE_REMOTE === '1';
+// `capture`/`replay` are remote runs over a transcript rather than a socket —
+// see lib/sqlTranscript.ts. They take the REMOTE shape for the same reasons.
+const TMODE = transcriptMode();
+const REMOTE = process.env.SUPABASE_REMOTE === '1' || TMODE !== 'off';
+const TRANSCRIPT = TMODE === 'off' ? null : new Transcript(TMODE, transcriptPath());
+
 let RCFG: RemoteConfig | null = null;
-if (REMOTE) {
+if (REMOTE && TMODE === 'off') {
   const r = remoteConfig();
   if (!r.ok) {
     console.error(`✋ SUPABASE_REMOTE=1 لكن ينقص: ${r.missing.join(', ')}`);
@@ -53,6 +59,7 @@ function ok(label: string, cond: boolean, detail = ''): void {
 }
 
 function psql(sql: string, db = DB): string {
+  if (TRANSCRIPT) return TRANSCRIPT.run(sql).trim();
   if (REMOTE) return remoteSqlAsPsql(RCFG!, sql).trim();
   return execFileSync('psql', ['-h', '/tmp', '-p', PGPORT, '-U', 'postgres', '-d', db,
     '-v', 'ON_ERROR_STOP=1', '-tAc', sql], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -140,11 +147,14 @@ if (!REMOTE) {
   console.log(`applied: ${MIGRATIONS.join(', ')}`);
 } else {
   const sig = psql(`select count(*) from storage.buckets where id in ('avatars','community-media','store-products','project-images')`);
-  if (!/4/.test(sig)) {
+  // Capture has no answers by construction; the gate bites on replay.
+  if (TMODE !== 'capture' && !/4/.test(sig)) {
     console.error('✋ الـBuckets الأربعة غير موجودة على المشروع الحقيقي — شغّل npm run remote:reconcile أولاً.');
     process.exit(2);
   }
-  console.log('\n✓ الوضع البعيد: الاختبار يجري على buckets المشروع الحقيقي مباشرة.');
+  console.log(TMODE === 'capture'
+    ? '\n✎ تسجيل: تُكتب عبارات المجموعة بترتيبها لتنفَّذ على المشروع الحقيقي.'
+    : '\n✓ الوضع البعيد: الاختبار يجري على buckets المشروع الحقيقي مباشرة.');
 }
 
 /** Remote seeds COMMIT, so they must LEAVE — before seeding and on exit. */

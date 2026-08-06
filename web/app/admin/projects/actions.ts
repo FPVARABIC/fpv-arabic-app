@@ -49,8 +49,6 @@ import type {
  * usually because it is wrong, and it must not require filling in a form.
  */
 
-const COLLECTION = 'projects';
-
 export type ProjectActionResult = { ok: true; id?: string } | { ok: false; errorAr: string };
 
 /* ── The wire shapes ─────────────────────────────────────────────────────── */

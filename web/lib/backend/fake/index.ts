@@ -539,7 +539,7 @@ export function createFakeBackend(
   const nameIsSafe = (path: string): boolean => {
     if (!path || path.length < 3 || path.length > 512) return false;
     if (path.includes('..') || path.startsWith('/') || path.includes('//')) return false;
-    // eslint-disable-next-line no-control-regex -- the control range IS the check
+    // The control range IS the check — it mirrors `storage_name_is_safe`.
     if (path.includes('\\') || /[\u0000-\u001f\u007f]/.test(path)) return false;
     const file = path.slice(path.lastIndexOf('/') + 1);
     return (file.match(/\./g) ?? []).length === 1;

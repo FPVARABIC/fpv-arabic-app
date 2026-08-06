@@ -1031,7 +1031,12 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     // there). Backend platform tooling, not Community.
     !f.startsWith('scripts/lib/') &&
     f !== 'scripts/supabaseRemoteStatus.ts' &&
-    f !== 'scripts/supabaseReconcile.ts',
+    f !== 'scripts/supabaseReconcile.ts' &&
+    // The MCP-connector flow: the offline plan computed from a live snapshot,
+    // and the transcript bridge that runs the RLS/Storage suites against the
+    // real project through a tool channel the shell cannot call.
+    f !== 'scripts/supabasePlan.ts' &&
+    f !== 'scripts/supabaseRemoteBatch.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);

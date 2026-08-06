@@ -711,7 +711,16 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('functions/src/') &&
     !f.startsWith('src/components/Community/Composer/') &&
     !f.startsWith('docs/platform/') &&
-    f !== 'eslint.config.js',
+    f !== 'eslint.config.js' &&
+    // ── The backend platform ───────────────────────────────────────────────
+    // Supabase migrations, the live-schema snapshot and plan, and the scripts
+    // that read/repair the real project or run its RLS and Storage suites.
+    // SQL and tooling: no Assembly module is imported and no product data is
+    // touched — `vite build` never sees any of it.
+    !f.startsWith('supabase/') &&
+    !f.startsWith('scripts/lib/') &&
+    !f.startsWith('scripts/supabase') &&
+    !f.startsWith('scripts/testSupabase'),
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

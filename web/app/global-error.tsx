@@ -85,15 +85,23 @@ export default function GlobalError({
             >
               أعد المحاولة
             </button>
-            <a
-              href="/"
+            {/*
+              A full document load, deliberately — not `next/link`. This screen
+              only renders when the ROOT layout itself threw, so the React tree
+              that a client-side navigation would reuse is the broken one. The
+              way back to a working app is to fetch it again from scratch.
+            */}
+            <button
+              type="button"
+              onClick={() => { window.location.href = '/'; }}
               style={{
-                borderRadius: 9, padding: '10px 18px', textDecoration: 'none',
+                borderRadius: 9, padding: '10px 18px', cursor: 'pointer',
+                background: 'transparent', fontFamily: 'inherit',
                 border: '1px solid #E3DED3', color: '#152232', fontWeight: 800, fontSize: 14,
               }}
             >
               الرئيسية
-            </a>
+            </button>
           </div>
         </div>
       </body>

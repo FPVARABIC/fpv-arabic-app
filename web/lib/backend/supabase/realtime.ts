@@ -75,9 +75,9 @@ export function makeRealtime(sb: SupabaseClient | null): RealtimePort {
       const channel = sb
         .channel('posts-feed')
         .on(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the
-          // SDK types this overload against generated database types we do not
-          // generate; the payload is validated by `idFrom` instead.
+          // The SDK types this overload against generated database types we do
+          // not generate; the payload is validated by `idFrom` instead.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           'postgres_changes' as any,
           { event: '*', schema: 'public', table: 'posts' },
           (payload: { eventType?: unknown; new?: unknown; old?: unknown }) => {

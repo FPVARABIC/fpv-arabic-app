@@ -1,8 +1,8 @@
 import 'server-only';
 
 import {
-  getProfileRow, listProfileRows, countProfiles, getAuthEmail,
-  getPostRow, getCommentRow, listPostRows,
+  getProfileRow, listProfileRows, countProfiles,
+  getCommentRow, listPostRows,
   getReportRow, listReportRows, countReports, countPosts,
   type ProfileRow, type ReportRowData,
 } from '../backend/supabase/adminData';

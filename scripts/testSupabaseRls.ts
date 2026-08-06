@@ -31,6 +31,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { remoteConfig, remoteSql, remoteSqlAsPsql, type RemoteConfig } from './lib/supabaseRemote';
+import { Transcript, transcriptMode, transcriptPath } from './lib/sqlTranscript';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PGHOST = '/tmp';
@@ -58,9 +59,16 @@ const DB = 'fpvarabic_rls_test';
  *     the suite REFUSES to run if the signature policy is absent rather
  *     than passing vacuously against empty tables
  */
-const REMOTE = process.env.SUPABASE_REMOTE === '1';
+const TMODE = transcriptMode();
+// Capture and replay are remote runs whose channel happens to be a transcript
+// rather than a socket: they must produce the REMOTE shape of every statement
+// (no trailing rollback, committing seeds, cleanup by id) or the transcript
+// would describe a run that never happens.
+const REMOTE = process.env.SUPABASE_REMOTE === '1' || TMODE !== 'off';
+const TRANSCRIPT = TMODE === 'off' ? null : new Transcript(TMODE, transcriptPath());
+
 let RCFG: RemoteConfig | null = null;
-if (REMOTE) {
+if (REMOTE && TMODE === 'off') {
   const r = remoteConfig();
   if (!r.ok) {
     console.error(`✋ SUPABASE_REMOTE=1 لكن ينقص: ${r.missing.join(', ')}`);
@@ -77,6 +85,7 @@ function ok(label: string, cond: boolean, detail = ''): void {
 }
 
 function psql(sql: string, db = DB): string {
+  if (TRANSCRIPT) return TRANSCRIPT.run(sql).trim();
   if (REMOTE) return remoteSqlAsPsql(RCFG!, sql).trim();
   return execFileSync('psql', [
     '-h', PGHOST, '-p', PGPORT, '-U', 'postgres', '-d', db,
@@ -202,11 +211,15 @@ if (!REMOTE) {
   // The real project must be reconciled FIRST — this suite proves policies,
   // it does not install them. Refusing here beats passing vacuously.
   const sig = psql(`select count(*) from pg_policies where policyname = 'posts_read_active'`);
-  if (!/1/.test(sig)) {
+  // The capture pass has no answers yet by construction — it exists to produce
+  // the question list. The gate still runs, and bites, on replay.
+  if (TMODE !== 'capture' && !/1/.test(sig)) {
     console.error('✋ المشروع الحقيقي غير مُسوّى بعد — شغّل npm run remote:reconcile أولاً.');
     process.exit(2);
   }
-  console.log('\n✓ الوضع البعيد: السياسات موجودة على المشروع الحقيقي — الاختبار يجري عليه مباشرة.');
+  console.log(TMODE === 'capture'
+    ? '\n✎ تسجيل: تُكتب عبارات المجموعة بترتيبها لتنفَّذ على المشروع الحقيقي.'
+    : '\n✓ الوضع البعيد: السياسات موجودة على المشروع الحقيقي — الاختبار يجري عليه مباشرة.');
 }
 
 /**
