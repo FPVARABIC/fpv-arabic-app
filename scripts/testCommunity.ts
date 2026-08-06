@@ -394,15 +394,37 @@ console.log('\n[18] Post-like UI — one shared component, used consistently, ac
   ok('the button is disabled while a toggle is genuinely pending, preventing double-activation', /disabled=\{!isGuest && \(likedLoading \|\| toggling\)\}/.test(postLikeButtonTsx));
 }
 
-console.log('\n[19] CSP (vercel.json) — Cloud Functions and Storage domains are reachable (the deployed comment-publish/upload bug fix)');
+console.log('\n[19] CSP (vercel.json) — the deploy config names the backend the web platform actually calls');
 {
+  // THIS FILE IS THE WEB APP'S DEPLOY CONFIG, NOT THE PHONE'S.
+  //
+  // `buildCommand` here builds `web/` and `outputDirectory` points at
+  // `web/.next` — it exists so a Vercel project rooted at the repository
+  // root needs no «Root Directory» set by hand. It used to carry a CSP from
+  // the Firebase era, naming Cloud Functions, Firestore and Firebase Storage
+  // and naming NO Supabase host at all.
+  //
+  // That combination is not merely stale, it is deploy-breaking: a browser
+  // loading the Supabase-backed app under this policy has every API call and
+  // every realtime socket refused by `connect-src`, and every uploaded image
+  // blocked by `img-src`. The page renders and then does nothing — the
+  // hardest failure to diagnose from a screenshot.
+  //
+  // So the assertions below moved with the platform: they now demand the
+  // hosts the app really talks to, and demand the Firebase ones are GONE.
   const cspHeader = vercelJson.match(/"Content-Security-Policy"[\s\S]*?"value": "([^"]+)"/)?.[1] ?? '';
   const connectSrc = cspHeader.match(/connect-src ([^;]+);/)?.[1] ?? '';
-  ok('connect-src allows Cloud Functions callable invocation (the Functions SDK constructs URLs as https://{region}-{projectId}.cloudfunctions.net/{name} — confirmed from the installed SDK source)', connectSrc.includes('https://*.cloudfunctions.net'));
-  ok('connect-src allows Firebase Storage (the Storage SDK\'s default host is firebasestorage.googleapis.com — confirmed from the installed SDK source)', connectSrc.includes('https://firebasestorage.googleapis.com'));
+  ok('connect-src allows the Supabase REST and Auth endpoints', connectSrc.includes('https://*.supabase.co'));
+  ok('connect-src allows the Supabase realtime socket (wss), or live comments never arrive', connectSrc.includes('wss://*.supabase.co'));
   const imgSrc = cspHeader.match(/img-src ([^;]+);/)?.[1] ?? '';
-  ok('img-src also allows Firebase Storage, so uploaded post images actually render', imgSrc.includes('https://firebasestorage.googleapis.com'));
-  ok('the pre-existing security headers (X-Frame-Options, HSTS, frame-ancestors) are untouched — this was a targeted connect-src/img-src addition, not a rewrite', /"X-Frame-Options", "value": "DENY"/.test(vercelJson) && /frame-ancestors 'none'/.test(vercelJson));
+  ok('img-src allows Supabase Storage, so uploaded post images actually render', imgSrc.includes('https://*.supabase.co'));
+  ok('no Firebase host survives anywhere in the policy', !/firebase|firestore|cloudfunctions|identitytoolkit|securetoken/i.test(cspHeader));
+  ok('the security headers (X-Frame-Options, HSTS, frame-ancestors) are untouched — this was a host swap, not a rewrite', /"X-Frame-Options", "value": "DENY"/.test(vercelJson) && /frame-ancestors 'none'/.test(vercelJson));
+  // The two deploy configs must not drift: whichever root a Vercel project is
+  // pointed at, the policy the browser receives has to be the same one.
+  const webVercelJson = readFileSync(join(ROOT, 'web/vercel.json'), 'utf8');
+  const webCsp = webVercelJson.match(/"Content-Security-Policy"[\s\S]*?"value": "([^"]+)"/)?.[1] ?? '';
+  ok('the root and web/ deploy configs carry the SAME policy', cspHeader === webCsp);
 }
 
 console.log('\n[20] Production displayNameNormalized migration — real, executable, fail-safe');

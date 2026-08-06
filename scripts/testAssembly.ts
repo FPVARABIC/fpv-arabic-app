@@ -720,7 +720,12 @@ console.log('\n[14] Scope — only the expected Assembly files (+ this test) are
     !f.startsWith('supabase/') &&
     !f.startsWith('scripts/lib/') &&
     !f.startsWith('scripts/supabase') &&
-    !f.startsWith('scripts/testSupabase'),
+    !f.startsWith('scripts/testSupabase') &&
+    // The web app's two deploy configs and the gate that reads them. The root
+    // one builds `web/` and carried a Firebase-era CSP that named no Supabase
+    // host — deploy-breaking for the web platform, and irrelevant to Assembly.
+    f !== 'vercel.json' &&
+    f !== 'scripts/preflightDeploy.ts',
   );
   ok('no file outside src/components/Assembly/, src/data/assembly/, public/assets/assembly/, src/assembly-preview.tsx, src/views/AssemblyView.tsx, docs/KNOWN_ISSUES.md, docs/EXPERT_RULES_UNMAPPED.md, or the new Assembly test scripts is dirty', outOfScope.length === 0);
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);

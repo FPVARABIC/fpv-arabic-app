@@ -151,8 +151,15 @@ function note(m: string) { notes.push(m); }
     if (!/supabase\.co/.test(v)) {
       blocker('web/vercel.json\'s CSP never names supabase.co — every API call would be refused by connect-src');
     }
-    if (/firestore\.googleapis|identitytoolkit/.test(v)) {
-      blocker('web/vercel.json\'s CSP still names Firebase hosts — phase six was supposed to remove them');
+    // Named hosts, not a hand-picked pair. The first version listed only
+    // `firestore.googleapis` and `identitytoolkit`, and `firebasestorage`
+    // survived phase six inside `img-src` because nothing looked for it —
+    // a check that enumerates two of five hosts reports «clean» for the
+    // other three.
+    const firebaseHost = v.match(
+      /(firestore\.googleapis|identitytoolkit|securetoken|firebasestorage|cloudfunctions|firebaseapp|firebaseio)[\w.]*/i);
+    if (firebaseHost) {
+      blocker(`web/vercel.json's CSP still names a Firebase host (${firebaseHost[0]}) — phase six was supposed to remove them`);
     }
     if (/sb_secret_|SUPABASE_SECRET/.test(v)) {
       blocker('web/vercel.json mentions the secret key — deploy config must never carry it');
