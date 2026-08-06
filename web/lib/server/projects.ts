@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { listProjectOverrides, isServiceConfigured } from '../backend/supabase/adminData';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import type { Project } from '@core/data/projects/types';
 
@@ -25,19 +25,25 @@ import type { Project } from '@core/data/projects/types';
  *
  * WHY A FAILED READ FALLS BACK TO THE SEEDS
  * -----------------------------------------
- * Same posture as the store catalogue: a section that 500s because Firestore is
- * unreachable is a section that is down. One that shows its reviewed seeds is
+ * Same posture as the store catalogue: a section that 500s because the
+ * database is unreachable is a section that is down. One that shows its reviewed seeds is
  * degraded and still useful. The one thing it must never do is invent.
  */
 
-const COLLECTION = 'projects';
-
 export const projectOverrides = cache(async (): Promise<Record<string, Partial<Project>>> => {
-  if (!isAdminConfigured()) return {};
+  if (!isServiceConfigured()) return {};
   try {
-    const snap = await adminDb().collection(COLLECTION).get();
+    const rows = await listProjectOverrides();
     const out: Record<string, Partial<Project>> = {};
-    for (const d of snap.docs) out[d.id] = d.data() as Partial<Project>;
+    for (const [id, v] of Object.entries(rows)) {
+      // The whole editable document rides in `patch`; the `published` column
+      // exists so a policy or an index can see it without opening the JSON,
+      // and the two are kept in step by the one writer in `actions.ts`.
+      out[id] = {
+        ...(v.patch as Partial<Project>),
+        ...(v.published !== undefined ? { published: v.published } : {}),
+      };
+    }
     return out;
   } catch {
     return {};

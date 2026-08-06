@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireCapability, ForbiddenError } from '@/lib/server/session';
-import { adminDb } from '@/lib/server/firebaseAdmin';
+import { listProfileRows } from '@/lib/backend/supabase/adminData';
 import { toRole, ROLE_LABEL_AR } from '@core/data/auth/roles';
 
 /**
@@ -8,9 +8,9 @@ import { toRole, ROLE_LABEL_AR } from '@core/data/auth/roles';
  *
  * THE SHAPE OF EVERY PRIVILEGED ROUTE IN THIS APP
  * -----------------------------------------------
- * `requireCapability()` is the FIRST statement. It verifies the session cookie
- * with Firebase, re-reads the role from Firestore, and throws before a single
- * document is read if the caller lacks the capability. Calling it first is not
+ * `requireCapability()` is the FIRST statement. It verifies the session with
+ * the Auth server, re-reads the role from the profiles table, and throws
+ * before a single row is read if the caller lacks the capability. Calling it first is not
  * a style preference: a check placed after the query has already leaked the
  * data it was meant to protect.
  *
@@ -34,32 +34,24 @@ export async function GET(request: Request) {
     // memory amplifier a caller should not control.
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit') ?? 25), 1), 100);
 
-    let query = adminDb().collection('users')
-      .orderBy('displayNameNormalized')
-      .limit(limit);
-
-    if (rawQ) {
-      // Prefix match on the normalised name the community layer already
-      // maintains — reusing that field rather than adding a second one.
-      query = adminDb().collection('users')
-        .orderBy('displayNameNormalized')
-        .startAt(rawQ)
-        .endAt(`${rawQ}`)
-        .limit(limit);
-    }
-
-    const snap = await query.get();
-    const users = snap.docs.map(d => {
-      const data = d.data();
-      const role = toRole(data.role);
+    // Prefix match on the normalised name the community layer already
+    // maintains — reusing that field rather than adding a second one.
+    const rows = await listProfileRows({
+      namePrefix: rawQ ? rawQ.toLowerCase() : undefined,
+      limit,
+    });
+    const users = rows.map(r => {
+      const role = toRole(r.role);
       return {
-        uid: d.id,
-        displayName: typeof data.displayName === 'string' ? data.displayName : null,
-        photoURL: typeof data.photoURL === 'string' ? data.photoURL : null,
+        uid: r.uid,
+        displayName: r.displayName,
+        photoURL: r.photoURL,
         role,
         roleLabelAr: ROLE_LABEL_AR[role],
-        status: data.status === 'banned' ? 'banned' : 'active',
-        postsCount: typeof data.postsCount === 'number' ? data.postsCount : 0,
+        status: r.status === 'banned' ? 'banned' : 'active',
+        // Counted on the detail screen where it matters; a list row does not
+        // pay one count query per user.
+        postsCount: 0,
       };
     });
 
@@ -68,7 +60,7 @@ export async function GET(request: Request) {
     if (e instanceof ForbiddenError) {
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
-    // Never echo an internal error to the caller: stack traces and Firestore
+    // Never echo an internal error to the caller: stack traces and database
     // messages disclose structure that helps an attacker.
     console.error('[admin/users]', e);
     return NextResponse.json({ error: 'تعذّر تنفيذ الطلب' }, { status: 500 });

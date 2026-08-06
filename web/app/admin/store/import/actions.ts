@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { setStoreDoc, mergeStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { SUPPLIERS } from '@core/data/store/suppliers';
@@ -53,7 +53,7 @@ async function gate(): Promise<Gate> {
     // sensitive half — as well as prices.
     return { errorAr: 'لا تملك صلاحية استيراد بيانات التوريد.' };
   }
-  if (!isAdminConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
   return { session };
 }
 
@@ -110,9 +110,11 @@ export async function applySupplyCsv(csv: string): Promise<ApplyResult> {
   });
 
   try {
-    // Batched: fifty round trips is fifty chances for the connection to drop
-    // halfway and leave the catalogue half-updated.
-    const batch = adminDb().batch();
+    // Sequential upserts rather than Firestore's batch — PostgREST offers no
+    // client-side multi-table transaction. The audit entry above is what makes
+    // a half-applied import DISCOVERABLE (its count and the file's verdicts),
+    // and re-running the same file is safe: every write below is an idempotent
+    // upsert keyed by variant id, so a retry converges rather than duplicating.
     for (const row of toApply) {
       if (row.kind !== 'apply') continue;
       const productId = row.variantId.split(':')[0];
@@ -127,13 +129,14 @@ export async function applySupplyCsv(csv: string): Promise<ApplyResult> {
         verified: row.verified,
         updatedAt: now,
       };
-      batch.set(adminDb().collection('storeSupply').doc(row.variantId), supply);
+      await setStoreDoc('storeSupply', row.variantId,
+        supply as unknown as Record<string, unknown>, g.session.uid);
 
       const breakdown = priceFrom(supply, settings);
       if (breakdown) {
         // The price lands on the variant, exactly as the single-product screen
         // writes it. `published` is deliberately absent from this write.
-        batch.set(adminDb().collection('storeProducts').doc(productId), {
+        await mergeStoreDoc('storeProducts', productId, {
           variantState: {
             [row.variantId]: {
               priceMinor: breakdown.sellMinor,
@@ -142,14 +145,13 @@ export async function applySupplyCsv(csv: string): Promise<ApplyResult> {
           },
           currency: 'USD',
           updatedAt: now,
-        }, { merge: true });
+        }, g.session.uid);
       }
     }
-    await batch.commit();
     await markAuditResult(entryId, 'ok');
   } catch {
-    await markAuditResult(entryId, 'error', 'batch write failed');
-    return { ok: false, errorAr: 'تعذّر تطبيق الاستيراد. لم يُكتب شيء.' };
+    await markAuditResult(entryId, 'error', 'import write failed partway');
+    return { ok: false, errorAr: 'تعذّر إكمال الاستيراد — أعد تشغيل الملف نفسه لإتمام ما تبقّى.' };
   }
 
   revalidatePath('/admin/store/supply');

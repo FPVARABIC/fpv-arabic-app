@@ -1,6 +1,8 @@
 import 'server-only';
-import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb, isAdminConfigured } from '../firebaseAdmin';
+import {
+  getOrderDoc, updateOrderDoc, getPaymentDoc, setPaymentDoc, mergePaymentDoc,
+  listPaymentDocsForOrder, isServiceConfigured,
+} from '../../backend/supabase/adminData';
 import { getSession } from '../session';
 import { logAudit, newRequestId, actorFromSession, type AuditActor } from '../audit';
 import { paymentProvider } from './index';
@@ -35,9 +37,6 @@ import type { StoreOrder } from '@core/data/store/types';
  * money's state.
  */
 
-const ORDERS = 'storeOrders';
-const PAYMENTS = 'storePayments';
-
 export type StartPaymentResult =
   | { ok: true; checkoutUrl: string; testMode: boolean }
   | { ok: false; errorAr: string };
@@ -56,7 +55,7 @@ const SYSTEM_ACTOR: AuditActor = {
  * money would be wrong.
  */
 export async function startPayment(orderId: string): Promise<StartPaymentResult> {
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الدفع غير متاح حالياً.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الدفع غير متاح حالياً.' };
 
   const provider = paymentProvider();
   if (!provider) {
@@ -66,9 +65,9 @@ export async function startPayment(orderId: string): Promise<StartPaymentResult>
   const session = await getSession();
   if (!session) return { ok: false, errorAr: 'سجّل الدخول أولاً.' };
 
-  const snap = await adminDb().collection(ORDERS).doc(orderId).get();
-  if (!snap.exists) return { ok: false, errorAr: 'لا يوجد طلب بهذا الرقم.' };
-  const order = { id: snap.id, ...snap.data() } as StoreOrder;
+  const row = await getOrderDoc(orderId).catch(() => null);
+  if (!row) return { ok: false, errorAr: 'لا يوجد طلب بهذا الرقم.' };
+  const order = { id: row.id, ...row.doc } as StoreOrder;
 
   // OWNERSHIP. Paying somebody else's order is the attack this line stops, and
   // it is checked before anything else is read or written.
@@ -141,7 +140,8 @@ export async function startPayment(orderId: string): Promise<StartPaymentResult>
     createdAt: now,
     updatedAt: now,
   };
-  await adminDb().collection(PAYMENTS).doc(created.providerRef).set(payment);
+  await setPaymentDoc(created.providerRef, orderId, 'pending',
+    payment as unknown as Record<string, unknown>);
 
   await logAudit(actorFromSession(session), newRequestId(), {
     action: 'store.order.status',
@@ -183,7 +183,7 @@ export async function applyPaymentWebhook(
   headers: Headers,
   rawBody: string,
 ): Promise<WebhookResult> {
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'غير متاح.' };
 
   const provider = paymentProvider();
   if (!provider) return { ok: false, errorAr: 'الدفع غير مفعّل.' };
@@ -196,8 +196,8 @@ export async function applyPaymentWebhook(
 
   // The payment must be one WE created. An unknown reference is somebody
   // POSTing ids at the endpoint; it is recorded and refused.
-  const doc = await adminDb().collection(PAYMENTS).doc(ref).get();
-  if (!doc.exists) {
+  const doc = await getPaymentDoc(ref).catch(() => null);
+  if (!doc) {
     await logAudit(SYSTEM_ACTOR, newRequestId(), {
       action: 'store.order.status',
       targetType: 'order',
@@ -207,7 +207,7 @@ export async function applyPaymentWebhook(
     });
     return { ok: false, errorAr: 'غير معروف.' };
   }
-  const payment = { id: doc.id, ...doc.data() } as OrderPayment;
+  const payment = { id: ref, ...doc } as OrderPayment;
 
   // THE ONLY SOURCE OF TRUTH: the provider, asked directly.
   let state;
@@ -272,13 +272,13 @@ export async function applyPaymentWebhook(
     || (state.refundedMinor ?? 0) !== (payment.refundedMinor ?? 0);
 
   if (changed) {
-    await adminDb().collection(PAYMENTS).doc(ref).update({
+    await mergePaymentDoc(ref, {
       status: state.status,
-      method: state.method ?? FieldValue.delete(),
+      method: state.method ?? null,
       refundedMinor: state.refundedMinor ?? 0,
-      failureReason: state.failureReason ?? FieldValue.delete(),
+      failureReason: state.failureReason ?? null,
       updatedAt: new Date().toISOString(),
-    });
+    }, state.status);
 
     await logAudit(SYSTEM_ACTOR, newRequestId(), {
       action: 'store.order.status',
@@ -324,14 +324,17 @@ export async function applyPaymentWebhook(
 async function advanceOrderForPayment(orderId: string, status: PaymentStatus): Promise<void> {
   if (status !== 'paid') return;
 
-  const ref = adminDb().collection(ORDERS).doc(orderId);
-  const snap = await ref.get();
-  if (!snap.exists) return;
+  const row = await getOrderDoc(orderId).catch(() => null);
+  if (!row) return;
 
-  const current = (snap.data() as StoreOrder).status;
+  const current = (row.doc as unknown as StoreOrder).status;
   if (current !== 'received') return;
 
-  await ref.update({ status: 'confirmed', updatedAt: new Date().toISOString() });
+  // The document and the relational spine move together, and the payment
+  // column records that money settled — the axis 0004 exists for.
+  await updateOrderDoc(orderId,
+    { status: 'confirmed', updatedAt: new Date().toISOString() },
+    { fulfilment: 'confirmed', payment_state: 'paid' });
 
   await logAudit(SYSTEM_ACTOR, newRequestId(), {
     action: 'store.order.status',
@@ -363,7 +366,7 @@ export async function refundPayment(
   amountMinor: number,
   actor: AuditActor,
 ): Promise<RefundResult> {
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'غير متاح.' };
 
   const provider = paymentProvider();
   if (!provider) return { ok: false, errorAr: 'الدفع غير مفعّل.' };
@@ -371,9 +374,9 @@ export async function refundPayment(
     return { ok: false, errorAr: 'مزوّد الدفع الحالي لا يدعم الاسترجاع من هنا.' };
   }
 
-  const doc = await adminDb().collection(PAYMENTS).doc(providerRef).get();
-  if (!doc.exists) return { ok: false, errorAr: 'لا توجد عملية دفع بهذا المعرّف.' };
-  const payment = { id: doc.id, ...doc.data() } as OrderPayment;
+  const doc = await getPaymentDoc(providerRef).catch(() => null);
+  if (!doc) return { ok: false, errorAr: 'لا توجد عملية دفع بهذا المعرّف.' };
+  const payment = { id: providerRef, ...doc } as OrderPayment;
 
   if (payment.status !== 'paid' && payment.status !== 'partially_refunded') {
     return { ok: false, errorAr: 'لا يمكن استرجاع عملية غير مدفوعة.' };
@@ -408,11 +411,11 @@ export async function refundPayment(
     return { ok: false, errorAr: 'تعذّر تنفيذ الاسترجاع الآن.' };
   }
 
-  await adminDb().collection(PAYMENTS).doc(providerRef).update({
+  await mergePaymentDoc(providerRef, {
     status: state.status,
     refundedMinor: state.refundedMinor ?? already + amountMinor,
     updatedAt: new Date().toISOString(),
-  });
+  }, state.status);
 
   await logAudit(actor, newRequestId(), {
     action: 'store.order.status',
@@ -458,10 +461,8 @@ export async function resyncPayment(
 
 /** The payment a customer is currently on, if any. */
 export async function activePaymentFor(orderId: string): Promise<OrderPayment | null> {
-  const snap = await adminDb().collection(PAYMENTS)
-    .where('orderId', '==', orderId)
-    .get();
-  const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as OrderPayment));
+  const all = (await listPaymentDocsForOrder(orderId))
+    .map(d => ({ ...d } as unknown as OrderPayment));
   return all.find(p => p.status === 'paid')
     ?? all.find(p => !isTerminalPayment(p.status))
     ?? null;
@@ -469,15 +470,13 @@ export async function activePaymentFor(orderId: string): Promise<OrderPayment | 
 
 /** Every payment attached to an order, newest first. For the admin panel. */
 export async function paymentsFor(orderId: string): Promise<OrderPayment[]> {
-  const snap = await adminDb().collection(PAYMENTS).where('orderId', '==', orderId).get();
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() } as OrderPayment))
+  return (await listPaymentDocsForOrder(orderId))
+    .map(d => ({ ...d } as unknown as OrderPayment))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 async function countPayments(orderId: string): Promise<number> {
-  const snap = await adminDb().collection(PAYMENTS).where('orderId', '==', orderId).get();
-  return snap.size;
+  return (await listPaymentDocsForOrder(orderId)).length;
 }
 
 /**

@@ -1,5 +1,7 @@
 import 'server-only';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import {
+  insertOrderDoc, getOrderDoc, listOrderDocs, updateOrderDoc, isServiceConfigured,
+} from '../backend/supabase/adminData';
 import { getSession } from './session';
 import { readCart, resolveCart } from '@core/data/store/cart';
 import { freeSetupVariantId } from '@core/data/store/services';
@@ -37,8 +39,6 @@ import type { OrderStatus, OrderSubmission, StoreOrder } from '@core/data/store/
  * the shop made should not depend on the customer's copy of it surviving.
  */
 
-const ORDERS = 'storeOrders';
-
 export type PlaceOrderResult =
   | { ok: true; orderId: string }
   | { ok: false; errorAr: string };
@@ -50,7 +50,7 @@ export type PlaceOrderResult =
  * says when it has not thought about what could go wrong.
  */
 export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrderResult> {
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الطلبات غير متاحة حالياً. حاول لاحقاً.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الطلبات غير متاحة حالياً. حاول لاحقاً.' };
 
   const session = await getSession();
   if (!session) {
@@ -176,12 +176,15 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
   };
 
   try {
-    const ref = await adminDb().collection(ORDERS).add(order);
-    // A pointer under the customer's own document, so «طلباتي» is one scoped
-    // read rather than a query across everybody's orders.
-    await adminDb().doc(`users/${session.uid}/orderRefs/${ref.id}`)
-      .set({ orderId: ref.id, createdAt: now, status: 'received' });
-    return { ok: true, orderId: ref.id };
+    // One insert writes both halves: the document (the contract every page
+    // reads) and the relational spine (`user_id`, the totals, the fulfilment
+    // state) that RLS polices — so «طلباتي» is `orders_read_own` doing its
+    // job rather than a pointer sub-collection kept manually in step.
+    const orderId = await insertOrderDoc({
+      ...order,
+      customerUid: session.uid,
+    });
+    return { ok: true, orderId };
   } catch {
     return { ok: false, errorAr: 'تعذّر حفظ الطلب. حاول مرة أخرى.' };
   }
@@ -189,18 +192,23 @@ export async function placeOrder(submission: OrderSubmission): Promise<PlaceOrde
 
 /** Orders, newest first. Staff only — the caller checks the capability. */
 export async function listOrders(opts: { status?: OrderStatus; limit?: number } = {}) {
-  if (!isAdminConfigured()) return [];
-  let q = adminDb().collection(ORDERS).orderBy('createdAt', 'desc');
-  if (opts.status) q = q.where('status', '==', opts.status) as typeof q;
-  const snap = await q.limit(opts.limit ?? 50).get();
-  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<StoreOrder, 'id'>) }));
+  if (!isServiceConfigured()) return [];
+  const rows = await listOrderDocs({ fulfilment: opts.status, limit: opts.limit ?? 50 });
+  return rows.map(r => ({ id: r.id, ...(r.doc as unknown as Omit<StoreOrder, 'id'>) }));
 }
 
 export async function getOrder(orderId: string): Promise<StoreOrder | null> {
-  if (!isAdminConfigured()) return null;
-  const doc = await adminDb().collection(ORDERS).doc(orderId).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...(doc.data() as Omit<StoreOrder, 'id'>) };
+  if (!isServiceConfigured()) return null;
+  const row = await getOrderDoc(orderId);
+  if (!row) return null;
+  return { id: row.id, ...(row.doc as unknown as Omit<StoreOrder, 'id'>) };
+}
+
+/** The signed-in customer's own orders, for «طلباتي». */
+export async function listOrdersForUser(uid: string): Promise<StoreOrder[]> {
+  if (!isServiceConfigured()) return [];
+  const rows = await listOrderDocs({ userId: uid, limit: 100 });
+  return rows.map(r => ({ id: r.id, ...(r.doc as unknown as Omit<StoreOrder, 'id'>) }));
 }
 
 export type UpdateStatusResult = { ok: true } | { ok: false; errorAr: string };
@@ -225,8 +233,8 @@ export async function updateOrderStatus(
   }
 
   const now = new Date().toISOString();
-  await adminDb().collection(ORDERS).doc(orderId).update({ status: next, updatedAt: now });
-  await adminDb().doc(`users/${order.customerUid}/orderRefs/${orderId}`)
-    .set({ status: next, updatedAt: now }, { merge: true });
+  // The document and the spine's `fulfilment` column move in one call — the
+  // single-writer rule that keeps the two halves from ever disagreeing.
+  await updateOrderDoc(orderId, { status: next, updatedAt: now }, { fulfilment: next });
   return { ok: true };
 }

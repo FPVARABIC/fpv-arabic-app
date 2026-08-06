@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
  * -----------------------------------------------
  * `isOwner` compares the post's `authorId` to the uid inside the server-verified
  * session cookie — not to anything the browser claimed. It only decides whether
- * to RENDER the owner controls; `firestore.rules` is what refuses the write.
+ * to RENDER the owner controls; row-level security is what refuses the write.
  */
 
 export async function generateMetadata(

@@ -15,7 +15,7 @@ import {
  * ----------------------------------------------------------------
  * The parent page computes `isOwner` from the VERIFIED session and passes it
  * down, so a visitor does not see an edit button on someone else's post. That
- * is presentation. The actual protection is that `firestore.rules` compares
+ * is presentation. The actual protection is that the RLS policies compare
  * `resource.data.authorId` to `request.auth.uid` on every write — proven by
  * emulator cases PE2 (another user cannot edit) and PE3 (an anonymous caller
  * cannot edit). Deleting this component would not open a hole.
@@ -177,7 +177,7 @@ export const PostActions: React.FC<{
           </fieldset>
           {/*
             The note appears ONLY for «سبب آخر». That is not a design
-            preference: `firestore.rules` requires `note == null` for every
+            preference: the report contract accepts a note for exactly one
             other reason and refuses the whole write otherwise, so a note box
             on «إزعاج» would be a field that silently destroys the report the
             moment someone types in it.

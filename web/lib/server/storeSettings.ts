@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { getStoreDoc, isServiceConfigured } from '../backend/supabase/adminData';
 import {
   SETTINGS_DOC_PUBLIC, SETTINGS_DOC_PRIVATE,
   INITIAL_PUBLIC_SETTINGS, INITIAL_PRIVATE_SETTINGS,
@@ -29,20 +29,20 @@ import type { StorePrivateSettings, StorePublicSettings } from '@core/data/store
  */
 
 export const privateStoreSettings = cache(async (): Promise<StorePrivateSettings> => {
-  if (!isAdminConfigured()) return INITIAL_PRIVATE_SETTINGS;
+  if (!isServiceConfigured()) return INITIAL_PRIVATE_SETTINGS;
   try {
-    const doc = await adminDb().doc(`storeSettings/${SETTINGS_DOC_PRIVATE}`).get();
-    return doc.exists ? validatePrivateSettings(doc.data()) : INITIAL_PRIVATE_SETTINGS;
+    const doc = await getStoreDoc('storeSettings', SETTINGS_DOC_PRIVATE);
+    return doc ? validatePrivateSettings(doc) : INITIAL_PRIVATE_SETTINGS;
   } catch {
     return INITIAL_PRIVATE_SETTINGS;
   }
 });
 
 export const publicStoreSettings = cache(async (): Promise<StorePublicSettings> => {
-  if (!isAdminConfigured()) return INITIAL_PUBLIC_SETTINGS;
+  if (!isServiceConfigured()) return INITIAL_PUBLIC_SETTINGS;
   try {
-    const doc = await adminDb().doc(`storeSettings/${SETTINGS_DOC_PUBLIC}`).get();
-    return doc.exists ? validatePublicSettings(doc.data()) : INITIAL_PUBLIC_SETTINGS;
+    const doc = await getStoreDoc('storeSettings', SETTINGS_DOC_PUBLIC);
+    return doc ? validatePublicSettings(doc) : INITIAL_PUBLIC_SETTINGS;
   } catch {
     return INITIAL_PUBLIC_SETTINGS;
   }

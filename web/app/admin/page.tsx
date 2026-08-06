@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { isServiceConfigured as isAdminConfigured } from '@/lib/backend/supabase/adminData';
 import { getAdminStats } from '@/lib/server/adminRead';
 import { listAudit } from '@/lib/server/audit';
 import { AdminShell } from '@/components/admin/AdminShell';

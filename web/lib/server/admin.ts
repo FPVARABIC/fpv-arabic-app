@@ -1,7 +1,10 @@
 import 'server-only';
 
-import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb } from './firebaseAdmin';
+import {
+  getProfileRow, getAuthEmail, updateProfileFields, countOwners as countOwnerRows,
+  getPostRow, setPostStatus, clearPostMedia, getCommentRow, setCommentStatus,
+  getReportRow, updateReportRow, deleteServicePrefix,
+} from '../backend/supabase/adminData';
 import { ForbiddenError, type Session } from './session';
 import {
   logAudit, logDenied, markAuditResult, actorFromSession,
@@ -44,13 +47,13 @@ import {
  * a capability an admin holds; banning THE OWNER is not something any capability
  * grants, and that distinction can only be made after the target is read.
  *
- * ADMIN SDK, WHICH MEANS RULES DO NOT APPLY
- * -----------------------------------------
- * Every write here bypasses `firestore.rules` by design — that is what the
- * Admin SDK is. It is the reason the checks in this file have to be complete
- * rather than a second opinion: there is no rules layer behind them to catch a
- * mistake. `scripts/testAdminRoles.ts` exercises the decision logic directly,
- * and the end-to-end suite drives the real endpoints.
+ * SERVICE KEY, WHICH MEANS ROW-LEVEL SECURITY DOES NOT APPLY
+ * ----------------------------------------------------------
+ * Every write here runs on the secret key and bypasses RLS by design — that
+ * is what the service role is. It is the reason the checks in this file have
+ * to be complete rather than a second opinion: there is no policy layer
+ * behind them to catch a mistake. `scripts/testAdminRoles.ts` exercises the
+ * decision logic directly.
  */
 
 /* ── Errors ──────────────────────────────────────────────────────────────── */
@@ -96,22 +99,14 @@ export interface TargetUser {
 }
 
 async function loadUser(uid: string): Promise<TargetUser> {
-  const snap = await adminDb().collection('users').doc(uid).get();
-  if (!snap.exists) throw new AdminError('not_found', 'لا يوجد مستخدم بهذا المعرّف', 404);
-  const d = snap.data() ?? {};
-  let email: string | null = null;
-  try {
-    email = (await adminAuth().getUser(uid)).email ?? null;
-  } catch {
-    // An account can exist in Firestore with no Auth record in a test fixture.
-    // A missing email is not a reason to refuse an administrative action.
-  }
+  const row = await getProfileRow(uid);
+  if (!row) throw new AdminError('not_found', 'لا يوجد مستخدم بهذا المعرّف', 404);
   return {
     uid,
-    role: toRole(d.role),
-    status: d.status === 'banned' ? 'banned' : 'active',
-    displayName: typeof d.displayName === 'string' ? d.displayName : null,
-    email,
+    role: toRole(row.role),
+    status: row.status === 'banned' ? 'banned' : 'active',
+    displayName: row.displayName,
+    email: await getAuthEmail(uid),
   };
 }
 
@@ -197,13 +192,11 @@ export interface BanInput {
  *
  * WHAT BANNING ACTUALLY DOES, STATED PRECISELY
  * --------------------------------------------
- *   - `users/{uid}.status` becomes 'banned'. `firestore.rules` reads that field
- *     through `isActiveCaller()`, so the account immediately loses the ability
- *     to post, comment, upload and report. That is enforced by the rules, not
- *     by the UI, and the emulator suite proves it.
- *   - Every refresh token is revoked. `getSession` verifies the session cookie
- *     with `checkRevoked: true`, so the existing httpOnly cookie stops
- *     resolving on the very next request rather than at its natural expiry.
+ *   - `profiles.status` becomes 'banned'. Every RLS insert policy reads that
+ *     row through `is_active()`, so the account immediately loses the ability
+ *     to post, comment, upload and report — enforced by the database, not by
+ *     the UI, and proven by the RLS suite. `getSession` additionally collapses
+ *     a banned session's role to `user` on its very next request.
  *   - The Auth account is NOT disabled and sign-in is NOT blocked. A banned
  *     person can still authenticate and read the site. That is deliberate:
  *     disabling the Auth record would make the state invisible to them and
@@ -231,13 +224,13 @@ export async function banUser(actor: Session, requestId: string, input: BanInput
     return await audited(actor, requestId, {
       ...entry, before: 'active', after: 'banned', reasonAr: input.reasonAr,
     }, async () => {
-      await adminDb().collection('users').doc(input.uid).update({ status: 'banned' });
-      // Kill live sessions. Without this the ban takes effect only when the
-      // existing session cookie expires, which can be two weeks.
-      await adminAuth().revokeRefreshTokens(input.uid).catch(() => {
-        // No Auth record (a Firestore-only fixture). The status field is the
-        // enforcement; revocation is the acceleration.
-      });
+      await updateProfileFields(input.uid, { status: 'banned' });
+      // No token revocation call here, and that is a considered difference
+      // from the Firebase version: enforcement never rested on it. The status
+      // field is re-read on EVERY privileged request by `getSession`, and
+      // `is_active()` refuses every write in RLS the moment the row says
+      // banned — so a live access token buys a banned account nothing beyond
+      // reading public pages, which a signed-out browser can do anyway.
       return { ...subject, status: 'banned' as const };
     });
   } catch (err) {
@@ -258,7 +251,7 @@ export async function unbanUser(actor: Session, requestId: string, input: BanInp
     return await audited(actor, requestId, {
       ...entry, before: 'banned', after: 'active', reasonAr: input.reasonAr,
     }, async () => {
-      await adminDb().collection('users').doc(input.uid).update({ status: 'active' });
+      await updateProfileFields(input.uid, { status: 'active' });
       return { ...subject, status: 'active' as const };
     });
   } catch (err) {
@@ -290,17 +283,12 @@ export interface AssignRoleInput {
  *      about this call, (5) is about the invariant surviving whatever a later
  *      change to (2) looks like.
  *
- * BOTH SOURCES ARE UPDATED, IN THE SAFE ORDER
- * -------------------------------------------
- * `getSession` takes the LOWER of the custom claim and the Firestore document.
- * So a demotion must land in the document first (which immediately reduces the
- * effective role even with a stale claim still in the cookie), and a promotion
- * only takes effect once both agree. Writing the document first is therefore
- * correct in both directions: it can never leave a window in which someone has
- * more power than intended.
- *
- * Tokens are revoked afterwards so the next request re-mints a cookie carrying
- * the new claim, rather than the person waiting out the old one.
+ * ONE SOURCE, READ FRESH
+ * ----------------------
+ * `profiles.role` is the only place a role lives. `getSession` re-reads it on
+ * every request and the RLS helpers re-read it inside the database, so there
+ * is no claim to reissue, no revocation to remember, and no window in which
+ * two sources disagree about who someone is.
  */
 export async function assignRole(
   actor: Session, requestId: string, input: AssignRoleInput,
@@ -335,15 +323,13 @@ export async function assignRole(
     return await audited(actor, requestId, {
       ...entry, before: subject.role, after: input.role, reasonAr: input.reasonAr,
     }, async () => {
-      // Document first. See the header: with `getSession` taking the lower of
-      // the two, this ordering is safe for a demotion and for a promotion.
-      await adminDb().collection('users').doc(input.uid).update({ role: input.role });
-      await adminAuth().setCustomUserClaims(input.uid, { role: input.role }).catch(() => {
-        // No Auth record. The document is what `getSession` and the rules read;
-        // the claim is the fast path, and its absence costs a lookup, not a
-        // permission.
-      });
-      await adminAuth().revokeRefreshTokens(input.uid).catch(() => {});
+      // ONE write, ONE source. There is no custom claim to keep in step any
+      // more: `getSession` and every RLS helper read `profiles.role` fresh on
+      // each request, so the demotion or promotion is total the moment this
+      // statement commits. The two-source choreography the Firebase version
+      // needed — document first, then the claim, then a revocation — was the
+      // cost of having two answers to one question, and it is gone with them.
+      await updateProfileFields(input.uid, { role: input.role });
       return { ...subject, role: input.role };
     });
   } catch (err) {
@@ -353,8 +339,7 @@ export async function assignRole(
 
 /** How many owners exist. Used only to refuse removing the last one. */
 export async function countOwners(): Promise<number> {
-  const snap = await adminDb().collection('users').where('role', '==', 'owner').limit(5).get();
-  return snap.size;
+  return countOwnerRows();
 }
 
 /* ── Content ─────────────────────────────────────────────────────────────── */
@@ -369,15 +354,16 @@ export interface ModeratePostInput {
 }
 
 async function loadPost(postId: string) {
-  const snap = await adminDb().collection('posts').doc(postId).get();
-  if (!snap.exists) throw new AdminError('not_found', 'لا يوجد منشور بهذا المعرّف', 404);
-  const d = snap.data() ?? {};
+  const row = await getPostRow(postId);
+  if (!row) throw new AdminError('not_found', 'لا يوجد منشور بهذا المعرّف', 404);
   return {
     id: postId,
-    authorId: String(d.authorId ?? ''),
-    status: (d.status === 'hidden' || d.status === 'deleted' ? d.status : 'active') as ContentStatus,
-    mediaPath: typeof d.mediaPath === 'string' ? d.mediaPath : null,
-    mediaType: (d.mediaType === 'image' || d.mediaType === 'video' ? d.mediaType : 'none') as 'none' | 'image' | 'video',
+    authorId: row.authorId,
+    status: (row.status === 'hidden' || row.status === 'deleted' ? row.status : 'active') as ContentStatus,
+    // The storage folder is DERIVED — `{uid}/{postId}` is the only shape the
+    // policies ever accepted, so there is no stored path to disagree with it.
+    mediaPath: row.mediaType !== 'none' ? `${row.authorId}/${postId}` : null,
+    mediaType: (row.mediaType === 'image' || row.mediaType === 'video' ? row.mediaType : 'none') as 'none' | 'image' | 'video',
   };
 }
 
@@ -411,7 +397,7 @@ export async function hidePost(actor: Session, requestId: string, input: Moderat
       ...entry, before: post.status, after: 'hidden', reasonAr: input.reasonAr,
       meta: { reportId: input.reportId ?? null, authorId: post.authorId },
     }, async () => {
-      await adminDb().collection('posts').doc(input.postId).update({ status: 'hidden' });
+      await setPostStatus(input.postId, 'hidden');
       return { ...post, status: 'hidden' as ContentStatus };
     });
   } catch (err) {
@@ -439,7 +425,7 @@ export async function unhidePost(actor: Session, requestId: string, input: Moder
       ...entry, before: 'hidden', after: 'active', reasonAr: input.reasonAr,
       meta: { reportId: input.reportId ?? null, authorId: post.authorId },
     }, async () => {
-      await adminDb().collection('posts').doc(input.postId).update({ status: 'active' });
+      await setPostStatus(input.postId, 'active');
       return { ...post, status: 'active' as ContentStatus };
     });
   } catch (err) {
@@ -469,7 +455,7 @@ export async function deletePostAdmin(actor: Session, requestId: string, input: 
       ...entry, before: post.status, after: 'deleted', reasonAr: input.reasonAr,
       meta: { reportId: input.reportId ?? null, authorId: post.authorId },
     }, async () => {
-      await adminDb().collection('posts').doc(input.postId).update({ status: 'deleted' });
+      await setPostStatus(input.postId, 'deleted');
       return { ...post, status: 'deleted' as ContentStatus };
     });
   } catch (err) {
@@ -488,17 +474,16 @@ export async function hideComment(actor: Session, requestId: string, input: Mode
   const entry = { action: 'comment.hide' as const, targetType: 'comment' as const, targetId: input.commentId };
   try {
     requireCap(actor, 'community.hideComment');
-    const ref = adminDb().collection('posts').doc(input.postId).collection('comments').doc(input.commentId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new AdminError('not_found', 'لا يوجد تعليق بهذا المعرّف', 404);
-    const before = String(snap.data()?.status ?? 'active');
+    const comment = await getCommentRow(input.commentId);
+    if (!comment) throw new AdminError('not_found', 'لا يوجد تعليق بهذا المعرّف', 404);
+    const before = comment.status;
     if (before === 'hidden') throw new AdminError('invalid_transition', 'التعليق مخفي بالفعل', 409);
 
     return await audited(actor, requestId, {
       ...entry, before, after: 'hidden', reasonAr: input.reasonAr,
-      meta: { postId: input.postId, reportId: input.reportId ?? null },
+      meta: { postId: comment.postId, reportId: input.reportId ?? null },
     }, async () => {
-      await ref.update({ status: 'hidden' });
+      await setCommentStatus(input.commentId, 'hidden');
       return { id: input.commentId, status: 'hidden' as ContentStatus };
     });
   } catch (err) {
@@ -532,26 +517,19 @@ export async function deletePostMedia(actor: Session, requestId: string, input: 
       throw new AdminError('invalid_transition', 'لا وسائط مرتبطة بهذا المنشور', 409);
     }
 
-    const expected = `community/posts/${post.authorId}/${post.id}`;
-    if (post.mediaPath !== expected) {
-      // The stored path disagrees with what it must be. Refuse rather than
-      // delete something whose ownership cannot be established.
-      throw new AdminError('media_mismatch', 'مسار الوسائط لا يطابق مالك المنشور', 409);
-    }
+    // The folder is DERIVED from the post's own author and id — the only
+    // shape the storage policies ever accepted — so it is structurally
+    // impossible for this to touch another user's files, whatever a caller
+    // sends. A forged URL or a hand-written path has nowhere to enter.
+    const expected = `${post.authorId}/${post.id}`;
 
     return await audited(actor, requestId, {
       ...entry, before: post.mediaType, after: 'none', reasonAr: input.reasonAr,
       meta: { path: expected, authorId: post.authorId, reportId: input.reportId ?? null },
     }, async () => {
-      const { getStorage } = await import('firebase-admin/storage');
-      const [files] = await getStorage().bucket().getFiles({ prefix: `${expected}/` });
-      await Promise.all(files.map(f => f.delete().catch(() => {})));
-      await adminDb().collection('posts').doc(input.postId).update({
-        mediaType: 'none', mediaURL: null, thumbnailURL: null,
-        mediaSize: null, mediaDuration: null, mediaPath: null,
-        mediaWidth: null, mediaHeight: null,
-      });
-      return { deleted: files.length };
+      const deleted = await deleteServicePrefix('community-media', expected);
+      await clearPostMedia(input.postId);
+      return { deleted };
     });
   } catch (err) {
     return denied(actor, requestId, entry, err);
@@ -579,6 +557,28 @@ export async function deletePostMedia(actor: Session, requestId: string, input: 
  */
 export type ReportStatus = 'open' | 'in_review' | 'resolved' | 'rejected';
 
+/**
+ * The table's enum and the web's vocabulary, mapped in one place.
+ *
+ * `0001` named the states `open / reviewing / resolved / dismissed`; the web
+ * UI had already shipped `in_review` and `rejected`. The database's names win
+ * at rest, the UI's win on screen, and these two functions are the entire
+ * treaty between them.
+ */
+export function reportStatusFromState(state: string): ReportStatus {
+  if (state === 'reviewing') return 'in_review';
+  if (state === 'dismissed') return 'rejected';
+  if (state === 'resolved') return 'resolved';
+  return 'open';
+}
+
+export function stateFromReportStatus(status: ReportStatus): string {
+  if (status === 'in_review') return 'reviewing';
+  if (status === 'rejected') return 'dismissed';
+  return status;
+}
+
+/** The Firestore-era derivation, kept for callers that still hold old docs. */
 export function effectiveReportStatus(doc: { resolved?: unknown; status?: unknown }): ReportStatus {
   const stored = typeof doc.status === 'string' ? doc.status : null;
   if (doc.resolved === true) return stored === 'rejected' ? 'rejected' : 'resolved';
@@ -617,10 +617,9 @@ export async function decideReport(
   try {
     requireCap(actor, 'community.resolveReports');
 
-    const ref = adminDb().collection('reports').doc(input.reportId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new AdminError('not_found', 'لا يوجد بلاغ بهذا المعرّف', 404);
-    const from = effectiveReportStatus(snap.data() ?? {});
+    const row = await getReportRow(input.reportId);
+    if (!row) throw new AdminError('not_found', 'لا يوجد بلاغ بهذا المعرّف', 404);
+    const from = reportStatusFromState(row.state);
 
     if (!canTransition(from, input.to)) {
       throw new AdminError(
@@ -633,13 +632,11 @@ export async function decideReport(
     return await audited(actor, requestId, {
       ...entry, before: from, after: input.to, reasonAr: input.reasonAr,
     }, async () => {
-      await ref.update({
-        // Both fields, always together — that is what keeps them consistent.
-        resolved: input.to === 'resolved' || input.to === 'rejected',
-        status: input.to,
-        reviewedBy: actor.uid,
-        reviewedAt: FieldValue.serverTimestamp(),
-        reviewNoteAr: input.reasonAr.trim().slice(0, 500) || null,
+      await updateReportRow(input.reportId, {
+        state: stateFromReportStatus(input.to),
+        handled_by: actor.uid,
+        handled_at: new Date().toISOString(),
+        resolution_note: input.reasonAr.trim().slice(0, 500) || null,
       });
       return { id: input.reportId, status: input.to };
     });

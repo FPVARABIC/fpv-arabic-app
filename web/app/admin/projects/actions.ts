@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { mergeProjectOverride, listProjectOverrides, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import type { ProjectSeed } from '@core/data/projects/types';
 import { getProject } from '@core/data/projects/registry';
@@ -136,7 +136,7 @@ export async function saveProject(input: SaveProjectInput): Promise<ProjectActio
   });
 
   try {
-    await adminDb().collection(COLLECTION).doc(id).set(doc, { merge: true });
+    await mergeProjectOverride(id, doc as Record<string, unknown>, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -186,10 +186,10 @@ export async function setProjectPublished(
   });
 
   try {
-    await adminDb().collection(COLLECTION).doc(projectId).set({
+    await mergeProjectOverride(projectId, {
       published,
       lastReviewed: monthStamp(),
-    }, { merge: true });
+    }, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -219,9 +219,9 @@ export async function setProjectImage(
   });
 
   try {
-    await adminDb().collection(COLLECTION).doc(projectId).set({
+    await mergeProjectOverride(projectId, {
       imageUrl: imageUrl ?? null,
-    }, { merge: true });
+    }, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -548,16 +548,17 @@ async function authorise(): Promise<Gate> {
   if (!session || !sessionCan(session, 'content.edit')) {
     return { errorAr: 'لا تملك صلاحية تعديل المحتوى.' };
   }
-  if (!isAdminConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
   return { session };
 }
 
 /** The project's stored visibility, or null when it has never been written. */
 async function readPublished(projectId: string): Promise<boolean | null> {
   try {
-    const doc = await adminDb().collection(COLLECTION).doc(projectId).get();
-    if (doc.exists) {
-      const v = (doc.data() as { published?: unknown }).published;
+    const all = await listProjectOverrides();
+    const row = all[projectId];
+    if (row) {
+      const v = row.published ?? (row.patch as { published?: unknown }).published;
       if (typeof v === 'boolean') return v;
     }
   } catch { /* fall through to the seed */ }

@@ -136,12 +136,18 @@ psql(`
   insert into auth.users (id, email) values
     ('${U.alice}','a@x.test'),('${U.mallory}','m@x.test'),
     ('${U.mod}','mod@x.test'),('${U.admin}','ad@x.test'),('${U.banned}','b@x.test');
+  -- 0005's trigger already made a bare profile per auth row; the seed SETS
+  -- the roles rather than inserting beside the trigger.
   insert into public.profiles (id, display_name, role, status) values
     ('${U.alice}','Alice','user','active'),
     ('${U.mallory}','Mallory','user','active'),
     ('${U.mod}','Mod','moderator','active'),
     ('${U.admin}','Admin','admin','active'),
-    ('${U.banned}','Banned','user','banned');
+    ('${U.banned}','Banned','user','banned')
+  on conflict (id) do update set
+    display_name = excluded.display_name,
+    role = excluded.role,
+    status = excluded.status;
   insert into storage.objects (bucket_id, name, owner, metadata) values
     ('avatars','${U.alice}/me.webp','${U.alice}', ${IMG}),
     ('community-media','${U.alice}/post-1/photo.webp','${U.alice}', ${IMG}),

@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { listStoreDocs, isServiceConfigured } from '../backend/supabase/adminData';
 import {
   STORE_PRODUCTS, storeProduct as seedProduct, selectCategory, sectionMembers,
 } from '@core/data/store/catalogue';
@@ -16,7 +16,7 @@ import { privateStoreSettings } from './storeSettings';
  * The catalogue the storefront actually renders.
  *
  * The seeds in the shared core say what a product IS; the `storeProducts`
- * collection says what the admin has changed about it since. This is where the
+ * documents say what the admin has changed about it since. This is where the
  * two meet, and it is the only place they meet — a component that imported the
  * seeds directly would render a shop that ignores its own admin panel, which is
  * the state this module exists to end.
@@ -24,8 +24,8 @@ import { privateStoreSettings } from './storeSettings';
  * WHY IT IS CACHED PER REQUEST AND NOT PER PROCESS
  * ------------------------------------------------
  * `cache()` deduplicates within one render, so a page that shows a section
- * grid, a related strip and a cart badge reads Firestore once instead of three
- * times. It deliberately does NOT survive the request: an admin who marks
+ * grid, a related strip and a cart badge reads the database once instead of
+ * three times. It deliberately does NOT survive the request: an admin who marks
  * something out of stock expects the next page load to say so, and a process-
  * level cache would decide otherwise for however long it felt like.
  *
@@ -37,15 +37,13 @@ import { privateStoreSettings } from './storeSettings';
  * honest, and still browsable. The one thing this must never do is invent.
  */
 
-const PRODUCTS = 'storeProducts';
-
 export const productOverrides = cache(async (): Promise<Record<string, ProductOverride>> => {
-  if (!isAdminConfigured()) return {};
+  if (!isServiceConfigured()) return {};
   try {
-    const snap = await adminDb().collection(PRODUCTS).get();
+    const docs = await listStoreDocs('storeProducts');
     const out: Record<string, ProductOverride> = {};
-    for (const d of snap.docs) {
-      out[d.id] = { productId: d.id, ...(d.data() as Omit<ProductOverride, 'productId'>) };
+    for (const [id, doc] of Object.entries(docs)) {
+      out[id] = { productId: id, ...(doc as Omit<ProductOverride, 'productId'>) };
     }
     return out;
   } catch {

@@ -1,5 +1,7 @@
 import 'server-only';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import {
+  getStoreDoc, listStoreDocs, mergeStoreDoc, isServiceConfigured,
+} from '../backend/supabase/adminData';
 import {
   SEED_SHIPPING_ZONES, EMPTY_SHIPPING_RULES, quoteShipping,
   type ShippingZone, type ShippingRules, type ShippingQuote, type ShippingLine,
@@ -16,20 +18,17 @@ import {
  * That is the correct failure: a shop that quotes a made-up rate loses real
  * money on every parcel until somebody notices, and nobody notices quickly.
  *
- * The FIRESTORE copy wins wherever it exists. The seeds only supply the zone's
+ * The STORED copy wins wherever it exists. The seeds only supply the zone's
  * identity and its country list, which are facts rather than commercial
  * decisions.
  */
 
-const ZONES = 'storeShippingZones';
-const RULES_DOC = 'storeSettings/shippingRules';
-
 export async function shippingZones(): Promise<ShippingZone[]> {
-  if (!isAdminConfigured()) return SEED_SHIPPING_ZONES;
+  if (!isServiceConfigured()) return SEED_SHIPPING_ZONES;
   try {
-    const snap = await adminDb().collection(ZONES).get();
-    if (snap.empty) return SEED_SHIPPING_ZONES;
-    const stored = new Map(snap.docs.map(d => [d.id, d.data() as Partial<ShippingZone>]));
+    const docs = await listStoreDocs('storeShippingZones');
+    if (Object.keys(docs).length === 0) return SEED_SHIPPING_ZONES;
+    const stored = new Map(Object.entries(docs) as [string, Partial<ShippingZone>][]);
     return SEED_SHIPPING_ZONES.map(seed => {
       const s = stored.get(seed.id);
       if (!s) return seed;
@@ -55,11 +54,11 @@ export async function shippingZones(): Promise<ShippingZone[]> {
 }
 
 export async function shippingRules(): Promise<ShippingRules> {
-  if (!isAdminConfigured()) return EMPTY_SHIPPING_RULES;
+  if (!isServiceConfigured()) return EMPTY_SHIPPING_RULES;
   try {
-    const doc = await adminDb().doc(RULES_DOC).get();
-    if (!doc.exists) return EMPTY_SHIPPING_RULES;
-    const d = doc.data() as Partial<ShippingRules>;
+    const doc = await getStoreDoc('storeSettings', 'shippingRules');
+    if (!doc) return EMPTY_SHIPPING_RULES;
+    const d = doc as Partial<ShippingRules>;
     return {
       blockedCategoryIds: d.blockedCategoryIds ?? [],
       manualReviewProductIds: d.manualReviewProductIds ?? [],
@@ -90,8 +89,6 @@ export async function saveShippingZone(
   zoneId: string,
   patch: Pick<ShippingZone, 'costMinor' | 'freeOverMinor' | 'etaDaysMin' | 'etaDaysMax' | 'enabled'>,
 ): Promise<void> {
-  await adminDb().collection(ZONES).doc(zoneId).set(
-    { ...patch, updatedAt: new Date().toISOString() },
-    { merge: true },
-  );
+  await mergeStoreDoc('storeShippingZones', zoneId,
+    { ...patch, updatedAt: new Date().toISOString() }, null);
 }

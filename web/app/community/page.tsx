@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { listPosts } from '@/lib/server/community';
-import { isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { isSupabaseConfigured } from '@/lib/backend/supabase/env';
 import { getSession } from '@/lib/server/session';
 import { PostCard } from '@/components/community/PostCard';
 import { AccountRail } from '@/components/AccountRail';
@@ -52,7 +52,7 @@ export default async function CommunityPage(
     : null;
 
   const session = await getSession();
-  const configured = isAdminConfigured();
+  const configured = isSupabaseConfigured();
 
   let error: string | null = null;
   let page = { posts: [] as Awaited<ReturnType<typeof listPosts>>['posts'], nextCursor: null as string | null };

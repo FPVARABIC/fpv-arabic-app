@@ -120,7 +120,7 @@ console.log('\n[1] المزوّد الوهمي يحقق كل الواجهات');
   const be = createFakeBackend();
 
   const shape: Record<string, string[]> = {
-    auth: ['currentUser', 'signInWithPassword', 'signUpWithPassword', 'signInWithProvider', 'signOut'],
+    auth: ['currentUser', 'signInWithPassword', 'signUpWithPassword', 'signInWithProvider', 'resetPassword', 'signOut'],
     read: ['listPosts', 'getPost', 'listComments', 'listPublishedProducts', 'listVariants', 'myOrders', 'projectOverrides'],
     write: ['createPost', 'editPost', 'deleteOwnPost', 'createComment', 'deleteOwnComment', 'togglePostLike', 'report', 'updateOwnProfile'],
     storage: ['upload', 'remove', 'publicUrl'],
@@ -609,15 +609,24 @@ console.log('\n[12] الحدود — لا SDK داخل الصفحات والمك
 console.log('\n[13] المفتاح السري — ملف واحد فقط');
 {
   const all = sources(WEB);
-  const holders = all.filter(f => /SUPABASE_SECRET_KEY|service_role/.test(codeOf(f)));
-  const expected = path.join(WEB, 'lib', 'backend', 'supabase', 'admin.ts');
+  // `process.env.SUPABASE_SECRET_KEY` — the actual READ of the secret. The
+  // string appears in error messages elsewhere; the read is what must be
+  // singular.
+  const holders = all.filter(f => /process\.env\.SUPABASE_SECRET_KEY/.test(codeOf(f)));
+  const expected = path.join(WEB, 'lib', 'backend', 'supabase', 'service.ts');
   ok('SUPABASE_SECRET_KEY is read in exactly one file',
     holders.length === 1 && holders[0] === expected,
     holders.map(rel).join(', '));
 
-  const adminSrc = readIf(expected);
   ok('…and that file is `server-only` on its FIRST line',
-    adminSrc.split('\n')[0].trim() === "import 'server-only';");
+    readIf(expected).split('\n')[0].trim() === "import 'server-only';");
+
+  // Every module that can TOUCH the service client is server-only too.
+  for (const f of ['admin.ts', 'adminData.ts', 'server.ts'].map(n =>
+    path.join(WEB, 'lib', 'backend', 'supabase', n))) {
+    ok(`${rel(f)}: declares server-only`,
+      /import\s+['"]server-only['"]/.test(readIf(f)));
+  }
 
   // A `'use client'` file that imported it would be a build failure, but the
   // build is not run by this suite — so the import graph is checked directly.
@@ -625,7 +634,8 @@ console.log('\n[13] المفتاح السري — ملف واحد فقط');
     const head = readIf(f).slice(0, 200);
     return /^\s*['"]use client['"]/.test(head);
   });
-  const leaked = clientFiles.filter(f => /backend\/supabase\/(admin|server)/.test(codeOf(f)));
+  const leaked = clientFiles.filter(f =>
+    /backend\/supabase\/(admin|adminData|server|service)/.test(codeOf(f)));
   ok('no `use client` file imports the admin or server adapter',
     leaked.length === 0, leaked.map(rel).join(', '));
   ok('…and there ARE client components to check (the control)',

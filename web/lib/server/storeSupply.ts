@@ -1,5 +1,5 @@
 import 'server-only';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { getStoreDoc, listStoreDocs, isServiceConfigured } from '../backend/supabase/adminData';
 import { priceFrom, realisedMarginPercent, type PriceBreakdown } from '@core/data/store/pricing';
 import { INITIAL_PRIVATE_SETTINGS } from '@core/data/store/settings';
 import type { StoreSupply } from '@core/data/store/types';
@@ -7,13 +7,12 @@ import type { StoreSupply } from '@core/data/store/types';
 /**
  * The supply side — read and written only on the server.
  *
- * `storeSupply` is closed to every client by the rules, so this module is the
- * only path to it. That is not defence in depth; it is the boundary. A browser
+ * `storeSupply` is named in NO select policy in `0007` — closed to every
+ * client in every role — so this module, on the service key, is the only path
+ * to it. That is not defence in depth; it is the boundary. A browser
  * that could read this collection would know what the shop pays and what it
  * makes on every item.
  */
-
-const SUPPLY = 'storeSupply';
 
 /**
  * One product's supply record, or null.
@@ -23,11 +22,11 @@ const SUPPLY = 'storeSupply';
  * collection on every publish.
  */
 export async function supplyForVariant(variantId: string): Promise<StoreSupply | null> {
-  if (!isAdminConfigured()) return null;
+  if (!isServiceConfigured()) return null;
   try {
-    const doc = await adminDb().collection(SUPPLY).doc(variantId).get();
-    if (!doc.exists) return null;
-    return { variantId, ...(doc.data() as Omit<StoreSupply, 'variantId'>) };
+    const doc = await getStoreDoc('storeSupply', variantId);
+    if (!doc) return null;
+    return { variantId, ...(doc as Omit<StoreSupply, 'variantId'>) };
   } catch {
     return null;
   }
@@ -49,11 +48,13 @@ export async function supplyFor(productId: string): Promise<StoreSupply | null> 
 }
 
 export async function readAllSupply(): Promise<Record<string, StoreSupply>> {
-  if (!isAdminConfigured()) return {};
+  if (!isServiceConfigured()) return {};
   try {
-    const snap = await adminDb().collection(SUPPLY).get();
+    const docs = await listStoreDocs('storeSupply');
     const out: Record<string, StoreSupply> = {};
-    for (const d of snap.docs) out[d.id] = { variantId: d.id, ...(d.data() as Omit<StoreSupply, 'variantId'>) };
+    for (const [id, doc] of Object.entries(docs)) {
+      out[id] = { variantId: id, ...(doc as Omit<StoreSupply, 'variantId'>) };
+    }
     return out;
   } catch {
     return {};

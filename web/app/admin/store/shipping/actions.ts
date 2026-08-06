@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCapability } from '@/lib/server/adminRoute';
 import { logAudit, newRequestId, actorFromSession } from '@/lib/server/audit';
 import { saveShippingZone, shippingZones, shippingRules } from '@/lib/server/storeShipping';
-import { adminDb } from '@/lib/server/firebaseAdmin';
+import { mergeStoreDoc } from '@/lib/backend/supabase/adminData';
 import { SEED_SHIPPING_ZONES } from '@core/data/store/shipping';
 
 /**
@@ -140,10 +140,9 @@ export async function saveRules(form: FormData): Promise<Result> {
 
   const before = await shippingRules();
 
-  await adminDb().doc('storeSettings/shippingRules').set(
+  await mergeStoreDoc('storeSettings', 'shippingRules',
     { blockedCategoryIds, manualReviewProductIds, updatedAt: new Date().toISOString() },
-    { merge: true },
-  );
+    gate.session.uid);
 
   await logAudit(actorFromSession(gate.session), newRequestId(), {
     action: 'store.settings',

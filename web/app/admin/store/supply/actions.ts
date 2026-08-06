@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { setStoreDoc, mergeStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { supplier } from '@core/data/store/suppliers';
 import { storeProduct } from '@core/data/store/catalogue';
@@ -50,7 +50,7 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
   if (!session || !sessionCan(session, 'store.editProducts')) {
     return { ok: false, errorAr: 'لا تملك صلاحية تعديل التسعير.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
 
   const productId = input.variantId.split(':')[0];
   const product = storeProduct(productId);
@@ -103,12 +103,13 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
   });
 
   try {
-    await adminDb().collection('storeSupply').doc(input.variantId).set(supply);
+    await setStoreDoc('storeSupply', input.variantId, supply as unknown as Record<string, unknown>, session.uid);
     // The price lands on the VARIANT, because that is what a basket line names
     // and what the publication gate reads. Writing a product-level price left
     // every variant unpriced and every product unpublishable — with the panel
     // cheerfully reporting a price nothing could use.
-    await adminDb().collection('storeProducts').doc(productId).set({
+    // Deep-merged: only THIS variant's state moves, the others keep theirs.
+    await mergeStoreDoc('storeProducts', productId, {
       variantState: {
         [input.variantId]: {
           priceMinor: breakdown.sellMinor,
@@ -118,7 +119,7 @@ export async function saveSupply(input: SaveSupplyInput): Promise<SaveSupplyResu
       currency: breakdown.currency,
       published: product.published,
       updatedAt: supply.updatedAt,
-    }, { merge: true });
+    }, session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');

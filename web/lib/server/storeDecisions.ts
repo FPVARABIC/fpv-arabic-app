@@ -1,5 +1,5 @@
 import 'server-only';
-import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { listStoreDocs, isServiceConfigured } from '../backend/supabase/adminData';
 
 /** An answer already given, so the panel stops asking. */
 export interface RecordedDecision {
@@ -12,11 +12,11 @@ export interface RecordedDecision {
 }
 
 export async function recordedDecisions(): Promise<Record<string, RecordedDecision>> {
-  if (!isAdminConfigured()) return {};
+  if (!isServiceConfigured()) return {};
   try {
-    const snap = await adminDb().collection('storeDecisions').get();
+    const docs = await listStoreDocs('storeDecisions');
     const out: Record<string, RecordedDecision> = {};
-    for (const d of snap.docs) out[d.id] = d.data() as RecordedDecision;
+    for (const [id, doc] of Object.entries(docs)) out[id] = doc as unknown as RecordedDecision;
     return out;
   } catch {
     return {};

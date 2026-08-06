@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { mergeStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { storeProduct } from '@core/data/store/catalogue';
 import {
@@ -58,7 +58,7 @@ export async function saveProductImages(
   if (!session || !sessionCan(session, 'store.editProducts')) {
     return { ok: false, errorAr: 'لا تملك صلاحية تعديل المنتجات.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
 
   const seed = storeProduct(productId);
   if (!seed) return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
@@ -133,11 +133,11 @@ export async function saveProductImages(
   });
 
   try {
-    await adminDb().collection(PRODUCTS).doc(productId).set({
+    await mergeStoreDoc(PRODUCTS, productId, {
       images,
       updatedAt: new Date().toISOString(),
       updatedBy: session.uid,
-    }, { merge: true });
+    }, session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');

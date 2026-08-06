@@ -2,6 +2,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { decodeCursor, encodeCursor } from '../../cursor';
+import { normalizeDisplayName } from '@core/community/utils/userSearch';
 import { NOT_CONFIGURED_AR, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, isSupabaseConfigured } from './env';
 import { makeAuth } from './auth';
 import { makeRealtime } from './realtime';
@@ -288,6 +289,19 @@ function pageOf<T extends { id: string }>(
 const POST_TEXT_MAX = 2000;
 const COMMENT_TEXT_MAX = 500;
 
+/**
+ * Search tokens, produced by the SAME pipeline the phone app uses, imported
+ * from the shared core rather than reimplemented: two different tokenisers
+ * would make a post findable on one surface and invisible on the other, and
+ * the divergence would be silent. `0006` stores them; the search page queries
+ * them with an array-overlap that a GIN index serves.
+ */
+function tokensFor(text: string): string[] {
+  return Array.from(new Set(
+    normalizeDisplayName(text).split(/\s+/).filter(t => t.length >= 2),
+  )).slice(0, 30);
+}
+
 const DENIED_AR = 'لا تملك صلاحية هذا الإجراء. سجّل الدخول وحاول مرة أخرى.';
 const FAILED_AR = 'تعذّر إتمام العملية. حاول مرة أخرى.';
 
@@ -296,6 +310,9 @@ function writeErrorAr(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('row-level security') || m.includes('policy') || m.includes('permission')) {
     return DENIED_AR;
+  }
+  if (m.includes('cooldown')) {
+    return 'على مهل — انتظر قليلاً قبل النشر مرة أخرى.';
   }
   if (m.includes('duplicate') || m.includes('unique')) {
     return 'سبق أن أرسلت هذا. لا حاجة لتكراره.';
@@ -322,12 +339,17 @@ export function makeWrite(sb: SupabaseClient | null): WritePort {
         const { data, error } = await sb
           .from('posts')
           .insert({
+            // The id is the caller's when media forced it to exist early (the
+            // storage path needs it before the upload), the database's when
+            // not. Either way it is a fresh uuid for the caller's own post.
+            ...(input.id ? { id: input.id } : {}),
             // `author_id` is sent because the column is NOT NULL, and
             // `posts_insert_own` in `0002` checks `author_id = auth.uid()` —
             // so sending somebody else's id is refused by the database rather
             // than trusted here.
             author_id: user,
             text,
+            search_tokens: tokensFor(text),
             category: input.category ?? null,
             media_type: input.media?.type ?? 'none',
             media_url: input.media?.url ?? null,
@@ -354,8 +376,10 @@ export function makeWrite(sb: SupabaseClient | null): WritePort {
       if (t.length > POST_TEXT_MAX) {
         return { ok: false, errorAr: `النص أطول من ${POST_TEXT_MAX} حرف. اختصره قليلاً.` };
       }
+      // Tokens move with the text — an edited post that kept its old tokens
+      // would be findable by words it no longer contains.
       return changed(sb.from('posts')
-        .update({ text: t, edited_at: new Date().toISOString() })
+        .update({ text: t, search_tokens: tokensFor(t), edited_at: new Date().toISOString() })
         .eq('id', postId)
         .select('id'));
     },

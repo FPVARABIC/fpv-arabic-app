@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { mergeStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import {
   SETTINGS_DOC_PUBLIC, SETTINGS_DOC_PRIVATE,
@@ -53,7 +53,7 @@ export async function saveStoreSettings(input: SettingsInput): Promise<SettingsR
     || !sessionCan(session, 'store.editProducts')) {
     return { ok: false, errorAr: 'لا تملك صلاحية تعديل إعدادات المتجر.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
 
   const margin = Number(input.defaultMarginPercent.trim());
   if (!Number.isFinite(margin) || margin < 0 || margin > 500) {
@@ -91,11 +91,10 @@ export async function saveStoreSettings(input: SettingsInput): Promise<SettingsR
   });
 
   try {
-    await adminDb().doc(`storeSettings/${SETTINGS_DOC_PRIVATE}`).set(
-      validatePrivateSettings({ defaultMarginPercent: margin, priceReviewDays: days }),
-      { merge: true },
-    );
-    await adminDb().doc(`storeSettings/${SETTINGS_DOC_PUBLIC}`).set({
+    await mergeStoreDoc('storeSettings', SETTINGS_DOC_PRIVATE,
+      validatePrivateSettings({ defaultMarginPercent: margin, priceReviewDays: days }) as unknown as Record<string, unknown>,
+      null);
+    await mergeStoreDoc('storeSettings', SETTINGS_DOC_PUBLIC, {
       ...validatePublicSettings({
         currency: 'USD',
         banner: { enabled: input.bannerEnabled, headlineAr, bodyAr },
@@ -103,7 +102,7 @@ export async function saveStoreSettings(input: SettingsInput): Promise<SettingsR
         regulatoryNoteAr: input.regulatoryNoteAr.trim().slice(0, 400),
       }),
       updatedAt: now,
-    }, { merge: true });
+    } as unknown as Record<string, unknown>, null);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');

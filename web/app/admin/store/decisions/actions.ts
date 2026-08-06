@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { setStoreDoc, mergeStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { storeProduct } from '@core/data/store/catalogue';
 import { OWNER_DECISIONS } from '@core/data/store/decisions';
@@ -37,7 +37,7 @@ export async function recordDecision(
   if (!session || !sessionCan(session, 'store.editProducts')) {
     return { ok: false, errorAr: 'لا تملك صلاحية اتخاذ هذا القرار.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
 
   const decision = OWNER_DECISIONS.find(d => d.id === decisionId);
   const option = decision?.options.find(o => o.id === optionId);
@@ -56,7 +56,7 @@ export async function recordDecision(
   });
 
   try {
-    await adminDb().collection(DECISIONS).doc(decisionId).set({
+    await setStoreDoc(DECISIONS, decisionId, {
       decisionId,
       productId: decision.productId,
       optionId,
@@ -65,16 +65,16 @@ export async function recordDecision(
       decidedBy: session.uid,
       decidedByName: session.displayName ?? null,
       decidedAt: now,
-    });
+    }, session.uid);
 
     // Hiding is the one action a click may perform: it is reversible, needs no
     // new data, and orders that reference the product keep working.
     if (option.action === 'unpublish') {
-      await adminDb().collection('storeProducts').doc(decision.productId).set({
+      await mergeStoreDoc('storeProducts', decision.productId, {
         published: false,
         updatedAt: now,
         updatedBy: session.uid,
-      }, { merge: true });
+      }, session.uid);
       revalidatePath(`/store/p/${decision.productId}`);
       revalidatePath('/store');
     }

@@ -247,6 +247,12 @@ export interface AuthPort {
   signInWithPassword(email: string, password: string): Promise<{ ok: true } | { ok: false; errorAr: string }>;
   signUpWithPassword(email: string, password: string, displayName: string): Promise<{ ok: true } | { ok: false; errorAr: string }>;
   signInWithProvider(provider: 'google', redirectTo: string): Promise<{ ok: true; url?: string } | { ok: false; errorAr: string }>;
+  /**
+   * Sends the reset email — and reports success for an unregistered address
+   * too. «هل هذا البريد مسجَّل؟» answered by a reset form is an enumeration
+   * oracle, so the honest UI copy is «أُرسل الرابط إن كان البريد مسجَّلاً».
+   */
+  resetPassword(email: string, redirectTo: string): Promise<{ ok: true } | { ok: false; errorAr: string }>;
   signOut(): Promise<void>;
 }
 
@@ -273,7 +279,14 @@ export interface ReadPort {
 
 /** Everything a browser may CHANGE, as itself. */
 export interface WritePort {
-  createPost(input: { text: string; category?: PostCategory | null; media?: { type: MediaKind; url: string; thumbnailURL?: string; width?: number; height?: number; duration?: number } }): Promise<{ ok: true; id: string } | { ok: false; errorAr: string }>;
+  /**
+   * `id` may be supplied by the caller, and that is not a courtesy — it is how
+   * media works at all. The storage policies accept an upload only under
+   * `{uid}/{postId}/…`, so the id must exist BEFORE the first byte moves, and
+   * the row is inserted after the upload succeeds. An id is the caller's own
+   * post either way; uniqueness is the primary key's problem.
+   */
+  createPost(input: { id?: string; text: string; category?: PostCategory | null; media?: { type: MediaKind; url: string; thumbnailURL?: string; width?: number; height?: number; duration?: number } }): Promise<{ ok: true; id: string } | { ok: false; errorAr: string }>;
   editPost(postId: string, text: string): Promise<{ ok: true } | { ok: false; errorAr: string }>;
   /** Soft delete. There is no hard delete anywhere in this interface. */
   deleteOwnPost(postId: string): Promise<{ ok: true } | { ok: false; errorAr: string }>;

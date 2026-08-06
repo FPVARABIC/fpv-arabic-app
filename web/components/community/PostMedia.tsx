@@ -51,7 +51,7 @@ function formatDuration(seconds: number): string {
 /**
  * Only ever hand an http(s) URL to `src`.
  *
- * `firestore.rules` requires `mediaURL` to be a string but cannot check that it
+ * The database requires `media_url` to be a string but cannot check that it
  * is a Storage download URL — Rules has no URL type, and pinning a hostname
  * would break every non-production environment including the emulator this is
  * tested against. So the render layer refuses anything that is not plain http

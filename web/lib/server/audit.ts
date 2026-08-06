@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { randomUUID } from 'node:crypto';
-import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb } from './firebaseAdmin';
+import {
+  insertAuditRow, amendAuditMetadata, listAuditRows,
+} from '../backend/supabase/adminData';
 import { ROLE_CAPABILITIES } from '@core/data/auth/roles';
 import type { Session } from './session';
 
@@ -12,9 +13,9 @@ import type { Session } from './session';
  * WHY IT IS APPEND-ONLY AND WHY IT IS WRITTEN SERVER-SIDE
  * ------------------------------------------------------
  * An audit log that the actor can edit is not an audit log. This writes through
- * the Admin SDK from the server, and `firestore.rules` closes the collection to
- * every client completely — read, create, update and delete alike. Reads happen
- * only here, behind `requireCapability('audit.view')`.
+ * the service key from the server, and `audit_log` carries NO client policy of
+ * any kind — `0002` grants it to nobody, in any role, and the RLS suite proves
+ * the closure. Reads happen only here, behind `requireCapability('audit.view')`.
  *
  * That total closure is deliberately narrower than granting a client read to
  * roles holding `audit.view`: an admin page is server-rendered and needs no
@@ -162,27 +163,33 @@ export async function logAudit(
   requestId: string,
   entry: AuditEntry,
 ): Promise<string> {
-  const ref = await adminDb().collection('auditLog').add({
-    actorUid: actor.uid,
+  // The columns are the axes the trail is FILTERED on; everything richer —
+  // the capabilities snapshot, before/after, the request id, the outcome —
+  // rides in metadata, because it is evidence to display, not an axis to
+  // query. The timestamp is `created_at`'s default: the database's own clock,
+  // because a client clock is trivially wrong and trivially forged.
+  return insertAuditRow({
+    actorId: actor.uid,
     actorRole: actor.role,
-    actorEmail: actor.email,
-    // What they were permitted to do at this instant — see the header.
-    actorCapabilities: [...(ROLE_CAPABILITIES[actor.role] ?? [])],
     action: entry.action,
     targetType: entry.targetType,
     targetId: entry.targetId,
-    before: entry.before ?? null,
-    after: entry.after ?? null,
-    reasonAr: entry.reasonAr?.trim() ? entry.reasonAr.trim().slice(0, 500) : null,
-    result: entry.result ?? 'ok',
-    error: entry.error ?? null,
-    meta: entry.meta ?? null,
-    requestId,
-    // Server time, from the database's own clock. A client clock is trivially
-    // wrong and trivially forged, and an entry's timestamp is half its value.
-    at: FieldValue.serverTimestamp(),
+    summary: [entry.before, entry.after].some(v => v != null)
+      ? `${entry.before ?? '—'} → ${entry.after ?? '—'}`
+      : null,
+    metadata: {
+      actorEmail: actor.email,
+      // What they were permitted to do at this instant — see the header.
+      actorCapabilities: [...(ROLE_CAPABILITIES[actor.role] ?? [])],
+      before: entry.before ?? null,
+      after: entry.after ?? null,
+      reasonAr: entry.reasonAr?.trim() ? entry.reasonAr.trim().slice(0, 500) : null,
+      result: entry.result ?? 'ok',
+      error: entry.error ?? null,
+      meta: entry.meta ?? null,
+      requestId,
+    },
   });
-  return ref.id;
 }
 
 /** Mark an already-written entry with the outcome the action actually had. */
@@ -191,10 +198,7 @@ export async function markAuditResult(
   result: AuditResult,
   error?: string,
 ): Promise<void> {
-  await adminDb().collection('auditLog').doc(entryId).update({
-    result,
-    error: error ?? null,
-  });
+  await amendAuditMetadata(entryId, { result, error: error ?? null });
 }
 
 /**
@@ -245,33 +249,30 @@ export async function listAudit(opts: {
   targetId?: string;
   action?: AuditAction;
 } = {}): Promise<AuditRecord[]> {
-  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-
-  const base = adminDb().collection('auditLog');
-  const filtered = opts.actorUid ? base.where('actorUid', '==', opts.actorUid)
-    : opts.targetId ? base.where('targetId', '==', opts.targetId)
-    : opts.action ? base.where('action', '==', opts.action)
-    : base;
-
-  const snap = await filtered.orderBy('at', 'desc').limit(limit).get();
-  return snap.docs.map(d => {
-    const v = d.data();
+  const rows = await listAuditRows({
+    limit: opts.limit,
+    actorId: opts.actorUid,
+    targetId: opts.targetId,
+    action: opts.action,
+  });
+  return rows.map(r => {
+    const m = r.metadata as Record<string, unknown>;
     return {
-      id: d.id,
-      actorUid: String(v.actorUid ?? ''),
-      actorRole: String(v.actorRole ?? 'user'),
-      actorEmail: typeof v.actorEmail === 'string' ? v.actorEmail : null,
-      actorCapabilities: Array.isArray(v.actorCapabilities) ? v.actorCapabilities.map(String) : [],
-      action: v.action as AuditAction,
-      targetType: v.targetType as AuditTargetType,
-      targetId: String(v.targetId ?? ''),
-      before: v.before ?? null,
-      after: v.after ?? null,
-      reasonAr: v.reasonAr ?? null,
-      result: (v.result ?? 'ok') as AuditResult,
-      error: v.error ?? null,
-      requestId: String(v.requestId ?? ''),
-      at: v.at?.toDate?.().toISOString() ?? null,
+      id: r.id,
+      actorUid: r.actorId,
+      actorRole: r.actorRole,
+      actorEmail: typeof m.actorEmail === 'string' ? m.actorEmail : null,
+      actorCapabilities: Array.isArray(m.actorCapabilities) ? m.actorCapabilities.map(String) : [],
+      action: r.action as AuditAction,
+      targetType: r.targetType as AuditTargetType,
+      targetId: r.targetId,
+      before: (m.before ?? null) as string | null,
+      after: (m.after ?? null) as string | null,
+      reasonAr: (m.reasonAr ?? null) as string | null,
+      result: ((m.result ?? 'ok') as AuditResult),
+      error: (m.error ?? null) as string | null,
+      requestId: String(m.requestId ?? ''),
+      at: r.createdAt,
     };
   });
 }

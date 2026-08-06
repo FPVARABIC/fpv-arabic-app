@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { SUPABASE_URL } from './env';
+import { isServiceConfigured, serviceClient } from './service';
 import { toOrderSummary, toSupplyRecord, type Row } from './rows';
 import { ORDER_STATUS_NEXT } from '@core/data/store/types';
 import type {
@@ -67,43 +67,17 @@ import type {
 
 /* ── The client ───────────────────────────────────────────────────────────── */
 
-const SECRET_KEY = process.env.SUPABASE_SECRET_KEY ?? '';
-
 /**
- * Are the server credentials present?
- *
- * Exported so a route can answer «الخدمة غير مهيّأة» instead of throwing when
- * the key has not been added to the deployment yet. It answers «is the variable
- * set», not «does it work» — a wrong key gets past this and fails at the first
- * call, which every method below already handles.
+ * The key itself lives in `service.ts` — one module reads it, two privileged
+ * modules share the client it builds. Exported so a route can answer «الخدمة
+ * غير مهيّأة» instead of throwing when the key has not been added yet.
  */
 export function isAdminConfigured(): boolean {
-  return SUPABASE_URL.length > 0 && SECRET_KEY.length > 0;
+  return isServiceConfigured();
 }
 
-let adminClient: SupabaseClient | null = null;
-
-/**
- * Memoised, unlike `serverSupabase()`, and safely so: this client carries NO
- * session. It is the same key for every request, so there is nothing
- * request-scoped to leak between them — which is exactly why the cookie-bound
- * one must never be memoised and this one may be.
- */
 function admin(): SupabaseClient | null {
-  if (!isAdminConfigured()) return null;
-  if (!adminClient) {
-    adminClient = createClient(SUPABASE_URL, SECRET_KEY, {
-      auth: {
-        // No session to persist, nothing to refresh, and no URL to parse: this
-        // client is not a user. Leaving these on would have it write tokens
-        // into a storage that does not exist on a server.
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-  }
-  return adminClient;
+  return serviceClient();
 }
 
 const NOT_CONFIGURED_AR = 'الخدمة غير مهيّأة على الخادم.';

@@ -213,6 +213,12 @@ export function createFakeBackend(
       return { ok: true, url: redirectTo };
     },
 
+    async resetPassword(_email, _redirectTo) {
+      // Success whether or not the address exists — the enumeration posture is
+      // part of the CONTRACT, so the fake must exhibit it too.
+      return { ok: true };
+    },
+
     async signOut() { state.currentUserId = null; },
   };
 
@@ -376,7 +382,9 @@ export function createFakeBackend(
         return { ok: false, errorAr: `النص أطول من ${POST_TEXT_MAX} حرف. اختصره قليلاً.` };
       }
 
-      const id = clock.id('post');
+      // The caller's id when media forced it to exist early, ours when not —
+      // the same contract the real adapter honours.
+      const id = input.id ?? clock.id('post');
       state.posts.push({
         id,
         authorId: p.id,

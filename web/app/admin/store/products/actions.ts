@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminDb, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { mergeStoreDoc, getStoreDoc, isServiceConfigured } from '@/lib/backend/supabase/adminData';
 import { actorFromSession, logAudit, markAuditResult, newRequestId } from '@/lib/server/audit';
 import { storeProduct } from '@core/data/store/catalogue';
 import { publishability } from '@core/data/store/publication';
@@ -144,7 +144,7 @@ export async function saveProduct(input: SaveProductInput): Promise<ProductActio
   });
 
   try {
-    await adminDb().collection(PRODUCTS).doc(input.productId).set(doc, { merge: true });
+    await mergeStoreDoc(PRODUCTS, input.productId, doc, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -240,11 +240,11 @@ export async function setProductPublished(
   });
 
   try {
-    await adminDb().collection(PRODUCTS).doc(productId).set({
+    await mergeStoreDoc(PRODUCTS, productId, {
       published,
       updatedAt: new Date().toISOString(),
       updatedBy: gate.session.uid,
-    }, { merge: true });
+    }, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -290,14 +290,14 @@ export async function setProductSuspension(
   });
 
   try {
-    await adminDb().collection(PRODUCTS).doc(productId).set({
+    await mergeStoreDoc(PRODUCTS, productId, {
       suspendedReasonAr: reason,
       // Suspending takes it off the shop in the same write. Two writes means a
       // window in which it is suspended and still selling.
       ...(reason === null ? {} : { published: false }),
       updatedAt: new Date().toISOString(),
       updatedBy: gate.session.uid,
-    }, { merge: true });
+    }, gate.session.uid);
     await markAuditResult(entryId, 'ok');
   } catch {
     await markAuditResult(entryId, 'error', 'write failed');
@@ -325,15 +325,15 @@ async function authorise(): Promise<Gate> {
   if (!session || !sessionCan(session, 'store.editProducts')) {
     return { errorAr: 'لا تملك صلاحية تعديل المنتجات.' };
   }
-  if (!isAdminConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
+  if (!isServiceConfigured()) return { errorAr: 'الاتصال بقاعدة البيانات غير متاح.' };
   return { session };
 }
 
 /** The product's current visibility — the stored value if there is one. */
 async function readPublished(productId: string, fallback: boolean): Promise<boolean> {
   try {
-    const doc = await adminDb().collection(PRODUCTS).doc(productId).get();
-    const v = doc.exists ? (doc.data() as { published?: unknown }).published : undefined;
+    const doc = await getStoreDoc(PRODUCTS, productId);
+    const v = doc?.published;
     return typeof v === 'boolean' ? v : fallback;
   } catch {
     return fallback;

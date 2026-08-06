@@ -2,61 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  sendPasswordResetEmail,
-  GoogleAuthProvider,
-  signInWithPopup,
-  type User,
-} from 'firebase/auth';
-import { clientAuth, isClientConfigured } from '@/lib/firebaseClient';
+import { browserBackend } from '@/lib/backend/supabase/client';
+import { isSupabaseConfigured } from '@/lib/backend/supabase/env';
 
 /**
- * Sign-in, sign-up and password reset.
+ * Sign-in, sign-up and password reset — through the auth port, never the SDK.
  *
- * THE TWO-STEP THAT MAKES THIS SECURE
- * -----------------------------------
- * Firebase authenticates in the browser and hands back an ID token. That token
- * is immediately POSTed to `/api/auth/session`, which verifies it server-side
- * and replies with an httpOnly cookie. Only after that exchange succeeds does
- * the user count as signed in as far as this site is concerned.
+ * WHERE THE SESSION LIVES NOW
+ * ---------------------------
+ * Supabase's browser client writes the session into cookies itself, and the
+ * middleware refreshes them on every request — so there is no token-exchange
+ * endpoint any more. The Firebase version needed `/api/auth/session` because
+ * its browser SDK kept the token where the server could not see it; here the
+ * cookie IS the shared channel, and `router.refresh()` after a successful call
+ * re-renders the server components against it. The server still never believes
+ * the browser about anything: `getSession()` verifies the token against the
+ * Auth server and re-reads the role from the profiles table on every request.
  *
- * The consequence is deliberate: a browser that authenticates with Firebase but
- * fails the exchange is NOT signed in here. There is no path where the client
- * decides it is authenticated and the server goes along with it.
- *
- * `router.refresh()` after the exchange re-renders the server components with
- * the new cookie, so the header updates from the verified session rather than
- * from client state — the browser never gets to say who it is.
- *
- * ERRORS ARE TRANSLATED, NOT ECHOED
- * ---------------------------------
- * Firebase error codes are mapped to plain Arabic. `auth/invalid-credential`
- * deliberately does not distinguish "no such account" from "wrong password",
- * because that distinction is an account-enumeration oracle.
+ * ERRORS ARE SENTENCES, NOT CODES
+ * -------------------------------
+ * The port already returns Arabic. «البريد أو كلمة المرور غير صحيحة» is one
+ * sentence for both failures on purpose — distinguishing «no such account»
+ * from «wrong password» is an account-enumeration oracle, and the reset flow
+ * makes the same refusal: «أُرسل الرابط إن كان البريد مسجَّلاً».
  */
 
 type Mode = 'signin' | 'signup' | 'reset';
-
-const ERROR_AR: Record<string, string> = {
-  'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة.',
-  'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
-  'auth/user-disabled': 'هذا الحساب موقوف.',
-  'auth/too-many-requests': 'محاولات كثيرة متتالية. انتظر قليلاً ثم أعد المحاولة.',
-  'auth/email-already-in-use': 'هذا البريد مسجَّل بالفعل. سجّل الدخول بدل إنشاء حساب.',
-  'auth/weak-password': 'كلمة المرور ضعيفة — استخدم ستة أحرف على الأقل.',
-  'auth/popup-closed-by-user': 'أُغلقت نافذة الدخول قبل إتمامها.',
-  'auth/popup-blocked': 'المتصفح منع النافذة المنبثقة. اسمح بها ثم أعد المحاولة.',
-  'auth/network-request-failed': 'تعذّر الاتصال. تحقّق من الشبكة.',
-  'auth/operation-not-allowed': 'طريقة الدخول هذه غير مفعّلة في هذا المشروع.',
-};
-
-function messageFor(e: unknown): string {
-  const code = (e as { code?: string })?.code ?? '';
-  return ERROR_AR[code] ?? 'تعذّر إتمام العملية. حاول مرة أخرى.';
-}
 
 export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
   const router = useRouter();
@@ -68,25 +39,10 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const configured = isClientConfigured();
+  const configured = isSupabaseConfigured();
 
-  /** The exchange. Without it, authenticating in the browser means nothing. */
-  async function establishSession(user: User) {
-    const idToken = await user.getIdToken(/* forceRefresh */ true);
-    const res = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      // Leave no half-signed-in state: if the server refused, the browser must
-      // not keep a Firebase session that the site does not recognise.
-      await clientAuth().signOut().catch(() => {});
-      throw new Error(body?.error ?? 'تعذّر إنشاء الجلسة');
-    }
-    // Re-render server components so the header and any private page pick up
-    // the verified session. Then navigate.
+  /** Success → re-render the server components against the new cookie, then go. */
+  function arrive() {
     router.refresh();
     router.push(nextPath);
   }
@@ -97,26 +53,23 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
     setNotice(null);
     setBusy(true);
     try {
-      const auth = clientAuth();
+      const { auth } = browserBackend();
       if (mode === 'reset') {
-        await sendPasswordResetEmail(auth, email);
+        const r = await auth.resetPassword(email, `${window.location.origin}/signin`);
+        if (!r.ok) { setError(r.errorAr); return; }
         setNotice('أُرسل رابط إعادة تعيين كلمة المرور إن كان البريد مسجَّلاً.');
         setMode('signin');
         return;
       }
       if (mode === 'signup') {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        const name = displayName.trim();
-        if (name) await updateProfile(cred.user, { displayName: name });
-        await establishSession(cred.user);
+        const r = await auth.signUpWithPassword(email, password, displayName.trim());
+        if (!r.ok) { setError(r.errorAr); return; }
+        arrive();
         return;
       }
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      await establishSession(cred.user);
-    } catch (err) {
-      setError(err instanceof Error && err.message.startsWith('تعذّر')
-        ? err.message
-        : messageFor(err));
+      const r = await auth.signInWithPassword(email, password);
+      if (!r.ok) { setError(r.errorAr); return; }
+      arrive();
     } finally {
       setBusy(false);
     }
@@ -127,11 +80,18 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
     setNotice(null);
     setBusy(true);
     try {
-      const cred = await signInWithPopup(clientAuth(), new GoogleAuthProvider());
-      await establishSession(cred.user);
-    } catch (err) {
-      setError(messageFor(err));
-    } finally {
+      // OAuth leaves the page: the port hands back the provider URL and the
+      // browser navigates to it. Supabase redirects back to `nextPath` with
+      // the session already in the URL fragment, which the client stores.
+      const r = await browserBackend().auth.signInWithProvider(
+        'google',
+        `${window.location.origin}${nextPath}`,
+      );
+      if (!r.ok) { setError(r.errorAr); setBusy(false); return; }
+      if (r.url) { window.location.assign(r.url); return; }
+      arrive();
+    } catch {
+      setError('تعذّر تسجيل الدخول عبر جوجل. حاول مرة أخرى.');
       setBusy(false);
     }
   }
@@ -141,7 +101,7 @@ export const SignInForm: React.FC<{ nextPath: string }> = ({ nextPath }) => {
       <div className="card" style={{ padding: '18px 20px' }} data-testid="signin-unconfigured">
         <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
           تسجيل الدخول غير مهيّأ في هذه البيئة: متغيّرات{' '}
-          <span className="ltr">NEXT_PUBLIC_FIREBASE_*</span> غير مضبوطة. راجع{' '}
+          <span className="ltr">NEXT_PUBLIC_SUPABASE_*</span> غير مضبوطة. راجع{' '}
           <span className="ltr">web/.env.example</span>.
         </p>
       </div>

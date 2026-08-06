@@ -18,10 +18,10 @@ export const dynamic = 'force-dynamic';
 /**
  * Sign-in.
  *
- * The account is the SAME account as the phone app's: same Firebase project,
- * same `users/{uid}` document, same posts, same moderation state. There is no
- * web-only identity, which is why signing in here shows a user their existing
- * community history rather than an empty profile.
+ * One identity for the whole platform: the same `profiles` row carries the
+ * display name, the role and the moderation state that every pillar reads.
+ * (The phone app still signs into Firebase until its own migration phase;
+ * the account import in the data phase is what joins the two histories.)
  *
  * Already signed in? Bounce them onward rather than showing a login form to
  * someone who is logged in — but only to a validated path (see safeNextPath):
@@ -41,15 +41,15 @@ export default async function SignInPage(
     <div className="shell" style={{ paddingTop: 56, paddingBottom: 60, maxWidth: 470 }}>
       <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0 }}>تسجيل الدخول</h1>
       <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '12px 0 22px', lineHeight: 1.95 }}>
-        حسابك هنا هو حسابك نفسه في تطبيق الهاتف: المنشورات والتعليقات والحالة كلها واحدة.
-        لا يوجد حساب منفصل للموقع.
+        حساب واحد للمنصة كلها: المنشورات والتعليقات والطلبات والحالة كلها على الحساب نفسه.
+        لا يوجد حساب منفصل لكل قسم.
       </p>
 
       <SignInForm nextPath={nextPath} />
 
       <p style={{ fontSize: 12, color: 'var(--text-dimmer)', margin: '20px 0 0', lineHeight: 1.9 }}>
-        تُحفَظ جلستك في ملفّ تعريف ارتباط لا تستطيع صفحات الموقع قراءته بجافاسكربت، ويتحقّق
-        منه الخادم في كل طلب. تسجيل الخروج يُنهي جلساتك على الأجهزة الأخرى أيضاً.
+        يتحقّق الخادم من جلستك في كل طلب، ولا يقرأ صلاحياتك إلا من سجلّ حسابك — لا من
+        المتصفّح. تسجيل الخروج يُنهي جلساتك على الأجهزة الأخرى أيضاً.
       </p>
 
       <p style={{ marginTop: 22 }}>

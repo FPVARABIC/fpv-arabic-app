@@ -122,6 +122,19 @@ export function makeAuth(sb: SupabaseClient | null): AuthPort {
       };
     },
 
+    async resetPassword(email, redirectTo) {
+      if (!sb || !isSupabaseConfigured()) return { ok: false, errorAr: NOT_CONFIGURED_AR };
+      try {
+        // The error is NOT surfaced as «no such account». Supabase itself
+        // answers success for unknown addresses for the same reason; only a
+        // transport failure is worth telling the user about.
+        await sb.auth.resetPasswordForEmail(email, { redirectTo });
+        return { ok: true };
+      } catch {
+        return { ok: false, errorAr: 'تعذّر الإرسال. تحقّق من اتصالك وحاول مرة أخرى.' };
+      }
+    },
+
     async signInWithProvider(provider, redirectTo) {
       if (!sb || !isSupabaseConfigured()) return { ok: false, errorAr: NOT_CONFIGURED_AR };
       const { data, error } = await sb.auth.signInWithOAuth({

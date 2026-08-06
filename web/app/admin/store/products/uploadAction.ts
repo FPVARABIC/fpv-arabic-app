@@ -1,10 +1,10 @@
 'use server';
 
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminStorage, storageBucketName, isAdminConfigured } from '@/lib/server/firebaseAdmin';
+import { uploadServiceObject, isServiceConfigured } from '@/lib/backend/supabase/adminData';
+import { SUPABASE_URL } from '@/lib/backend/supabase/env';
 import { storeProduct } from '@core/data/store/catalogue';
-import { storeImageFolderPath } from '@core/community/utils/firestorePaths';
-import { MAX_MEDIA_SIZE_BYTES } from '@core/community/Composer/mediaPipeline';
+import { MAX_MEDIA_SIZE_BYTES } from '@/lib/mediaUpload';
 
 /**
  * Writing a product photograph.
@@ -12,16 +12,17 @@ import { MAX_MEDIA_SIZE_BYTES } from '@core/community/Composer/mediaPipeline';
  * WHY THE SERVER AND NOT THE BROWSER
  * ----------------------------------
  * The panel's authority is a verified session holding `store.editProducts`.
- * Letting the browser write directly to Storage would mean `storage.rules`
- * re-deriving that permission as a role lookup — a second answer to «who may
- * upload a product photograph», which drifts from the first the moment anybody
- * adds a role. Here there is one answer, and it is the capability model the
+ * Letting the browser write directly to Storage would mean the storage
+ * policies re-deriving that permission as a role lookup — a second answer to
+ * «who may upload a product photograph», which drifts from the first the
+ * moment anybody adds a role. Here there is one answer, and it is the capability model the
  * rest of the panel already uses.
  *
  * It also removes a whole failure mode: the admin panel authenticates by
- * server session, and a browser whose Firebase SDK is signed out — or signed in
- * as somebody else — would fail an upload for reasons nobody could see. This
- * cannot happen if the browser never talks to Storage.
+ * server session, and a browser whose own auth state has drifted — signed
+ * out, or signed in as somebody else — would fail an upload for reasons
+ * nobody could see. This cannot happen if the browser never talks to
+ * Storage.
  *
  * WHAT THE BROWSER STILL DOES
  * ---------------------------
@@ -48,7 +49,7 @@ export async function uploadProductPhoto(payload: UploadPayload): Promise<Upload
   if (!session || !sessionCan(session, 'store.editProducts')) {
     return { ok: false, errorAr: 'لا تملك صلاحية رفع صور المنتجات.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'التخزين غير متاح حالياً.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'التخزين غير متاح حالياً.' };
   if (!storeProduct(payload.productId)) {
     return { ok: false, errorAr: 'لا يوجد منتج بهذا المعرّف.' };
   }
@@ -76,44 +77,27 @@ export async function uploadProductPhoto(payload: UploadPayload): Promise<Upload
   }
 
   const uuid = crypto.randomUUID();
-  const folder = storeImageFolderPath(payload.productId);
+  // `{productId}/{uuid}.jpg` in the store-products bucket — the same shape the
+  // committed manifest uses, minus the bucket-as-prefix that Firebase needed.
+  const folder = payload.productId;
 
   try {
-    const bucket = adminStorage().bucket(storageBucketName());
-    const fullFile = bucket.file(`${folder}/${uuid}.jpg`);
-    const thumbFile = bucket.file(`${folder}/${uuid}_thumb.jpg`);
-    // A download token, so the URL works exactly like one the client SDK would
-    // have produced — same shape, same public readability, no signed-URL expiry
-    // to renew and nothing for the storefront to special-case.
-    const token = crypto.randomUUID();
-    const metadata = {
-      contentType: 'image/jpeg',
-      metadata: { firebaseStorageDownloadTokens: token },
-    };
     await Promise.all([
-      fullFile.save(full, { metadata, resumable: false }),
-      thumbFile.save(thumb, { metadata, resumable: false }),
+      uploadServiceObject('store-products', `${folder}/${uuid}.jpg`, full, 'image/jpeg'),
+      uploadServiceObject('store-products', `${folder}/${uuid}_thumb.jpg`, thumb, 'image/jpeg'),
     ]);
     return {
       ok: true,
-      url: downloadUrl(bucket.name, `${folder}/${uuid}.jpg`, token),
-      thumbnailUrl: downloadUrl(bucket.name, `${folder}/${uuid}_thumb.jpg`, token),
+      url: publicUrl('store-products', `${folder}/${uuid}.jpg`),
+      thumbnailUrl: publicUrl('store-products', `${folder}/${uuid}_thumb.jpg`),
     };
   } catch {
     return { ok: false, errorAr: 'تعذّر حفظ الصورة في التخزين. حاول مرة أخرى.' };
   }
 }
 
-/**
- * The public download URL for an object.
- *
- * Built rather than requested because `getDownloadURL` is a client-SDK call and
- * the Admin SDK has no equivalent. The shape is fixed and documented, and the
- * emulator serves the same one — which is what lets the end-to-end run exercise
- * the real path rather than a stub.
- */
-function downloadUrl(bucket: string, path: string, token: string): string {
-  const host = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-  const base = host ? `http://${host}` : 'https://firebasestorage.googleapis.com';
-  return `${base}/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+/** The bucket is public — the URL is a pure function of bucket and path. */
+function publicUrl(bucket: string, path: string): string {
+  return `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${bucket}/${path
+    .split('/').map(encodeURIComponent).join('/')}`;
 }

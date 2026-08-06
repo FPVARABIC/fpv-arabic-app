@@ -169,29 +169,84 @@ psql(`
     ('${U.alice}','a@x.test'), ('${U.mallory}','m@x.test'),
     ('${U.mod}','mod@x.test'), ('${U.admin}','admin@x.test'),
     ('${U.banned}','b@x.test');
+  -- 0005's trigger already created a bare profile for each auth row above, so
+  -- the seed's job is to SET the roles, not to insert beside the trigger. An
+  -- upsert keeps this true whichever of the two runs first.
   insert into public.profiles (id, display_name, role, status) values
     ('${U.alice}','Alice','user','active'),
     ('${U.mallory}','Mallory','user','active'),
     ('${U.mod}','Mod','moderator','active'),
     ('${U.admin}','Admin','admin','active'),
-    ('${U.banned}','Banned','user','banned');
-  insert into public.posts (id, author_id, text, status) values
-    ('post-live','${U.alice}','منشور نشط','active'),
-    ('post-hidden','${U.alice}','منشور مخفي','hidden');
-  insert into public.comments (id, post_id, author_id, text, status) values
-    ('c1','post-live','${U.alice}','تعليق','active');
+    ('${U.banned}','Banned','user','banned')
+  on conflict (id) do update set
+    display_name = excluded.display_name,
+    role = excluded.role,
+    status = excluded.status;
+  -- Backdated one hour: 0006's cooldown policies read the author's newest row,
+  -- and a seed stamped «now» would put every author inside their own cooldown
+  -- window before the first assertion ran.
+  insert into public.posts (id, author_id, text, status, created_at) values
+    ('post-live','${U.alice}','منشور نشط','active', now() - interval '1 hour'),
+    ('post-hidden','${U.alice}','منشور مخفي','hidden', now() - interval '1 hour');
+  insert into public.comments (id, post_id, author_id, text, status, created_at) values
+    ('c1','post-live','${U.alice}','تعليق','active', now() - interval '1 hour');
   insert into public.store_products (id, name_ar, category_id, published) values
     ('prod-live','منتج منشور','frames', true),
     ('prod-draft','منتج مسودة','frames', false);
   insert into public.store_variants (id, product_id, label_ar, price_minor, is_default) values
     ('var-1','prod-live','قياسي', 4999, true);
-  insert into public.store_supply (product_id, supplier_name, cost_minor, margin_pct) values
-    ('prod-live','MoriSupplier', 2500, 45.0);
+  insert into public.store_docs (collection, id, doc) values
+    ('storeSupply','prod-live:std','{"variantId":"prod-live:std","supplierId":"mori","unitCostMinor":2500,"marginPercent":45}'),
+    ('storeProducts','prod-live','{"published":true,"priceMinor":4999}'),
+    ('storeShippingZones','eu','{"costMinor":700,"enabled":true}'),
+    ('storeSettings','public','{"currency":"EUR"}'),
+    ('storeSettings','shippingRules','{"blockedCategoryIds":[]}'),
+    ('storeSettings','private','{"defaultMarginPercent":10}');
   insert into public.orders (id, reference, user_id, total_minor, payment_state, fulfilment) values
     ('66666666-6666-6666-6666-666666666666','ORD-1','${U.alice}', 4999, 'paid', 'confirmed');
   insert into public.audit_log (actor_id, action, target_type) values
     ('${U.admin}','role.change','profile');
 `);
+
+/* ── 0. The profile trigger — an account cannot exist without a profile ───── */
+
+console.log('\n[0] كل حساب جديد يحصل على ملف تعريف تلقائياً');
+{
+  // A fresh auth row, exactly as Supabase Auth writes one: id, email, and the
+  // display name inside raw_user_meta_data. No client insert anywhere.
+  psql(`insert into auth.users (id, email, raw_user_meta_data) values
+    ('77777777-7777-7777-7777-777777777777','new@x.test','{"display_name": "Newcomer"}')`);
+
+  ok('the profile row exists without any client writing it',
+    psql(`select count(*) from public.profiles where id = '77777777-7777-7777-7777-777777777777'`) === '1');
+  ok('the display name was read out of the metadata',
+    psql(`select display_name from public.profiles where id = '77777777-7777-7777-7777-777777777777'`) === 'Newcomer');
+  ok('the new account defaults to role `user`, not to anything grander',
+    psql(`select role::text from public.profiles where id = '77777777-7777-7777-7777-777777777777'`) === 'user');
+
+  // The collision case: a SECOND person typing the same display name must not
+  // lose their ACCOUNT to the unique index — only the colliding name.
+  psql(`insert into auth.users (id, email, raw_user_meta_data) values
+    ('88888888-8888-8888-8888-888888888878','new2@x.test','{"display_name": "Newcomer"}')`);
+  ok('a display-name collision costs the name, never the sign-up',
+    psql(`select count(*) from public.profiles where id = '88888888-8888-8888-8888-888888888878'`) === '1'
+    && psql(`select coalesce(display_name_normalized, '∅') from public.profiles where id = '88888888-8888-8888-8888-888888888878'`) === '∅');
+
+  // The import case. `profiles.id` references `auth.users`, so the data
+  // migration MUST create the auth row first — the trigger then makes a bare
+  // profile — and upsert the imported fields over it. The assertion is that
+  // the upsert wins and the trigger's bare row does not: an imported moderator
+  // arriving as role `user` would be a silent de-mod of every staff account.
+  psql(`insert into auth.users (id, email) values
+    ('99999999-9999-9999-9999-999999999979','imp@x.test')`);
+  psql(`insert into public.profiles (id, display_name, role) values
+    ('99999999-9999-9999-9999-999999999979','Imported','moderator')
+    on conflict (id) do update set
+      display_name = excluded.display_name, role = excluded.role`);
+  ok('an imported profile overwrites the trigger\'s bare row, roles intact',
+    psql(`select display_name from public.profiles where id = '99999999-9999-9999-9999-999999999979'`) === 'Imported'
+    && psql(`select role::text from public.profiles where id = '99999999-9999-9999-9999-999999999979'`) === 'moderator');
+}
 
 /* ── 1. Reading the community ─────────────────────────────────────────────── */
 
@@ -268,24 +323,42 @@ console.log('\n[4] صاحب التعليق يدير تعليقه ضمن القو
 
 console.log('\n[5] المستخدم العادي لا يقرأ المورد أو التكلفة أو الهامش');
 {
-  ok('a normal user reads NOTHING from store_supply',
-    rowsSeen('authenticated', U.alice, 'select count(*) from public.store_supply') === 0);
-  ok('an anonymous visitor reads nothing from it either',
-    rowsSeen('anon', null, 'select count(*) from public.store_supply') <= 0);
+  const SUPPLY = "select count(*) from public.store_docs where collection = 'storeSupply'";
+  const PRIVATE = "select count(*) from public.store_docs where collection = 'storeSettings' and id = 'private'";
+
+  ok('a normal user reads NOTHING of the supply documents',
+    rowsSeen('authenticated', U.alice, SUPPLY) === 0);
+  ok('an anonymous visitor reads nothing of them either',
+    rowsSeen('anon', null, SUPPLY) <= 0);
 
   /*
-   * A MODERATOR IS STAFF AND STILL MUST NOT SEE COST.
+   * STAFF — ANY STAFF, ADMIN INCLUDED — MUST NOT SEE COST FROM A CLIENT.
    *
-   * This is the assertion that would have caught the likeliest real mistake:
-   * writing `is_staff()` where `is_admin()` belongs. Both read as "a
-   * privileged person", and only one of them is right for commercial terms.
+   * `0007` names `storeSupply` in NO select policy at all: the only path to a
+   * supplier cost is the server adapter on the secret key, where every read
+   * is code review-able. A client-side admin read would put the margin one
+   * developer-tools tab away from any admin's browser extension.
    */
-  ok('a MODERATOR reads nothing from store_supply either',
-    rowsSeen('authenticated', U.mod, 'select count(*) from public.store_supply') === 0);
+  ok('a MODERATOR reads nothing of the supply documents',
+    rowsSeen('authenticated', U.mod, SUPPLY) === 0);
+  ok('even an ADMIN client reads nothing of them — server adapter only',
+    rowsSeen('authenticated', U.admin, SUPPLY) === 0);
+  ok('the private settings document is equally invisible to an admin client',
+    rowsSeen('authenticated', U.admin, PRIVATE) === 0);
 
-  // The allow half, without which all three above pass on an empty table.
-  ok('an admin CAN read it (so the checks above are not vacuous)',
-    rowsSeen('authenticated', U.admin, 'select count(*) from public.store_supply') === 1);
+  // The allow half, without which everything above passes on an empty table:
+  // the same table, the PUBLIC collections, readable by everyone.
+  ok('anyone reads a product override (so the checks above are not vacuous)',
+    rowsSeen('anon', null,
+      "select count(*) from public.store_docs where collection = 'storeProducts'") === 1);
+  ok('anyone reads the zone pricing and the public settings',
+    rowsSeen('anon', null,
+      "select count(*) from public.store_docs where collection = 'storeShippingZones'") === 1
+    && rowsSeen('anon', null,
+      "select count(*) from public.store_docs where collection = 'storeSettings' and id in ('public','shippingRules')") === 2);
+  ok('no client writes a store document, staff included',
+    !asUser('authenticated', U.admin,
+      `insert into public.store_docs (collection, id, doc) values ('storeProducts','x','{}')`).okd);
 
   // The public product is readable; the draft is not.
   ok('anyone reads a published product',
@@ -389,10 +462,10 @@ console.log('\n[9–12] الطلب والسعر والشحن — خادمياً 
       `insert into public.order_items (order_id, name_ar, unit_price_minor, quantity, line_total_minor)
        values ('66666666-6666-6666-6666-666666666666','x',1,1,1)`).okd);
 
-  ok('a client cannot touch payment_attempts',
+  ok('a client cannot touch the payment records',
     !asUser('authenticated', U.alice,
-      `insert into public.payment_attempts (order_id, provider, amount_minor)
-       values ('66666666-6666-6666-6666-666666666666','mollie', 1)`).okd);
+      `insert into public.store_payments (id, order_id) values
+       ('tr_forged','66666666-6666-6666-6666-666666666666')`).okd);
 
   // 12. Reading someone else's order.
   ok('Alice reads her own order',
@@ -406,6 +479,72 @@ console.log('\n[9–12] الطلب والسعر والشحن — خادمياً 
 }
 
 /* ── 13. The tables with no client door at all ────────────────────────────── */
+
+/* ── 0006 — the controls the WEB migration carried over ───────────────────── */
+
+console.log('\n[15] فترة الانتظار — قاعدة، لا مجاملة واجهة');
+{
+  // Two posts in one breath: the first is allowed, the second refused BY THE
+  // DATABASE. This is the 60-second window `firestore.rules` used to arm off
+  // `lastPostAt`, now with nothing to arm.
+  const burst = asUser('authenticated', U.alice, `
+    insert into public.posts (id, author_id, text) values ('burst-1','${U.alice}','الأول');
+    insert into public.posts (id, author_id, text) values ('burst-2','${U.alice}','الثاني')`);
+  ok('a second post inside sixty seconds is refused', !burst.okd, burst.out);
+
+  ok('one post alone is allowed (the control)',
+    asUser('authenticated', U.alice,
+      `insert into public.posts (id, author_id, text) values ('single-1','${U.alice}','وحيد')`).okd);
+
+  const commentBurst = asUser('authenticated', U.mallory, `
+    insert into public.comments (id, post_id, author_id, text) values ('cb-1','post-live','${U.mallory}','أ');
+    insert into public.comments (id, post_id, author_id, text) values ('cb-2','post-live','${U.mallory}','ب')`);
+  ok('a second comment inside five seconds is refused', !commentBurst.okd, commentBurst.out);
+}
+
+console.log('\n[16] العدّادات والاسم المنسوخ — تصونها القاعدة لا العميل');
+{
+  // psql echoes BEGIN/SET/ROLLBACK around the data, so the assertion reads
+  // the result LINE, not the tail of the stream — the harness bug of treating
+  // «ROLLBACK» as the answer is one this suite has already met once.
+  const lineOf = (out: string, want: string) =>
+    out.split('\n').map(l => l.trim()).includes(want);
+
+  // The counter moves because the database moved it — the insert names no
+  // counter column at all. The seed's own comment already fired the trigger
+  // once, so the count this insert produces is 2, and asserting the exact
+  // value proves the seed was counted too.
+  const counted = asUser('authenticated', U.mallory, `
+    insert into public.comments (id, post_id, author_id, text) values ('cc-1','post-live','${U.mallory}','عدّ');
+    select comments_count from public.posts where id = 'post-live'`);
+  ok('inserting a comment bumps the post\'s counter via the trigger',
+    counted.okd && lineOf(counted.out, '2'), counted.out);
+
+  const liked = asUser('authenticated', U.mallory, `
+    insert into public.post_likes (post_id, user_id) values ('post-live','${U.mallory}');
+    select likes_count from public.posts where id = 'post-live'`);
+  ok('a like bumps likes_count the same way',
+    liked.okd && lineOf(liked.out, '1'), liked.out);
+
+  // The client's claimed author_name is IGNORED, not validated.
+  const spoofed = asUser('authenticated', U.mallory, `
+    insert into public.posts (id, author_id, text, author_name) values
+      ('spoof-1','${U.mallory}','نص','قائد المنصة');
+    select author_name from public.posts where id = 'spoof-1'`);
+  ok('a spoofed author_name is overwritten from the profile',
+    spoofed.okd && lineOf(spoofed.out, 'Mallory'), spoofed.out);
+
+  // hasOnly(), reborn as column grants: the author's own row, and still no.
+  ok('an author cannot inflate their own likes_count',
+    !asUser('authenticated', U.alice,
+      "update public.posts set likes_count = 999 where id = 'post-live'").okd);
+  ok('an author cannot touch their own feed_score',
+    !asUser('authenticated', U.alice,
+      "update public.posts set feed_score = 1e9 where id = 'post-live'").okd);
+  ok('…but editing their own text still works (the control)',
+    rowsSeen('authenticated', U.alice,
+      "with u as (update public.posts set text = 'معدّل' where id = 'post-live' returning 1) select count(*) from u") === 1);
+}
 
 console.log('\n[13] الجداول المغلقة كلياً على العميل');
 {
@@ -428,7 +567,7 @@ console.log('\n[13] الجداول المغلقة كلياً على العميل
   const policied = psql(`
     select coalesce(string_agg(distinct tablename, ', '), '')
     from pg_policies where schemaname='public'
-      and tablename in ('audit_log','payment_attempts','rate_limits','cleanup_runs','media_objects','order_items')
+      and tablename in ('audit_log','store_payments','rate_limits','cleanup_runs','media_objects','order_items')
       and tablename <> 'order_items'`);
   ok(`the closed tables carry no policy whatsoever (${policied || 'none'})`, policied === '');
 }

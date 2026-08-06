@@ -19,10 +19,14 @@
 
 create schema if not exists auth;
 
--- Supabase's own table, reduced to what the schema references.
+-- Supabase's own table, reduced to what the schema references — plus
+-- `raw_user_meta_data`, because `0005`'s profile trigger reads the display
+-- name out of it and a trigger can only be exercised against the column it
+-- actually reads.
 create table if not exists auth.users (
   id uuid primary key,
   email text unique,
+  raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 

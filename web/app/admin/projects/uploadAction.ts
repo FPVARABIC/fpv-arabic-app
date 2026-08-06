@@ -1,8 +1,9 @@
 'use server';
 
 import { getSession, sessionCan } from '@/lib/server/session';
-import { adminStorage, storageBucketName, isAdminConfigured } from '@/lib/server/firebaseAdmin';
-import { MAX_MEDIA_SIZE_BYTES } from '@core/community/Composer/mediaPipeline';
+import { uploadServiceObject, isServiceConfigured } from '@/lib/backend/supabase/adminData';
+import { SUPABASE_URL } from '@/lib/backend/supabase/env';
+import { MAX_MEDIA_SIZE_BYTES } from '@/lib/mediaUpload';
 
 /**
  * Writing a project's cover photograph.
@@ -10,9 +11,12 @@ import { MAX_MEDIA_SIZE_BYTES } from '@core/community/Composer/mediaPipeline';
  * SAME POSTURE AS THE SHOP'S UPLOAD, FOR THE SAME REASON
  * ------------------------------------------------------
  * The panel's authority is a verified session holding `content.edit`. Letting
- * the browser write to Storage directly would mean `storage.rules` re-deriving
- * that permission as a role lookup — a second answer to «who may upload», which
- * drifts from the first the moment anybody adds a role.
+ * the browser write to Storage directly would mean the storage policies
+ * re-deriving that permission as a role lookup — a second answer to «who may
+ * upload», which drifts from the first the moment anybody adds a role. So the
+ * `project-images` bucket accepts `is_admin()` clients only as defence in
+ * depth, and the PANEL's path is this action: session first, service key
+ * second.
  *
  * The browser still does the compression, because only the browser has the
  * file. This re-checks the size and the JPEG magic bytes, because both arrived
@@ -43,7 +47,7 @@ export async function uploadProjectImage(
   if (!session || !sessionCan(session, 'content.edit')) {
     return { ok: false, errorAr: 'لا تملك صلاحية رفع صور المشاريع.' };
   }
-  if (!isAdminConfigured()) return { ok: false, errorAr: 'التخزين غير متاح حالياً.' };
+  if (!isServiceConfigured()) return { ok: false, errorAr: 'التخزين غير متاح حالياً.' };
 
   const projectId = payload.projectId.trim().toLowerCase();
   if (!/^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/.test(projectId)) {
@@ -67,27 +71,18 @@ export async function uploadProjectImage(
   }
 
   const uuid = crypto.randomUUID();
-  const path = `projects/${projectId}/${uuid}.jpg`;
+  const path = `${projectId}/${uuid}.jpg`;
 
   try {
-    const bucket = adminStorage().bucket(storageBucketName());
-    const token = crypto.randomUUID();
-    await bucket.file(path).save(full, {
-      metadata: {
-        contentType: 'image/jpeg',
-        metadata: { firebaseStorageDownloadTokens: token },
-      },
-      resumable: false,
-    });
-    return { ok: true, url: downloadUrl(bucket.name, path, token) };
+    await uploadServiceObject('project-images', path, full, 'image/jpeg');
+    return { ok: true, url: publicUrl('project-images', path) };
   } catch {
     return { ok: false, errorAr: 'تعذّر حفظ الصورة في التخزين. حاول مرة أخرى.' };
   }
 }
 
-/** Same URL shape the client SDK would have produced. See the store's uploader. */
-function downloadUrl(bucket: string, path: string, token: string): string {
-  const host = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-  const base = host ? `http://${host}` : 'https://firebasestorage.googleapis.com';
-  return `${base}/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+/** The bucket is public — the URL is a pure function of bucket and path. */
+function publicUrl(bucket: string, path: string): string {
+  return `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${bucket}/${path
+    .split('/').map(encodeURIComponent).join('/')}`;
 }

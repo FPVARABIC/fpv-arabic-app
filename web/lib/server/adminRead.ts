@@ -1,8 +1,14 @@
 import 'server-only';
 
-import { adminAuth, adminDb } from './firebaseAdmin';
+import {
+  getProfileRow, listProfileRows, countProfiles, getAuthEmail,
+  getPostRow, getCommentRow, listPostRows,
+  getReportRow, listReportRows, countReports, countPosts,
+  type ProfileRow, type ReportRowData,
+} from '../backend/supabase/adminData';
+import { serviceClient } from '../backend/supabase/service';
 import { toRole, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
-import { effectiveReportStatus, type ReportStatus } from './admin';
+import { reportStatusFromState, stateFromReportStatus, type ReportStatus } from './admin';
 
 /**
  * Everything the admin surface READS.
@@ -15,15 +21,14 @@ import { effectiveReportStatus, type ReportStatus } from './admin';
  * WHAT IS DELIBERATELY NOT RETURNED
  * ---------------------------------
  * Every function here returns the narrowest projection its screen needs. Not
- * the whole user document, not the reporter's own history, not a user's saved
- * posts, notifications, device tokens or project. An admin list is a tool for a
- * specific job, not a licence to read everything about a person — and each
- * field returned here is a field that will end up in a screenshot someday.
+ * the whole profile row, not the reporter's own history, not a user's saved
+ * posts or devices. An admin list is a tool for a specific job, not a licence
+ * to read everything about a person — and each field returned here is a field
+ * that will end up in a screenshot someday.
  *
- * Emails are the one thing fetched from outside Firestore, because they live in
- * the Auth record rather than the profile document. They are included ONLY on
- * the single-user detail screen, where identifying the right account is the
- * task; the list view deliberately does without them.
+ * Emails live in the Auth record rather than the profile row. They are
+ * included ONLY on the single-user detail screen, where identifying the right
+ * account is the task; the list view deliberately does without them.
  */
 
 export interface AdminUserRow {
@@ -38,22 +43,37 @@ export interface AdminUserRow {
   lastPostAt: string | null;
 }
 
-const toIso = (v: unknown): string | null =>
-  (v as { toDate?: () => Date })?.toDate?.().toISOString() ?? null;
-
-function rowFrom(id: string, d: Record<string, unknown>): AdminUserRow {
-  const role = toRole(d.role);
+async function rowFrom(p: ProfileRow, postsCount: number, lastPostAt: string | null): Promise<AdminUserRow> {
+  const role = toRole(p.role);
   return {
-    uid: id,
-    displayName: typeof d.displayName === 'string' ? d.displayName : null,
-    photoURL: typeof d.photoURL === 'string' ? d.photoURL : null,
+    uid: p.uid,
+    displayName: p.displayName,
+    photoURL: p.photoURL,
     role,
     roleLabelAr: ROLE_LABEL_AR[role],
-    status: d.status === 'banned' ? 'banned' : 'active',
-    postsCount: typeof d.postsCount === 'number' ? d.postsCount : 0,
-    joinedAt: toIso(d.joinedAt),
-    lastPostAt: toIso(d.lastPostAt),
+    status: p.status === 'banned' ? 'banned' : 'active',
+    postsCount,
+    joinedAt: p.createdAt,
+    lastPostAt,
   };
+}
+
+/**
+ * Posts per author, counted from the posts table at read time.
+ *
+ * Not a stored counter — a stored counter is a number that can be wrong. One
+ * bounded count per listed row; an admin list of 25 costs 25 fast indexed
+ * counts, which is the right trade for a screen whose numbers must be true.
+ */
+async function postCounts(uids: string[]): Promise<Record<string, number>> {
+  const sb = serviceClient();
+  if (!sb) return {};
+  const pairs = await Promise.all(uids.map(async uid => {
+    const { count } = await sb
+      .from('posts').select('id', { count: 'exact', head: true }).eq('author_id', uid);
+    return [uid, count ?? 0] as const;
+  }));
+  return Object.fromEntries(pairs);
 }
 
 /**
@@ -62,51 +82,48 @@ function rowFrom(id: string, d: Record<string, unknown>): AdminUserRow {
  * Three lookups, tried in the order that gives an administrator the fastest
  * answer for what they actually typed:
  *
- *   1. An exact uid — because that is what an audit entry or a report gives you,
- *      and it is the only identifier guaranteed to be unique.
- *   2. An email, resolved through the Auth record — because that is what a
- *      support request gives you. Firestore never stores emails, so this cannot
- *      be a query; it is a direct Auth lookup that either finds the one account
- *      or finds nothing.
- *   3. A display-name prefix, over the SAME `displayNameNormalized` field the
- *      community's own user search already maintains — reusing it rather than
+ *   1. An exact uid — what an audit entry or a report gives you, and the only
+ *      identifier guaranteed to be unique.
+ *   2. An email, resolved through the Auth admin API — what a support request
+ *      gives you. Profiles never store emails, so this cannot be a query.
+ *   3. A display-name prefix, over the SAME `display_name_normalized` field
+ *      the community's own user search maintains — reusing it rather than
  *      adding a second index that could disagree with the first.
  */
 export async function findUsers(rawQuery: string, limit = 25): Promise<AdminUserRow[]> {
   const q = rawQuery.trim().slice(0, 120);
   const capped = Math.min(Math.max(limit, 1), 100);
 
+  let rows: ProfileRow[];
+
   if (!q) {
-    const snap = await adminDb().collection('users')
-      .orderBy('joinedAt', 'desc').limit(capped).get();
-    return snap.docs.map(d => rowFrom(d.id, d.data()));
-  }
-
-  // 1. Exact uid.
-  const byId = await adminDb().collection('users').doc(q).get();
-  if (byId.exists) return [rowFrom(byId.id, byId.data() ?? {})];
-
-  // 2. Email, via Auth.
-  if (q.includes('@')) {
-    try {
-      const user = await adminAuth().getUserByEmail(q);
-      const snap = await adminDb().collection('users').doc(user.uid).get();
-      if (snap.exists) return [rowFrom(snap.id, snap.data() ?? {})];
-    } catch {
-      // No such account. Fall through to the name search rather than reporting
-      // "not found" — the string might still be a display name.
+    rows = await listProfileRows({ limit: capped });
+  } else {
+    // 1. Exact uid.
+    const byId = /^[0-9a-f-]{36}$/i.test(q) ? await getProfileRow(q) : null;
+    if (byId) {
+      rows = [byId];
+    } else if (q.includes('@')) {
+      // 2. Email, via the Auth admin API — list-and-match, because GoTrue's
+      // admin listing is the only email lookup the API offers.
+      const sb = serviceClient();
+      let match: ProfileRow | null = null;
+      if (sb) {
+        try {
+          const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 200 });
+          const hit = data.users.find(u => u.email?.toLowerCase() === q.toLowerCase());
+          if (hit) match = await getProfileRow(hit.id);
+        } catch { /* fall through to the name search */ }
+      }
+      rows = match ? [match] : await listProfileRows({ namePrefix: q.toLowerCase(), limit: capped });
+    } else {
+      // 3. Display-name prefix.
+      rows = await listProfileRows({ namePrefix: q.toLowerCase(), limit: capped });
     }
   }
 
-  // 3. Display-name prefix.
-  const norm = q.toLowerCase();
-  const snap = await adminDb().collection('users')
-    .orderBy('displayNameNormalized')
-    .startAt(norm)
-    .endAt(`${norm}`)
-    .limit(capped)
-    .get();
-  return snap.docs.map(d => rowFrom(d.id, d.data()));
+  const counts = await postCounts(rows.map(r => r.uid));
+  return Promise.all(rows.map(r => rowFrom(r, counts[r.uid] ?? 0, null)));
 }
 
 export interface AdminUserDetail extends AdminUserRow {
@@ -117,35 +134,41 @@ export interface AdminUserDetail extends AdminUserRow {
 }
 
 export async function getUserDetail(uid: string): Promise<AdminUserDetail | null> {
-  const snap = await adminDb().collection('users').doc(uid).get();
-  if (!snap.exists) return null;
-  const row = rowFrom(snap.id, snap.data() ?? {});
+  const p = await getProfileRow(uid);
+  if (!p) return null;
+
+  const posts = await listPostRows({ authorId: uid, limit: 100 });
+  const lastPostAt = posts[0]?.createdAt ?? null;
 
   let email: string | null = null;
   let emailVerified = false;
-  let authDisabled = false;
-  try {
-    const u = await adminAuth().getUser(uid);
-    email = u.email ?? null;
-    emailVerified = u.emailVerified;
-    authDisabled = u.disabled;
-  } catch { /* Firestore-only account; not an error for this screen */ }
-
-  // How many reports name content this person authored. Counted through their
-  // posts rather than stored on the profile, so it cannot drift and cannot be
-  // written by anyone.
-  const posts = await adminDb().collection('posts')
-    .where('authorId', '==', uid).limit(100).get();
-  const postIds = posts.docs.map(d => d.id);
-  let reportsAgainstCount = 0;
-  for (let i = 0; i < postIds.length; i += 10) {
-    const batch = postIds.slice(i, i + 10);
-    if (!batch.length) break;
-    const r = await adminDb().collection('reports').where('postId', 'in', batch).get();
-    reportsAgainstCount += r.size;
+  const sb = serviceClient();
+  if (sb) {
+    try {
+      const { data } = await sb.auth.admin.getUserById(uid);
+      email = data.user?.email ?? null;
+      emailVerified = Boolean(data.user?.email_confirmed_at);
+    } catch { /* profile without a reachable Auth record; not an error here */ }
   }
 
-  return { ...row, email, emailVerified, authDisabled, reportsAgainstCount };
+  // How many reports name content this person authored — counted through
+  // their posts rather than stored on the profile, so it cannot drift and
+  // cannot be written by anyone.
+  const postIds = posts.map(x => x.id);
+  const reports = postIds.length
+    ? await listReportRows({ targetIds: postIds, limit: 500 })
+    : [];
+
+  const row = await rowFrom(p, postIds.length, lastPostAt);
+  return {
+    ...row,
+    email,
+    emailVerified,
+    // Supabase Auth has no per-account «disabled» flag the platform uses;
+    // the platform's own suspension is `status = 'banned'`, shown beside it.
+    authDisabled: false,
+    reportsAgainstCount: reports.length,
+  };
 }
 
 export interface AdminReportRow {
@@ -171,47 +194,46 @@ export const REPORT_REASON_AR: Record<string, string> = {
   other: 'سبب آخر',
 };
 
+function toAdminReportRow(r: ReportRowData): AdminReportRow {
+  return {
+    id: r.id,
+    targetType: r.targetType === 'comment' ? 'comment' : 'post',
+    targetId: r.targetId,
+    // For a post the target IS the post; for a comment the parent post id is
+    // resolved where it is needed (the detail screen), not stored twice.
+    postId: r.targetType === 'comment' ? '' : r.targetId,
+    reporterId: r.reporterId ?? '',
+    reporterName: null,
+    reason: r.reason || 'other',
+    note: r.detail,
+    createdAt: r.createdAt,
+    status: reportStatusFromState(r.state),
+    reviewedBy: r.handledBy,
+    reviewedAt: r.handledAt,
+    reviewNoteAr: r.resolutionNote,
+  };
+}
+
 /**
  * The report queue.
  *
- * Filtered in memory on the derived status rather than by a `where` on the
- * stored field, because the effective status is a FUNCTION of `resolved` and
- * `status` (see `effectiveReportStatus`) and a query on either one alone would
- * silently miss reports written by the phone, which sets only `resolved`. The
- * queue is bounded and small; correctness beats an index here.
+ * Filtered by the STORED state now — the Firestore version had to filter in
+ * memory because its status was derived from two fields written by two
+ * surfaces; the relational table has one state column and one writer, so the
+ * query can simply say what it wants.
  */
 export async function listReports(opts: {
   status?: ReportStatus | 'all';
   limit?: number;
 } = {}): Promise<AdminReportRow[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-  const snap = await adminDb().collection('reports')
-    .orderBy('createdAt', 'desc').limit(limit * 2).get();
-
-  const rows: AdminReportRow[] = snap.docs.map(d => {
-    const v = d.data();
-    return {
-      id: d.id,
-      targetType: v.targetType === 'comment' ? 'comment' : 'post',
-      targetId: String(v.targetId ?? ''),
-      postId: String(v.postId ?? ''),
-      reporterId: String(v.reporterId ?? ''),
-      reporterName: null,
-      reason: String(v.reason ?? 'other'),
-      note: typeof v.note === 'string' ? v.note : null,
-      createdAt: toIso(v.createdAt),
-      status: effectiveReportStatus(v),
-      reviewedBy: typeof v.reviewedBy === 'string' ? v.reviewedBy : null,
-      reviewedAt: toIso(v.reviewedAt),
-      reviewNoteAr: typeof v.reviewNoteAr === 'string' ? v.reviewNoteAr : null,
-    };
+  const rows = await listReportRows({
+    states: !opts.status || opts.status === 'all'
+      ? undefined
+      : [stateFromReportStatus(opts.status)],
+    limit,
   });
-
-  const filtered = !opts.status || opts.status === 'all'
-    ? rows
-    : rows.filter(r => r.status === opts.status);
-
-  return filtered.slice(0, limit);
+  return rows.map(toAdminReportRow);
 }
 
 export interface AdminReportDetail extends AdminReportRow {
@@ -232,39 +254,42 @@ export interface AdminReportDetail extends AdminReportRow {
 }
 
 export async function getReportDetail(reportId: string): Promise<AdminReportDetail | null> {
-  const snap = await adminDb().collection('reports').doc(reportId).get();
-  if (!snap.exists) return null;
-  const [row] = await listReportRows([{ id: snap.id, data: snap.data() ?? {} }]);
+  const r = await getReportRow(reportId);
+  if (!r) return null;
+  const row = toAdminReportRow(r);
 
-  // The reported artifact. Read with the Admin SDK precisely because a hidden
-  // or deleted post is exactly what a moderator most needs to look at, and the
-  // public read rule refuses those.
+  // The reported artifact. Read on the service key precisely because a hidden
+  // or deleted post is exactly what a moderator most needs to look at, and
+  // the public read policy refuses those.
   let content: AdminReportDetail['content'] = null;
   if (row.targetType === 'post') {
-    const p = await adminDb().collection('posts').doc(row.targetId).get();
-    content = p.exists ? fromPost(p.data() ?? {}) : { ...EMPTY_CONTENT, exists: false };
+    const sb = serviceClient();
+    const { data } = sb
+      ? await sb.from('posts').select('*').eq('id', row.targetId).maybeSingle()
+      : { data: null };
+    content = data ? fromPostRow(data as Record<string, unknown>) : { ...EMPTY_CONTENT, exists: false };
   } else {
-    const c = await adminDb().collection('posts').doc(row.postId)
-      .collection('comments').doc(row.targetId).get();
-    content = c.exists
-      ? {
+    const c = await getCommentRow(row.targetId);
+    if (c) {
+      row.postId = c.postId;
+      content = {
         exists: true,
-        text: String(c.data()?.text ?? ''),
-        authorId: String(c.data()?.authorId ?? ''),
-        authorName: typeof c.data()?.authorName === 'string' ? c.data()!.authorName : null,
-        status: String(c.data()?.status ?? 'active'),
+        text: c.text,
+        authorId: c.authorId,
+        authorName: null,
+        status: c.status,
         mediaType: 'none', mediaURL: null, thumbnailURL: null,
         mediaWidth: null, mediaHeight: null, mediaDuration: null,
-      }
-      : { ...EMPTY_CONTENT, exists: false };
+      };
+    } else {
+      content = { ...EMPTY_CONTENT, exists: false };
+    }
   }
 
-  const reporter = await adminDb().collection('users').doc(row.reporterId).get();
+  const reporter = row.reporterId ? await getProfileRow(row.reporterId) : null;
   return {
     ...row,
-    reporterName: reporter.exists && typeof reporter.data()?.displayName === 'string'
-      ? reporter.data()!.displayName as string
-      : null,
+    reporterName: reporter?.displayName ?? null,
     content,
   };
 }
@@ -275,52 +300,31 @@ const EMPTY_CONTENT = {
   mediaWidth: null, mediaHeight: null, mediaDuration: null,
 };
 
-function fromPost(d: Record<string, unknown>): NonNullable<AdminReportDetail['content']> {
+function fromPostRow(d: Record<string, unknown>): NonNullable<AdminReportDetail['content']> {
   return {
     exists: true,
     text: String(d.text ?? ''),
-    authorId: String(d.authorId ?? ''),
-    authorName: typeof d.authorName === 'string' ? d.authorName : null,
+    authorId: String(d.author_id ?? ''),
+    authorName: typeof d.author_name === 'string' ? d.author_name : null,
     status: String(d.status ?? 'active'),
-    mediaType: (d.mediaType === 'image' || d.mediaType === 'video' ? d.mediaType : 'none'),
-    mediaURL: typeof d.mediaURL === 'string' ? d.mediaURL : null,
-    thumbnailURL: typeof d.thumbnailURL === 'string' ? d.thumbnailURL : null,
-    mediaWidth: typeof d.mediaWidth === 'number' ? d.mediaWidth : null,
-    mediaHeight: typeof d.mediaHeight === 'number' ? d.mediaHeight : null,
-    mediaDuration: typeof d.mediaDuration === 'number' ? d.mediaDuration : null,
+    mediaType: (d.media_type === 'image' || d.media_type === 'video' ? d.media_type : 'none'),
+    mediaURL: typeof d.media_url === 'string' ? d.media_url : null,
+    thumbnailURL: typeof d.thumbnail_url === 'string' ? d.thumbnail_url : null,
+    mediaWidth: typeof d.media_width === 'number' ? d.media_width : null,
+    mediaHeight: typeof d.media_height === 'number' ? d.media_height : null,
+    mediaDuration: typeof d.media_duration === 'number' ? Number(d.media_duration) : null,
   };
-}
-
-function listReportRows(docs: { id: string; data: Record<string, unknown> }[]): AdminReportRow[] {
-  return docs.map(({ id, data: v }) => ({
-    id,
-    targetType: v.targetType === 'comment' ? 'comment' : 'post',
-    targetId: String(v.targetId ?? ''),
-    postId: String(v.postId ?? ''),
-    reporterId: String(v.reporterId ?? ''),
-    reporterName: null,
-    reason: String(v.reason ?? 'other'),
-    note: typeof v.note === 'string' ? v.note : null,
-    createdAt: toIso(v.createdAt),
-    status: effectiveReportStatus(v),
-    reviewedBy: typeof v.reviewedBy === 'string' ? v.reviewedBy : null,
-    reviewedAt: toIso(v.reviewedAt),
-    reviewNoteAr: typeof v.reviewNoteAr === 'string' ? v.reviewNoteAr : null,
-  }));
 }
 
 /**
  * The dashboard's numbers.
  *
- * Every one is COUNTED from the collection it describes, at read time. None is
- * a stored counter, because a stored counter is a number that can be wrong, and
- * a dashboard whose figures are quietly stale is worse than one with no figures
- * at all — it produces confident decisions from bad data.
- *
- * The counts are bounded rather than exhaustive: `count()` aggregation with a
- * cap, so a platform with a hundred thousand posts does not make this page
- * expensive. Where a cap is hit the UI says «+» rather than pretending the
- * number is exact.
+ * Every one is COUNTED from the table it describes, at read time. None is a
+ * stored counter, because a stored counter is a number that can be wrong, and
+ * a dashboard whose figures are quietly stale produces confident decisions
+ * from bad data. PostgreSQL's `count` is exact and indexed, so the Firestore
+ * version's sampling cap is gone — `capped` stays in the contract and is
+ * simply always false now.
  */
 export interface AdminStats {
   openReports: number;
@@ -331,32 +335,14 @@ export interface AdminStats {
   capped: boolean;
 }
 
-const STAT_CAP = 500;
-
 export async function getAdminStats(): Promise<AdminStats> {
-  const db = adminDb();
-
-  const [reportsSnap, hidden, banned, users] = await Promise.all([
-    db.collection('reports').limit(STAT_CAP).get(),
-    db.collection('posts').where('status', '==', 'hidden').limit(STAT_CAP).get(),
-    db.collection('users').where('status', '==', 'banned').limit(STAT_CAP).get(),
-    db.collection('users').limit(STAT_CAP).get(),
+  const [openReports, inReviewReports, hiddenPosts, bannedUsers, totalUsers] = await Promise.all([
+    countReports(['open']),
+    countReports(['reviewing']),
+    countPosts('hidden'),
+    countProfiles({ status: 'banned' }),
+    countProfiles(),
   ]);
 
-  let openReports = 0;
-  let inReviewReports = 0;
-  for (const d of reportsSnap.docs) {
-    const s = effectiveReportStatus(d.data());
-    if (s === 'open') openReports++;
-    else if (s === 'in_review') inReviewReports++;
-  }
-
-  return {
-    openReports,
-    inReviewReports,
-    hiddenPosts: hidden.size,
-    bannedUsers: banned.size,
-    totalUsers: users.size,
-    capped: reportsSnap.size >= STAT_CAP || users.size >= STAT_CAP,
-  };
+  return { openReports, inReviewReports, hiddenPosts, bannedUsers, totalUsers, capped: false };
 }

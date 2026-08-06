@@ -42,9 +42,13 @@ const nextConfig: NextConfig = {
   },
 
   images: {
-    // Community media lives in Firebase Storage. Only that host is allowed —
-    // an open remote-image policy is an SSRF and cost amplifier.
+    // Community media lives in Supabase Storage. The Firebase hosts stay ONLY
+    // until the data migration rewrites imported posts' media URLs — they are
+    // a read-only allowance for legacy files, not a runtime dependency — and
+    // they come out with that phase. An open remote-image policy is an SSRF
+    // and cost amplifier, so the list is exact either way.
     remotePatterns: [
+      { protocol: 'https', hostname: '*.supabase.co' },
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
       { protocol: 'https', hostname: 'storage.googleapis.com' },
     ],
