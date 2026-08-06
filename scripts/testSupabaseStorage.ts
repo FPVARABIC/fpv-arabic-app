@@ -26,10 +26,24 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { remoteConfig, remoteSqlAsPsql, type RemoteConfig } from './lib/supabaseRemote';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PGPORT = process.env.RLS_TEST_PORT ?? '55432';
 const DB = 'fpvarabic_storage_test';
+
+// REMOTE MODE — same suite, real project. See testSupabaseRls.ts for the
+// full argument; the three channel differences are identical here.
+const REMOTE = process.env.SUPABASE_REMOTE === '1';
+let RCFG: RemoteConfig | null = null;
+if (REMOTE) {
+  const r = remoteConfig();
+  if (!r.ok) {
+    console.error(`✋ SUPABASE_REMOTE=1 لكن ينقص: ${r.missing.join(', ')}`);
+    process.exit(2);
+  }
+  RCFG = r.cfg;
+}
 
 let passed = 0;
 let failed = 0;
@@ -39,6 +53,7 @@ function ok(label: string, cond: boolean, detail = ''): void {
 }
 
 function psql(sql: string, db = DB): string {
+  if (REMOTE) return remoteSqlAsPsql(RCFG!, sql).trim();
   return execFileSync('psql', ['-h', '/tmp', '-p', PGPORT, '-U', 'postgres', '-d', db,
     '-v', 'ON_ERROR_STOP=1', '-tAc', sql], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
@@ -57,8 +72,9 @@ function psqlFile(file: string, db = DB): void {
  */
 function allowed(role: string, uid: string | null, sql: string): boolean {
   const claim = uid ? `set local request.jwt.claim.sub = '${uid}';` : '';
+  const tail = REMOTE ? '' : '; rollback;';
   try {
-    psql(`begin; set local role ${role}; ${claim} ${sql}; rollback;`);
+    psql(`begin; set local role ${role}; ${claim} ${sql}${tail}`);
     return true;
   } catch { return false; }
 }
@@ -71,8 +87,9 @@ function changed(role: string, uid: string | null, sql: string): number {
 /** How many rows the role can see. -1 means the statement itself was refused. */
 function visible(role: string, uid: string | null, sql: string): number {
   const claim = uid ? `set local request.jwt.claim.sub = '${uid}';` : '';
+  const tail = REMOTE ? '' : '; rollback;';
   try {
-    const out = psql(`begin; set local role ${role}; ${claim} ${sql}; rollback;`);
+    const out = psql(`begin; set local role ${role}; ${claim} ${sql}${tail}`);
     const n = out.split('\n').map(l => l.trim()).filter(l => /^\d+$/.test(l)).pop();
     return n === undefined ? -1 : Number(n);
   } catch { return -1; }
@@ -87,43 +104,74 @@ function put(bucket: string, name: string, uid: string, meta = IMG): string {
           values ('${bucket}', '${name}', '${uid}', ${meta})`;
 }
 
-/* ── Bring the database up ────────────────────────────────────────────────── */
+/* ── Bring the database up (LOCAL) / verify it is reconciled (REMOTE) ────── */
 
-if (!existsSync('/usr/bin/psql')) {
-  console.log('\nPostgreSQL is not available — storage spec cannot run.');
-  process.exitCode = 1;
-  throw new Error('no postgres');
-}
-
-// Bring the cluster up if it is not already. The spec must be runnable with
-// one command, not two — a suite that needs a remembered prerequisite is a
-// suite that gets skipped.
-try {
-  execFileSync('bash', [path.join(ROOT, 'supabase/test/start-postgres.sh')],
-    { stdio: ['ignore', 'pipe', 'pipe'] });
-} catch (e) {
-  console.log('could not start PostgreSQL:', String((e as { stderr?: Buffer }).stderr ?? e).slice(0, 200));
-  process.exitCode = 1;
-  throw e;
-}
-
-console.log('\nApplying migrations to a scratch database…');
-try { psql(`drop database if exists ${DB}`, 'postgres'); } catch { /* first run */ }
-psql(`create database ${DB}`, 'postgres');
-psql('create extension if not exists "pgcrypto"');
-// EVERY shim, in order — not a hand-written list.
-//
-// The RLS suite briefly loaded only the auth shim while still applying every
-// migration, so `0003_storage.sql` failed with `relation "storage.buckets"
-// does not exist`. A sweep cannot fall out of step with the directory the way
-// a list can.
-for (const shim of readdirSync(path.join(ROOT, 'supabase/test'))
-  .filter(f => f.endsWith('.sql')).sort()) {
-  psqlFile(path.join(ROOT, 'supabase/test', shim));
-}
 const MIGRATIONS = readdirSync(path.join(ROOT, 'supabase/migrations')).filter(f => f.endsWith('.sql')).sort();
-for (const m of MIGRATIONS) psqlFile(path.join(ROOT, 'supabase/migrations', m));
-console.log(`applied: ${MIGRATIONS.join(', ')}`);
+
+if (!REMOTE) {
+  if (!existsSync('/usr/bin/psql')) {
+    console.log('\nPostgreSQL is not available — storage spec cannot run.');
+    process.exitCode = 1;
+    throw new Error('no postgres');
+  }
+
+  // Bring the cluster up if it is not already. The spec must be runnable with
+  // one command, not two — a suite that needs a remembered prerequisite is a
+  // suite that gets skipped.
+  try {
+    execFileSync('bash', [path.join(ROOT, 'supabase/test/start-postgres.sh')],
+      { stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (e) {
+    console.log('could not start PostgreSQL:', String((e as { stderr?: Buffer }).stderr ?? e).slice(0, 200));
+    process.exitCode = 1;
+    throw e;
+  }
+
+  console.log('\nApplying migrations to a scratch database…');
+  try { psql(`drop database if exists ${DB}`, 'postgres'); } catch { /* first run */ }
+  psql(`create database ${DB}`, 'postgres');
+  psql('create extension if not exists "pgcrypto"');
+  // EVERY shim, in order — not a hand-written list.
+  for (const shim of readdirSync(path.join(ROOT, 'supabase/test'))
+    .filter(f => f.endsWith('.sql')).sort()) {
+    psqlFile(path.join(ROOT, 'supabase/test', shim));
+  }
+  for (const m of MIGRATIONS) psqlFile(path.join(ROOT, 'supabase/migrations', m));
+  console.log(`applied: ${MIGRATIONS.join(', ')}`);
+} else {
+  const sig = psql(`select count(*) from storage.buckets where id in ('avatars','community-media','store-products','project-images')`);
+  if (!/4/.test(sig)) {
+    console.error('✋ الـBuckets الأربعة غير موجودة على المشروع الحقيقي — شغّل npm run remote:reconcile أولاً.');
+    process.exit(2);
+  }
+  console.log('\n✓ الوضع البعيد: الاختبار يجري على buckets المشروع الحقيقي مباشرة.');
+}
+
+/** Remote seeds COMMIT, so they must LEAVE — before seeding and on exit. */
+function remoteCleanup(): void {
+  if (!REMOTE) return;
+  const uids = [
+    '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+    '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444',
+    '55555555-5555-5555-5555-555555555555',
+  ].map(u => `'${u}'`).join(',');
+  try {
+    psql(`
+      delete from storage.objects where owner in (${uids})
+        or name like '${'11111111-1111-1111-1111-111111111111'}/%'
+        or name like 'products/%test-probe%';
+      delete from auth.users where id in (${uids});
+    `);
+  } catch (e) {
+    console.error('  ⚠ تنظيف بذور التخزين تعثّر:', String((e as Error).message).slice(0, 200));
+  }
+}
+
+if (REMOTE) {
+  remoteCleanup();
+  let cleaned = false;
+  process.on('exit', () => { if (!cleaned) { cleaned = true; remoteCleanup(); } });
+}
 
 const U = {
   alice: '11111111-1111-1111-1111-111111111111',

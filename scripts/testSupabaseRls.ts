@@ -30,11 +30,44 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { remoteConfig, remoteSql, remoteSqlAsPsql, type RemoteConfig } from './lib/supabaseRemote';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PGHOST = '/tmp';
 const PGPORT = process.env.RLS_TEST_PORT ?? '55432';
 const DB = 'fpvarabic_rls_test';
+
+/**
+ * REMOTE MODE — the same suite, pointed at the REAL project.
+ *
+ * `SUPABASE_REMOTE=1` swaps the executor from local psql to the Management
+ * API and changes NOTHING about what is asserted: the policies under test
+ * are the ones the reconciler applied to the live database, exercised as the
+ * live `anon` / `authenticated` roles.
+ *
+ * Three mechanical differences, each forced by the channel:
+ *   · a probe cannot end in `rollback` (the API returns the LAST statement's
+ *     rows), so remote probes rely on the session's implicit rollback —
+ *     every call is its own session, and an uncommitted transaction dies
+ *     with it
+ *   · seeds COMMIT (sessions share nothing), so remote runs register a
+ *     cleanup that deletes every seeded row by its known id — before seeding
+ *     (a crashed earlier run) and again on exit
+ *   · the local bootstrap (scratch cluster, shims, migration apply) is
+ *     skipped: the real database is expected to be reconciled already, and
+ *     the suite REFUSES to run if the signature policy is absent rather
+ *     than passing vacuously against empty tables
+ */
+const REMOTE = process.env.SUPABASE_REMOTE === '1';
+let RCFG: RemoteConfig | null = null;
+if (REMOTE) {
+  const r = remoteConfig();
+  if (!r.ok) {
+    console.error(`✋ SUPABASE_REMOTE=1 لكن ينقص: ${r.missing.join(', ')}`);
+    process.exit(2);
+  }
+  RCFG = r.cfg;
+}
 
 let passed = 0;
 let failed = 0;
@@ -44,6 +77,7 @@ function ok(label: string, cond: boolean, detail = ''): void {
 }
 
 function psql(sql: string, db = DB): string {
+  if (REMOTE) return remoteSqlAsPsql(RCFG!, sql).trim();
   return execFileSync('psql', [
     '-h', PGHOST, '-p', PGPORT, '-U', 'postgres', '-d', db,
     '-v', 'ON_ERROR_STOP=1', '-tAc', sql,
@@ -66,12 +100,18 @@ function psqlFile(file: string, db = DB): void {
  */
 function asUser(role: string, uid: string | null, sql: string): { okd: boolean; out: string } {
   const claim = uid ? `set local request.jwt.claim.sub = '${uid}';` : '';
-  const wrapped = `begin; set local role ${role}; ${claim} ${sql}; rollback;`;
+  // Remotely the probe ends on its OWN last statement: the API returns the
+  // last statement's rows, and the never-committed transaction dies with the
+  // session — the same rollback, achieved implicitly.
+  const wrapped = REMOTE
+    ? `begin; set local role ${role}; ${claim} ${sql}`
+    : `begin; set local role ${role}; ${claim} ${sql}; rollback;`;
   try {
     return { okd: true, out: psql(wrapped) };
   } catch (e) {
-    const err = String((e as { stderr?: Buffer }).stderr ?? e);
-    return { okd: false, out: err.split('\n').find(l => /ERROR/.test(l)) ?? err.slice(0, 120) };
+    const err = String((e as { stderr?: Buffer; message?: string }).stderr
+      ?? (e as Error).message ?? e);
+    return { okd: false, out: err.split('\n').find(l => /ERROR|violates|denied|permission/i.test(l)) ?? err.slice(0, 160) };
   }
 }
 
@@ -116,44 +156,96 @@ function rowsSeen(role: string, uid: string | null, sql: string): number {
   return numeric.length ? Number(numeric[numeric.length - 1]) : -1;
 }
 
-/* ── Bring the database up ────────────────────────────────────────────────── */
-
-if (!existsSync('/usr/lib/postgresql/16/bin/initdb') && !existsSync('/usr/bin/psql')) {
-  console.log('\nPostgreSQL is not available — RLS spec cannot run.');
-  process.exitCode = 1;
-  throw new Error('no postgres');
-}
-
-// Bring the cluster up if it is not already. The spec must be runnable with
-// one command, not two — a suite that needs a remembered prerequisite is a
-// suite that gets skipped.
-try {
-  execFileSync('bash', [path.join(ROOT, 'supabase/test/start-postgres.sh')],
-    { stdio: ['ignore', 'pipe', 'pipe'] });
-} catch (e) {
-  console.log('could not start PostgreSQL:', String((e as { stderr?: Buffer }).stderr ?? e).slice(0, 200));
-  process.exitCode = 1;
-  throw e;
-}
-
-console.log('\nApplying migrations to a scratch database…');
-try { psql(`drop database if exists ${DB}`, 'postgres'); } catch { /* first run */ }
-psql(`create database ${DB}`, 'postgres');
-psql('create extension if not exists "pgcrypto"');
-// EVERY shim, in order — not a hand-written list.
-//
-// The RLS suite briefly loaded only the auth shim while still applying every
-// migration, so `0003_storage.sql` failed with `relation "storage.buckets"
-// does not exist`. A sweep cannot fall out of step with the directory the way
-// a list can.
-for (const shim of readdirSync(path.join(ROOT, 'supabase/test'))
-  .filter(f => f.endsWith('.sql')).sort()) {
-  psqlFile(path.join(ROOT, 'supabase/test', shim));
-}
-
+// The list serves both modes: applied locally, and swept for leaked secrets
+// by section [14] either way.
 const MIGRATIONS = readdirSync(path.join(ROOT, 'supabase/migrations')).filter(f => f.endsWith('.sql')).sort();
-for (const m of MIGRATIONS) psqlFile(path.join(ROOT, 'supabase/migrations', m));
-console.log(`applied: ${MIGRATIONS.join(', ')}`);
+
+/* ── Bring the database up (LOCAL) / verify it is reconciled (REMOTE) ────── */
+
+if (!REMOTE) {
+  if (!existsSync('/usr/lib/postgresql/16/bin/initdb') && !existsSync('/usr/bin/psql')) {
+    console.log('\nPostgreSQL is not available — RLS spec cannot run.');
+    process.exitCode = 1;
+    throw new Error('no postgres');
+  }
+
+  // Bring the cluster up if it is not already. The spec must be runnable with
+  // one command, not two — a suite that needs a remembered prerequisite is a
+  // suite that gets skipped.
+  try {
+    execFileSync('bash', [path.join(ROOT, 'supabase/test/start-postgres.sh')],
+      { stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (e) {
+    console.log('could not start PostgreSQL:', String((e as { stderr?: Buffer }).stderr ?? e).slice(0, 200));
+    process.exitCode = 1;
+    throw e;
+  }
+
+  console.log('\nApplying migrations to a scratch database…');
+  try { psql(`drop database if exists ${DB}`, 'postgres'); } catch { /* first run */ }
+  psql(`create database ${DB}`, 'postgres');
+  psql('create extension if not exists "pgcrypto"');
+  // EVERY shim, in order — not a hand-written list.
+  //
+  // The RLS suite briefly loaded only the auth shim while still applying every
+  // migration, so `0003_storage.sql` failed with `relation "storage.buckets"
+  // does not exist`. A sweep cannot fall out of step with the directory the way
+  // a list can.
+  for (const shim of readdirSync(path.join(ROOT, 'supabase/test'))
+    .filter(f => f.endsWith('.sql')).sort()) {
+    psqlFile(path.join(ROOT, 'supabase/test', shim));
+  }
+
+  for (const m of MIGRATIONS) psqlFile(path.join(ROOT, 'supabase/migrations', m));
+  console.log(`applied: ${MIGRATIONS.join(', ')}`);
+} else {
+  // The real project must be reconciled FIRST — this suite proves policies,
+  // it does not install them. Refusing here beats passing vacuously.
+  const sig = psql(`select count(*) from pg_policies where policyname = 'posts_read_active'`);
+  if (!/1/.test(sig)) {
+    console.error('✋ المشروع الحقيقي غير مُسوّى بعد — شغّل npm run remote:reconcile أولاً.');
+    process.exit(2);
+  }
+  console.log('\n✓ الوضع البعيد: السياسات موجودة على المشروع الحقيقي — الاختبار يجري عليه مباشرة.');
+}
+
+/**
+ * REMOTE seeds COMMIT, so they must LEAVE. Every seeded row is deleted by
+ * its known id — before seeding (a crashed earlier run left leftovers) and
+ * again on exit, crash included: the executor is synchronous, so an exit
+ * handler can actually finish the job.
+ */
+function remoteCleanup(): void {
+  if (!REMOTE) return;
+  const uids = [
+    '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+    '33333333-3333-3333-3333-333333333333', '44444444-4444-4444-4444-444444444444',
+    '55555555-5555-5555-5555-555555555555', '77777777-7777-7777-7777-777777777777',
+    '88888888-8888-8888-8888-888888888878', '99999999-9999-9999-9999-999999999979',
+  ].map(u => `'${u}'`).join(',');
+  try {
+    psql(`
+      delete from public.audit_log where actor_id in (${uids}) or actor_id is null and action = 'role.change';
+      delete from public.orders where id = '66666666-6666-6666-6666-666666666666';
+      delete from public.store_docs where (collection, id) in (
+        ('storeSupply','prod-live:std'), ('storeProducts','prod-live'),
+        ('storeShippingZones','eu'), ('storeSettings','public'),
+        ('storeSettings','shippingRules'), ('storeSettings','private'));
+      delete from public.store_variants where id = 'var-1';
+      delete from public.store_products where id in ('prod-live','prod-draft');
+      delete from public.posts where id in ('post-live','post-hidden');
+      delete from auth.users where id in (${uids});
+    `);
+  } catch (e) {
+    console.error('  ⚠ تنظيف البذور البعيدة تعثّر:', String((e as Error).message).slice(0, 200));
+  }
+}
+
+if (REMOTE) {
+  remoteCleanup();
+  let cleaned = false;
+  process.on('exit', () => { if (!cleaned) { cleaned = true; remoteCleanup(); } });
+}
 
 /* ── Seed four people and a shop ──────────────────────────────────────────── */
 

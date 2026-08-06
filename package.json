@@ -56,6 +56,9 @@
     "test:storage": "npx tsx scripts/testSupabaseStorage.ts",
     "test:backend": "npx tsx scripts/testBackendAdapter.ts",
     "test:supabase": "npm run test:rls && npm run test:storage && npm run test:backend",
+    "remote:status": "npx tsx scripts/supabaseRemoteStatus.ts",
+    "remote:reconcile": "npx tsx scripts/supabaseReconcile.ts",
+    "remote:test": "SUPABASE_REMOTE=1 npx tsx scripts/testSupabaseRls.ts && SUPABASE_REMOTE=1 npx tsx scripts/testSupabaseStorage.ts",
     "test:bundle-secrets": "npx tsx scripts/testClientBundleSecrets.ts",
     "preflight": "npx tsx scripts/preflightDeploy.ts"
   },

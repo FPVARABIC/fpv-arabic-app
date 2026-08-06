@@ -1023,7 +1023,15 @@ console.log('\n[16] Scope — only the expected Community/rules/index/migration/
     !f.startsWith('supabase/') &&
     f !== 'docs/platform/SUPABASE_MIGRATION.md' &&
     !f.startsWith('scripts/testSupabase') &&
-    f !== 'scripts/testBackendAdapter.ts',
+    f !== 'scripts/testBackendAdapter.ts' &&
+    // ── Remote operations on the real Supabase project ────────────────────
+    // The Management-API executor, the statement-level migration
+    // reconciliation engine, and the two CLI entry points that read/repair
+    // the REAL database (the owner ran 0001 by hand; these take over from
+    // there). Backend platform tooling, not Community.
+    !f.startsWith('scripts/lib/') &&
+    f !== 'scripts/supabaseRemoteStatus.ts' &&
+    f !== 'scripts/supabaseReconcile.ts',
   );
   if (outOfScope.length > 0) console.log('  OUT OF SCOPE:', outOfScope);
   ok('no file outside the expected Community/rules/index/migration/test scope is dirty', outOfScope.length === 0);
