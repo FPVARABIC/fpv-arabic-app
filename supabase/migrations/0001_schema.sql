@@ -1,5 +1,9 @@
 -- FPVARABIC — the schema, phase one of the move off Firebase.
 --
+-- NOT YET APPLIED TO THE REAL SUPABASE PROJECT. This file is reviewed and
+-- exercised against a local PostgreSQL by `scripts/testSupabaseRls.ts`; the
+-- hosted project has not been touched.
+--
 -- WHAT THIS FILE IS AND WHAT IT DELIBERATELY IS NOT
 -- =================================================
 -- It creates every table the platform needs and turns Row Level Security ON

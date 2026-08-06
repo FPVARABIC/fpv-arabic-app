@@ -1,5 +1,8 @@
 -- FPVARABIC — Row Level Security, phase two.
 --
+-- NOT YET APPLIED TO THE REAL SUPABASE PROJECT. Proven against a local
+-- PostgreSQL 16 by `scripts/testSupabaseRls.ts`, and nowhere else yet.
+--
 -- `0001` left every table with RLS enabled and no policy, which denies
 -- everything. This file opens the doors that must be open, one at a time. Each
 -- one is exercised as a real role in `supabase/test/rls_spec.sql`.

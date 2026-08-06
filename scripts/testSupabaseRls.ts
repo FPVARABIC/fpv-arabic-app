@@ -124,10 +124,32 @@ if (!existsSync('/usr/lib/postgresql/16/bin/initdb') && !existsSync('/usr/bin/ps
   throw new Error('no postgres');
 }
 
+// Bring the cluster up if it is not already. The spec must be runnable with
+// one command, not two — a suite that needs a remembered prerequisite is a
+// suite that gets skipped.
+try {
+  execFileSync('bash', [path.join(ROOT, 'supabase/test/start-postgres.sh')],
+    { stdio: ['ignore', 'pipe', 'pipe'] });
+} catch (e) {
+  console.log('could not start PostgreSQL:', String((e as { stderr?: Buffer }).stderr ?? e).slice(0, 200));
+  process.exitCode = 1;
+  throw e;
+}
+
 console.log('\nApplying migrations to a scratch database…');
 try { psql(`drop database if exists ${DB}`, 'postgres'); } catch { /* first run */ }
 psql(`create database ${DB}`, 'postgres');
-psqlFile(path.join(ROOT, 'supabase/test/00_supabase_shim.sql'));
+psql('create extension if not exists "pgcrypto"');
+// EVERY shim, in order — not a hand-written list.
+//
+// The RLS suite briefly loaded only the auth shim while still applying every
+// migration, so `0003_storage.sql` failed with `relation "storage.buckets"
+// does not exist`. A sweep cannot fall out of step with the directory the way
+// a list can.
+for (const shim of readdirSync(path.join(ROOT, 'supabase/test'))
+  .filter(f => f.endsWith('.sql')).sort()) {
+  psqlFile(path.join(ROOT, 'supabase/test', shim));
+}
 
 const MIGRATIONS = readdirSync(path.join(ROOT, 'supabase/migrations')).filter(f => f.endsWith('.sql')).sort();
 for (const m of MIGRATIONS) psqlFile(path.join(ROOT, 'supabase/migrations', m));
@@ -165,8 +187,8 @@ psql(`
     ('var-1','prod-live','قياسي', 4999, true);
   insert into public.store_supply (product_id, supplier_name, cost_minor, margin_pct) values
     ('prod-live','MoriSupplier', 2500, 45.0);
-  insert into public.orders (id, reference, user_id, total_minor, state) values
-    ('66666666-6666-6666-6666-666666666666','ORD-1','${U.alice}', 4999, 'paid');
+  insert into public.orders (id, reference, user_id, total_minor, payment_state, fulfilment) values
+    ('66666666-6666-6666-6666-666666666666','ORD-1','${U.alice}', 4999, 'paid', 'confirmed');
   insert into public.audit_log (actor_id, action, target_type) values
     ('${U.admin}','role.change','profile');
 `);
@@ -336,7 +358,7 @@ console.log('\n[9–12] الطلب والسعر والشحن — خادمياً 
   // send a total. «السعر والشحن يعاد حسابهما خادمياً» is mechanical because
   // the client has no INSERT at all.
   const forged = asUser('authenticated', U.alice,
-    `insert into public.orders (id, reference, user_id, total_minor, state)
+    `insert into public.orders (id, reference, user_id, total_minor, payment_state)
      values ('88888888-8888-8888-8888-888888888888','ORD-FORGED','${U.alice}', 1, 'paid')`);
   ok('a client cannot create an order at all — so it cannot send a price',
     !forged.okd, forged.out);
@@ -347,7 +369,20 @@ console.log('\n[9–12] الطلب والسعر والشحن — خادمياً 
 
   ok('a client cannot mark its own order paid',
     rowsSeen('authenticated', U.alice,
-      "with u as (update public.orders set state='paid' where reference='ORD-1' returning 1) select count(*) from u") <= 0);
+      "with u as (update public.orders set payment_state='paid' where reference='ORD-1' returning 1) select count(*) from u") <= 0);
+
+  // 0004's second axis. A customer who could set this could close their own
+  // dispute by declaring the parcel delivered.
+  ok('a client cannot declare its own order delivered',
+    rowsSeen('authenticated', U.alice,
+      "with u as (update public.orders set fulfilment='delivered' where reference='ORD-1' returning 1) select count(*) from u") <= 0);
+
+  // The control for the two above: the columns EXIST and hold what was seeded,
+  // so «the update changed nothing» is a refusal and not a typo in a column
+  // name that no longer exists.
+  ok('Alice can nevertheless SEE both axes of her own order',
+    rowsSeen('authenticated', U.alice,
+      "select count(*) from public.orders where reference='ORD-1' and payment_state='paid' and fulfilment='confirmed'") === 1);
 
   ok('a client cannot write order items',
     !asUser('authenticated', U.alice,

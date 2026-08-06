@@ -287,11 +287,35 @@ console.log('\n[6] Secrets never reach the browser');
     ok(`${f}: is not a client component`, !s.includes("'use client'"));
   }
 
+  /*
+   * THE SAME TWO DEFENCES, FOR THE SECOND PROVIDER.
+   *
+   * The check above finds admin modules by looking for `firebase-admin`. That
+   * string does not appear in `lib/backend/supabase/admin.ts`, which holds the
+   * Supabase `service_role` key — a credential that is exempt from row-level
+   * security ENTIRELY and is therefore at least as dangerous as the Firebase
+   * service account.
+   *
+   * A guard that protects one provider and silently ignores the other is worse
+   * than no guard, because it reads as coverage. So the same two assertions are
+   * made against whatever reads `SUPABASE_SECRET_KEY`, found by the variable
+   * name rather than by a package name.
+   */
+  const supabaseAdminFiles = [...SOURCES.entries()]
+    .filter(([, s]) => /process\.env\.SUPABASE_SECRET_KEY/.test(s));
+  ok(`supabase secret-holding files exist to check (${supabaseAdminFiles.length})`,
+    supabaseAdminFiles.length > 0);
+  for (const [f, s] of supabaseAdminFiles) {
+    ok(`${f}: declares server-only`, /import\s+['"]server-only['"]/.test(s));
+    ok(`${f}: is not a client component`, !s.includes("'use client'"));
+  }
+
   // A client component must never import the session module either — it reads
   // cookies and calls Admin.
   const clientFiles = [...SOURCES.entries()].filter(([, s]) => s.includes("'use client'"));
   const leaky = clientFiles.filter(([, s]) =>
-    /from\s+['"][^'"]*server\/(firebaseAdmin|session)['"]/.test(s)).map(([f]) => f);
+    /from\s+['"][^'"]*server\/(firebaseAdmin|session)['"]/.test(s)
+    || /from\s+['"][^'"]*backend\/supabase\/(admin|server)['"]/.test(s)).map(([f]) => f);
   if (leaky.length) console.error('  CLIENT IMPORTING SERVER:', leaky);
   ok('no client component imports the server session or admin modules', leaky.length === 0);
 
@@ -311,6 +335,13 @@ console.log('\n[6] Secrets never reach the browser');
   const example = readFileSync(path.join(WEB, '.env.example'), 'utf8');
   ok('.env.example exists and documents the server variables',
     example.includes('FIREBASE_PRIVATE_KEY') && example.includes('NEXT_PUBLIC_FIREBASE_API_KEY'));
+  // Both providers, for as long as both exist. A variable the deployment needs
+  // and the example file does not name is a variable somebody discovers by
+  // watching production fail.
+  ok('.env.example documents the Supabase variables too, public and secret alike',
+    example.includes('NEXT_PUBLIC_SUPABASE_URL')
+    && example.includes('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
+    && example.includes('SUPABASE_SECRET_KEY'));
   ok('.env.example carries no values',
     !/=\S/.test(example.replace(/^NEXT_PUBLIC_SITE_URL=.*$/m, '')));
 }
