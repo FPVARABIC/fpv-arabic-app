@@ -333,9 +333,15 @@ console.log('\n[0] كل حساب جديد يحصل على ملف تعريف تل
   // lose their ACCOUNT to the unique index — only the colliding name.
   psql(`insert into auth.users (id, email, raw_user_meta_data) values
     ('88888888-8888-8888-8888-888888888878','new2@x.test','{"display_name": "Newcomer"}')`);
+  // Both probes hoisted OUT of the assertion: `&&` short-circuits, and a
+  // skipped-on-false second probe makes the statement stream depend on the
+  // answers — which breaks the capture/replay bridge's one soundness premise
+  // (same statements, same order, both passes). Hoisting runs every probe
+  // unconditionally; the assertion itself is unchanged.
+  const collisionCount = psql(`select count(*) from public.profiles where id = '88888888-8888-8888-8888-888888888878'`);
+  const collisionNorm = psql(`select coalesce(display_name_normalized, '∅') from public.profiles where id = '88888888-8888-8888-8888-888888888878'`);
   ok('a display-name collision costs the name, never the sign-up',
-    psql(`select count(*) from public.profiles where id = '88888888-8888-8888-8888-888888888878'`) === '1'
-    && psql(`select coalesce(display_name_normalized, '∅') from public.profiles where id = '88888888-8888-8888-8888-888888888878'`) === '∅');
+    collisionCount === '1' && collisionNorm === '∅');
 
   // The import case. `profiles.id` references `auth.users`, so the data
   // migration MUST create the auth row first — the trigger then makes a bare
@@ -348,9 +354,11 @@ console.log('\n[0] كل حساب جديد يحصل على ملف تعريف تل
     ('99999999-9999-9999-9999-999999999979','Imported','moderator')
     on conflict (id) do update set
       display_name = excluded.display_name, role = excluded.role`);
+  // Hoisted for the same transcript-determinism reason as above.
+  const importedName = psql(`select display_name from public.profiles where id = '99999999-9999-9999-9999-999999999979'`);
+  const importedRole = psql(`select role::text from public.profiles where id = '99999999-9999-9999-9999-999999999979'`);
   ok('an imported profile overwrites the trigger\'s bare row, roles intact',
-    psql(`select display_name from public.profiles where id = '99999999-9999-9999-9999-999999999979'`) === 'Imported'
-    && psql(`select role::text from public.profiles where id = '99999999-9999-9999-9999-999999999979'`) === 'moderator');
+    importedName === 'Imported' && importedRole === 'moderator');
 }
 
 /* ── 1. Reading the community ─────────────────────────────────────────────── */
@@ -456,11 +464,13 @@ console.log('\n[5] المستخدم العادي لا يقرأ المورد أو
   ok('anyone reads a product override (so the checks above are not vacuous)',
     rowsSeen('anon', null,
       "select count(*) from public.store_docs where collection = 'storeProducts'") === 1);
+  // Hoisted for the same transcript-determinism reason as section [0].
+  const zonesSeen = rowsSeen('anon', null,
+    "select count(*) from public.store_docs where collection = 'storeShippingZones'");
+  const publicSettingsSeen = rowsSeen('anon', null,
+    "select count(*) from public.store_docs where collection = 'storeSettings' and id in ('public','shippingRules')");
   ok('anyone reads the zone pricing and the public settings',
-    rowsSeen('anon', null,
-      "select count(*) from public.store_docs where collection = 'storeShippingZones'") === 1
-    && rowsSeen('anon', null,
-      "select count(*) from public.store_docs where collection = 'storeSettings' and id in ('public','shippingRules')") === 2);
+    zonesSeen === 1 && publicSettingsSeen === 2);
   ok('no client writes a store document, staff included',
     !asUser('authenticated', U.admin,
       `insert into public.store_docs (collection, id, doc) values ('storeProducts','x','{}')`).okd);

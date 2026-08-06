@@ -169,7 +169,14 @@ function remoteCleanup(): void {
     psql(`
       delete from storage.objects where owner in (${uids})
         or name like '${'11111111-1111-1111-1111-111111111111'}/%'
-        or name like 'products/%test-probe%';
+        or name like 'products/%test-probe%'
+        or bucket_id = 'rogue';
+      -- The rogue bucket is created BY this suite, to prove a bucket nobody
+      -- wrote a policy for is unreachable. It survived the first remote run
+      -- because only objects and users were cleaned, and the next run then
+      -- saw five buckets where the inventory assertions expect four — a
+      -- leftover reporting itself as a configuration fault. It goes too.
+      delete from storage.buckets where id = 'rogue';
       delete from auth.users where id in (${uids});
     `);
   } catch (e) {
@@ -228,9 +235,14 @@ console.log('\n[1] The buckets, and their declared limits');
     psql('select count(*) from storage.buckets where allowed_mime_types is null') === '0');
   ok('avatars are capped small (2 MB)',
     psql("select file_size_limit from storage.buckets where id='avatars'") === String(2 * 1024 * 1024));
+  // Both probes hoisted out of the assertion: `&&` short-circuits, and a
+  // second probe that only runs when the first answer matched makes the
+  // statement stream answer-dependent — unsound for the capture/replay
+  // bridge, which needs both passes to issue identical statements in order.
+  const communityAllowsVideo = psql("select 'video/mp4' = any(allowed_mime_types) from storage.buckets where id='community-media'");
+  const avatarsAllowVideo = psql("select 'video/mp4' = any(allowed_mime_types) from storage.buckets where id='avatars'");
   ok('community media allows video, avatars do not',
-    psql("select 'video/mp4' = any(allowed_mime_types) from storage.buckets where id='community-media'") === 't'
-    && psql("select 'video/mp4' = any(allowed_mime_types) from storage.buckets where id='avatars'") === 'f');
+    communityAllowsVideo === 't' && avatarsAllowVideo === 'f');
   ok('no bucket allows an executable or archive mime type',
     psql(`select count(*) from storage.buckets
           where allowed_mime_types && array['application/x-sh','application/octet-stream',
@@ -428,9 +440,26 @@ console.log('\n[6] القراءة العامة، والمسار غير المع�
   ok('and an orphan already in it is invisible to clients',
     visible('anon', null, "select count(*) from storage.objects where bucket_id='rogue'") === 0);
 
-  // RLS must be on AND forced, or the owner bypasses it.
-  ok('storage.objects has RLS enabled and forced',
-    psql(`select relrowsecurity and relforcerowsecurity from pg_class c
+  // RLS must be ENABLED on storage.objects — that is what puts every `anon`
+  // and `authenticated` request through the policies above.
+  //
+  // FORCED IS DELIBERATELY NOT ASSERTED, AND THE REAL PROJECT PROVED WHY.
+  // ---------------------------------------------------------------------
+  // This first read «enabled AND forced», which passed against the local
+  // scratch database and FAILED against the real one: Supabase ships
+  // storage.objects with RLS enabled and force OFF. That is not a
+  // misconfiguration to repair — `force` is what makes the policies apply to
+  // the table's OWNER too, and the owner here is `supabase_storage_admin`,
+  // the role the Storage API itself connects as. Forcing it would make the
+  // platform's own uploads and deletes fail while protecting nothing extra:
+  // the API is the trusted server-side path, exactly like `service_role` on
+  // the public tables, and no browser ever authenticates as that owner.
+  //
+  // So the assertion checks the property that actually guards user traffic,
+  // and the fifty-eight policy probes above — every one of them run as `anon`
+  // or `authenticated` against the real project — are what prove it holds.
+  ok('storage.objects has RLS enabled, so every client request goes through the policies',
+    psql(`select relrowsecurity from pg_class c
           join pg_namespace n on n.oid=c.relnamespace
           where n.nspname='storage' and c.relname='objects'`) === 't');
 }
