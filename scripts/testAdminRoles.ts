@@ -264,17 +264,23 @@ console.log('\n[7] The server enforces order and owns every decision');
   ok('assignRole consults canAssignRole, not a hand-rolled comparison',
     /canAssignRole\(actor\.role, input\.role\)/.test(admin));
   ok('assignRole refuses to remove the last owner', /'last_owner'/.test(admin));
-  ok('assignRole updates the Firestore document BEFORE the custom claim',
-    admin.indexOf(".update({ role: input.role })") < admin.indexOf('setCustomUserClaims'));
-  ok('assignRole revokes tokens so the new role takes effect at once',
-    /revokeRefreshTokens/.test(admin));
-  ok('banning revokes tokens too', /revokeRefreshTokens\(input\.uid\)/.test(admin));
+  // ONE SOURCE NOW: the claim/revocation choreography died with the second
+  // source. The role lives in profiles alone, re-read by getSession AND by
+  // the RLS helpers on every request — so a role change or a ban is total
+  // the moment its single write commits, with nothing to revoke.
+  ok('assignRole writes the ONE role source and nothing else',
+    /updateProfileFields\(input\.uid, \{ role: input\.role \}\)/.test(admin)
+    && !/setCustomUserClaims|revokeRefreshTokens/.test(admin));
+  ok('banning writes the same single source',
+    /updateProfileFields\(input\.uid, \{ status: 'banned' \}\)/.test(admin));
+  ok('…and the enforcement it relies on is stated where it happens',
+    admin.includes('is_active()'));
 
   // Media deletion must never accept a caller-supplied path.
-  ok('media deletion derives the path from the post, never from input',
-    /const expected = `community\/posts\/\$\{post\.authorId\}\/\$\{post\.id\}`/.test(admin));
-  ok('media deletion refuses a post whose stored path disagrees',
-    /'media_mismatch'/.test(admin));
+  ok('media deletion derives the folder from the post, never from input',
+    /const expected = `\$\{post\.authorId\}\/\$\{post\.id\}`/.test(admin));
+  ok('…and deletes by that prefix on the service key',
+    /deleteServicePrefix\('community-media', expected\)/.test(admin));
 
   // The route wrapper is the only door, and it enforces the order.
   ok('every admin route resolves the session before reading the body',
@@ -309,8 +315,11 @@ console.log('\n[8] Report lifecycle transitions');
   // contradicting each other.
   ok('effective status is derived from resolved first, then refined by status',
     /if \(doc\.resolved === true\) return stored === 'rejected' \? 'rejected' : 'resolved';/.test(admin));
-  ok('a decision writes both fields together',
-    /resolved: input\.to === 'resolved' \|\| input\.to === 'rejected',\s*status: input\.to,/.test(admin));
+  // One state column, one writer — the two-field dance was Firestore's need
+  // to stay compatible with the phone's `resolved` boolean; the relational
+  // table has a single enum and the mapping treaty is named in one place.
+  ok('a decision writes the single state column through the mapper',
+    /state: stateFromReportStatus\(input\.to\)/.test(admin));
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -349,12 +358,12 @@ console.log('\n[10] The audit log records what an audit log must');
     'targetType', 'targetId', 'before', 'after', 'reasonAr', 'result', 'requestId']) {
     ok(`every entry carries ${field}`, new RegExp(`${field}:`).test(audit));
   }
-  ok('the timestamp is the server\'s, never the client\'s',
-    /at: FieldValue\.serverTimestamp\(\)/.test(audit));
+  ok('the timestamp is the database\'s own clock, never the client\'s',
+    audit.includes("created_at") && !/at:\s*new Date\(/.test(audit));
   ok('capabilities are snapshotted at the time of the action',
     /ROLE_CAPABILITIES\[actor\.role\]/.test(audit));
   ok('a refused attempt is recorded too', /result: 'denied'/.test(audit));
-  ok('the log is written with the Admin SDK from the server', /import 'server-only'/.test(audit));
+  ok('the log is written server-only, on the service key', /import 'server-only'/.test(audit));
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */

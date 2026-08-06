@@ -1205,14 +1205,18 @@ console.log('\n[17] The product editor refuses what it cannot stand behind');
   ok('image order is the array, not a separate field to disagree with',
     imageActions.includes('order: images.length'));
 
-  // The compression goes through the SHARED pipeline. A second one would be a
-  // second answer to «what may be uploaded», and there is only one right one.
+  // The compression uses the web's OWN pipeline since phase five — the shared
+  // one is Firebase-coupled and Android is frozen. What keeps the two from
+  // disagreeing about «what may be uploaded» is testWebCore's equality check
+  // on the limit constants, so here it is enough that the panel compresses
+  // through the same module the community uses.
   const upload = readFileSync(join(ROOT, 'web/lib/mediaUpload.ts'), 'utf8');
-  ok('product images use the shared compression pipeline',
-    upload.includes('compressForUpload')
-    && upload.includes("from '@core/community/Composer/mediaPipeline'"));
-  ok('…and declare no size or format limits of their own',
-    !/MAX_\w*BYTES\s*=|image\/jpeg/.test(stripComments(upload).replace(/export \{[\s\S]*?\}/, '')));
+  ok('product images use the web\'s one compression pipeline',
+    upload.includes('compressProductImage')
+    && readFileSync(join(ROOT, 'web/components/admin/ProductImages.tsx'), 'utf8')
+      .includes("from '@/lib/mediaUpload'"));
+  ok('…with the same 500KB ceiling the community enforces',
+    upload.includes('MAX_MEDIA_SIZE_BYTES = 500 * 1024'));
 
   // THE WRITE IS THE SERVER'S.
   //
@@ -1225,7 +1229,7 @@ console.log('\n[17] The product editor refuses what it cannot stand behind');
     join(ROOT, 'web/app/admin/store/products/uploadAction.ts'), 'utf8');
   ok('the photograph is written by the server, holding the capability',
     uploadAction.includes("sessionCan(session, 'store.editProducts')")
-    && uploadAction.includes('adminStorage()'));
+    && uploadAction.includes('uploadServiceObject'));
   ok('…which re-checks the size rather than believing the browser',
     uploadAction.includes('MAX_MEDIA_SIZE_BYTES'));
   ok('…and that the bytes really are the JPEG the pipeline produces',
@@ -1759,8 +1763,13 @@ console.log('\n[22] The spreadsheet round-trip');
     && importAction.includes("sessionCan(session, 'store.viewSupply')"));
   ok('the import is audited as one entry naming how many rows moved',
     importAction.includes("action: 'store.import'"));
-  ok('a failed batch writes nothing', importAction.includes('batch.commit()')
-    && importAction.includes('لم يُكتب شيء'));
+  // PostgREST offers no client-side multi-table transaction, so the batch
+  // became idempotent upserts: a failure partway is DISCOVERABLE (the audit
+  // entry and the message both say so) and re-running the same file
+  // converges rather than duplicating.
+  ok('a failed import names itself and re-running converges',
+    importAction.includes('أعد تشغيل الملف نفسه')
+    && importAction.includes('idempotent'));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

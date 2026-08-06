@@ -92,7 +92,14 @@ async function withFreshPricesOnly(products: StoreProduct[]): Promise<StoreProdu
 
   return products.map(p => {
     const variants = p.variants.map(v =>
-      isPriceStale(supply[v.id], now, reviewDays) ? { ...v, priceMinor: null } : v);
+      // A FREE line is exempt, and not as a special case for its own sake:
+      // staleness protects the shop from selling off a cost nobody has
+      // re-checked, and a variant given away at zero has no cost recovery at
+      // stake. Without this the free-setup service — which by design never
+      // has a supply record — was dropped from every basket with «سعر هذه
+      // النسخة قيد التحديث», found by the store's own browser suite.
+      v.priceMinor === 0 ? v
+        : isPriceStale(supply[v.id], now, reviewDays) ? { ...v, priceMinor: null } : v);
     return variants.some((v, i) => v !== p.variants[i]) ? { ...p, variants } : p;
   });
 }

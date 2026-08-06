@@ -274,13 +274,15 @@ Supabase وGitHub مباشرة، لا عبري.
 سياسة جديدة مطلوبة — سياسات `orders` تخص الصفوف لا الأعمدة، والعميل لا يملك
 `UPDATE` أصلاً.
 
-### الأرقام
+### الأرقام — بعد اكتمال المرحلتين الخامسة والسادسة
 
 ```
-supabase rls:      58 ناجحاً · 0 راسباً
-supabase storage:  59 ناجحاً · 0 راسباً
-backend adapter:  143 ناجحاً · 0 راسباً
-web:typecheck      نظيف
+supabase rls:      79 ناجحاً · 0 راسباً   (PostgreSQL 16 حقيقي)
+supabase storage:  59 ناجحاً · 0 راسباً   (PostgreSQL 16 حقيقي)
+backend adapter:  146 ناجحاً · 0 راسباً
+web-core 80 · web-auth 55 · web-community 89 · web-identity 182
+store 585 · admin-roles 362 · bundle-secrets 15 · scope guard 388
+web:typecheck + web build   نظيفان — بلا firebase وبلا firebase-admin
 ```
 
 أربعة اختبارات طَفرة أثبتت أن التأكيدات ليست شكلية: إضافة `admin` إلى واجهة
