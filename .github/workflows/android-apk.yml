@@ -1,0 +1,121 @@
+# Build the Android APK for the phone app — recovery, not development.
+#
+# WHY THIS EXISTS
+# ---------------
+# The phone app's APK is a Capacitor shell whose WebView loads
+# https://fpv-arabic-app.vercel.app; `capacitor.config.ts` is NOT touched by
+# this workflow and nothing here changes the app. What was missing was any
+# way to PRODUCE an APK at all: the development container has no Android SDK
+# and its egress proxy refuses dl.google.com, so Gradle cannot resolve the
+# Android Gradle Plugin there. A GitHub runner has both.
+#
+# WHAT IT DELIBERATELY DOES NOT DO
+# --------------------------------
+#   · it invents no keystore. `android/app/build.gradle` wires the release
+#     signingConfig ONLY when `android/keystore.properties` exists, and that
+#     file is gitignored and absent from every checkout. So the release step
+#     below runs only if a real one is present — on a plain CI checkout it is
+#     skipped, and `assembleDebug` is the deliverable.
+#   · it needs no google-services.json. The same build file applies the
+#     google-services plugin only when that file exists, and logs a warning
+#     otherwise; push notifications are simply absent from this build.
+#   · it touches no other surface: `web/` is never built, Supabase is never
+#     contacted, and no secret is required to run it.
+#
+# TOOLCHAIN, PINNED TO WHAT THE PROJECT ACTUALLY DECLARES
+#   AGP 8.13.0 (android/build.gradle) → needs JDK 17+; 21 is the current LTS
+#   Gradle 8.14.3 (gradle-wrapper.properties) — the wrapper fetches itself
+#   compileSdk/targetSdk 36, minSdk 24 (android/variables.gradle)
+
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/mobile-baseline-before-web]
+
+# Never two APK builds of the same ref at once; a newer push wins.
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      # `npm ci` — the lockfile's exact tree, not a fresh resolution. The web
+      # app under web/ has its own manifest and is not installed or built.
+      - name: Install dependencies
+        run: npm ci
+
+      # tsc -b && vite build → dist/. This is the bundle the shell would fall
+      # back to; the WebView loads the deployed site, but `cap sync` copies
+      # dist/ into the native project and fails without it.
+      - name: Build the web assets
+        run: npm run build
+
+      - name: Sync the native project
+        run: npx cap sync android
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Report what was produced
+        run: |
+          echo "### APK build" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -la android/app/build/outputs/apk/debug/ >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fpvarabic-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # Release is attempted ONLY when a real signing config is present. It is
+      # not present on a CI checkout, so this normally skips — which is the
+      # correct outcome, not a failure to work around.
+      - name: Check for a real release signing config
+        id: signing
+        run: |
+          if [ -f android/keystore.properties ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "android/keystore.properties absent — release build skipped, debug APK is the artifact." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Assemble release APK
+        if: steps.signing.outputs.present == 'true'
+        working-directory: android
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.present == 'true'
+        with:
+          name: fpvarabic-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
