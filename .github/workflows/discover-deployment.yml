@@ -12,7 +12,16 @@
 
 name: Discover deployment
 
+# Push-triggered on its own file for the same reason verify-production.yml
+# is: workflow_dispatch resolves against the repository's default branch,
+# which is a stale branch this file is not on, so the API answers 404. Bump
+# the run counter below and push to read the records again.
+#
+# discovery run: 2 — read the failed build of 3accfc7 in full
 on:
+  push:
+    branches: [claude/web-platform-foundation]
+    paths: ['.github/workflows/discover-deployment.yml']
   workflow_dispatch:
 
 permissions:
@@ -45,6 +54,18 @@ jobs:
             curl -sf -H "$auth" "$api/commits/$sha/check-runs?per_page=50" \
               | jq -r '.check_runs[] | "CHECK  \(.name) | \(.status)/\(.conclusion) | \(.details_url // "-") | \((.output.summary // "-") | gsub("[\\r\\n]+"; " ") | .[0:400])"' \
               | tee -a /tmp/all.txt || echo "  (check-runs unreadable)"
+
+            # Cloudflare's check runs carry their build report in output
+            # title/summary/text — print those IN FULL, because the tail of a
+            # failed build is exactly what cannot be read from anywhere else.
+            curl -sf -H "$auth" "$api/commits/$sha/check-runs?per_page=50" \
+              | jq -r '.check_runs[] | select(.name | test("cloudflare|workers"; "i"))
+                  | "----- FULL OUTPUT: \(.name) [\(.status)/\(.conclusion)] -----",
+                    "title: \(.output.title // "-")",
+                    "summary:", (.output.summary // "-"),
+                    "text:", (.output.text // "-"),
+                    "-----"' \
+              | tee -a /tmp/all.txt || true
 
             curl -sf -H "$auth" "$api/commits/$sha/status" \
               | jq -r '.statuses[]? | "STATUS \(.context) | \(.state) | \(.target_url // "-") | \(.description // "-")"' \
