@@ -122,8 +122,27 @@ jobs:
             --environment=${{ inputs.production && 'production' || 'preview' }} \
             --token="${{ secrets.VERCEL_TOKEN }}"
 
+      # WHY THIS ONE STEP GETS A HEAP CEILING
+      #
+      # `vercel build` runs the project's own build command — `cd web && npm
+      # install && npm run build`, i.e. `next build` — as a CHILD of the CLI,
+      # then traces the output. So one runner holds the CLI, npm, and a Next
+      # build that prerenders 272 pages of encyclopedia, and Node picked a
+      # default heap sized for the machine, not for that:
+      #
+      #     FATAL ERROR: Reached heap limit Allocation failed —
+      #     JavaScript heap out of memory                     (exit 134)
+      #
+      # `NODE_OPTIONS` is inherited by every child, so setting it here reaches
+      # the `next build` that actually needs it. 4096 MiB on a 7 GB runner
+      # leaves room for the CLI beside it. It is not on the CI job: there
+      # `next build` runs on its own and has never come near the limit — and a
+      # ceiling raised everywhere would hide the day one of them genuinely
+      # starts leaking.
       - name: Build
         if: steps.guard.outputs.configured == 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy
