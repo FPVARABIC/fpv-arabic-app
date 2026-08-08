@@ -32,7 +32,7 @@ name: Verify production
 # default branch ever moves to the web branch, dispatch starts working too
 # and nothing here needs to change.
 #
-# verification run: 3 — the deduplicated worker
+# verification run: 4 — target: Vercel production domain after the branch fix
 on:
   push:
     branches: [claude/web-platform-foundation]
@@ -43,7 +43,7 @@ on:
         description: 'Base URL to verify'
         type: string
         required: false
-        default: 'https://fpv-arabic-app.melyanneahmed.workers.dev'
+        default: 'https://fpv-arabic-app.vercel.app'
       wait_minutes:
         description: 'Minutes to wait for the new build to start serving'
         type: string
@@ -60,7 +60,7 @@ jobs:
         run: |
           BASE="${{ inputs.base }}"
           # Push-triggered runs carry no inputs; the live deployment is the default.
-          [ -z "$BASE" ] && BASE="https://fpv-arabic-app.melyanneahmed.workers.dev"
+          [ -z "$BASE" ] && BASE="https://fpv-arabic-app.vercel.app"
           BASE="${BASE%/}"
           echo "verifying against: $BASE"
 

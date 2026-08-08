@@ -17,7 +17,7 @@ name: Discover deployment
 # which is a stale branch this file is not on, so the API answers 404. Bump
 # the run counter below and push to read the records again.
 #
-# discovery run: 3 — probe the Vercel surfaces: production vs branch alias
+# discovery run: 4 — production vs alias, after the production-branch change
 on:
   push:
     branches: [claude/web-platform-foundation]
