@@ -30,7 +30,10 @@ import nextTypescript from 'eslint-config-next/typescript';
  */
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'] },
+  // `.open-next` and `.wrangler` are the Cloudflare adapter's build output and
+  // local state — generated, gitignored, and 30 MB of bundled code that is not
+  // ours to lint.
+  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', '.open-next/**', '.wrangler/**'] },
   ...coreWebVitals,
   ...nextTypescript,
   {

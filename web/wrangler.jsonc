@@ -25,7 +25,9 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fpv-arabic-app",
+  // Must match the Cloudflare project's worker name, or every deploy warns
+  // and risks creating a second worker beside the real one.
+  "name": "fpv-arabic",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-05-05",
   "compatibility_flags": ["nodejs_compat"],
