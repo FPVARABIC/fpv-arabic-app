@@ -1,7 +1,15 @@
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from '../types';
 
 // Arabic relative time with Western digits (D12 — no Eastern Arabic numerals
 // anywhere in Community UI, even though Arabic labels surround the number).
+//
+// The Timestamp here is Community's own structural one, not Firestore's class.
+// It has to be: the fields on a post now carry the structural type, and the
+// class demands `isEqual` and `toJSON` on top of it, so the class type would
+// reject every real caller. The structural type is the WIDER contract — a
+// genuine Firestore Timestamp satisfies it — so both kinds of value are
+// accepted here, and `.toMillis()`, the only member this function touches, is
+// present on both.
 
 const MINUTE = 60;
 const HOUR = MINUTE * 60;

@@ -1,4 +1,8 @@
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from '../types';
+
+// Community's structural Timestamp, not Firestore's class — same reason as
+// `timeAgo.ts`: the class additionally demands `isEqual` and `toJSON`, which
+// the stored field type does not carry, and `.toMillis()` is all this needs.
 
 // Shared client-side rate-limit pre-check. Used to show a friendly Arabic
 // message BEFORE attempting a write, rather than parsing Firestore's generic
