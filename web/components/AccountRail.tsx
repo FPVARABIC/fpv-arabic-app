@@ -3,6 +3,7 @@ import {
   Settings, Info, Shield, Mail, ShieldCheck, ChevronLeft, LogIn,
 } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { AUTH_UI_HIDDEN } from '@/lib/launchFlags';
 import { isStaff, ROLE_LABEL_AR, type PlatformRole } from '@core/data/auth/roles';
 
 /**
@@ -119,7 +120,9 @@ export const AccountRail: React.FC<{
                 <LogIn size={26} color="var(--acct-blue)" />
               </span>
               <p className="rail-name">زائر</p>
-              <p className="rail-sub">سجّل الدخول لتتابع تقدّمك</p>
+              {/* No sign-in invitation while the flag holds — the sub-line
+                  must not promise a door the header no longer offers. */}
+              <p className="rail-sub">{AUTH_UI_HIDDEN ? 'كل المحتوى مفتوح لك' : 'سجّل الدخول لتتابع تقدّمك'}</p>
             </>
           )}
         </div>
@@ -204,7 +207,7 @@ export const AccountRail: React.FC<{
                 <ChevronLeft size={15} className="rail-row-chevron" aria-hidden />
               </SignOutButton>
             </>
-          ) : (
+          ) : AUTH_UI_HIDDEN ? null : (
             <>
               <div className="rail-divider" />
               <Link

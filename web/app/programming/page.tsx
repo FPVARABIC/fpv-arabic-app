@@ -4,7 +4,7 @@ import {
   SOFTWARE, CATEGORY_ORDER, CATEGORY_LABEL_AR, CATEGORY_BLURB_AR,
   COVERAGE_LABEL_AR, softwareByCategory, HUB_TOTALS,
 } from '@/lib/softwareHub';
-import { webHref, SECTION_ROUTES } from '@/lib/webRoutes';
+import { webHref } from '@/lib/webRoutes';
 
 export const metadata: Metadata = {
   title: 'مركز البرامج',
@@ -74,7 +74,7 @@ export default function ProgrammingHub() {
                   <div style={{ display: 'flex', gap: 9, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <span className="ltr" style={{ fontSize: 15, fontWeight: 900 }}>{s.nameEn}</span>
                     <span className={COVERAGE_CLASS[s.coverage]} data-testid={`software-coverage-${s.id}`}>
-                      {COVERAGE_LABEL_AR[s.coverage]}
+                      {s.coverage === 'none' ? 'قريباً' : COVERAGE_LABEL_AR[s.coverage]}
                       {s.coverage !== 'none' && <> · <span dir="ltr">{s.documented}</span></>}
                     </span>
                   </div>
@@ -97,13 +97,16 @@ export default function ProgrammingHub() {
                 </>
               );
 
-              // Covered programs resolve through the shared destination table;
-              // uncovered ones open the scope page that says so. Neither URL is
-              // written here — a path in a component is a second routing table.
-              const target = s.destination
-                ? webHref(s.destination).href
-                : s.scopeId
-                  ? SECTION_ROUTES.scope(s.scopeId)
+              // Covered programs resolve through the shared destination table.
+              // Uncovered ones are NOT clickable any more: a card that looks
+              // ready and lands on «لا نغطّيه» is a dead end the reader meets
+              // AFTER the tap — the closure rule is that they learn BEFORE.
+              // The badge says «قريباً», the card stays as the honest map of
+              // what is coming, and the scope pages remain on disk, unlinked.
+              const target = s.coverage === 'none'
+                ? null
+                : s.destination
+                  ? webHref(s.destination).href
                   : null;
 
               return target ? (

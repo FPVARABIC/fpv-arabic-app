@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { browserBackend } from '@/lib/backend/supabase/client';
 import { ROLE_LABEL_AR, isStaff, type PlatformRole } from '@core/data/auth/roles';
+import { AUTH_UI_HIDDEN } from '@/lib/launchFlags';
 
 /**
  * The header's account corner — hydrated in the BROWSER, on purpose.
@@ -55,6 +56,10 @@ export const HeaderSession: React.FC<{
   }
 
   if (user === null) {
+    // Pre-launch: no sign-in invitation anywhere. A reader who already
+    // HOLDS a session still gets their chip below — hiding the door is not
+    // the same as evicting the people inside.
+    if (AUTH_UI_HIDDEN) return null;
     return (
       <Link href="/signin" className="btn-ghost" data-testid="header-signin">
         تسجيل الدخول

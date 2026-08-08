@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Search } from 'lucide-react';
 import type { Metadata } from 'next';
 import { retrieve, INTENT_LABEL_AR, type RetrievalResult } from '@core/platform/retrieval';
-import type { SearchDocType } from '@core/data/kb/search/buildIndex';
+import { getSearchIndex, type SearchDocType } from '@core/data/kb/search/buildIndex';
 import {
   RESULT_TYPE_LABEL_AR, topReasons, resultHref,
   RESULT_GROUPS, GROUP_OF_TYPE, groupOf, type ResultGroupId,
@@ -32,6 +32,33 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 20;
+
+/**
+ * A RESULT IS A PROMISE, AND THIS SURFACE MUST ONLY PROMISE WHAT IT SERVES.
+ *
+ * Some indexed types live only in the phone app (lessons, assembly stages,
+ * roadmap, checklists…) — their results used to render as unclickable
+ * «متاح في التطبيق» cards, which is still a promise this surface cannot
+ * keep. They are now excluded from the QUERY itself, so the counts, the
+ * pagination and the shelves all agree. The set is DERIVED, not typed: a
+ * type is hidden when not one of its documents resolves to a live web URL,
+ * so content ported to the web later re-enters search by existing, with no
+ * edit here. `software-scope` is excluded by name — its pages are honest
+ * «لا نغطّيه» notices, unlinked from the hub in the closure pass, and a
+ * search result must not resurrect them as if they were content.
+ */
+const EXCLUDED_BY_NAME: readonly string[] = ['software-scope'];
+const SEARCHABLE_TYPES: SearchDocType[] = (() => {
+  const live = new Set<string>();
+  const all = new Set<string>();
+  for (const d of getSearchIndex()) {
+    all.add(d.type);
+    // The resolver only reads type/destination/route — the retrieval-only
+    // fields (score, provenance…) play no part in where a document LIVES.
+    if (resultHref(d as unknown as Parameters<typeof resultHref>[0]).href) live.add(d.type);
+  }
+  return [...all].filter(t => live.has(t) && !EXCLUDED_BY_NAME.includes(t)) as SearchDocType[];
+})();
 
 /**
  * Search — the main way into everything.
@@ -98,11 +125,17 @@ export default async function SearchPage({
     (Object.entries(GROUP_OF_TYPE) as [SearchDocType, ResultGroupId][])
       .filter(([, gid]) => gid === g).map(([t]) => t);
 
+  // The type filter ALWAYS applies now: web-unreachable types never enter the
+  // query, so every count and page number below describes only results a tap
+  // can actually open.
+  const searchableIn = (g: ResultGroupId | ''): SearchDocType[] =>
+    g ? typesInGroup(g).filter(t => SEARCHABLE_TYPES.includes(t)) : SEARCHABLE_TYPES;
+
   const result = active
     ? retrieve(query, {
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      filters: groupFilter ? { types: typesInGroup(groupFilter) } : undefined,
+      filters: { types: searchableIn(groupFilter) },
     })
     : null;
 
@@ -116,7 +149,10 @@ export default async function SearchPage({
   const shelves = RESULT_GROUPS
     .map(g => ({
       ...g,
-      results: (result?.official ?? []).filter(r => groupOf(r.type) === g.id),
+      // The per-document belt to the type-level filter above: a mixed type
+      // whose ONE document resolves nowhere still never renders a dead card.
+      results: (result?.official ?? [])
+        .filter(r => groupOf(r.type) === g.id && resultHref(r).href !== null),
       total: Object.entries(result?.countsByType ?? {})
         .filter(([t]) => groupOf(t) === g.id)
         .reduce((n, [, c]) => n + c, 0),

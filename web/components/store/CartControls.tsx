@@ -11,6 +11,7 @@ import {
   cartAdd, cartSetQuantity, cartRemove,
 } from '@/lib/cart';
 import { cartHref, productHref } from '@/lib/store';
+import { STORE_OPENING_SOON } from '@/lib/launchFlags';
 
 /**
  * The cart's interactive parts.
@@ -241,7 +242,15 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
         </div>
       </dl>
 
-      {orderable && (
+      {orderable && (STORE_OPENING_SOON ? (
+        <p role="note" data-testid="cart-opening-soon" className="card-sm" style={{
+          marginTop: 16, padding: '12px 15px', fontSize: 13, lineHeight: 1.9,
+          color: 'var(--sev-warning)',
+        }}>
+          <strong>المتجر يفتتح قريباً</strong> — سلتك محفوظة في متصفّحك، وسيتم
+          تفعيل الطلب والدفع عند الافتتاح.
+        </p>
+      ) : (
         <p style={{ marginTop: 16 }}>
           <Link href={`${cartHref()}/checkout`} className="btn-primary"
             data-testid="cart-checkout"
@@ -249,7 +258,7 @@ export const CartContents: React.FC<{ catalogue: readonly PricedProduct[] }> = (
             أكمل الطلب ←
           </Link>
         </p>
-      )}
+      ))}
     </div>
   );
 };

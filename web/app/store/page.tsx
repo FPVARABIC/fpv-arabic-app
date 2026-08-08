@@ -4,6 +4,7 @@ import { STORE_GROUP_LABEL_AR, STORE_GROUP_BLURB_AR } from '@core/data/store/cat
 import { SERVICES_CATEGORY_ID } from '@core/data/store/services';
 import { categoriesInGroup, categoryHref } from '@/lib/store';
 import { publishedProducts, sectionCounts } from '@/lib/server/storeCatalogue';
+import { STORE_OPENING_SOON } from '@/lib/launchFlags';
 import { StoreBanner } from '@/components/store/StorePieces';
 import { publicStoreSettings } from '@/lib/server/storeSettings';
 
@@ -70,6 +71,15 @@ export default async function StorePage() {
         <p className="page-lede" style={{ margin: '8px 0 0' }}>
           في كل قسم ثلاثة إلى خمسة خيارات فقط، بفارق واضح — لأننا نوصي، لا نستورد قائمة.
         </p>
+        {STORE_OPENING_SOON && (
+          <p role="note" data-testid="store-opening-soon" className="card-sm" style={{
+            marginTop: 14, padding: '11px 14px', fontSize: 13, lineHeight: 1.9,
+            color: 'var(--sev-warning)', border: '1px solid rgba(138, 90, 0, 0.25)',
+          }}>
+            <strong>المتجر يفتتح قريباً.</strong>{' '}
+            يمكنك تصفح المنتجات والمعلومات الآن، وسيتم تفعيل الطلب والدفع لاحقاً.
+          </p>
+        )}
       </header>
 
       {/* The truthful state of the shop, before anything else on the page.

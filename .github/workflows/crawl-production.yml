@@ -1,0 +1,39 @@
+# The dead-end crawler, pointed at the REAL deployment.
+#
+# `scripts/testWebLinks.ts` walks every internal link a visitor can reach and
+# fails on anything but real content or a declared redirect. Locally it runs
+# against `next start`; this workflow runs the SAME script against production,
+# because the closure promise («صفر طريق مسدود») is about what visitors get,
+# not about what the repository contains. Same self-service push trigger as
+# the other verification eyes: workflow_dispatch resolves against the default
+# branch, which this file is not on.
+#
+# crawl run: 1 — first production crawl, the closure batch itself
+
+name: Crawl production
+
+on:
+  push:
+    branches: [claude/web-platform-foundation]
+    paths: ['.github/workflows/crawl-production.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    name: Walk every link on the live site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # The crawler needs only tsx and the script's own imports — but a
+      # partial install invites drift, and the workspace install is cached.
+      - run: npm ci
+      - name: Crawl the live deployment
+        run: BASE=https://fpv-arabic-app.vercel.app npm run test:web-links

@@ -68,6 +68,7 @@ jobs:
           npm run test:web-project
           npm run test:web-software
           npm run test:web-build
+          npm run test:web-closure
           npm run test:retrieval
           npm run test:admin-roles
           npm run test:store

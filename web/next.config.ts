@@ -119,6 +119,14 @@ const nextConfig: NextConfig = {
     return [
       { source: '/community', destination: '/build', permanent: false },
       { source: '/community/:path*', destination: '/build', permanent: false },
+      // Pre-launch (see lib/launchFlags.ts): the sign-in page is not offered
+      // anywhere, so arriving at it directly lands home instead of on a door
+      // the product currently keeps closed. TEMPORARY, like the flag.
+      { source: '/signin', destination: '/', permanent: false },
+      // The store browses fully but ordering opens later — the checkout
+      // routes fold back to the cart, whose own call-to-action says why.
+      { source: '/store/cart/checkout', destination: '/store/cart', permanent: false },
+      { source: '/store/cart/checkout/:path*', destination: '/store/cart', permanent: false },
     ];
   },
 
