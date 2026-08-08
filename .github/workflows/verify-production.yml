@@ -32,7 +32,7 @@ name: Verify production
 # default branch ever moves to the web branch, dispatch starts working too
 # and nothing here needs to change.
 #
-# verification run: 6 — post-cleanup: prove the sole remaining project serves the images
+# verification run: 7 — the build section ships: wait for /build, then verify everything
 on:
   push:
     branches: [claude/web-platform-foundation]
@@ -64,29 +64,54 @@ jobs:
           BASE="${BASE%/}"
           echo "verifying against: $BASE"
 
-          # Wait for the deployment to start serving the projects page with
-          # its covers — the one signature the old build cannot produce.
+          # Wait for the deployment to start serving the BUILD section — the
+          # signature only the newest build can produce (the previous
+          # signature, the ten covers, is already live and would satisfy the
+          # wait instantly without proving anything about THIS deployment).
           WAIT_MIN="${{ inputs.wait_minutes }}"
           [ -z "$WAIT_MIN" ] && WAIT_MIN=6
           tries=$(( WAIT_MIN * 4 ))
           ready=0
           for i in $(seq 1 "$tries"); do
-            covers=$(curl -s --max-time 20 "$BASE/projects" \
-              | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l || echo 0)
-            echo "attempt $i/$tries -> covers seen: $covers"
-            if [ "$covers" -ge 10 ]; then ready=1; break; fi
+            marker=$(curl -s --max-time 20 "$BASE/build" \
+              | grep -c 'build-mode-guided' || true)
+            echo "attempt $i/$tries -> /build mode-cards marker: $marker"
+            if [ "$marker" -ge 1 ]; then ready=1; break; fi
             sleep 15
           done
           if [ "$ready" -ne 1 ]; then
-            echo "the projects page never served the ten covers within the window"
+            echo "/build never started serving the wizard's doors within the window"
           fi
 
           fail=0
-          for p in / /community /projects /search; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || echo 000)
+          # /community is deliberately ABSENT here: it is no longer a page.
+          # Its redirect is asserted separately below.
+          for p in / /build /build/wizard /projects /search /store; do
+            code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || echo 000)
             echo "PATH $p -> $code"
             if [ "$code" != "200" ]; then fail=1; fi
           done
+
+          # The retired community must answer with a TEMPORARY redirect to
+          # /build — a 404 would mean broken old links, a 200 would mean the
+          # section quietly came back.
+          creds=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 20 "$BASE/community" || echo 000)
+          echo "REDIRECT /community -> $creds"
+          case "$creds" in
+            30[78]\ *"/build") echo "  community redirect: correct" ;;
+            *) echo "  community redirect: WRONG"; fail=1 ;;
+          esac
+
+          # The new navigation order, read from the served HTML itself.
+          navsig=$(curl -sL --max-time 20 "$BASE/" \
+            | grep -o 'data-testid="nav-[a-z]*"' | sed 's/.*nav-//; s/"//' | head -6 | paste -sd, -)
+          echo "NAV order -> $navsig"
+          if [ "$navsig" != "home,build,programming,kb,projects,store" ]; then fail=1; fi
+
+          # The three doors of the build section, present on the landing.
+          doors=$(curl -sL --max-time 20 "$BASE/build" | grep -o 'build-mode-[a-z]*' | sort -u | paste -sd, -)
+          echo "BUILD doors -> $doors"
+          if [ "$doors" != "build-mode-advanced,build-mode-guided,build-mode-parts" ]; then fail=1; fi
 
           covers=$(curl -s --max-time 20 "$BASE/projects" \
             | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l || echo 0)
