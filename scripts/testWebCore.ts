@@ -59,9 +59,11 @@ function webSourceFiles(): string[] {
       // the encyclopedia is compiled into them. Walking it made the
       // «no article prose is copied into web source» check fail against the
       // build's own output — a true statement about a generated file and a
-      // meaningless one about this repository.
+      // meaningless one about this repository. `.open-next` is the same story
+      // on the same day's successor: the Cloudflare adapter's bundle carries
+      // the compiled encyclopedia too, and it is gitignored output, not source.
       if (entry === 'node_modules' || entry === '.next' || entry === 'out'
-        || entry === '.netlify') continue;
+        || entry === '.netlify' || entry === '.open-next') continue;
       const full = path.join(dir, entry);
       if (statSync(full).isDirectory()) walk(full);
       else if (/\.(ts|tsx|js|jsx|css)$/.test(entry)) out.push(full);

@@ -29,13 +29,15 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      # The shared core lives in ../src and is imported by the web app, so both
-      # manifests have to be installed before either surface can build.
-      - name: Install (root — the shared core)
+      # One install for the whole workspace. The repository is an npm
+      # workspace (root `package.json` → workspaces: ["web"]) with a SINGLE
+      # lockfile at the root covering both surfaces — the phone app's
+      # dependencies and the web's. Two independent lockfiles was the shape
+      # that broke deployment tooling: every adapter derives «where is the
+      # app» by walking up to the nearest lockfile, and web's own lockfile
+      # made that answer disagree with the build's tracing root.
+      - name: Install (workspace — phone app and web)
         run: npm ci
-
-      - name: Install (web)
-        run: npm ci --prefix web
 
       # `test:navigation-regression` drives a real browser: it builds the phone
       # bundle, serves it, and clicks every nav tab to prove none of them 404s.

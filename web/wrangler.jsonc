@@ -1,0 +1,36 @@
+/**
+ * The web platform on Cloudflare Workers.
+ *
+ * WHY THIS FILE LIVES IN THE REPOSITORY
+ * -------------------------------------
+ * The first Cloudflare deployment was configured entirely in the dashboard,
+ * and what it shipped proved why that is not good enough: it built the
+ * repository ROOT (`npm run build` → the phone app's Vite bundle, 115 assets)
+ * from a stale branch, and served the old app at a brand-new URL. A config
+ * that lives here is reviewed, versioned, and cannot quietly disagree with
+ * what was tested.
+ *
+ * HOW THE PIECES FIT
+ * ------------------
+ * `web/` is a Next.js app, and the supported way to run Next.js on Workers is
+ * the OpenNext adapter: `opennextjs-cloudflare build` runs `next build` and
+ * repackages the output under `.open-next/` — a worker entry for the server
+ * half, an assets directory for the static half (including
+ * `public/assets/projects/**`, the project covers). This file tells wrangler
+ * to deploy exactly that.
+ *
+ * `nodejs_compat` is required by the adapter; the compatibility date is
+ * pinned so behaviour changes arrive by a deliberate edit here, not by
+ * whenever a build happens to run.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fpv-arabic-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-05-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+}

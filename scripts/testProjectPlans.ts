@@ -448,10 +448,25 @@ console.log('\n[5] An uploaded photograph actually reaches the page');
   const code = (src: string) =>
     src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+  /*
+   * The filesystem is consulted at BUILD time, not request time. The first
+   * resolver ran `existsSync` per request, which is correct only on runtimes
+   * that carry the repository files — false on Cloudflare Workers, where the
+   * covers would have silently reverted to placeholders while the files sat
+   * on the CDN. So `next.config.ts` reads the directory once (it always runs
+   * under Node with the real repo present) and inlines the listing; the
+   * resolver matches that constant against the shared slots. The owner's
+   * workflow is unchanged: drop a file, push, the next build sees it.
+   */
   const resolver = readFileSync(path.join(ROOT, 'web/lib/server/projectImages.ts'), 'utf8');
+  const nextCfg = readFileSync(path.join(ROOT, 'web/next.config.ts'), 'utf8');
   ok('the web has a resolver for uploaded project images', resolver.length > 0);
-  ok('it asks the filesystem rather than a list somebody has to maintain',
-    /existsSync\(/.test(resolver));
+  ok('the build reads the directory — no list anybody has to maintain',
+    /readdirSync/.test(code(nextCfg)) && /public\/assets\/projects/.test(nextCfg));
+  ok('…and inlines the answer for filesystem-less runtimes',
+    /UPLOADED_PROJECT_IMAGES/.test(code(nextCfg)) && /UPLOADED_PROJECT_IMAGES/.test(code(resolver)));
+  ok('the resolver itself never touches a filesystem at request time',
+    !/existsSync|readdirSync|node:fs/.test(code(resolver)));
   ok('it derives the paths from the shared slots, inventing none of its own',
     /slotsForProject/.test(resolver) && !/01-cover\.webp/.test(code(resolver)));
 
@@ -490,15 +505,17 @@ console.log('\n[5] An uploaded photograph actually reaches the page');
   ok(`every anchored id is a real project (${focused.length})`,
     focused.every(id => ALL_PROJECTS.some(p => p.id === id)));
 
-  // Prerendered pages check the filesystem at build time; regeneration happens
-  // later, in a bundle that does not carry `public/` unless it is traced in.
-  const nextConfig = readFileSync(path.join(ROOT, 'web/next.config.ts'), 'utf8');
-  const traced = /outputFileTracingIncludes/.test(nextConfig)
-    && /public\/assets\/projects/.test(nextConfig);
-  ok('the photographs are traced into the routes that look for them at runtime', traced);
-  for (const route of ['/projects', '/projects/[projectId]']) {
-    ok(`  …including ${route}`, nextConfig.includes(`'${route}'`));
-  }
+  // Tracing the photographs into the lambdas existed solely to make runtime
+  // existsSync see them. With no runtime filesystem reads left, nothing may
+  // quietly reintroduce the pattern the Workers runtime cannot honour.
+  ok('no route traces the photographs in — the CDN serves them, the constant answers',
+    !/outputFileTracingIncludes/.test(code(nextCfg)));
+
+  // The listing the build computes is derived, never typed: the config file
+  // must contain no hard-coded project id, so a new project's folder is
+  // picked up by the same readdir that found the first ten.
+  ok('the build-time listing hard-codes no project id',
+    !ALL_PROJECTS.some(p => code(nextCfg).includes(`'${p.id}'`)));
 }
 
 console.log(`\n${'─'.repeat(66)}`);

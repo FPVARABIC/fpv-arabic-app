@@ -12,3 +12,9 @@ next-env.d.ts
 .env.*.local
 tsconfig.tsbuildinfo
 
+
+# OpenNext build output (opennextjs-cloudflare build) — regenerated every build
+/.open-next/
+
+# wrangler's local state (wrangler dev) — never source
+/.wrangler/

@@ -1,15 +1,57 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
 import { isStagingFromEnv } from './lib/staging';
+
+/**
+ * WHICH PROJECT PHOTOGRAPHS EXIST — DECIDED HERE, AT BUILD TIME
+ * -------------------------------------------------------------
+ * The owner drops covers into `public/assets/projects/<id>/` and pushes;
+ * `lib/server/projectImages.ts` answers «which are uploaded?». It used to
+ * answer with `existsSync` at REQUEST time, which was correct on a host whose
+ * lambdas carry the repository files — and quietly wrong everywhere else. On
+ * Cloudflare Workers there is no repository filesystem at request time at
+ * all: every card would have fallen back to its placeholder while the files
+ * sat on the CDN, the same invisible-images failure this project has already
+ * had once, on a second host, for a second reason.
+ *
+ * This config file is the one place guaranteed to run under Node with the
+ * real repository present — on every host, because it IS the build. So the
+ * directory is read once here, and the answer ships as an inlined constant:
+ * Next substitutes `env` entries at build time into both bundles, so the
+ * resolver does string lookups and never touches a filesystem again. Adding
+ * a photograph still takes no data edit — drop the file, push, and the next
+ * build sees it. (In `next dev` the list is read when the dev server starts;
+ * a file dropped in mid-session appears on restart.)
+ */
+function uploadedProjectImages(): Record<string, string[]> {
+  const root = path.join(process.cwd(), 'public/assets/projects');
+  if (!existsSync(root)) return {};
+  const out: Record<string, string[]> = {};
+  for (const dir of readdirSync(root, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    const files = readdirSync(path.join(root, dir.name))
+      .filter(f => f.endsWith('.webp'))
+      .sort();
+    if (files.length > 0) out[dir.name] = files;
+  }
+  return out;
+}
 
 /**
  * The web surface of FPVARABIC.
  *
- * `outputFileTracingRoot` points at the repository root rather than `web/`
- * because the shared core lives OUTSIDE this directory, in `../src`. Without
- * it Next traces only files under `web/` and a production build silently ships
- * without the encyclopedia — the failure looks like an empty site rather than
- * an error, which is the worst kind.
+ * `outputFileTracingRoot` points at the repository root because that is where
+ * the module graph genuinely ends: `@core/*` maps to `../src`, and Turbopack
+ * compiles only what sits inside this root — pin it to `web/` and every
+ * import that reaches the shared core fails with module-not-found (224 of
+ * them, measured). The root being the parent also nests the standalone
+ * output as `standalone/web/.next`, which is exactly the layout the OpenNext
+ * adapter expects for a workspace member: it walks up from `web/` to the
+ * single workspace lockfile at the repository root and derives the same
+ * geometry. One lockfile, one root, every tool in agreement — which is the
+ * reason the repository is an npm workspace and `web/` carries no lockfile
+ * of its own.
  *
  * ONE COPY OF EVERY RUNTIME PACKAGE THE SHARED CORE IMPORTS
  * ---------------------------------------------------------
@@ -28,35 +70,17 @@ import { isStagingFromEnv } from './lib/staging';
  * ROOT manifest and nowhere else. `scripts/testWebCore.ts` enforces it.
  */
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(process.cwd(), '..'),
+  outputFileTracingRoot: path.join(__dirname, '..'),
 
-  /*
-   * THE UPLOADED PHOTOGRAPHS TRAVEL WITH THE ROUTES THAT LOOK FOR THEM
-   * ------------------------------------------------------------------
-   * `lib/server/projectImages.ts` decides whether a photograph exists by asking
-   * the filesystem — see the reasoning there. That is free and correct during
-   * `next build`, where the whole repository is present. It is NOT
-   * automatically true afterwards: `public/` is served by the
-   * CDN and is not part of a route's traced bundle, so when a page with
-   * `revalidate` regenerates on the server, `existsSync` would answer «no» for a
-   * file that is sitting in the repository, and every card would silently fall
-   * back to its placeholder some minutes after each deploy.
-   *
-   * Tracing them in makes the two moments agree. The globs are relative to this
-   * directory; the listed routes are exactly the ones whose server code asks the
-   * question — the two public project routes, and the two admin routes that
-   * resolve a project in order to show the owner what is already uploaded.
-   *
-   * `lib/server/storeImages.ts` has the same shape and will need the same entry
-   * for `./public/assets/store/**` the day a shop route renders an uploaded
-   * photograph. It is left out until then rather than listed against routes
-   * that do not read it, so this map keeps saying something true.
-   */
-  outputFileTracingIncludes: {
-    '/projects': ['./public/assets/projects/**'],
-    '/projects/[projectId]': ['./public/assets/projects/**'],
-    '/admin/projects': ['./public/assets/projects/**'],
-    '/admin/projects/[projectId]': ['./public/assets/projects/**'],
+  // The build-time answer to «which project photographs are uploaded» —
+  // see uploadedProjectImages() above. Inlined into the bundles, so the
+  // resolver works identically on a filesystem-less runtime. This replaced
+  // `outputFileTracingIncludes` for the same files: tracing shipped the
+  // photographs INTO the lambdas so runtime existsSync could see them, and
+  // with no runtime filesystem reads left there is nothing for the lambdas
+  // to carry — the CDN serves the files, the constant answers the question.
+  env: {
+    UPLOADED_PROJECT_IMAGES: JSON.stringify(uploadedProjectImages()),
   },
 
   // The core is plain TypeScript compiled from source, not a published
