@@ -37,6 +37,16 @@ jobs:
       - name: Install (web)
         run: npm ci --prefix web
 
+      # `test:navigation-regression` drives a real browser: it builds the phone
+      # bundle, serves it, and clicks every nav tab to prove none of them 404s.
+      # A GitHub runner ships no browser, so without this the suite dies at
+      # launch — which is not the same thing as the navigation being broken, and
+      # skipping it would trade a red workflow for a silent one. `npx` resolves
+      # the Playwright version the lockfile already pins, so the browser and the
+      # driver can never disagree.
+      - name: Install the browser the navigation suite drives
+        run: npx playwright install --with-deps chromium
+
       - name: Typecheck — phone app
         run: npx tsc -b --pretty false
 

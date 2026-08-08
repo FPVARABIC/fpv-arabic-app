@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { chromium, type Page, type Browser } from 'playwright';
+import { chromiumLaunchOptions } from './lib/browser';
 
 const PORT = 4382;
 const BASE = `http://localhost:${PORT}`;
@@ -69,7 +70,7 @@ const ORIGINAL_TABS: { testid: string; path: string; label: string }[] = [
 
 async function main() {
   let server: ChildProcess | null = null;
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await chromium.launch(chromiumLaunchOptions());
   const consoleErrors: string[] = [];
 
   try {
