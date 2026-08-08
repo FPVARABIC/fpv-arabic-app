@@ -32,7 +32,7 @@ name: Verify production
 # default branch ever moves to the web branch, dispatch starts working too
 # and nothing here needs to change.
 #
-# verification run: 1
+# verification run: 2 — after the dashboard was pointed at the web branch
 on:
   push:
     branches: [claude/web-platform-foundation]
