@@ -9,6 +9,7 @@
 # branch, which this file is not on.
 #
 # crawl run: 1 — first production crawl, the closure batch itself
+# crawl run: 2 — the UI cleanup: prove the staging sash is gone from every live page
 
 name: Crawl production
 

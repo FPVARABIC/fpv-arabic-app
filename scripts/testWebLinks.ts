@@ -59,6 +59,10 @@ const DEAD_MARKERS = [
   'هذه الصفحة غير موجودة',
   'لم تُوثَّق هذه الصفحة بعد',
   'المنصّة لم تستطع بدء الصفحة',
+  // The staging sash. It renders only on a DECLARED staging deploy (see
+  // showStagingBadge) — appearing on ANY crawled page means the launch
+  // cleanup regressed, on production most of all.
+  'نسخة تجريبية —',
 ];
 
 /**
