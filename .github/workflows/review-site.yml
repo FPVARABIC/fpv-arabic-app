@@ -17,16 +17,34 @@
 # `configure-pages` with `enablement: true` turns GitHub Pages on through the
 # API using that same token, so even the one-time settings toggle is automated.
 
+# DISABLED ON PUSH — 2026-08-08
+# ------------------------------
+# It cannot succeed on this repository and has failed on every push since it
+# was added. Its own diagnosis step says why, in its own logs:
+#
+#     repository visibility -> "private": true
+#     GET  /pages -> http=404
+#     POST /pages -> 403 Resource not accessible by integration
+#
+# GitHub Pages on a PRIVATE repository needs a paid plan. The token's
+# permissions below are correct and irrelevant — the account cannot host Pages
+# at all, so `configure-pages` is refused before anything is built.
+#
+# It is also no longer needed. This existed because the development container
+# is refused outbound access to every hosting provider, so a static copy built
+# by a runner was the only way to look at the site on a real phone. The Next.js
+# app is now the product and deploys to Vercel, which serves that purpose
+# properly — with a database behind it, which this copy never had.
+#
+# The build itself is untouched: `scripts/buildReviewSite.mjs` and everything
+# under `.review-site/` stay exactly as they are, and `workflow_dispatch`
+# remains so this can still be run by hand. To bring it back on push, restore
+# the `push:` block below — and make the repository public, or upgrade the
+# plan, or Pages will refuse it again.
+
 name: Review site
 
 on:
-  push:
-    branches: [claude/web-platform-foundation]
-    paths:
-      - 'web/**'
-      - 'src/**'
-      - 'scripts/buildReviewSite.mjs'
-      - '.github/workflows/review-site.yml'
   workflow_dispatch:
 
 permissions:
