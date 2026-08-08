@@ -1,0 +1,102 @@
+# Eyes on the real deployment.
+#
+# Deployment is Vercel's job now (Git integration; see deploy.yml's header
+# for why the CLI path was retired). What remains ours is the question that
+# actually matters: what does a visitor get? This workflow answers it from a
+# GitHub runner because the development container's egress policy refuses
+# *.vercel.app, so the runner is the only place we can look from.
+#
+# It deploys nothing, needs no secret, and checks out nothing — it is curl
+# and arithmetic. Dispatch it after a push builds, and read the log:
+#
+#   · the four public sections must answer 200
+#   · /projects must reference all ten project covers
+#   · each cover URL must itself serve 200
+#
+# It first WAITS (up to wait_minutes) for /projects to serve a page carrying
+# the ten covers, because a Git-integration build takes a few minutes and
+# the production alias flips only when the build is READY. A page that never
+# starts serving the covers inside the window is a real failure and fails
+# the job — with the per-path, per-image codes in the log saying what was
+# actually served instead.
+
+name: Verify production
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: 'Base URL to verify'
+        type: string
+        required: false
+        default: 'https://fpv-arabic-app.vercel.app'
+      wait_minutes:
+        description: 'Minutes to wait for the new build to start serving'
+        type: string
+        required: false
+        default: '10'
+
+jobs:
+  verify:
+    name: Check what is actually served
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for the build, then verify
+        run: |
+          BASE="${{ inputs.base }}"
+          BASE="${BASE%/}"
+          echo "verifying against: $BASE"
+
+          # Wait for the deployment to start serving the projects page with
+          # its covers — the one signature the old build cannot produce.
+          tries=$(( ${{ inputs.wait_minutes }} * 4 ))
+          ready=0
+          for i in $(seq 1 "$tries"); do
+            covers=$(curl -s --max-time 20 "$BASE/projects" \
+              | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l || echo 0)
+            echo "attempt $i/$tries -> covers seen: $covers"
+            if [ "$covers" -ge 10 ]; then ready=1; break; fi
+            sleep 15
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "the projects page never served the ten covers within the window"
+          fi
+
+          fail=0
+          for p in / /community /projects /search; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || echo 000)
+            echo "PATH $p -> $code"
+            if [ "$code" != "200" ]; then fail=1; fi
+          done
+
+          covers=$(curl -s --max-time 20 "$BASE/projects" \
+            | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l || echo 0)
+          echo "covers referenced on /projects: $covers/10"
+          if [ "$covers" -lt 10 ]; then fail=1; fi
+
+          ok=0
+          for id in visual-target-tracking gps-denied-vio precision-landing-marker \
+                    depth-obstacle-avoidance lidar-slam-mapping multi-drone-swarm \
+                    autonomous-drone-racing crop-health-ndvi thermal-search-rescue \
+                    esp32-mini-drone; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+              "$BASE/assets/projects/$id/01-cover.webp" || echo 000)
+            echo "IMAGE $id -> $code"
+            if [ "$code" = "200" ]; then ok=$((ok+1)); fi
+          done
+          echo "image URLs 200: $ok/10"
+          if [ "$ok" -ne 10 ]; then fail=1; fi
+
+          {
+            echo "### Production verification"
+            echo ""
+            echo "Base: $BASE"
+            echo ""
+            echo "| check | result |"
+            echo "|---|---|"
+            echo "| four public paths 200 | $([ $fail -eq 0 ] && echo yes || echo see log) |"
+            echo "| covers on /projects | $covers/10 |"
+            echo "| cover URLs 200 | $ok/10 |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$fail"
