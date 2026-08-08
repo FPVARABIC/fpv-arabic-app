@@ -22,14 +22,28 @@
 
 name: Verify production
 
+# TWO TRIGGERS, ONE OF THEM SELF-SERVICE
+# --------------------------------------
+# `workflow_dispatch` only works for workflows that exist on the repository's
+# DEFAULT branch — which is a stale branch this file is not on, so the API
+# answers 404 to every dispatch. The push trigger below is the way around
+# that: touching this file (the check counter at the bottom) and pushing runs
+# the verification from THIS branch, no registration required. When the
+# default branch ever moves to the web branch, dispatch starts working too
+# and nothing here needs to change.
+#
+# verification run: 1
 on:
+  push:
+    branches: [claude/web-platform-foundation]
+    paths: ['.github/workflows/verify-production.yml']
   workflow_dispatch:
     inputs:
       base:
         description: 'Base URL to verify'
         type: string
         required: false
-        default: 'https://fpv-arabic-app.vercel.app'
+        default: 'https://fpv-arabic-app.melyanneahmed.workers.dev'
       wait_minutes:
         description: 'Minutes to wait for the new build to start serving'
         type: string
@@ -45,12 +59,16 @@ jobs:
       - name: Wait for the build, then verify
         run: |
           BASE="${{ inputs.base }}"
+          # Push-triggered runs carry no inputs; the live deployment is the default.
+          [ -z "$BASE" ] && BASE="https://fpv-arabic-app.melyanneahmed.workers.dev"
           BASE="${BASE%/}"
           echo "verifying against: $BASE"
 
           # Wait for the deployment to start serving the projects page with
           # its covers — the one signature the old build cannot produce.
-          tries=$(( ${{ inputs.wait_minutes }} * 4 ))
+          WAIT_MIN="${{ inputs.wait_minutes }}"
+          [ -z "$WAIT_MIN" ] && WAIT_MIN=6
+          tries=$(( WAIT_MIN * 4 ))
           ready=0
           for i in $(seq 1 "$tries"); do
             covers=$(curl -s --max-time 20 "$BASE/projects" \
