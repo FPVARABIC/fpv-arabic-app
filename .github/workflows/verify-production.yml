@@ -34,6 +34,7 @@ name: Verify production
 #
 # verification run: 7 — the build section ships: wait for /build, then verify everything
 # verification run: 8 — the quality pass ships: undecided-pref fix, mid-path edit fix, glossary help
+# verification run: 9 — /programming joins the live checklist (the one template path never yet measured)
 on:
   push:
     branches: [claude/web-platform-foundation]
@@ -87,7 +88,7 @@ jobs:
           fail=0
           # /community is deliberately ABSENT here: it is no longer a page.
           # Its redirect is asserted separately below.
-          for p in / /build /build/wizard /projects /search /store; do
+          for p in / /build /build/wizard /programming /projects /search /store; do
             code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || echo 000)
             echo "PATH $p -> $code"
             if [ "$code" != "200" ]; then fail=1; fi
