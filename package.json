@@ -43,6 +43,8 @@
     "test:web-project": "npx tsx scripts/testWebProject.ts",
     "test:web-project-e2e": "npx tsx scripts/testWebProjectE2E.ts",
     "test:web-software": "npx tsx --tsconfig web/tsconfig.json scripts/testWebSoftware.ts",
+    "test:web-build": "npx tsx --tsconfig web/tsconfig.json scripts/testWebBuild.ts",
+    "test:web-build-e2e": "npx tsx --tsconfig web/tsconfig.json scripts/testWebBuildE2E.ts",
     "test:web-software-e2e": "npx tsx scripts/testWebSoftwareE2E.ts",
     "test:retrieval": "npx tsx scripts/testRetrieval.ts",
     "test:store": "npx tsx scripts/testStore.ts",

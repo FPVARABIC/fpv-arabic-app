@@ -67,6 +67,7 @@ jobs:
           npm run test:web-identity
           npm run test:web-project
           npm run test:web-software
+          npm run test:web-build
           npm run test:retrieval
           npm run test:admin-roles
           npm run test:store
