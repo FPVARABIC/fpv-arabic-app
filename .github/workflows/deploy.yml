@@ -88,17 +88,35 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         run: npm install
 
-      # RUN FROM `web/`, NOT THE REPOSITORY ROOT.
+      # RUN FROM THE REPOSITORY ROOT — «web» IS NAMED EXACTLY ONCE.
       #
-      # The Vercel CLI treats its working directory as the project root. Run
-      # from the root, it finds a Vite app and no Next.js app, and the only
-      # documented fix is setting «Root Directory» in the dashboard — which is
-      # exactly the settings work the owner must not have to do. Running from
-      # `web/` puts the Next app where the CLI expects it, and `web/vercel.json`
-      # carries the framework and the security headers.
+      # These three steps used to run with `working-directory: web`, and the
+      # project ALSO already knows the web app lives under `web/` — root
+      # `vercel.json` says so (`buildCommand: cd web && …`, `outputDirectory:
+      # web/.next`), and the linked project carries its own Root Directory,
+      # which `vercel pull` fetches into `.vercel/project.json`. Two answers to
+      # one question, and the CLI applied both:
+      #
+      #     ENOENT: no such file or directory, lstat
+      #     …/fpv-arabic-app/web/web/.next/package.json
+      #
+      # `web/` from the shell, `web/` again from the project's own settings.
+      # Nothing was wrong with either answer on its own — only with giving it
+      # twice.
+      #
+      # So the shell stops answering. The CLI runs where the repository is, and
+      # the single remaining source of «where is the web app» is the project
+      # configuration the CLI already reads. That is also why this is the
+      # correct half to drop: it works whether the linked project's Root
+      # Directory is `web` (the CLI descends once) or unset (root
+      # `vercel.json`'s buildCommand and outputDirectory do it once) — whereas
+      # deleting the vercel.json keys instead would only work in the first case.
+      #
+      # The earlier note here claimed the root looks like a Vite app to the CLI.
+      # `vercel.json` pins `"framework": "nextjs"`, so detection never gets a
+      # vote.
       - name: Pull deployment settings
         if: steps.guard.outputs.configured == 'true'
-        working-directory: web
         run: |
           vercel pull --yes \
             --environment=${{ inputs.production && 'production' || 'preview' }} \
@@ -106,12 +124,10 @@ jobs:
 
       - name: Build
         if: steps.guard.outputs.configured == 'true'
-        working-directory: web
         run: vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy
         if: steps.guard.outputs.configured == 'true'
-        working-directory: web
         id: deploy
         run: |
           URL=$(vercel deploy --prebuilt ${{ inputs.production && '--prod' || '' }} \
