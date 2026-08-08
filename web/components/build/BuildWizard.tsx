@@ -544,79 +544,99 @@ const Questionnaire: React.FC<{
 
 // ── «لدي بعض القطع» — the owned-parts screen ────────────────────────────────
 
+/**
+ * «قطعك الحالية» — one clean card per category, phone-first.
+ *
+ * WHY THE CONTROLS ARE STACKED, NOT SIDE BY SIDE
+ * ----------------------------------------------
+ * The first layout put the select and the free-text input on one flex row.
+ * A native <select> sizes itself to its LONGEST option — and the options
+ * carried «الاسم العربي — the English name», so on a 390px phone the row
+ * blew the page out to 723px and the reader met a horizontally-scrolled,
+ * seemingly-broken screen. Now: the Arabic name is the option (short), the
+ * chosen part's English name renders under the control as a caption, and
+ * every control is full-width with a touch-friendly height. The global
+ * `select { min-width: 0; max-width: 100% }` rule guards the class of bug;
+ * this layout removes the instance.
+ */
 const OwnedParts: React.FC<{
   draft: BuildDraft;
   onChange: (patch: Partial<BuildDraft>) => void;
   onDone: () => void;
 }> = ({ draft, onChange, onDone }) => {
   const categories = Object.keys(PART_CATEGORY_MAP);
+  const control: React.CSSProperties = {
+    width: '100%', minWidth: 0, fontSize: 15, padding: '12px 12px',
+    borderRadius: 10, border: '1px solid var(--border-soft)',
+    background: 'var(--surface)', color: 'var(--text)',
+  };
   return (
-    <div data-testid="build-owned-parts" style={{ maxWidth: 720 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>قطعك الحالية</h2>
+    <div data-testid="build-owned-parts" style={{ maxWidth: 640 }}>
+      <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: 'var(--accent-ink)' }}>
+        خطوة تمهيدية — قبل مسار البناء
+      </p>
+      <h2 style={{ fontSize: 20, fontWeight: 900, margin: '6px 0 0' }}>قطعك الحالية</h2>
       <p style={{ margin: '8px 0 18px', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
-        حدد ما تملكه — من الكتالوج إن وُجد، أو باسمه إن لم يوجد. ما تتركه فارغاً
-        سيقترحه المسار حولك. القطع من خارج الكتالوج لا يمكن فحص توافقها آلياً،
-        وستُعلَّم بذلك بوضوح.
+        حدد ما تملكه، وما تتركه فارغاً سيقترحه المسار حولك.
       </p>
       <div style={{ display: 'grid', gap: 12 }}>
         {categories.map(category => {
           const parts = PART_CATEGORY_MAP[category];
           const owned = draft.partIds[category];
           const external = draft.externalParts[category];
+          const ownedPart = owned ? parts.find(p => p.id === owned) : undefined;
           return (
-            <div key={category} className="card-sm" style={{ padding: '13px 15px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: 13.5, fontWeight: 900 }}>
+            <div key={category} className="card-sm" style={{ padding: '14px 16px', minWidth: 0 }}>
+              <p style={{ margin: '0 0 9px', fontSize: 14, fontWeight: 900 }}>
                 {PART_CATEGORY_LABEL_AR[category] ?? category}
               </p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <select
-                  value={owned ?? ''}
-                  data-testid={`owned-select-${category}`}
-                  onChange={e => {
-                    const id = e.target.value;
-                    const partIds = { ...draft.partIds };
-                    const externalParts = { ...draft.externalParts };
-                    if (id) { partIds[category] = id; delete externalParts[category]; }
-                    else delete partIds[category];
-                    onChange({ partIds, externalParts });
-                  }}
-                  style={{
-                    fontSize: 13, padding: '8px 10px', borderRadius: 8,
-                    border: '1px solid var(--border-soft)', background: 'var(--surface)',
-                    maxWidth: '100%',
-                  }}
-                >
-                  <option value="">— لا أملكها / يقترحها المسار —</option>
-                  {parts.map(p => (
-                    <option key={p.id} value={p.id}>{p.nameAr} — {p.nameEn}</option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  placeholder="أو اكتب اسم قطعتك غير المدرجة"
-                  defaultValue={external ?? ''}
-                  data-testid={`owned-external-${category}`}
-                  onBlur={e => {
-                    const name = e.target.value.trim();
-                    const partIds = { ...draft.partIds };
-                    const externalParts = { ...draft.externalParts };
-                    if (name) { externalParts[category] = name; delete partIds[category]; }
-                    else delete externalParts[category];
-                    onChange({ partIds, externalParts });
-                  }}
-                  style={{
-                    fontSize: 13, padding: '8px 10px', borderRadius: 8,
-                    border: '1px solid var(--border-soft)', background: 'var(--surface)',
-                    flex: '1 1 200px',
-                  }}
-                />
-              </div>
+              <select
+                value={owned ?? ''}
+                data-testid={`owned-select-${category}`}
+                onChange={e => {
+                  const id = e.target.value;
+                  const partIds = { ...draft.partIds };
+                  const externalParts = { ...draft.externalParts };
+                  if (id) { partIds[category] = id; delete externalParts[category]; }
+                  else delete partIds[category];
+                  onChange({ partIds, externalParts });
+                }}
+                style={control}
+              >
+                <option value="">لا أملكها — يقترحها المسار</option>
+                {parts.map(p => (
+                  <option key={p.id} value={p.id}>{p.nameAr}</option>
+                ))}
+              </select>
+              {ownedPart && (
+                <p dir="ltr" style={{
+                  margin: '6px 2px 0', fontSize: 11.5, color: 'var(--text-dimmer)',
+                  textAlign: 'end', overflowWrap: 'anywhere',
+                }}>
+                  {ownedPart.nameEn}{ownedPart.brand ? ` — ${ownedPart.brand}` : ''}
+                </p>
+              )}
+              <input
+                type="text"
+                placeholder="أو اكتب اسم قطعتك غير المدرجة"
+                defaultValue={external ?? ''}
+                data-testid={`owned-external-${category}`}
+                onBlur={e => {
+                  const name = e.target.value.trim();
+                  const partIds = { ...draft.partIds };
+                  const externalParts = { ...draft.externalParts };
+                  if (name) { externalParts[category] = name; delete partIds[category]; }
+                  else delete externalParts[category];
+                  onChange({ partIds, externalParts });
+                }}
+                style={{ ...control, marginTop: 8 }}
+              />
             </div>
           );
         })}
       </div>
       <button type="button" className="btn-primary" data-testid="owned-done"
-        onClick={onDone} style={{ marginTop: 18, fontSize: 13.5 }}>
+        onClick={onDone} style={{ marginTop: 18, fontSize: 14.5, width: '100%', padding: '13px 16px' }}>
         تم — أكمل البناء حول قطعي ←
       </button>
     </div>

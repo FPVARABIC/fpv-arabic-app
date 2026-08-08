@@ -49,7 +49,7 @@ export default function ExpressLrsHub() {
         «الطائرة لا تستجيب» تعود إلى أحدها. ابدأ من الباب الذي يصف حالتك.
       </p>
 
-      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
         <Link href={setupHref} className="card" data-testid="elrs-door-setup"
           style={{ padding: '18px 20px', display: 'block' }}>
           <span style={{ display: 'block', fontSize: 16, fontWeight: 900 }}>الإعداد من الصفر</span>

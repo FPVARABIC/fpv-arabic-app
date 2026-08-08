@@ -128,7 +128,7 @@ export default async function ArticlePage(
         {/* ── The article ───────────────────────────────────────────────── */}
         <article style={{ minWidth: 0, maxWidth: 780 }}>
           <header>
-            <h1 style={{ fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1.45 }}>
+            <h1 style={{ fontSize: 'clamp(24px, 5.5vw, 30px)', fontWeight: 900, margin: 0, lineHeight: 1.45 }}>
               {a.titleAr}
             </h1>
             {a.titleEn && (

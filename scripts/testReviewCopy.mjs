@@ -180,7 +180,9 @@ console.log('\n[3] The home page is a platform entrance, not a second encycloped
     ok(`home answers «${q}»`, home.text.includes(needle));
   }
 
-  ok('home offers its own search field', home.html.includes('data-testid="home-search-input"'));
+  // The hero's duplicate field was removed in the polish batch — the header's
+  // search (rendered on every page, home included) is the one way in.
+  ok('the search reaches the home page through the header', home.html.includes('role="search"'));
 }
 
 /* ── 4. مشروعي explains itself ────────────────────────────────────────────── */

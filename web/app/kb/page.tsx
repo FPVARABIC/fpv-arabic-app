@@ -26,17 +26,17 @@ export default function KbIndexPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> الموسوعة
       </nav>
 
-      <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 10px' }}>الموسوعة</h1>
-      <p style={{ fontSize: 15, color: 'var(--text-dim)', maxWidth: 720, lineHeight: 1.95, margin: 0 }}>
-        كل منظومة مشروحة بطبقات: إجابة سريعة، ثم شرح مبسّط، ثم تقني، ثم تطبيق عملي، ثم
-        تشخيص ومرجع. وكل مقال يذكر مصادره وإصداراتها وتاريخ مراجعتها — فما لا مصدر له لا
-        يُكتب هنا.
+      {/* Content first: the modules are two lines down, and the layered-
+          structure explanation lives BELOW them under «عن هذا القسم». */}
+      <h1 className="page-title" style={{ margin: '14px 0 10px' }}>الموسوعة</h1>
+      <p className="page-lede" style={{ margin: 0 }}>
+        منظومات مشروحة من المبدأ إلى العطل — وما لا مصدر له لا يُكتب هنا.
       </p>
 
       <div
         style={{
-          display: 'grid', gap: 16, marginTop: 30,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
+          display: 'grid', gap: 16, marginTop: 24,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(330px, 100%), 1fr))',
         }}
       >
         {allKbModules.map(m => {
@@ -88,6 +88,18 @@ export default function KbIndexPage() {
           );
         })}
       </div>
+
+      {/* ── About this section — the moved preface ──────────────────────── */}
+      <section aria-labelledby="about-kb-h" style={{ marginTop: 30, maxWidth: 780 }}>
+        <div className="card-sm" style={{ padding: '16px 18px' }}>
+          <h2 id="about-kb-h" style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>عن هذا القسم</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 2, margin: '9px 0 0' }}>
+            كل منظومة مشروحة بطبقات: إجابة سريعة، ثم شرح مبسّط، ثم تقني، ثم تطبيق
+            عملي، ثم تشخيص ومرجع. وكل مقال يذكر مصادره وإصداراتها وتاريخ مراجعتها —
+            فما لا مصدر له لا يُكتب هنا.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

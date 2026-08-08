@@ -51,19 +51,13 @@ export default function ProgrammingHub() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> البرامج
       </nav>
 
-      <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>مركز البرامج</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 10px', maxWidth: 780 }}>
-        ليست قائمة أسماء. كل برنامج مغطّى هنا يفتح على صفحاته الحقيقية، وكل صفحة
-        تقرأ من مشروعك ما يخصّها وحده — المنفذ، أو المستقبل، أو نظام الفيديو —
-        وتعرض ما ينقص وما يمنع، وتقودك إلى الدرس أو شجرة التشخيص المناسبة.
-      </p>
-      <p style={{ fontSize: 13, color: 'var(--text-dimmer)', lineHeight: 1.95, margin: '0 0 26px', maxWidth: 780 }}>
-        الأعداد أدناه محسوبة من محتوى المنصة نفسه، لا مكتوبة يدوياً: {' '}
-        <span dir="ltr">{HUB_TOTALS.betaflightDocumented}/{HUB_TOTALS.betaflightPages}</span> صفحة Betaflight،
-        و<span dir="ltr">{HUB_TOTALS.edgetxPages}</span> صفحة EdgeTX،
-        و<span dir="ltr">{HUB_TOTALS.elrsSteps}</span> خطوة و<span dir="ltr">{HUB_TOTALS.elrsIssues}</span> مشكلة في ExpressLRS،
-        و<span dir="ltr">{HUB_TOTALS.videoPages}</span> صفحة لأدوات الفيديو.
-        {' '}<span dir="ltr">{covered}</span> برامج مغطّاة، والباقي مذكور بصراحة كغير متاح.
+      {/* Content first: the title, one line, then the programs themselves.
+          The full explanation and the counted numbers moved BELOW the
+          catalogue («عن هذا القسم») — somebody opening the software centre
+          came for the software, not for a preface about it. */}
+      <h1 className="page-title" style={{ margin: '14px 0 8px' }}>مركز البرامج</h1>
+      <p className="page-lede" style={{ margin: '0 0 24px' }}>
+        كل برنامج مغطّى يفتح على صفحاته الحقيقية — مربوطة بقطعك أنت، لا شرحاً عاماً.
       </p>
 
       {CATEGORY_ORDER.map(cat => (
@@ -73,7 +67,7 @@ export default function ProgrammingHub() {
             {CATEGORY_BLURB_AR[cat]}
           </p>
 
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
             {softwareByCategory(cat).map(s => {
               const body = (
                 <>
@@ -132,6 +126,26 @@ export default function ProgrammingHub() {
         — الأحكام هناك تدلّك على الصفحة التي تخصّك،
         أو ابدأ من <Link href="/diagnose" style={{ color: 'var(--accent-ink)' }}>التشخيص</Link> إن كان شيء لا يعمل.
       </p>
+
+      {/* ── About this section — the moved preface, after the content ────── */}
+      <section aria-labelledby="about-hub-h" style={{ marginTop: 34, maxWidth: 780 }}>
+        <div className="card-sm" style={{ padding: '16px 18px' }}>
+          <h2 id="about-hub-h" style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>عن هذا القسم</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 2, margin: '9px 0 0' }}>
+            ليست قائمة أسماء. كل برنامج مغطّى هنا يفتح على صفحاته الحقيقية، وكل صفحة
+            تقرأ من مشروعك ما يخصّها وحده — المنفذ، أو المستقبل، أو نظام الفيديو —
+            وتعرض ما ينقص وما يمنع، وتقودك إلى الدرس أو شجرة التشخيص المناسبة.
+          </p>
+          <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', lineHeight: 1.95, margin: '9px 0 0' }}>
+            الأعداد أعلاه محسوبة من محتوى المنصة نفسه، لا مكتوبة يدوياً: {' '}
+            <span dir="ltr">{HUB_TOTALS.betaflightDocumented}/{HUB_TOTALS.betaflightPages}</span> صفحة Betaflight،
+            و<span dir="ltr">{HUB_TOTALS.edgetxPages}</span> صفحة EdgeTX،
+            و<span dir="ltr">{HUB_TOTALS.elrsSteps}</span> خطوة و<span dir="ltr">{HUB_TOTALS.elrsIssues}</span> مشكلة في ExpressLRS،
+            و<span dir="ltr">{HUB_TOTALS.videoPages}</span> صفحة لأدوات الفيديو.
+            {' '}<span dir="ltr">{covered}</span> برامج مغطّاة، والباقي مذكور بصراحة كغير متاح.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

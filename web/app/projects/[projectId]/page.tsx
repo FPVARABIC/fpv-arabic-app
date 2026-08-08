@@ -136,7 +136,7 @@ export default async function ProjectPage(
         <article style={{ minWidth: 0 }} className="prose">
           {/* 1 — the title */}
           <header>
-            <h1 style={{ fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1.45 }}>
+            <h1 style={{ fontSize: 'clamp(24px, 5.5vw, 30px)', fontWeight: 900, margin: 0, lineHeight: 1.45 }}>
               {p.titleAr}
             </h1>
             <p className="ltr" style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '6px 0 0' }}>

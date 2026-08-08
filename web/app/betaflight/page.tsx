@@ -57,7 +57,7 @@ export default function BetaflightHub() {
         <Link href={SECTION_ROUTES.programming}>البرامج</Link> <span aria-hidden>/</span> Betaflight
       </nav>
 
-      <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>
+      <h1 className="page-title" style={{ margin: '14px 0 8px' }}>
         <span className="ltr">Betaflight Configurator</span>
       </h1>
       <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 8px', maxWidth: 780 }}>

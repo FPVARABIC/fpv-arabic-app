@@ -52,7 +52,7 @@ export default function GlossaryPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> القاموس
       </nav>
 
-      <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 10px' }}>القاموس</h1>
+      <h1 className="page-title" style={{ margin: '14px 0 10px' }}>القاموس</h1>
       <p style={{ fontSize: 15, color: 'var(--text-dim)', maxWidth: 720, lineHeight: 1.95, margin: 0 }}>
         <span dir="ltr">{kbTerms.length}</span> مصطلحاً. لكل واحد تعريف مبسّط وآخر تقني،
         واسمه الإنجليزي كما يظهر داخل البرامج — لأن من يقرأ برنامج إعداد بالإنجليزية يحتاج
@@ -100,7 +100,7 @@ export default function GlossaryPage() {
             <div
               style={{
                 display: 'grid', gap: 12,
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))',
               }}
             >
               {terms.map(t => (

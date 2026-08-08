@@ -316,6 +316,24 @@ figure img {
   margin: 0 auto;
   padding: 0 20px;
 }
+@media (max-width: 480px) {
+  .shell { padding: 0 14px; }
+}
+
+/*
+ * FORM CONTROLS CAN NEVER BE WIDER THAN THEIR CONTAINER.
+ *
+ * A native <select> sizes itself to its LONGEST option, and a flex/grid item
+ * defaults to min-width:auto — so one long option label («اسم القطعة — its
+ * English name») silently made the whole page 723px wide on a 390px phone,
+ * with the header and the bottom bar both appearing "cut" because the reader
+ * was mid-way through a horizontal scroll nobody intended to exist. This rule
+ * kills the entire class of bug rather than the one instance found.
+ */
+select, input, textarea {
+  min-width: 0;
+  max-width: 100%;
+}
 
 /** Screen-reader-only text that still participates in the accessibility tree. */
 .sr-only {
@@ -985,12 +1003,9 @@ details.card-sm > summary:focus-visible {
  * TYPOGRAPHY HELPERS
  * ═════════════════════════════════════════════════════════════════════════ */
 
-.page-title { font-size: 28px; font-weight: 900; margin: 0; letter-spacing: -0.01em; }
+.page-title { font-size: clamp(24px, 5.5vw, 32px); font-weight: 900; margin: 0; letter-spacing: -0.01em; }
 .page-lede { font-size: 14.5px; color: var(--text-dim); margin: 10px 0 0; line-height: 1.95; max-width: 68ch; }
 
-@media (min-width: 900px) {
-  .page-title { font-size: 32px; }
-}
 
 /* The section heading with the brand's side accent — the app's `.accent-head`. */
 .accent-head { position: relative; padding-inline-start: 12px; }

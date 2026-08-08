@@ -55,45 +55,20 @@ export default async function ProjectsPage(
 
   return (
     <div className="shell" style={{ paddingTop: 40, paddingBottom: 32 }}>
+      {/* Content first: title, one line, then straight to the filters and
+          the projects themselves. The difficulty-levels explainer and the
+          honest count moved BELOW the grid — useful context, but nobody
+          opens «المشاريع» to read about the section before seeing one. */}
       <header style={{ maxWidth: 780 }}>
         <h1 className="page-title">المشاريع</h1>
         <p className="page-lede">
-          مشاريع حقيقية تجمع الطيران بالذكاء الاصطناعي والرؤية الحاسوبية والأنظمة
-          الذاتية — كلٌّ منها مشروح بالكامل: الفكرة، والبنية، والقطع، والبرامج،
-          ومراحل البناء، والتحدّيات التي ستقابلك فعلاً، ومصادره الأصلية.
-        </p>
-        <p style={{ fontSize: 13, color: 'var(--text-dimmer)', margin: '12px 0 0', lineHeight: 1.9 }}>
-          <span dir="ltr">{all.length}</span> مشاريع منشورة. هذه المرحلة الأولى —
-          العدد صغير عن قصد، والمعيار أن يستحقّ كل مشروع صفحته.
+          مشاريع حقيقية تجمع الطيران بالذكاء الاصطناعي والرؤية الحاسوبية —
+          مشروحة بالكامل حتى مصادرها.
         </p>
       </header>
 
-      {/* ── What the levels mean ────────────────────────────────────────── */}
-      <section aria-labelledby="levels-h" style={{ marginTop: 30 }}>
-        <h2 id="levels-h" style={{ fontSize: 17, fontWeight: 900, margin: '0 0 12px' }}>
-          مستويات الصعوبة
-        </h2>
-        <div
-          style={{
-            display: 'grid', gap: 10,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-          }}
-        >
-          {(Object.keys(DIFFICULTY_LABEL_AR) as (keyof typeof DIFFICULTY_LABEL_AR)[]).map(d => (
-            <div key={d} className="card-sm" style={{ padding: '13px 15px' }}>
-              <h3 style={{ fontSize: 13.5, fontWeight: 900, margin: 0 }}>
-                {DIFFICULTY_LABEL_AR[d]}
-              </h3>
-              <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.85 }}>
-                {DIFFICULTY_MEANS_AR[d]}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ── Categories ──────────────────────────────────────────────────── */}
-      <nav aria-label="تصفية حسب التصنيف" style={{ marginTop: 30 }}>
+      <nav aria-label="تصفية حسب التصنيف" style={{ marginTop: 18 }}>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           <li>
             <Link
@@ -147,6 +122,36 @@ export default async function ProjectsPage(
             {shown.map(p => <ProjectCard key={p.id} project={p} />)}
           </div>
         )}
+      </section>
+
+      {/* ── What the levels mean — after the content it describes ───────── */}
+      <section aria-labelledby="levels-h" style={{ marginTop: 34 }}>
+        <h2 id="levels-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 12px' }}>
+          مستويات الصعوبة
+        </h2>
+        <div
+          style={{
+            display: 'grid', gap: 10,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          }}
+        >
+          {(Object.keys(DIFFICULTY_LABEL_AR) as (keyof typeof DIFFICULTY_LABEL_AR)[]).map(d => (
+            <div key={d} className="card-sm" style={{ padding: '13px 15px' }}>
+              <h3 style={{ fontSize: 13.5, fontWeight: 900, margin: 0 }}>
+                {DIFFICULTY_LABEL_AR[d]}
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-dim)', margin: '6px 0 0', lineHeight: 1.85 }}>
+                {DIFFICULTY_MEANS_AR[d]}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '14px 0 0', lineHeight: 1.9 }}>
+          <span dir="ltr">{all.length}</span> مشاريع منشورة. هذه المرحلة الأولى —
+          العدد صغير عن قصد، والمعيار أن يستحقّ كل مشروع صفحته. كل مشروع مشروح
+          بالكامل: الفكرة، والبنية، والقطع، والبرامج، ومراحل البناء، والتحدّيات
+          التي ستقابلك فعلاً، ومصادره الأصلية.
+        </p>
       </section>
     </div>
   );

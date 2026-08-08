@@ -79,6 +79,10 @@ export const viewport: Viewport = {
   themeColor: '#5EEAD4',
   width: 'device-width',
   initialScale: 1,
+  // Lets the page extend under notches and home indicators, which is what
+  // makes the `env(safe-area-inset-*)` paddings on the bottom bar actually
+  // receive non-zero values on the phones that need them.
+  viewportFit: 'cover',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

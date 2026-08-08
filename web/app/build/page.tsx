@@ -71,33 +71,25 @@ export default function BuildPage() {
 
   return (
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 44 }}>
-      {/* ── What this is ─────────────────────────────────────────────────── */}
+      {/* Content first: title, one line, resume, and the three doors inside
+          the first phone viewport. The full explanation and the counted
+          numbers moved to «عن هذا القسم» below the path overview. */}
       <section style={{ maxWidth: 780 }}>
         <nav aria-label="مسار التنقّل" style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
           <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> البناء
         </nav>
-        <h1 style={{ fontSize: 32, fontWeight: 900, lineHeight: 1.45, margin: '12px 0 0' }}>
+        <h1 style={{ fontSize: 'clamp(23px, 5.5vw, 32px)', fontWeight: 900, lineHeight: 1.45, margin: '12px 0 0' }}>
           ابنِ درونك — <span style={{ color: 'var(--accent-ink)' }}>من اختيار القطع إلى أول طيران</span>
         </h1>
-        <p style={{ fontSize: 15.5, color: 'var(--text-dim)', marginTop: 14, lineHeight: 1.95 }}>
-          ليست صفحة مقال: مسار تفاعلي من <span dir="ltr">{TOTAL_BUILD_STEPS}</span> خطوة
-          يمشي معك — يقترح القطعة ويقول لماذا، ويفحص التوافق الكهربائي والميكانيكي
-          بمحرك أحكام يشرح كل حكم بسببه ودليله، ويقف عند بوابات السلامة قبل أن
-          تلمس البطارية. وما لا نملك مواصفته الموثقة نقوله صراحةً:
-          «تحتاج المواصفة إلى تحقق من الشركة المصنّعة» — لا تخمين.
-        </p>
-        <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', marginTop: 10 }} data-testid="build-counts">
-          <span dir="ltr">{partCount}</span> قطعة موثقة في{' '}
-          <span dir="ltr">{categoryCount}</span> فئة ·{' '}
-          <span dir="ltr">{droneTypes.length}</span> أنواع بناء ·{' '}
-          <span dir="ltr">{GATE_STEP_IDS.length}</span> بوابات سلامة بـ
-          <span dir="ltr">{gateItemCount}</span> فحصاً إلزامياً
+        <p className="page-lede" style={{ marginTop: 8 }}>
+          مسار تفاعلي من <span dir="ltr">{TOTAL_BUILD_STEPS}</span> خطوة يقترح ويفحص
+          التوافق ويقف عند بوابات السلامة — خطوة بخطوة.
         </p>
         <BuildResume />
       </section>
 
       {/* ── The three doors ──────────────────────────────────────────────── */}
-      <section aria-labelledby="modes-h" style={{ marginTop: 40 }}>
+      <section aria-labelledby="modes-h" style={{ marginTop: 24 }}>
         <h2 id="modes-h" style={{ fontSize: 21, fontWeight: 900, margin: '0 0 14px' }}>
           ماذا تريد أن تبني؟
         </h2>
@@ -160,7 +152,7 @@ export default function BuildPage() {
         </div>
       </section>
 
-      {/* ── The safety stance, stated before anyone starts ───────────────── */}
+      {/* ── The safety stance + the moved preface ─────────────────────────── */}
       <section aria-labelledby="safety-h" style={{ marginTop: 44, maxWidth: 780 }}>
         <div className="card" style={{ padding: '20px 22px' }}>
           <h2 id="safety-h" style={{ fontSize: 16, fontWeight: 900, margin: 0 }}>
@@ -171,6 +163,22 @@ export default function BuildPage() {
             والقطبية بالـMultimeter وSmoke Stopper قبل أي بطارية، والمراوح منزوعة
             في أي اختبار محركات، وFailsafe يُضبط ويُختبر قبل أن يُحتاج — كل بوابة
             قائمة تُؤكَّد بنداً بنداً، ولا يفتح «التالي» قبل اكتمالها.
+          </p>
+        </div>
+        <div className="card-sm" style={{ padding: '16px 18px', marginTop: 12 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>عن هذا القسم</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 2, margin: '9px 0 0' }}>
+            ليست صفحة مقال: المسار يقترح القطعة ويقول لماذا، ويفحص التوافق
+            الكهربائي والميكانيكي بمحرك أحكام يشرح كل حكم بسببه ودليله. وما لا
+            نملك مواصفته الموثقة نقوله صراحةً: «تحتاج المواصفة إلى تحقق من
+            الشركة المصنّعة» — لا تخمين.
+          </p>
+          <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', marginTop: 9, marginBottom: 0 }} data-testid="build-counts">
+            <span dir="ltr">{partCount}</span> قطعة موثقة في{' '}
+            <span dir="ltr">{categoryCount}</span> فئة ·{' '}
+            <span dir="ltr">{droneTypes.length}</span> أنواع بناء ·{' '}
+            <span dir="ltr">{GATE_STEP_IDS.length}</span> بوابات سلامة بـ
+            <span dir="ltr">{gateItemCount}</span> فحصاً إلزامياً
           </p>
         </div>
       </section>

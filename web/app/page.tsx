@@ -220,7 +220,7 @@ export default function HomePage() {
         >
           {BRAND_NAME}
         </p>
-        <h1 style={{ fontSize: 34, fontWeight: 900, lineHeight: 1.4, margin: '10px 0 0' }}>
+        <h1 style={{ fontSize: 'clamp(24px, 6vw, 34px)', fontWeight: 900, lineHeight: 1.4, margin: '10px 0 0' }}>
           كل ما تحتاجه للطيران بالمنظور الأول،{' '}
           <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>
         </h1>
@@ -230,30 +230,10 @@ export default function HomePage() {
           المبدأ قبل الخطوة. الحساب نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
         </p>
 
-        {/* The site's search, repeated here at full size. The header field is
-            the global entry; on the page a visitor is looking AT, a wide field
-            is the fastest answer to «where do I even start». Same GET form,
-            same destination, same engine — no second search anywhere. */}
-        <form
-          action={sectionHref('search')}
-          method="get"
-          role="search"
-          style={{ marginTop: 24 }}
-        >
-          <label htmlFor="home-q" className="sr-only">ابحث في المنصّة</label>
-          <div className="search-bar">
-            <span aria-hidden className="search-bar-icon" style={{ fontSize: 19 }}>⌕</span>
-            <input
-              id="home-q"
-              type="search"
-              name="q"
-              className="search-bar-input"
-              data-testid="home-search-input"
-              placeholder="ابحث: «الريسيفر لا يشتغل»، «UART»، «اختيار كاميرا»…"
-            />
-            <button type="submit" className="btn-primary search-bar-submit">ابحث</button>
-          </div>
-        </form>
+        {/* The hero used to repeat the search at full size right under the
+            header's own field — two identical controls stacked within one
+            phone viewport. The header field (a real field on phones too) is
+            the one search; the hero hands the space back to the pillars. */}
       </section>
 
       {/* ── The four pillars, equal by construction ──────────────────────── */}

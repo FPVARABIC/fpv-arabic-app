@@ -66,11 +66,9 @@ export default async function StorePage() {
       </nav>
 
       <header style={{ margin: '14px 0 18px' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>المتجر</h1>
-        <p style={{ fontSize: 14.5, color: 'var(--text-dim)', lineHeight: 2, margin: '8px 0 0', maxWidth: 780 }}>
-          كل منتج هنا موجود لأننا نوصي به، لا لأنه متوفّر عند المورد. في كل قسم
-          ثلاثة إلى خمسة خيارات فقط، مرتّبة بحيث يظهر الفرق بينها من أول نظرة —
-          ومع كل واحد منها ما يجب أن تقرأه قبل أن تقرّر.
+        <h1 className="page-title" style={{ margin: 0 }}>المتجر</h1>
+        <p className="page-lede" style={{ margin: '8px 0 0' }}>
+          في كل قسم ثلاثة إلى خمسة خيارات فقط، بفارق واضح — لأننا نوصي، لا نستورد قائمة.
         </p>
       </header>
 

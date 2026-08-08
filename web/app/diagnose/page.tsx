@@ -73,7 +73,7 @@ export default function DiagnoseIndexPage() {
             <div
               style={{
                 display: 'grid', gap: 11,
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))',
               }}
             >
               {trees.map(t => {

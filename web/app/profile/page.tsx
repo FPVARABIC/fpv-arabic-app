@@ -42,7 +42,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="shell" style={{ paddingTop: 40, paddingBottom: 40, maxWidth: 760 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, margin: 0 }}>ملفي</h1>
+      <h1 className="page-title">ملفي</h1>
       <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: '10px 0 0', lineHeight: 1.9 }}>
         هذا الحساب نفسه الذي تستخدمه في تطبيق الهاتف. أي تغيير هنا يظهر هناك، والعكس.
       </p>

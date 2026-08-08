@@ -67,7 +67,7 @@ export default function ProjectPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> مشروعي
       </nav>
 
-      <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>مشروعي</h1>
+      <h1 className="page-title" style={{ margin: '14px 0 8px' }}>مشروعي</h1>
       <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 22px', maxWidth: 760 }}>
         هذه ليست قائمة قطع. المنصة تقرأ ما سجّلته وتحسب منه أحكام التوافق نفسها
         التي يحسبها التطبيق — بالسبب، والدليل، ودرجة الثقة، وما ينقص للحكم. حين
