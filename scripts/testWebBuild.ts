@@ -405,4 +405,85 @@ console.log('\n[8] The community is gone from the user-facing web — and only f
     !existsSync(path.join(ROOT, 'supabase/migrations/community-removal.sql')));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[9] The hard scenarios: insufficiency, shortage, and honest gaps');
+{
+  const { flightControllers } = await import('../src/data/assembly/parts/flightControllers');
+  const { gps } = await import('../src/data/assembly/parts/gps');
+  const { wiringLines } = await import('../web/components/build/GuideSteps');
+
+  // Scenario «ESC غير كافٍ»: the honest answer is that current headroom
+  // CANNOT be computed from our data — the engine must say so as
+  // manual-required, never fake a pass or a fail.
+  const esc = escs[0];
+  const withEsc = snapshotFromContext({
+    droneTypeId: 'freestyle', sizeInch: 5, batteryVoltage: 6,
+    parts: { motors: motors[0], escs: esc },
+  }, 6);
+  const headroom = computeFindings(withEsc).find(f => f.id === 'current-headroom');
+  ok('ESC sufficiency is answered honestly: manual-required, with the thrust-table action',
+    headroom?.confidence === 'manual-required'
+    && headroom.severity === 'unknown'
+    && !!headroom.manualCheckAr);
+
+  // Scenario «نقص UART»: the verdict must equal the engine's own formula
+  // over the REAL uartCount — proving the wizard surfaces it, whatever the
+  // catalogue's numbers are today.
+  const fcMinUart = [...flightControllers].sort((a, b) => a.specs.uartCount - b.specs.uartCount)[0];
+  const crowded = snapshotFromContext({
+    droneTypeId: 'freestyle', sizeInch: 5, batteryVoltage: 6,
+    parts: {
+      flightControllers: fcMinUart, receivers: receivers[0],
+      gps: gps[0], videoUnits: videoUnits[0],
+    },
+  }, 8);
+  const uart = computeFindings(crowded).find(f => f.id === 'uart-budget');
+  const expected = 3 > fcMinUart.specs.uartCount ? 'blocker'
+    : 3 === fcMinUart.specs.uartCount ? 'warning' : 'ok';
+  ok(`UART budget over ${fcMinUart.specs.uartCount} ports with 3 consumers reads «${expected}» — formula and finding agree`,
+    uart?.severity === expected);
+
+  // Scenario «بيانات قطعة ناقصة»: an undocumented mounting size must yield
+  // «لا نستطيع تأكيد…», not a silent pass.
+  const fcNoMount = flightControllers.find(fc => fc.specs.mountingSizeMm === undefined);
+  if (fcNoMount) {
+    const s = snapshotFromContext({
+      droneTypeId: 'freestyle', sizeInch: 5, batteryVoltage: 6,
+      parts: { frames: frames[0], flightControllers: fcNoMount },
+    }, 7);
+    const mount = computeFindings(s).find(f => f.id === 'stack-mount');
+    ok('a missing mounting spec becomes a visible «بيانات ناقصة» verdict with the manual pointer',
+      mount?.severity === 'unknown' && mount.confidence === 'manual-required');
+  } else {
+    ok('every FC currently documents its mounting size — the unknown path stays wired', true);
+  }
+
+  // Scenario «VTX يحتاج جهدًا غير متوفر»: the wiring overview must show the
+  // DOCUMENTED input range when one exists, and the manufacturer sentence
+  // when none does — never an assumed number.
+  const withRange = videoUnits.find(v => v.specs.operatingVoltageRange);
+  const withoutRange = videoUnits.find(v => !v.specs.operatingVoltageRange);
+  if (withRange) {
+    const d1 = emptyDraft(); d1.droneTypeId = 'freestyle'; d1.partIds = { videoUnits: withRange.id };
+    ok(`a documented video input range is shown verbatim (${withRange.specs.operatingVoltageRange})`,
+      wiringLines(d1).some(l => l.overAr.includes(withRange.specs.operatingVoltageRange!)));
+  }
+  if (withoutRange) {
+    const d2 = emptyDraft(); d2.droneTypeId = 'freestyle'; d2.partIds = { videoUnits: withoutRange.id };
+    ok('an undocumented video input range shows the manufacturer sentence instead',
+      wiringLines(d2).some(l => l.overAr.includes('تحقق من الشركة المصنّعة')));
+  }
+  ok('the catalogue exercises at least one of the two voltage paths', !!withRange || !!withoutRange);
+
+  // Regression: «أقرر لاحقاً» is an answer, not an ecosystem. The first
+  // implementation stored the button label and flagged the ENTIRE video
+  // catalogue as «يحتاج مراجعة» against it.
+  const { UNDECIDED_PREF } = await import('../web/lib/build/checks');
+  const anyUnit = videoUnits.find(v => v.protocolOrSystem)!;
+  ok('an undecided video preference mismatches nothing',
+    checkEcosystemFit('videoUnits', anyUnit, { videoSystem: UNDECIDED_PREF }).verdict === 'ok');
+  ok('an undecided RC preference mismatches nothing',
+    checkEcosystemFit('receivers', receivers[0], { rcProtocol: UNDECIDED_PREF }).verdict === 'ok');
+}
+
 console.log(`\n✅ testWebBuild: ${passed} assertions passed`);

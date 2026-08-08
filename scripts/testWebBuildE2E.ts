@@ -199,6 +199,12 @@ async function main() {
       await pickFirst(page, 'motors');
       ok('motors alone do not open the step — the propeller is part of the same decision',
         await page.locator(sel.next).isDisabled());
+      // «بناءي» must reflect a pick the INSTANT it is made.
+      const pickedMotor = await page
+        .locator('[data-testid="part-picker-motors"] [data-testid^="part-card-"]:has(button:has-text("مختارة")) h4')
+        .first().innerText();
+      ok(`«بناءي» lists the motor the instant it is tapped (${pickedMotor})`,
+        (await page.locator('[data-testid="my-build-panel"]').innerText()).includes(pickedMotor));
       await pickFirst(page, 'propellers');
       ok('motor + propeller together unlock it', !(await page.locator(sel.next).isDisabled()));
       await next(page, 6);
@@ -221,11 +227,21 @@ async function main() {
       await waitStep(page, 6);
       ok('a reload resumes on the same step with the same choices', true);
 
+      // ── Leaving for another section and coming back must resume too ──
+      await page.goto(`${BASE}/kb`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${BASE}/build/wizard`, { waitUntil: 'domcontentloaded' });
+      await waitStep(page, 6);
+      ok('leaving to the encyclopedia and returning resumes mid-path', true);
+
       await next(page, 7);
       await pickFirst(page, 'flightControllers');
       await next(page, 8);
       await pickFirst(page, 'receivers');
       await next(page, 9);
+      // «لا أعرف بعد» at the video question means NO preference: the units
+      // must not all be smeared with a bogus «يحتاج مراجعة» against it.
+      ok('an undecided video preference leaves compatible units marked «متوافق»',
+        await page.locator('[data-testid="part-picker-videoUnits"] [data-verdict="ok"]').count() > 0);
       await pickFirst(page, 'videoUnits');
       await next(page, 10);
       ok('the extras step is optional — «التالي» is open with nothing picked',
@@ -294,18 +310,32 @@ async function main() {
       await page.waitForSelector('[data-testid="build-owned-parts"]');
       ok('the owned-parts screen appears for this mode only', true);
 
-      const motorSelect = page.locator('[data-testid="owned-select-motors"]');
-      const firstMotorId = await motorSelect.locator('option').nth(1).getAttribute('value');
-      await motorSelect.selectOption(firstMotorId!);
+      // The brief's own scenario: the reader already owns a frame and an FC.
+      for (const cat of ['frames', 'flightControllers']) {
+        const select = page.locator(`[data-testid="owned-select-${cat}"]`);
+        const firstId = await select.locator('option').nth(1).getAttribute('value');
+        await select.selectOption(firstId!);
+      }
       await page.locator('[data-testid="owned-external-receivers"]').fill('ريسيفر قديم عندي');
       await page.locator('[data-testid="owned-external-receivers"]').blur();
       await page.locator('[data-testid="owned-done"]').click();
 
       await page.waitForSelector(sel.progress);
       const panel = await page.locator('[data-testid="my-build-panel"]').innerText();
-      ok('«بناءي» lists the owned motor from the catalogue', panel.includes('المحركات'));
+      ok('«بناءي» lists the owned frame and FC from the catalogue',
+        panel.includes('الإطار') && panel.includes('Flight Controller'));
       ok('…and the uncatalogued receiver, marked as outside the catalogue',
         panel.includes('ريسيفر قديم عندي') && panel.includes('خارج الكتالوج'));
+
+      // The path builds AROUND the owned parts: after goal and size, the
+      // owned frame arrives at its step already selected.
+      await waitStep(page, 1);
+      await page.locator('[data-testid="goal-freestyle"]').click();
+      await next(page, 2);
+      await page.locator('[data-testid="size-5"]').click();
+      await next(page, 3);
+      ok('the owned frame survives goal and size and shows as «مختارة»',
+        await page.locator('[data-testid="part-picker-frames"] button:has-text("مختارة")').count() > 0);
       await ctx.close();
     }
 
@@ -339,8 +369,56 @@ async function main() {
       await ctx.close();
     }
 
-    // ── [5] No console errors anywhere along the way ───────────────────────
-    console.log('\n[5] Console hygiene');
+    // ── [5] The three phone widths the brief names ─────────────────────────
+    console.log('\n[5] 360 / 390 / 430 — RTL, no overflow, controls reachable');
+    for (const width of [360, 390, 430]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 800 } });
+      const page = await ctx.newPage(); watch(page);
+
+      const noOverflow = async (label: string) => {
+        const m = await page.evaluate(() => ({
+          scroll: document.documentElement.scrollWidth,
+          inner: window.innerWidth,
+          dir: document.documentElement.getAttribute('dir'),
+        }));
+        ok(`${width}px ${label}: RTL and no horizontal overflow (${m.scroll}/${m.inner})`,
+          m.dir === 'rtl' && m.scroll <= m.inner + 1);
+      };
+
+      await page.goto(`${BASE}/build`, { waitUntil: 'domcontentloaded' });
+      await noOverflow('/build');
+
+      await page.goto(`${BASE}/build/wizard?mode=guided`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('[data-testid="exp-beginner"]');
+      await noOverflow('questionnaire');
+      await page.locator('[data-testid="exp-beginner"]').click();
+      await page.waitForSelector('[data-testid="tier-budget"]');
+      await page.locator('[data-testid="tier-budget"]').click();
+      await page.waitForSelector('[data-testid="video-skip"]');
+      await page.locator('[data-testid="video-skip"]').click();
+      await page.waitForSelector('[data-testid="rc-skip"]');
+      await page.locator('[data-testid="rc-skip"]').click();
+
+      await waitStep(page, 1);
+      await noOverflow('step 1');
+      const prevBox = await page.locator(sel.prev).boundingBox();
+      const nextBox = await page.locator(sel.next).boundingBox();
+      ok(`${width}px: «السابق» و«التالي» both on screen, no overlap`,
+        !!prevBox && !!nextBox
+        && prevBox.x >= 0 && nextBox.x >= 0
+        && prevBox.x + prevBox.width <= width + 1 && nextBox.x + nextBox.width <= width + 1
+        && (prevBox.x + prevBox.width <= nextBox.x || nextBox.x + nextBox.width <= prevBox.x));
+
+      await page.locator('[data-testid="goal-freestyle"]').click();
+      await next(page, 2);
+      await page.locator('[data-testid="size-5"]').click();
+      await next(page, 3);
+      await noOverflow('part cards');
+      await ctx.close();
+    }
+
+    // ── [6] No console errors anywhere along the way ───────────────────────
+    console.log('\n[6] Console hygiene');
     ok(`no console or page errors across every driven page (${consoleErrors.length})`,
       consoleErrors.length === 0);
     if (consoleErrors.length > 0) console.log(consoleErrors.slice(0, 5).join('\n'));

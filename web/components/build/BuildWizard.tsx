@@ -19,7 +19,7 @@ import {
   type BuildDraft,
 } from '@/lib/build/draft';
 import {
-  snapshotFromContext, videoSystemOptions, rcProtocolOptions,
+  snapshotFromContext, videoSystemOptions, rcProtocolOptions, UNDECIDED_PREF,
   type BuildContext,
 } from '@/lib/build/checks';
 import { gateFor } from '@/lib/build/gates';
@@ -188,14 +188,22 @@ export const BuildWizard: React.FC = () => {
     else update({ stepIndex: draft.stepIndex - 1 });
   };
 
+  // Finishing the questionnaire must not MOVE somebody who was already on
+  // the path: «عدّل إجاباتك» from step 17 returns to step 17, not to the
+  // report. Only a fresh build (still on step one, nothing picked) jumps —
+  // and in the owned-parts mode it detours through the owned screen first,
+  // once, for the same reason.
+  const freshStart = draft.stepIndex === 0
+    && Object.keys(draft.partIds).length + Object.keys(draft.externalParts).length === 0;
+
   if (phase === 'questions') {
     return (
       <Questionnaire
         draft={draft}
         onAnswer={update}
         onDone={() => {
-          if (draft.mode === 'parts' ) setPhase('owned');
-          else { update({ stepIndex: firstUnresolvedStep(draft) }); setPhase('path'); }
+          if (draft.mode === 'parts' && freshStart) setPhase('owned');
+          else setPhase('path');
         }}
       />
     );
@@ -206,7 +214,10 @@ export const BuildWizard: React.FC = () => {
       <OwnedParts
         draft={draft}
         onChange={update}
-        onDone={() => { update({ stepIndex: firstUnresolvedStep(draft) }); setPhase('path'); }}
+        onDone={() => {
+          if (draft.stepIndex === 0) update({ stepIndex: firstUnresolvedStep(draft) });
+          setPhase('path');
+        }}
       />
     );
   }
@@ -399,6 +410,14 @@ const ProgressHeader: React.FC<{ step: BuildStep; onEditAnswers: () => void }> =
     <p style={{ margin: '6px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
       {step.introAr}
     </p>
+    {/* A first build is full of first words. The glossary carries every term
+        with its English form as the software spells it — one tap away on
+        every step, so an unknown word never blocks a decision. */}
+    <p style={{ margin: '7px 0 0', fontSize: 11.5 }}>
+      <Link href="/glossary" data-testid="wizard-glossary" style={{ color: 'var(--text-dimmer)' }}>
+        مصطلح غير مفهوم؟ افتح القاموس ←
+      </Link>
+    </p>
   </header>
 );
 
@@ -471,7 +490,7 @@ const Questionnaire: React.FC<{
               onClick={() => answerAndNext({ videoSystemPref: sys })}
               titleAr={sys} bodyAr="" ltrTitle />
           ))}
-          <OptionButton testId="video-skip" onClick={() => answerAndNext({ videoSystemPref: 'أقرر لاحقاً' })}
+          <OptionButton testId="video-skip" onClick={() => answerAndNext({ videoSystemPref: UNDECIDED_PREF })}
             titleAr="لا أعرف بعد" bodyAr="سنعرض الكل ونشرح الفرق عند خطوة الفيديو." />
         </QuestionCard>
       )}
@@ -484,7 +503,7 @@ const Questionnaire: React.FC<{
               onClick={() => answerAndNext({ rcProtocolPref: proto })}
               titleAr={proto} bodyAr="" ltrTitle />
           ))}
-          <OptionButton testId="rc-skip" onClick={() => answerAndNext({ rcProtocolPref: 'أقرر لاحقاً' })}
+          <OptionButton testId="rc-skip" onClick={() => answerAndNext({ rcProtocolPref: UNDECIDED_PREF })}
             titleAr="لا أملك جهاز تحكم بعد" bodyAr="سنعرض الكل عند خطوة الريسيفر." />
         </QuestionCard>
       )}
@@ -505,9 +524,11 @@ const Questionnaire: React.FC<{
                 draft.tierPref === 'budget' ? 'اقتصادية'
                 : draft.tierPref === 'mid' ? 'متوازنة' : 'Premium'}
                 onClear={() => onAnswer({ tierPref: undefined })} />
-              <EditRow labelAr="الفيديو" valueAr={draft.videoSystemPref ?? '—'}
+              <EditRow labelAr="الفيديو"
+                valueAr={draft.videoSystemPref === UNDECIDED_PREF ? 'أقرر لاحقاً' : draft.videoSystemPref ?? '—'}
                 onClear={() => onAnswer({ videoSystemPref: undefined })} />
-              <EditRow labelAr="التحكم" valueAr={draft.rcProtocolPref ?? '—'}
+              <EditRow labelAr="التحكم"
+                valueAr={draft.rcProtocolPref === UNDECIDED_PREF ? 'أقرر لاحقاً' : draft.rcProtocolPref ?? '—'}
                 onClear={() => onAnswer({ rcProtocolPref: undefined })} />
             </>
           )}

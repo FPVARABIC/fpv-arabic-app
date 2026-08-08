@@ -48,6 +48,18 @@ import type { ProjectSnapshot } from '@core/data/project/types';
 /** The sentence the platform uses when a spec is genuinely undocumented. */
 export const MANUAL_CHECK_AR = 'تحتاج المواصفة إلى تحقق من الشركة المصنّعة';
 
+/**
+ * The questionnaire's honest «لا أعرف بعد» answer.
+ *
+ * A sentinel, not an empty string: `undefined` means the question was never
+ * answered (the questionnaire must still ask it), while this value means it
+ * was answered with «أقرر لاحقاً» — and every ecosystem check below must
+ * treat that as NO preference. The first implementation stored the Arabic
+ * button label itself, and every video unit promptly failed the comparison
+ * against it — a bogus «يحتاج مراجعة» on the whole catalogue.
+ */
+export const UNDECIDED_PREF = 'undecided';
+
 export type CandidateVerdict = 'ok' | 'review' | 'incompatible';
 
 export const CANDIDATE_VERDICT_LABEL_AR: Record<CandidateVerdict, string> = {
@@ -190,6 +202,10 @@ export function checkEcosystemFit(
   part: BasePart,
   prefs: { videoSystem?: string; rcProtocol?: string },
 ): CandidateCheck {
+  // «أقرر لاحقاً» is an answer, not a system — nothing can mismatch it.
+  if (prefs.videoSystem === UNDECIDED_PREF) prefs = { ...prefs, videoSystem: undefined };
+  if (prefs.rcProtocol === UNDECIDED_PREF) prefs = { ...prefs, rcProtocol: undefined };
+
   if (category === 'videoUnits' && prefs.videoSystem
     && part.protocolOrSystem && part.protocolOrSystem !== prefs.videoSystem) {
     return {

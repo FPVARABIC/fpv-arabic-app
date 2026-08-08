@@ -33,6 +33,7 @@ name: Verify production
 # and nothing here needs to change.
 #
 # verification run: 7 — the build section ships: wait for /build, then verify everything
+# verification run: 8 — the quality pass ships: undecided-pref fix, mid-path edit fix, glossary help
 on:
   push:
     branches: [claude/web-platform-foundation]
