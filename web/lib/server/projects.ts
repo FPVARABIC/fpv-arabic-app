@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { listProjectOverrides, isServiceConfigured } from '../backend/supabase/adminData';
+import { uploadedProjectCover } from './projectImages';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import type { Project } from '@core/data/projects/types';
 
@@ -28,6 +29,21 @@ import type { Project } from '@core/data/projects/types';
  * Same posture as the store catalogue: a section that 500s because the
  * database is unreachable is a section that is down. One that shows its reviewed seeds is
  * degraded and still useful. The one thing it must never do is invent.
+ *
+ * WHERE THE COVER PHOTOGRAPH COMES FROM
+ * -------------------------------------
+ * Two places, and the precedence between them is the point. The admin panel
+ * uploads to Storage and writes `imageUrl`; the owner also drops files straight
+ * into `web/public/assets/projects/<id>/` under the naming convention the
+ * manifest publishes. The database wins when it has an answer — including the
+ * answer «cleared», which is why the test below is `undefined` and not falsy:
+ * `setProjectImage(id, null)` writes an explicit null, and reviving a repository
+ * file over somebody's deliberate removal would make the panel's delete button
+ * appear broken.
+ *
+ * Absent that, the uploaded file IS the image, with no data edit — which is what
+ * `docs/projects/PROJECT_IMAGE_MANIFEST.md` step 6 has been promising the owner
+ * all along.
  */
 
 export const projectOverrides = cache(async (): Promise<Record<string, Partial<Project>>> => {
@@ -69,7 +85,11 @@ export const resolvedProjects = cache(async (): Promise<Project[]> => {
     merged.push({ ...(o as Project), id });
   }
 
-  return merged;
+  return merged.map(p => {
+    if (p.imageUrl !== undefined) return p;
+    const cover = uploadedProjectCover(p);
+    return cover ? { ...p, imageUrl: cover.url } : p;
+  });
 });
 
 /** Only what a reader may see. */

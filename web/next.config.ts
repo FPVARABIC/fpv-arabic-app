@@ -30,6 +30,35 @@ import { isStagingFromEnv } from './lib/staging';
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), '..'),
 
+  /*
+   * THE UPLOADED PHOTOGRAPHS TRAVEL WITH THE ROUTES THAT LOOK FOR THEM
+   * ------------------------------------------------------------------
+   * `lib/server/projectImages.ts` decides whether a photograph exists by asking
+   * the filesystem — see the reasoning there. That is free and correct during
+   * `next build`, where the whole repository is present. It is NOT
+   * automatically true afterwards: `public/` is served by the
+   * CDN and is not part of a route's traced bundle, so when a page with
+   * `revalidate` regenerates on the server, `existsSync` would answer «no» for a
+   * file that is sitting in the repository, and every card would silently fall
+   * back to its placeholder some minutes after each deploy.
+   *
+   * Tracing them in makes the two moments agree. The globs are relative to this
+   * directory; the listed routes are exactly the ones whose server code asks the
+   * question — the two public project routes, and the two admin routes that
+   * resolve a project in order to show the owner what is already uploaded.
+   *
+   * `lib/server/storeImages.ts` has the same shape and will need the same entry
+   * for `./public/assets/store/**` the day a shop route renders an uploaded
+   * photograph. It is left out until then rather than listed against routes
+   * that do not read it, so this map keeps saying something true.
+   */
+  outputFileTracingIncludes: {
+    '/projects': ['./public/assets/projects/**'],
+    '/projects/[projectId]': ['./public/assets/projects/**'],
+    '/admin/projects': ['./public/assets/projects/**'],
+    '/admin/projects/[projectId]': ['./public/assets/projects/**'],
+  },
+
   // The core is plain TypeScript compiled from source, not a published
   // package, so it must go through the same transpile pipeline as the app's
   // own files.

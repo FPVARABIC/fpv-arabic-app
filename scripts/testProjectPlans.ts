@@ -432,6 +432,56 @@ console.log('\n[4] The image system is ready, and empty is not an error');
     manifest.projects.every(m => ALL_PROJECTS.some(p => p.id === m.projectId)));
 }
 
+/*
+ * THE HALF THAT MAKES THE FOLDER MEAN SOMETHING.
+ *
+ * Everything above checks that a file may be dropped in and is named correctly.
+ * For a long time that was ALL there was: the folders existed, the manifest
+ * promised «ادفع — لا يوجد ملف بيانات تعدّله», and no page ever read the folder,
+ * so an uploaded photograph was reachable at its URL and invisible everywhere on
+ * the site. Nothing failed — which is precisely why it went unnoticed. These
+ * assertions are the ones that would have caught it.
+ */
+console.log('\n[5] An uploaded photograph actually reaches the page');
+{
+  /** Comments stripped, so a file that EXPLAINS a rule does not fail it. */
+  const code = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+  const resolver = readFileSync(path.join(ROOT, 'web/lib/server/projectImages.ts'), 'utf8');
+  ok('the web has a resolver for uploaded project images', resolver.length > 0);
+  ok('it asks the filesystem rather than a list somebody has to maintain',
+    /existsSync\(/.test(resolver));
+  ok('it derives the paths from the shared slots, inventing none of its own',
+    /slotsForProject/.test(resolver) && !/01-cover\.webp/.test(code(resolver)));
+
+  const merge = readFileSync(path.join(ROOT, 'web/lib/server/projects.ts'), 'utf8');
+  ok('the merge fills a missing cover from what was uploaded',
+    /uploadedProjectCover\(/.test(merge));
+  // `setProjectImage(id, null)` writes an explicit null. Falling back on any
+  // falsy value would revive the repository file over a deliberate removal and
+  // make the panel's delete button look broken.
+  ok('…only when the database has no answer, not when it answered «cleared»',
+    /imageUrl !== undefined/.test(merge));
+
+  // A card that renders `imageUrl` is the whole point; a placeholder must remain
+  // the answer when there is none, rather than a borrowed or stock picture.
+  const card = readFileSync(path.join(ROOT, 'web/components/projects/ProjectCard.tsx'), 'utf8');
+  ok('the card renders the resolved image', /src=\{p\.imageUrl\}/.test(card));
+  ok('and still falls back to the typed placeholder, not to another project\'s photograph',
+    /project-card-placeholder/.test(card));
+
+  // Prerendered pages check the filesystem at build time; regeneration happens
+  // later, in a bundle that does not carry `public/` unless it is traced in.
+  const nextConfig = readFileSync(path.join(ROOT, 'web/next.config.ts'), 'utf8');
+  const traced = /outputFileTracingIncludes/.test(nextConfig)
+    && /public\/assets\/projects/.test(nextConfig);
+  ok('the photographs are traced into the routes that look for them at runtime', traced);
+  for (const route of ['/projects', '/projects/[projectId]']) {
+    ok(`  …including ${route}`, nextConfig.includes(`'${route}'`));
+  }
+}
+
 console.log(`\n${'─'.repeat(66)}`);
 console.log(`project plans: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exitCode = 1;
