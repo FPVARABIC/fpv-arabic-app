@@ -3,7 +3,6 @@ import { Search } from 'lucide-react';
 import type { Metadata } from 'next';
 import { retrieve, INTENT_LABEL_AR, type RetrievalResult } from '@core/platform/retrieval';
 import type { SearchDocType } from '@core/data/kb/search/buildIndex';
-import { searchCommunity } from '@/lib/server/communitySearch';
 import {
   RESULT_TYPE_LABEL_AR, topReasons, resultHref,
   RESULT_GROUPS, GROUP_OF_TYPE, groupOf, type ResultGroupId,
@@ -16,7 +15,7 @@ export const metadata: Metadata = {
   title: 'البحث',
   description:
     'ابحث في الموسوعة والمصطلحات والتشخيص وصفحات Betaflight وExpressLRS وEdgeTX '
-    + 'والفيديو ومشروعك والمجتمع — بمحرّك واحد يشرح لماذا ظهرت كل نتيجة.',
+    + 'والفيديو ومشروعك — بمحرّك واحد يشرح لماذا ظهرت كل نتيجة.',
   alternates: { canonical: '/search' },
   // A results page has no stable content of its own, and indexing every query
   // string produces thousands of near-duplicate pages. The sections it searches
@@ -27,9 +26,8 @@ export const metadata: Metadata = {
 /**
  * Rendered on demand rather than prerendered.
  *
- * The community half needs Firestore and the query lives in the URL, so there
- * is nothing to build ahead of time. The page is `noindex` anyway — see the
- * metadata above — so nothing is lost.
+ * The query lives in the URL, so there is nothing to build ahead of time. The
+ * page is `noindex` anyway — see the metadata above — so nothing is lost.
  */
 export const dynamic = 'force-dynamic';
 
@@ -38,18 +36,17 @@ const PAGE_SIZE = 20;
 /**
  * Search — the main way into everything.
  *
- * ONE ENGINE, ONE INDEX, THREE GROUPS
- * -----------------------------------
+ * ONE ENGINE, ONE INDEX, TWO GROUPS
+ * ---------------------------------
  * `retrieve()` from the shared core does the finding; this page only renders.
  * The ranking, the Arabic normalisation, the synonym expansion, the symptom
  * matching and the intent recognition are identical to what any other surface
  * gets, which is the whole point of the layer existing.
  *
- * The three groups are three fields on the response, not three filters over one
- * list. Reviewed knowledge, the reader's own build, and member posts are
- * different KINDS of thing, and the separation has to survive somebody
- * refactoring this component — so it lives in the contract rather than in the
- * markup.
+ * Reviewed knowledge and the reader's own build are different KINDS of thing,
+ * and the separation has to survive somebody refactoring this component — so
+ * it lives in the contract rather than in the markup. (Member posts were the
+ * third group until the community section was retired from the web.)
  *
  * WHY IT RUNS ON THE SERVER
  * -------------------------
@@ -125,10 +122,6 @@ export default async function SearchPage({
         .reduce((n, [, c]) => n + c, 0),
     }))
     .filter(g => g.results.length > 0);
-
-  // Community runs in parallel with nothing else blocking on it, and returns []
-  // rather than throwing if Firestore is unreachable.
-  const community = active ? await searchCommunity(query, { limit: 6 }) : [];
 
   const totalPages = result ? Math.max(1, Math.ceil(result.totalOfficial / PAGE_SIZE)) : 1;
 
@@ -214,7 +207,6 @@ export default async function SearchPage({
             {result.totalOfficial === 0
               ? 'لا نتائج في المحتوى الموثّق.'
               : `${result.totalOfficial} نتيجة في المحتوى الموثّق`}
-            {community.length > 0 && ` · ${community.length} من المجتمع`}
           </p>
 
           {result.didYouMean && (
@@ -337,22 +329,6 @@ export default async function SearchPage({
             </nav>
           )}
 
-          {/* ── Community, apart and marked ───────────────────────────────── */}
-          {community.length > 0 && (
-            <section aria-labelledby="community-h" data-testid="search-community"
-              style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-              <h2 id="community-h" style={{ fontSize: 15, fontWeight: 900, margin: '0 0 4px' }}>
-                من المجتمع
-              </h2>
-              <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
-                كتبها أعضاء، ولم تُراجَع. تجارب وآراء — لا تُعامَل كإجابة هندسية،
-                ولا تُغني عن دليل جهازك.
-              </p>
-              <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
-                {community.map(r => <ResultCard key={r.id} result={r} />)}
-              </ol>
-            </section>
-          )}
         </>
       )}
 
@@ -366,7 +342,6 @@ export default async function SearchPage({
 const ResultCard: React.FC<{ result: RetrievalResult & { route?: string; postId?: string } }> = ({ result }) => {
   const { href, unavailableReasonAr } = resultHref(result);
   const reasons = topReasons(result.reasons);
-  const isCommunity = result.provenance === 'community';
 
   const body = (
     <>
@@ -375,7 +350,7 @@ const ResultCard: React.FC<{ result: RetrievalResult & { route?: string; postId?
           data-testid={`result-badge-${result.type}`}
           style={{
             fontSize: 10.5, fontWeight: 800,
-            color: isCommunity ? 'var(--text-dimmer)' : 'var(--accent-ink)',
+            color: 'var(--accent-ink)',
             border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px',
           }}
         >
@@ -478,8 +453,8 @@ const SearchIntro: React.FC = () => (
         'صفحات Betaflight وحقولها، وخطوات ExpressLRS ومشكلاته، وEdgeTX، وأدوات الفيديو',
         'المشاريع وأقسامها — القطع والمتطلّبات والمصطلحات والمراحل والتحدّيات',
         'منتجات المتجر المنشورة وخياراتها وخدماتها',
+        'قسم البناء: مسار بناء الدرون وقطعه الموثقة',
         'قطعك وأحكام مشروعك — تظهر لك وحدك',
-        'منشورات المجتمع، في مجموعة منفصلة وموسومة',
       ].map(t => (
         <li key={t} style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>— {t}</li>
       ))}

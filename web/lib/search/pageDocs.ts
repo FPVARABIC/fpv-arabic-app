@@ -113,11 +113,14 @@ const PAGES: StandingPage[] = [
     ],
   },
   {
-    id: 'community-front',
-    titleAr: 'المجتمع',
-    route: SECTION_ROUTES.community,
-    summaryAr: 'أسئلة وتجارب يكتبها الأعضاء — غير مراجَعة، ومنفصلة عن المحتوى الموثّق.',
-    findByAr: ['المجتمع', 'منتدى', 'نقاش', 'سؤال', 'تجربة'],
+    id: 'build-front',
+    titleAr: 'البناء — ابنِ درونك',
+    route: SECTION_ROUTES.build,
+    summaryAr: 'مسار تفاعلي من اختيار القطع وفحص التوافق إلى بوابات السلامة وأول طيران.',
+    findByAr: [
+      'البناء', 'بناء درون', 'ابني درون', 'تجميع', 'تجميع درون', 'اختيار القطع',
+      'توافق القطع', 'قائمة القطع', 'BOM', 'أول طيران',
+    ],
   },
   {
     id: 'programming-front',

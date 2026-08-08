@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  Shield, AlertCircle, Library, Wrench, Store, Users, Search, CircuitBoard,
+  Shield, AlertCircle, Library, Wrench, Store, Search, CircuitBoard,
 } from 'lucide-react';
 import { getSession } from '@/lib/server/session';
 import { AccountRail } from '@/components/AccountRail';
@@ -72,11 +72,11 @@ const PILLARS = [
     href: '/store',
   },
   {
-    Icon: Users,
-    title: 'المجتمع',
-    body: 'أسئلة الطيارين ومشاريعهم. محتوى يكتبه المستخدمون، منفصل عن الموسوعة '
-      + 'المراجَعة — والفرق بينهما مكتوب في كل صفحة.',
-    href: '/community',
+    Icon: Wrench,
+    title: 'البناء',
+    body: 'مسار تفاعلي يبني درونك معك: يقترح القطعة ويشرح لماذا، ويفحص التوافق '
+      + 'بمحرك أحكام، ويقف عند بوابات السلامة قبل أول طيران.',
+    href: '/build',
   },
 ];
 

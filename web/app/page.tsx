@@ -6,6 +6,7 @@ import { kbTerms } from '@core/data/kb/glossary/terms';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
+import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
 import { navItem } from '@/lib/siteNav';
@@ -94,6 +95,8 @@ export default function HomePage() {
   const modules = allKbModules;
   const articleCount = modules.reduce((n, m) => n + m.articles.length, 0);
   const publishedProjectCount = ALL_PROJECTS.filter(p => p.published).length;
+  const buildPartCount = Object.values(PART_CATEGORY_MAP).reduce((n, l) => n + l.length, 0);
+  const buildCategoryCount = Object.keys(PART_CATEGORY_MAP).length;
 
   const softwarePages =
     HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
@@ -102,28 +105,16 @@ export default function HomePage() {
      renderer — see the note above on why that matters more than it looks. */
   const pillars: Pillar[] = [
     {
-      id: 'community',
-      labelAr: 'المجتمع',
-      href: sectionHref('community'),
+      id: 'build',
+      labelAr: 'البناء',
+      href: sectionHref('build'),
       Icon: Wrench,
       blurbAr:
-        'اسأل طيّارين آخرين عن قطعة أو عطل، واعرض بناءك، واقرأ تجارب حقيقية. '
-        + 'نفس المجتمع الموجود في التطبيق — نفس الحسابات ونفس المنشورات.',
-      count: null,
-      countLabelAr: 'أسئلة · مشاريع · تجارب',
-      ctaAr: 'ادخل المجتمع',
-    },
-    {
-      id: 'store',
-      labelAr: 'المتجر',
-      href: sectionHref('store'),
-      Icon: Store,
-      blurbAr:
-        'عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها ومواصفات '
-        + 'موثّقة من الشركة الصانعة. ومع كل طلب خدمة الإعداد التي نشرحها هنا.',
-      count: STORE_PRODUCTS.length,
-      countLabelAr: `منتجاً في ${STORE_CATEGORIES.length} قسماً`,
-      ctaAr: 'تصفّح المتجر',
+        'ابنِ درونك خطوة بخطوة: مسار تفاعلي يقترح القطعة ويقول لماذا، ويفحص '
+        + 'التوافق بمحرك أحكام يشرح كل حكم، ويقف عند بوابات السلامة قبل البطارية.',
+      count: buildPartCount,
+      countLabelAr: `قطعة موثّقة في ${buildCategoryCount} فئة`,
+      ctaAr: 'ابنِ درونك',
     },
     {
       id: 'programming',
@@ -168,6 +159,19 @@ export default function HomePage() {
       count: publishedProjectCount,
       countLabelAr: 'مشروعاً مراجَعاً',
       ctaAr: 'تصفّح المشاريع',
+    },
+    /* The store closes the list, mirroring the bar — last by instruction. */
+    {
+      id: 'store',
+      labelAr: 'المتجر',
+      href: sectionHref('store'),
+      Icon: Store,
+      blurbAr:
+        'عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها ومواصفات '
+        + 'موثّقة من الشركة الصانعة. ومع كل طلب خدمة الإعداد التي نشرحها هنا.',
+      count: STORE_PRODUCTS.length,
+      countLabelAr: `منتجاً في ${STORE_CATEGORIES.length} قسماً`,
+      ctaAr: 'تصفّح المتجر',
     },
   ];
 
@@ -221,9 +225,9 @@ export default function HomePage() {
           <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.95 }}>
-          منصّة واحدة على الهاتف والويب: مجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات
-          موثّقة، ومركز برامج يشرح كل إعداد، وموسوعة تشرح المبدأ قبل الخطوة. الحساب
-          نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
+          منصّة واحدة على الهاتف والويب: مسار بناء يمشي معك من اختيار القطع إلى أول
+          طيران، ومتجر بمواصفات موثّقة، ومركز برامج يشرح كل إعداد، وموسوعة تشرح
+          المبدأ قبل الخطوة. الحساب نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
         </p>
 
         {/* The site's search, repeated here at full size. The header field is
@@ -336,15 +340,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── The personal workspace ───────────────────────────────────────── */}
-      <section aria-labelledby="project-h" style={{ marginTop: 52 }}>
+      {/* ── The build call — the strong card the brief asked for ─────────── */}
+      <section aria-labelledby="build-h" style={{ marginTop: 52 }}>
         <div className="card project-band">
           <div style={{ minWidth: 0 }}>
             <span aria-hidden className="pillar-icon">
-              <Hammer size={20} strokeWidth={2} />
+              <Wrench size={20} strokeWidth={2} />
             </span>
-            <h2 id="project-h" style={{ fontSize: 19, fontWeight: 900, margin: '12px 0 0' }}>
-              مشروعي
+            <h2 id="build-h" style={{ fontSize: 19, fontWeight: 900, margin: '12px 0 0' }}>
+              ابنِ درونك
             </h2>
             <p
               style={{
@@ -352,13 +356,17 @@ export default function HomePage() {
                 margin: '9px 0 0', maxWidth: 620,
               }}
             >
-              سجّل قطعك مرّة واحدة، فتقرأ المنصّة منها أحكام التوافق نفسها التي يحسبها
-              التطبيق — بالسبب، والدليل، ودرجة الثقة، وما ينقص للحكم. وتصبح صفحات
-              الإعداد والتشخيص مربوطة بقطعك أنت لا بقطع عامة.
+              من اختيار القطع إلى أول طيران — خطوة بخطوة. المسار يقترح ويشرح لماذا،
+              ومحرك التوافق يحكم بالسبب والدليل ودرجة الثقة، وبوابات السلامة تقف
+              قبل البطارية. وما تختاره يصبح «مشروعي»: مساحة عملك الدائمة التي تربط
+              الإعداد والتشخيص بقطعك أنت.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Link href={sectionHref('project')} className="btn-primary" data-testid="home-project">
+            <Link href={sectionHref('build')} className="btn-primary" data-testid="home-build">
+              ابنِ درونك
+            </Link>
+            <Link href={sectionHref('project')} className="btn-ghost" data-testid="home-project">
               افتح مشروعي
             </Link>
           </div>
@@ -431,7 +439,7 @@ export default function HomePage() {
               'كل مقال يذكر مصادره وإصداراتها وتاريخ مراجعتها — لا معلومة بلا أصل.',
               'ما لا نعرفه يُقال صراحةً: لا نخترع Pinout ولا جدول قنوات ولا توافق أجيال.',
               'إجراءات التشخيص تبدأ دائماً بالفحص الأقل خطراً، والمراوح منزوعة.',
-              'منشورات المجتمع تجارب شخصية، لا مرجع — وعند التعارض تُقدَّم الموسوعة ودليل الشركة.',
+              'مسار البناء لا يخمّن مواصفة: ما ليس موثّقاً يقول «تحتاج تحققاً من الشركة المصنّعة».',
             ].map(t => (
               <li key={t} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
                 <span

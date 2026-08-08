@@ -22,14 +22,14 @@
  *
  * THE ORDER, AND WHY IT IS NOT THE PHONE'S
  * ----------------------------------------
- * «المجتمع» is second, by instruction: it is one of the platform's load-bearing
- * pillars and was buried at position six. After it the order follows what a
- * person is actually doing — talking to other pilots, buying the part, setting
- * it up in software, reading why, and only then opening their own build:
+ * «البناء» is second, by instruction: the community section was retired from
+ * the web experience and its slot — the platform's second position — now
+ * belongs to the thing this platform actually walks a person through,
+ * building a drone. The store closes the bar, also by instruction:
  *
- *   الرئيسية · المجتمع · المتجر · البرامج · الموسوعة · مشروعي
+ *   الرئيسية · البناء · البرامج · الموسوعة · المشاريع · المتجر
  *
- * The encyclopedia moves down deliberately. It is the largest section, and
+ * The encyclopedia stays mid-bar deliberately. It is the largest section, and
  * being largest is exactly why it kept reading as the whole product — the brief
  * was «لا تجعل الموسوعة تهيمن بصرياً على بقية المنصة». Nothing was removed from
  * it; it simply stops being the first thing every surface points at.
@@ -70,19 +70,19 @@ export interface NavTab {
 
 export const NAV_TABS: NavTab[] = [
   { id: 'home', labelAr: 'الرئيسية', href: '/', Icon: House },
-  { id: 'community', labelAr: 'المجتمع', href: '/community', Icon: Wrench },
-  { id: 'store', labelAr: 'المتجر', href: '/store', Icon: Store },
+  { id: 'build', labelAr: 'البناء', href: '/build', Icon: Wrench,
+    // «مشروعي» — the reader's OWN build — keeps its route and lights THIS tab:
+    // the wizard writes the same one project store the workspace reads, so as
+    // far as a reader is concerned /project IS the build section's workspace.
+    // It is not deleted and not merged — it simply belongs here now.
+    activeMatch: ['/build', '/project'] },
   { id: 'programming', labelAr: 'البرامج', href: '/programming', Icon: CircuitBoard,
     activeMatch: ['/programming', '/betaflight'] },
   { id: 'kb', labelAr: 'الموسوعة', href: '/kb', Icon: Library,
     activeMatch: ['/kb', '/glossary', '/diagnose'] },
-  { id: 'projects', labelAr: 'المشاريع', href: '/projects', Icon: Hammer,
-    // «مشروعي» — the reader's OWN build — keeps its route and is reachable from
-    // the home page and the account rail. It is not deleted and not merged: one
-    // is a private workspace holding their parts, the other is a public library
-    // of builds to learn from, and a tab bar with both is a tab bar that makes
-    // somebody read it.
-    activeMatch: ['/projects', '/project'] },
+  { id: 'projects', labelAr: 'المشاريع', href: '/projects', Icon: Hammer },
+  // Last by instruction: the shop closes the bar rather than leading it.
+  { id: 'store', labelAr: 'المتجر', href: '/store', Icon: Store },
 ];
 
 /**

@@ -107,6 +107,21 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  /**
+   * The community section was RETIRED from the web experience and replaced by
+   * «البناء». The route redirects rather than 404s because links to it exist
+   * in the wild — old shares, browser history, the phone app's own copy —
+   * and each should land somewhere alive. TEMPORARY (307) by instruction:
+   * the Supabase data underneath is intact, and a permanent redirect would
+   * teach caches and crawlers to never come back if the section returns.
+   */
+  async redirects() {
+    return [
+      { source: '/community', destination: '/build', permanent: false },
+      { source: '/community/:path*', destination: '/build', permanent: false },
+    ];
+  },
+
   async headers() {
     return [
       {

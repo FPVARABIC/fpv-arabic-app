@@ -169,10 +169,18 @@ export const SECTION_ROUTES = {
   /** The ExpressLRS front page, in front of the setup and troubleshooting flows. */
   expresslrs: '/programming/expresslrs',
   /**
-   * The community index. A post is a database row rather than content, so it
-   * has no `Destination` kind — the resolver models what the platform KNOWS,
-   * and a member's post is not that. Its path lives here for the same reason
-   * every other path does.
+   * The build section — the interactive path from part selection to first
+   * flight. A navigation door rather than a piece of content, like the
+   * software hub: nothing resolves TO it as an answer, so it has no
+   * `Destination` kind.
+   */
+  build: '/build',
+  /**
+   * The RETIRED community index. The section was removed from the web
+   * experience (the route now redirects to `/build` — see next.config.ts),
+   * but the dormant community module still references this constant, and a
+   * path constant that lies about where a module points would be worse than
+   * one that names a redirect.
    */
   community: '/community',
   /** The search page, so a "search for this" link is never hand-written. */

@@ -73,7 +73,7 @@ export default async function SettingsPage() {
                 <>
                   <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
                     أنت تتصفّح كزائر. تسجيل الدخول يربط ما تقرأه هنا بحسابك في التطبيق،
-                    ويتيح لك النشر في المجتمع.
+                    ويتيح لك الطلب من المتجر باسمك.
                   </p>
                   <p style={{ margin: '14px 0 0' }}>
                     <Link href="/signin?next=%2Fsettings" className="btn-primary">تسجيل الدخول</Link>
@@ -90,8 +90,7 @@ export default async function SettingsPage() {
             <div className="card" style={{ padding: '18px 20px' }}>
               <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
                 تقدّمك في الدروس ومراحل البناء وقوائم الفحص محفوظ في متصفّحك، لا على
-                خادم. ما يُحفظ على الخادم هو ما تنشره في المجتمع وما تطلبه من المتجر،
-                لا أكثر.
+                خادم. ما يُحفظ على الخادم هو ما تطلبه من المتجر باسمك، لا أكثر.
               </p>
             </div>
           </section>

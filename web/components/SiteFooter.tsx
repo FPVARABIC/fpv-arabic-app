@@ -13,7 +13,6 @@ export const SiteFooter: React.FC = () => {
     { id: 'learn', titleAr: 'التعلّم' },
     { id: 'software', titleAr: 'البرامج' },
     { id: 'build', titleAr: 'البناء' },
-    { id: 'community', titleAr: 'المجتمع' },
     { id: 'store', titleAr: 'المتجر' },
     // The app's own «about / contact / settings» rows, reachable from the
     // bottom of every page as well as from the account rail. Two routes to the

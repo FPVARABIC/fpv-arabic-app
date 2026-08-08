@@ -32,7 +32,7 @@ export interface NavItem {
   status?: 'live' | 'planned';
   /** One line explaining the section, used on the home page and in menus. */
   blurbAr: string;
-  group: 'learn' | 'build' | 'software' | 'store' | 'community' | 'account' | 'admin';
+  group: 'learn' | 'build' | 'software' | 'store' | 'account' | 'admin';
   /** Signed-out users do not see it, and the server refuses it. */
   requiresAuth?: boolean;
   /** Minimum role. Enforced server-side; listed here only for menu rendering. */
@@ -65,6 +65,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
   // ── Build ────────────────────────────────────────────────────────────────
+  // «البناء» replaced the retired community section as a primary pillar: the
+  // interactive build path from part selection to first flight. The community
+  // entry was REMOVED from this map deliberately — the sitemap, the footer and
+  // the header all render from here, so removing it here removes it there.
+  {
+    id: 'build', labelAr: 'البناء', href: '/build', group: 'build',
+    blurbAr: 'مسار تفاعلي يبني درونك معك: القطع، التوافق، السلامة، أول طيران.',
+  },
   {
     id: 'projects', labelAr: 'المشاريع', href: '/projects', group: 'build',
     blurbAr: 'مشاريع حقيقية تجمع الطيران بالذكاء الاصطناعي والرؤية الحاسوبية.',
@@ -78,12 +86,6 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: 'store', labelAr: 'المتجر', href: '/store', group: 'store',
     blurbAr: 'منتجات مختارة في كل قسم، بفارق واضح بينها، ومع كل طلب خدمة إعداد.',
-  },
-
-  // ── Community ────────────────────────────────────────────────────────────
-  {
-    id: 'community', labelAr: 'المجتمع', href: '/community', group: 'community',
-    blurbAr: 'أسئلة الطيارين ومشاريعهم — نفس المجتمع الموجود في التطبيق.',
   },
 
   // ── Account ──────────────────────────────────────────────────────────────

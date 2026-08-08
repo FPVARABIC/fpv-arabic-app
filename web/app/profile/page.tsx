@@ -113,7 +113,7 @@ export default async function ProfilePage() {
         <div style={{ display: 'grid', gap: 11, gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
           {[
             { href: '/project', titleAr: 'مشروعي', blurbAr: 'قطعك وإعداداتك وأحكام التوافق.' },
-            { href: '/community', titleAr: 'المجتمع', blurbAr: 'منشوراتك وتعليقاتك.' },
+            { href: '/build', titleAr: 'البناء', blurbAr: 'تابع مسار بناء درونك من حيث توقفت.' },
           ].map(c => (
             <Link key={c.href} href={c.href} className="card-sm" style={{ display: 'block', padding: '14px 16px' }}>
               <h3 style={{ fontSize: 14.5, fontWeight: 800, margin: 0 }}>{c.titleAr}</h3>

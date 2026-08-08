@@ -54,7 +54,7 @@ export const AccountRail: React.FC<{
   stats?: RailStats;
   /** Where to return after signing in, when signed out. */
   signInNext?: string;
-}> = ({ signedIn, displayName, photoURL, email, role, stats, signInNext = '/community' }) => {
+}> = ({ signedIn, displayName, photoURL, email, role, stats, signInNext = '/build' }) => {
   const name = displayName?.trim() || 'حسابي';
 
   return (
@@ -93,7 +93,7 @@ export const AccountRail: React.FC<{
               {role !== 'user' ? (
                 <p className="rail-sub">{ROLE_LABEL_AR[role]}</p>
               ) : (
-                <p className="rail-sub">عضو في المجتمع</p>
+                <p className="rail-sub">حساب على المنصّة</p>
               )}
               {email && (
                 <p
