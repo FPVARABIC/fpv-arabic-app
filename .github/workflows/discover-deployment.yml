@@ -1,0 +1,72 @@
+# Find where Cloudflare actually deployed us.
+#
+# The development container's egress policy refuses *.workers.dev and the
+# repository carries no wrangler config — the Cloudflare project lives
+# entirely in its dashboard. But Cloudflare's Git integration reports every
+# build back to GitHub, on the commit it built, and THOSE records a GitHub
+# runner can read with its own token. This workflow deploys nothing and
+# changes nothing: it walks the branch's recent commits and prints, for each,
+# the check runs, commit statuses and deployment statuses — then extracts
+# every *.workers.dev / *.pages.dev URL it finds, so the deployment's real
+# address comes out of the platform's own records rather than a guess.
+
+name: Discover deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: read
+  statuses: read
+  deployments: read
+
+jobs:
+  discover:
+    name: Read the platform's own build records
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect recent commits' checks, statuses and deployments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          auth="Authorization: Bearer $GH_TOKEN"
+          api="https://api.github.com/repos/$REPO"
+          found=/tmp/found-urls.txt
+          : > "$found"
+
+          shas=$(curl -sf -H "$auth" "$api/commits?sha=${{ github.ref_name }}&per_page=5" \
+                  | jq -r '.[].sha')
+          for sha in $shas; do
+            echo "=== commit ${sha:0:7} ==="
+
+            curl -sf -H "$auth" "$api/commits/$sha/check-runs?per_page=50" \
+              | jq -r '.check_runs[] | "CHECK  \(.name) | \(.status)/\(.conclusion) | \(.details_url // "-") | \((.output.summary // "-") | gsub("[\\r\\n]+"; " ") | .[0:400])"' \
+              | tee -a /tmp/all.txt || echo "  (check-runs unreadable)"
+
+            curl -sf -H "$auth" "$api/commits/$sha/status" \
+              | jq -r '.statuses[]? | "STATUS \(.context) | \(.state) | \(.target_url // "-") | \(.description // "-")"' \
+              | tee -a /tmp/all.txt || echo "  (statuses unreadable)"
+
+            deps=$(curl -sf -H "$auth" "$api/deployments?sha=$sha&per_page=10" | jq -r '.[].id') || deps=""
+            for d in $deps; do
+              curl -sf -H "$auth" "$api/deployments/$d/statuses?per_page=5" \
+                | jq -r '.[] | "DEPLOY \(.state) | \(.environment_url // "-") | \(.target_url // "-")"' \
+                | tee -a /tmp/all.txt || true
+            done
+            echo
+          done
+
+          grep -oE 'https://[A-Za-z0-9.-]+\.(workers|pages)\.dev[^" |]*' /tmp/all.txt \
+            | sort -u | tee "$found" || true
+
+          echo
+          if [ -s "$found" ]; then
+            echo "== deployment URLs found =="
+            cat "$found"
+          else
+            echo "== no *.workers.dev / *.pages.dev URL in any record of the last 5 commits =="
+            echo "   (either Cloudflare is building a different branch, or it posts no URL back)"
+          fi
