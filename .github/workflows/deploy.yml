@@ -122,33 +122,51 @@ jobs:
             --environment=${{ inputs.production && 'production' || 'preview' }} \
             --token="${{ secrets.VERCEL_TOKEN }}"
 
-      # WHY THIS ONE STEP GETS A HEAP CEILING
+      # WHY BOTH CLI STEPS GET A HEAP CEILING — AND PRINT IT
       #
-      # `vercel build` runs the project's own build command — `cd web && npm
-      # install && npm run build`, i.e. `next build` — as a CHILD of the CLI,
-      # then traces the output. So one runner holds the CLI, npm, and a Next
-      # build that prerenders 272 pages of encyclopedia, and Node picked a
-      # default heap sized for the machine, not for that:
+      # Two Vercel CLI invocations run Node with real memory appetites, and
+      # each has now demonstrated it, separately:
       #
-      #     FATAL ERROR: Reached heap limit Allocation failed —
-      #     JavaScript heap out of memory                     (exit 134)
+      #   · Build — `vercel build` runs `cd web && npm install && npm run
+      #     build` (i.e. `next build`, 272 prerendered pages) as its child.
+      #     Run #40 died there at Node's default heap. With 4096 it passes.
+      #   · Deploy — `vercel deploy --prebuilt` UPLOADS the built output, and
+      #     run #42 proved the ceiling must be here too: Build succeeded, then
+      #     the upload retried (`Error: Upload aborted` × many) and the CLI
+      #     died at `Mark-Compact … 2045.3 MB` — the ~2 GB DEFAULT, because
+      #     the env was scoped to the Build step only. The same OOM signature,
+      #     one step later, at the default limit: the value never reached the
+      #     process that died.
       #
-      # `NODE_OPTIONS` is inherited by every child, so setting it here reaches
-      # the `next build` that actually needs it. 4096 MiB on a 7 GB runner
-      # leaves room for the CLI beside it. It is not on the CI job: there
-      # `next build` runs on its own and has never come near the limit — and a
-      # ceiling raised everywhere would hide the day one of them genuinely
-      # starts leaking.
+      # `NODE_OPTIONS` is inherited by child processes, so on Build it reaches
+      # `next build`, and on Deploy it governs the uploading CLI itself.
+      # 4096 MiB each on a 7 GB runner leaves headroom (the steps run in
+      # sequence, never together). Still deliberately NOT on the CI job: there
+      # `next build` runs alone and has never come near the limit, and a
+      # ceiling raised everywhere would hide the day something genuinely leaks.
+      #
+      # Each step first prints the NODE_OPTIONS it sees and the heap limit V8
+      # actually derived from it — no secret is echoed. If one of these steps
+      # ever OOMs again, the log now says at a glance whether the ceiling was
+      # in force (≈4.3e9) or lost (≈2.2e9), instead of leaving it to be
+      # reverse-engineered from a GC trace.
       - name: Build
         if: steps.guard.outputs.configured == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
-        run: vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
+        run: |
+          echo "NODE_OPTIONS=$(node -p 'process.env.NODE_OPTIONS')"
+          echo "heap_size_limit=$(node -e 'console.log(require("v8").getHeapStatistics().heap_size_limit)')"
+          vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy
         if: steps.guard.outputs.configured == 'true'
         id: deploy
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: |
+          echo "NODE_OPTIONS=$(node -p 'process.env.NODE_OPTIONS')"
+          echo "heap_size_limit=$(node -e 'console.log(require("v8").getHeapStatistics().heap_size_limit)')"
           URL=$(vercel deploy --prebuilt ${{ inputs.production && '--prod' || '' }} \
                   --token="${{ secrets.VERCEL_TOKEN }}")
           echo "url=$URL" >> "$GITHUB_OUTPUT"
