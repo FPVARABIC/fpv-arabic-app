@@ -471,6 +471,25 @@ console.log('\n[5] An uploaded photograph actually reaches the page');
   ok('and still falls back to the typed placeholder, not to another project\'s photograph',
     /project-card-placeholder/.test(card));
 
+  /*
+   * The 16:9 box crops 15.6% off a 3:2 cover. Centring is right for a scene and
+   * wrong for the one cover whose title lives in the top band, so the framing is
+   * a per-project answer — and it must stay a MEASURED one. The default has to
+   * remain centre, or a future cover silently inherits somebody else's anchor.
+   */
+  const focus = readFileSync(path.join(ROOT, 'web/lib/projectCoverFocus.ts'), 'utf8');
+  ok('the card sets the crop anchor rather than trusting the default everywhere',
+    /objectPosition:\s*coverFocus\(p\.id\)/.test(card));
+  ok('the anchor defaults to centre, so an unlisted cover is framed like a scene',
+    /DEFAULT_COVER_FOCUS\s*=\s*'50% 50%'/.test(focus));
+  ok('the infographic cover is anchored to its title band',
+    /'autonomous-drone-racing':\s*'50% 0%'/.test(focus));
+  // Every id in the map must be a real project — a typo would silently do
+  // nothing, which is the failure mode a map of strings always has.
+  const focused = [...focus.matchAll(/^\s*'([a-z0-9-]+)':\s*'[^']+',$/gm)].map(m => m[1]);
+  ok(`every anchored id is a real project (${focused.length})`,
+    focused.every(id => ALL_PROJECTS.some(p => p.id === id)));
+
   // Prerendered pages check the filesystem at build time; regeneration happens
   // later, in a bundle that does not carry `public/` unless it is traced in.
   const nextConfig = readFileSync(path.join(ROOT, 'web/next.config.ts'), 'utf8');
