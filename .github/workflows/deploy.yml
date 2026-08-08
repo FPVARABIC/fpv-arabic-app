@@ -78,16 +78,6 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         run: npm install --global vercel@latest
 
-      # `--yes` accepts the project-creation prompts, so the very first run
-      # needs no interaction. The project name fixes the default URL to
-      # fpvarabic-*.vercel.app rather than a name derived from the directory.
-      # Installs the workspace root's dependencies, which `web/` resolves
-      # `@core/*` against. Vercel's own install runs inside `web/` and would
-      # otherwise never see the shared core.
-      - name: Install workspace dependencies
-        if: steps.guard.outputs.configured == 'true'
-        run: npm install
-
       # RUN FROM THE REPOSITORY ROOT — «web» IS NAMED EXACTLY ONCE.
       #
       # These three steps used to run with `working-directory: web`, and the
@@ -122,53 +112,46 @@ jobs:
             --environment=${{ inputs.production && 'production' || 'preview' }} \
             --token="${{ secrets.VERCEL_TOKEN }}"
 
-      # WHY BOTH CLI STEPS GET A HEAP CEILING — AND PRINT IT
+      # THE BUILD HAPPENS ON VERCEL'S MACHINES, NOT ON THIS RUNNER.
       #
-      # Two Vercel CLI invocations run Node with real memory appetites, and
-      # each has now demonstrated it, separately:
+      # This workflow used to `vercel build` here and upload the result with
+      # `--prebuilt`. Both halves of that failed, each with receipts:
       #
-      #   · Build — `vercel build` runs `cd web && npm install && npm run
-      #     build` (i.e. `next build`, 272 prerendered pages) as its child.
-      #     Run #40 died there at Node's default heap. With 4096 it passes.
-      #   · Deploy — `vercel deploy --prebuilt` UPLOADS the built output, and
-      #     run #42 proved the ceiling must be here too: Build succeeded, then
-      #     the upload retried (`Error: Upload aborted` × many) and the CLI
-      #     died at `Mark-Compact … 2045.3 MB` — the ~2 GB DEFAULT, because
-      #     the env was scoped to the Build step only. The same OOM signature,
-      #     one step later, at the default limit: the value never reached the
-      #     process that died.
+      #   · the local build OOM'd at Node's default heap (run #40) and needed
+      #     a 4096 MiB ceiling to pass at all;
+      #   · the prebuilt UPLOAD then failed deterministically — hundreds of
+      #     instant `Error: Upload aborted` retries, run after run, OOM at the
+      #     default heap in #42 and a clean exit 1 at 4096 in #44. Measured,
+      #     the payload was modest (~40 MB of traced function files, ~8 MB of
+      #     static, no file near Vercel's 100 MB per-file cap), so the size
+      #     was never the problem: the prebuilt-upload path itself was.
       #
-      # `NODE_OPTIONS` is inherited by child processes, so on Build it reaches
-      # `next build`, and on Deploy it governs the uploading CLI itself.
-      # 4096 MiB each on a 7 GB runner leaves headroom (the steps run in
-      # sequence, never together). Still deliberately NOT on the CI job: there
-      # `next build` runs alone and has never come near the limit, and a
-      # ceiling raised everywhere would hide the day something genuinely leaks.
+      # Meanwhile the SAME app at the SAME shape has already built and served
+      # green on Vercel's own infrastructure (deployment 9kwrSTVHw, Ready,
+      # from 58c3255). So this step now hands Vercel the source — a measured
+      # ~100 MB across ~1,100 tracked files, nothing over 4 MB — and lets it
+      # build where it demonstrably succeeds, with its own memory and its own
+      # build cache. The runner needs no npm install, no heap ceiling, and no
+      # 272-page prerender; the whole failure surface of the last four runs is
+      # simply no longer here.
       #
-      # Each step first prints the NODE_OPTIONS it sees and the heap limit V8
-      # actually derived from it — no secret is echoed. If one of these steps
-      # ever OOMs again, the log now says at a glance whether the ceiling was
-      # in force (≈4.3e9) or lost (≈2.2e9), instead of leaving it to be
-      # reverse-engineered from a GC trace.
-      - name: Build
-        if: steps.guard.outputs.configured == 'true'
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: |
-          echo "NODE_OPTIONS=$(node -p 'process.env.NODE_OPTIONS')"
-          echo "heap_size_limit=$(node -e 'console.log(require("v8").getHeapStatistics().heap_size_limit)')"
-          vercel build ${{ inputs.production && '--prod' || '' }} --token="${{ secrets.VERCEL_TOKEN }}"
-
+      # The CLI respects .gitignore when packaging source (there is no
+      # .vercelignore, deliberately — a second ignore file REPLACES gitignore
+      # semantics and would have to re-list node_modules, dist*, .next and
+      # every other exclusion, and the first omission re-bloats the upload).
+      # It waits until the deployment is READY and exits non-zero if the
+      # remote build fails, so this step's status IS the deployment's status.
       - name: Deploy
         if: steps.guard.outputs.configured == 'true'
         id: deploy
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          echo "NODE_OPTIONS=$(node -p 'process.env.NODE_OPTIONS')"
-          echo "heap_size_limit=$(node -e 'console.log(require("v8").getHeapStatistics().heap_size_limit)')"
-          URL=$(vercel deploy --prebuilt ${{ inputs.production && '--prod' || '' }} \
-                  --token="${{ secrets.VERCEL_TOKEN }}")
+          status=0
+          URL=$(vercel deploy ${{ inputs.production && '--prod' || '' }} \
+                  --token="${{ secrets.VERCEL_TOKEN }}" 2>vercel-progress.log) || status=$?
+          # The progress log carries the Inspect link and the remote build's
+          # phases; surface its tail whether the deploy worked or not.
+          grep -Ei 'inspect|queued|building|completing|error' vercel-progress.log | tail -30 || true
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           {
             echo "### FPVARABIC deployed"
@@ -179,3 +162,57 @@ jobs:
             echo "**Branch:** \`${{ github.ref_name }}\`"
             echo "**Kind:** ${{ inputs.production && 'production' || 'preview' }}"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # THE DEPLOYMENT IS NOT DONE UNTIL THE PAGES ANSWER.
+      #
+      # A READY deployment that serves the wrong build is exactly the failure
+      # this project has already lived through once, so the workflow checks
+      # what a visitor would actually get: the four public sections must
+      # answer 200, the projects page must reference all ten covers, and each
+      # cover file must itself be served. Production runs are checked on the
+      # production domain — the URL people actually open — and preview runs on
+      # the deployment's own URL.
+      - name: Verify what is actually being served
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          BASE='${{ inputs.production && 'https://fpv-arabic-app.vercel.app' || '' }}'
+          [ -z "$BASE" ] && BASE="${{ steps.deploy.outputs.url }}"
+          echo "verifying against: $BASE"
+
+          # The alias flips atomically on completion; give the edge a moment.
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/projects" || echo 000)
+            if [ "$code" = "200" ]; then break; fi
+            sleep 6
+          done
+
+          fail=0
+          for p in / /community /projects /search; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE$p" || echo 000)
+            echo "PATH $p -> $code"
+            if [ "$code" != "200" ]; then fail=1; fi
+          done
+
+          covers=$(curl -s "$BASE/projects" \
+            | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l || echo 0)
+          echo "covers referenced on /projects: $covers/10"
+          if [ "$covers" -lt 10 ]; then fail=1; fi
+
+          ok=0
+          for id in visual-target-tracking gps-denied-vio precision-landing-marker \
+                    depth-obstacle-avoidance lidar-slam-mapping multi-drone-swarm \
+                    autonomous-drone-racing crop-health-ndvi thermal-search-rescue \
+                    esp32-mini-drone; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/assets/projects/$id/01-cover.webp" || echo 000)
+            echo "IMAGE $id -> $code"
+            if [ "$code" = "200" ]; then ok=$((ok+1)); fi
+          done
+          echo "image URLs 200: $ok/10"
+          if [ "$ok" -ne 10 ]; then fail=1; fi
+
+          {
+            echo "### Verification"
+            echo ""
+            echo "Base: $BASE · paths 200: $([ $fail -eq 0 ] && echo yes || echo NO) · covers on /projects: $covers/10 · image URLs 200: $ok/10"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $fail
