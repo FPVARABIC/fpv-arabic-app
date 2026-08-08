@@ -62,6 +62,7 @@ jobs:
           npm run test:web-community
           npm run test:platform-core
           npm run test:project
+          npm run test:project-plans
           npm run test:navigation-regression
           npm run test:kb
 
