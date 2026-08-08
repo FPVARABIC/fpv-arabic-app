@@ -17,7 +17,7 @@ name: Discover deployment
 # which is a stale branch this file is not on, so the API answers 404. Bump
 # the run counter below and push to read the records again.
 #
-# discovery run: 2 — read the failed build of 3accfc7 in full
+# discovery run: 3 — probe the Vercel surfaces: production vs branch alias
 on:
   push:
     branches: [claude/web-platform-foundation]
@@ -91,3 +91,34 @@ jobs:
             echo "== no *.workers.dev / *.pages.dev URL in any record of the last 5 commits =="
             echo "   (either Cloudflare is building a different branch, or it posts no URL back)"
           fi
+
+      # WHICH APP EACH VERCEL SURFACE IS ACTUALLY SERVING.
+      #
+      # The question «why are the images missing on Vercel» cannot be answered
+      # from build records alone, because Vercel has TWO surfaces here: the
+      # production domain (whatever the project's Production Branch last
+      # built) and the branch alias (the newest preview of the web branch).
+      # This step fingerprints both: HTTP codes, which application answers
+      # (the Next platform renders project-card test ids; the old Vite shell
+      # renders an empty #root div), how many covers /projects references,
+      # and whether a cover file itself is served.
+      - name: Probe the Vercel surfaces
+        run: |
+          probe() {
+            BASE="$1"; LABEL="$2"
+            echo "──── $LABEL — $BASE"
+            for p in / /projects /community /search; do
+              code=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p" || echo 000)
+              echo "  PATH $p -> $code"
+            done
+            html=$(curl -sL --max-time 20 "$BASE/projects" || true)
+            covers=$(printf '%s' "$html" | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l)
+            cards=$(printf '%s' "$html" | grep -c 'data-testid="project-card-' || true)
+            vite=$(curl -sL --max-time 20 "$BASE/" | grep -c 'id="root"' || true)
+            echo "  identity: project cards=$cards · covers referenced=$covers/10 · vite-root-div=$vite"
+            img=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 20 \
+              "$BASE/assets/projects/visual-target-tracking/01-cover.webp" || echo 000)
+            echo "  sample cover URL -> $img"
+          }
+          probe "https://fpv-arabic-app.vercel.app" "PRODUCTION domain"
+          probe "https://fpv-arabic-app-git-claude-web-platform-foundation-fpv-arabic.vercel.app" "BRANCH alias (newest preview)"
