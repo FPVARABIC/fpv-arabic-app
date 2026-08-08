@@ -910,6 +910,21 @@ details.card-sm > summary:focus-visible {
   .with-index { grid-template-columns: 250px minmax(0, 1fr); gap: 40px; }
 }
 
+/* The build wizard: the step in front, «بناءي» beside it where a screen can
+ * hold both. Stacks on a phone with the panel BELOW the step — the choice the
+ * reader is making stays first, the summary follows it. Same one-column-first
+ * rule as every other shared layout. */
+.build-cols {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .build-cols { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; }
+  .build-cols > aside { position: sticky; top: 92px; }
+}
+
 /*
  * The reading measure.
  *
