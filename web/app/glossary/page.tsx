@@ -52,12 +52,7 @@ export default function GlossaryPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> القاموس
       </nav>
 
-      <h1 className="page-title" style={{ margin: '14px 0 10px' }}>القاموس</h1>
-      <p style={{ fontSize: 15, color: 'var(--text-dim)', maxWidth: 720, lineHeight: 1.95, margin: 0 }}>
-        <span dir="ltr">{kbTerms.length}</span> مصطلحاً. لكل واحد تعريف مبسّط وآخر تقني،
-        واسمه الإنجليزي كما يظهر داخل البرامج — لأن من يقرأ برنامج إعداد بالإنجليزية يحتاج
-        الكلمة التي على شاشته هو، لا ترجمتها.
-      </p>
+      <h1 className="page-title" style={{ margin: '14px 0 0' }}>القاموس</h1>
 
       <nav aria-label="المجالات" style={{ marginTop: 22 }}>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 7 }}>

@@ -61,14 +61,10 @@ export default async function ProjectsPage(
           opens «المشاريع» to read about the section before seeing one. */}
       <header style={{ maxWidth: 780 }}>
         <h1 className="page-title">المشاريع</h1>
-        <p className="page-lede">
-          مشاريع حقيقية تجمع الطيران بالذكاء الاصطناعي والرؤية الحاسوبية —
-          مشروحة بالكامل حتى مصادرها.
-        </p>
       </header>
 
       {/* ── Categories ──────────────────────────────────────────────────── */}
-      <nav aria-label="تصفية حسب التصنيف" style={{ marginTop: 18 }}>
+      <nav aria-label="تصفية حسب التصنيف" style={{ marginTop: 14 }}>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           <li>
             <Link
@@ -146,12 +142,6 @@ export default async function ProjectsPage(
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '14px 0 0', lineHeight: 1.9 }}>
-          <span dir="ltr">{all.length}</span> مشاريع منشورة. هذه المرحلة الأولى —
-          العدد صغير عن قصد، والمعيار أن يستحقّ كل مشروع صفحته. كل مشروع مشروح
-          بالكامل: الفكرة، والبنية، والقطع، والبرامج، ومراحل البناء، والتحدّيات
-          التي ستقابلك فعلاً، ومصادره الأصلية.
-        </p>
       </section>
     </div>
   );

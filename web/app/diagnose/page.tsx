@@ -43,11 +43,7 @@ export default function DiagnoseIndexPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> التشخيص
       </nav>
 
-      <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 10px' }}>التشخيص</h1>
-      <p style={{ fontSize: 15, color: 'var(--text-dim)', maxWidth: 760, lineHeight: 1.95, margin: 0 }}>
-        ابدأ من العرَض كما تراه أنت، لا من اسم القطعة. كل شجرة ترتّب فحوصها من الأقل خطراً
-        إلى الأكثر، وتقول لك في كل نتيجة ما الذي تعنيه، ومتى تتوقف بدل أن تكمل التخمين.
-      </p>
+      <h1 className="page-title" style={{ margin: '14px 0 0' }}>التشخيص</h1>
 
       <aside
         className="card"

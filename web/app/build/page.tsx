@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PART_CATEGORY_MAP } from '@core/data/project/store';
-import { droneTypes } from '@core/data/assembly/droneTypes';
-import { BUILD_PATH, TOTAL_BUILD_STEPS, GATE_STEP_IDS } from '@/lib/build/path';
-import { SAFETY_GATES } from '@/lib/build/gates';
+import { BUILD_PATH, TOTAL_BUILD_STEPS } from '@/lib/build/path';
 import { BuildResume } from '@/components/build/BuildResume';
 
 export const metadata: Metadata = {
@@ -31,10 +28,6 @@ export const metadata: Metadata = {
  * page follows, for the same reason: a written figure is a promise that rots.
  */
 export default function BuildPage() {
-  const categoryCount = Object.keys(PART_CATEGORY_MAP).length;
-  const partCount = Object.values(PART_CATEGORY_MAP).reduce((n, list) => n + list.length, 0);
-  const gateItemCount = SAFETY_GATES.reduce((n, g) => n + g.items.length, 0);
-
   const modes = [
     {
       id: 'guided',
@@ -81,10 +74,6 @@ export default function BuildPage() {
         <h1 style={{ fontSize: 'clamp(23px, 5.5vw, 32px)', fontWeight: 900, lineHeight: 1.45, margin: '12px 0 0' }}>
           ابنِ درونك — <span style={{ color: 'var(--accent-ink)' }}>من اختيار القطع إلى أول طيران</span>
         </h1>
-        <p className="page-lede" style={{ marginTop: 8 }}>
-          مسار تفاعلي من <span dir="ltr">{TOTAL_BUILD_STEPS}</span> خطوة يقترح ويفحص
-          التوافق ويقف عند بوابات السلامة — خطوة بخطوة.
-        </p>
         <BuildResume />
       </section>
 
@@ -163,22 +152,6 @@ export default function BuildPage() {
             والقطبية بالـMultimeter وSmoke Stopper قبل أي بطارية، والمراوح منزوعة
             في أي اختبار محركات، وFailsafe يُضبط ويُختبر قبل أن يُحتاج — كل بوابة
             قائمة تُؤكَّد بنداً بنداً، ولا يفتح «التالي» قبل اكتمالها.
-          </p>
-        </div>
-        <div className="card-sm" style={{ padding: '16px 18px', marginTop: 12 }}>
-          <h2 style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>عن هذا القسم</h2>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 2, margin: '9px 0 0' }}>
-            ليست صفحة مقال: المسار يقترح القطعة ويقول لماذا، ويفحص التوافق
-            الكهربائي والميكانيكي بمحرك أحكام يشرح كل حكم بسببه ودليله. وما لا
-            نملك مواصفته الموثقة نقوله صراحةً: «تحتاج المواصفة إلى تحقق من
-            الشركة المصنّعة» — لا تخمين.
-          </p>
-          <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', marginTop: 9, marginBottom: 0 }} data-testid="build-counts">
-            <span dir="ltr">{partCount}</span> قطعة موثقة في{' '}
-            <span dir="ltr">{categoryCount}</span> فئة ·{' '}
-            <span dir="ltr">{droneTypes.length}</span> أنواع بناء ·{' '}
-            <span dir="ltr">{GATE_STEP_IDS.length}</span> بوابات سلامة بـ
-            <span dir="ltr">{gateItemCount}</span> فحصاً إلزامياً
           </p>
         </div>
       </section>

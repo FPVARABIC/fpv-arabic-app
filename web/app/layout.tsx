@@ -9,7 +9,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { BottomNav } from '@/components/NavTabs';
 import { siteOrigin, isCanonicalOrigin } from '@/lib/siteOrigin';
 import { BRAND_NAME, BRAND_TITLE_AR, BRAND_TITLE_SUFFIX } from '@core/data/brand';
-import { isStagingEnvironment, STAGING_BADGE_AR } from '@/lib/staging';
+import { showStagingBadge, STAGING_BADGE_AR } from '@/lib/staging';
 
 /**
  * The root of the web surface.
@@ -99,7 +99,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             It is not dismissible: the moment it can be closed, the person most
             likely to close it is the one about to forget which site they are
             on. */}
-        {isStagingEnvironment() && (
+        {/* Explicit staging ONLY (see showStagingBadge): the real deployment
+            must never wear a test sash because a variable is unset, while the
+            payment-key and indexing fail-safes keep their strict default. */}
+        {showStagingBadge() && (
           <p className="staging-badge" role="status" data-testid="staging-badge">
             {STAGING_BADGE_AR}
           </p>

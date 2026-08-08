@@ -60,11 +60,6 @@ export default function BetaflightHub() {
       <h1 className="page-title" style={{ margin: '14px 0 8px' }}>
         <span className="ltr">Betaflight Configurator</span>
       </h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 8px', maxWidth: 780 }}>
-        كل صفحة هنا تحمل أسماء الحقول الإنجليزية كما تظهر في البرنامج تماماً،
-        ومعناها بالعربية، ومصدرها، والإصدار الذي رُوجعت عليه. الترتيب هو ترتيب
-        التبويبات في البرنامج نفسه.
-      </p>
       <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '0 0 24px' }}>
         <span dir="ltr">{documented.length}</span> صفحة موثّقة من{' '}
         <span dir="ltr">{bfPageRegistry.length}</span> تبويباً مسجَّلاً — رُوجعت على

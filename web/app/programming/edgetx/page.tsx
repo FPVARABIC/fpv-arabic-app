@@ -79,11 +79,6 @@ export default function EdgeTxHub() {
       <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>
         <span className="ltr">EdgeTX</span>
       </h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 6px', maxWidth: 780 }}>
-        نظام تشغيل جهاز التحكم نفسه. ليست ترجمة لقوائمه: كل صفحة تقول ما الذي
-        يتغيّر في <em>الطائرة</em> حين تغيّر إعداداً، وكيف تتحقق، وكيف تتراجع —
-        لأن قائمة مترجمة تترك القارئ حيث بدأ، بالعربية بدل الإنجليزية.
-      </p>
       <p style={{ fontSize: 12.5, color: 'var(--text-dimmer)', margin: '0 0 8px' }}>
         <span dir="ltr">{allEdgeTxPages.length}</span> صفحة في{' '}
         <span dir="ltr">{edgeTxSections.length}</span> أقسام.

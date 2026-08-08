@@ -388,8 +388,15 @@ console.log('\n[13] Staging cannot take real money, and says so');
   ok('production must be DECLARED by naming the canonical origin',
     /!== BRAND_ORIGIN/.test(staging));
 
+  // The badge SPLIT from the fail-safe in the launch cleanup: payments and
+  // indexing keep the strict default above, while the visitor badge renders
+  // only on a DECLARED staging deploy — the real production site must not
+  // wear a test sash because a variable is unset.
   ok('the badge is rendered from the layout, so every page carries it',
-    /isStagingEnvironment\(\) && \(/.test(layout) && /staging-badge/.test(layout));
+    /showStagingBadge\(\) && \(/.test(layout) && /staging-badge/.test(layout));
+  ok('…and only on EXPLICIT staging, never as a configuration fallback',
+    /export function showStagingBadge/.test(staging)
+    && /return !!flag && !FLAG_OFF\.has\(flag\);/.test(staging));
   ok('the badge says money is not taken and nothing ships',
     /لا تُخصم أموال ولا تُشحن طلبات/.test(staging));
 

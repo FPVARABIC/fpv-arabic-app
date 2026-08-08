@@ -78,3 +78,26 @@ const FLAG_OFF = new Set(['false', '0', 'no', 'off']);
  * shipped.
  */
 export const STAGING_BADGE_AR = 'نسخة تجريبية — لا تُخصم أموال ولا تُشحن طلبات';
+
+/**
+ * Whether the VISITOR-FACING badge renders — explicit STAGING only.
+ *
+ * This deliberately breaks from `isStagingEnvironment()`'s fail-safe default,
+ * for the badge and nothing else. That default exists to protect two
+ * irreversible mistakes — accepting a live payment key and being indexed —
+ * and both keep it: the payment registry still refuses live keys through
+ * `isStagingEnvironment()`, and robots/noindex still fail closed through
+ * `isCanonicalOrigin()`. But the BADGE's job was to warn a visitor that
+ * their order is fake, and the platform now says that better itself:
+ * `STORE_OPENING_SOON` closes ordering everywhere with its own honest
+ * banner. What remained was the real production deployment wearing a
+ * «نسخة تجريبية» sash merely because the canonical domain is not attached
+ * yet — a fail-safe that had started telling visitors a falsehood. So the
+ * badge now requires staging to be DECLARED (`STAGING=1` on a genuinely
+ * experimental deploy), and configuration absence no longer masquerades as
+ * a product state.
+ */
+export function showStagingBadge(env: Record<string, string | undefined> = process.env): boolean {
+  const flag = env.STAGING?.trim().toLowerCase();
+  return !!flag && !FLAG_OFF.has(flag);
+}

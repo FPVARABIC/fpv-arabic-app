@@ -174,10 +174,6 @@ export default async function SearchPage({
   return (
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 30, maxWidth: 900 }}>
       <h1 className="page-title">البحث</h1>
-      <p className="page-lede">
-        محرّك واحد يصل إلى الموسوعة والمصطلحات وصفحات البرامج والتشخيص. اكتب المصطلح
-        كما تعرفه — بالعربية أو كما يظهر داخل البرنامج.
-      </p>
 
       {/* A plain GET form: works with no JavaScript, and the query lands in the
           URL so a result set can be shared, bookmarked, and reached with Back.

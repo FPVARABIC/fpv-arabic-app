@@ -43,13 +43,7 @@ export default function ExpressLrsHub() {
       <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>
         <span className="ltr">ExpressLRS</span>
       </h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 24px', maxWidth: 760 }}>
-        رابط التحكم بين جهازك والطائرة. طرفاه — الوحدة في الراديو والمستقبل على
-        الطائرة — يجب أن يحملا نظاماً ونطاقاً وإصداراً متوافقة، وأغلب أعطال
-        «الطائرة لا تستجيب» تعود إلى أحدها. ابدأ من الباب الذي يصف حالتك.
-      </p>
-
-      <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
+      <div style={{ display: 'grid', gap: 14, marginTop: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
         <Link href={setupHref} className="card" data-testid="elrs-door-setup"
           style={{ padding: '18px 20px', display: 'block' }}>
           <span style={{ display: 'block', fontSize: 16, fontWeight: 900 }}>الإعداد من الصفر</span>

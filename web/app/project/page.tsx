@@ -67,12 +67,7 @@ export default function ProjectPage() {
         <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> مشروعي
       </nav>
 
-      <h1 className="page-title" style={{ margin: '14px 0 8px' }}>مشروعي</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 22px', maxWidth: 760 }}>
-        هذه ليست قائمة قطع. المنصة تقرأ ما سجّلته وتحسب منه أحكام التوافق نفسها
-        التي يحسبها التطبيق — بالسبب، والدليل، ودرجة الثقة، وما ينقص للحكم. حين
-        لا تكفي البيانات تقول ذلك صراحةً بدل أن تفترض.
-      </p>
+      <h1 className="page-title" style={{ margin: '14px 0 18px' }}>مشروعي</h1>
 
       {/* Server-rendered, so it is here with or without JavaScript. */}
       <section

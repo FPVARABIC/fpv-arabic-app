@@ -37,6 +37,7 @@ name: Verify production
 # verification run: 9 — /programming joins the live checklist (the one template path never yet measured)
 # verification run: 10 — the mobile-polish batch ships: content-first landings, overflow fixes, safe areas
 # verification run: 11 — the closure batch ships: auth hidden, store opening-soon, no dead ends
+# verification run: 12 — the UI cleanup ships: no staging badge, no ledes, title straight to content
 on:
   push:
     branches: [claude/web-platform-foundation]
