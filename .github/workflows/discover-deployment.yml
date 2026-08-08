@@ -18,6 +18,7 @@ name: Discover deployment
 # the run counter below and push to read the records again.
 #
 # discovery run: 5 — production vs alias, first post-tracking push
+# discovery run: 6 — after the Vercel cleanup: exactly one project should report
 on:
   push:
     branches: [claude/web-platform-foundation]
@@ -113,9 +114,11 @@ jobs:
             done
             html=$(curl -sL --max-time 20 "$BASE/projects" || true)
             covers=$(printf '%s' "$html" | grep -o 'src="/assets/projects/[^"]*01-cover.webp"' | sort -u | wc -l)
-            cards=$(printf '%s' "$html" | grep -c 'data-testid="project-card-' || true)
+            # Count DISTINCT cards, not lines — the whole page is one line of
+            # HTML, so `grep -c` saturates at 1 no matter how many cards exist.
+            cards=$(printf '%s' "$html" | grep -o 'data-testid="project-card-[^"]*"' | sort -u | wc -l)
             vite=$(curl -sL --max-time 20 "$BASE/" | grep -c 'id="root"' || true)
-            echo "  identity: project cards=$cards · covers referenced=$covers/10 · vite-root-div=$vite"
+            echo "  identity: project cards=$cards/10 · covers referenced=$covers/10 · vite-root-div=$vite"
             img=$(curl -sL -o /dev/null -w '%{http_code}' --max-time 20 \
               "$BASE/assets/projects/visual-target-tracking/01-cover.webp" || echo 000)
             echo "  sample cover URL -> $img"

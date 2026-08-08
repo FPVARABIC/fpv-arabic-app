@@ -32,7 +32,7 @@ name: Verify production
 # default branch ever moves to the web branch, dispatch starts working too
 # and nothing here needs to change.
 #
-# verification run: 5 — the first push AFTER the production-branch change took effect
+# verification run: 6 — post-cleanup: prove the sole remaining project serves the images
 on:
   push:
     branches: [claude/web-platform-foundation]
