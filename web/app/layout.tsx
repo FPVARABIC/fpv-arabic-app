@@ -27,9 +27,13 @@ import { isStagingEnvironment, STAGING_BADGE_AR } from '@/lib/staging';
  * its own page, where `requireCapability` runs per request as it always did.
  */
 
+// Mirrors the platform's CURRENT pillars, in the navigation's own order:
+// البناء → البرامج → الموسوعة → المشاريع → المتجر. The community was retired
+// from the web experience and must not survive here as metadata.
 const DESCRIPTION =
-  'منصّة عربية متكاملة للطيران بالمنظور الأول: موسوعة مشروحة بالمصادر، وتشخيص للأعطال، '
-  + 'ومراكز برامج Betaflight وExpressLRS وEdgeTX وأنظمة الفيديو، ومتجر مراجَع، ومجتمع.';
+  'منصّة عربية متكاملة للطيران بالمنظور الأول: مسار بناء تفاعلي من اختيار القطع إلى أول طيران، '
+  + 'ومراكز برامج Betaflight وExpressLRS وEdgeTX وأنظمة الفيديو، وموسوعة مشروحة بالمصادر '
+  + 'مع تشخيص للأعطال، ومشاريع مراجَعة، ومتجر مراجَع.';
 
 export const metadata: Metadata = {
   // `siteOrigin()` rather than a literal: a preview deployment must produce

@@ -48,7 +48,7 @@ function sectionHref(id: string): string {
  * way «وزناً متقارباً» survives contact with later changes.
  *
  * The order follows the navigation bar, so the page and the bar teach the same
- * shape: المجتمع · المتجر · البرامج · الموسوعة · المشاريع. That correspondence
+ * shape: البناء · البرامج · الموسوعة · المشاريع · المتجر. That correspondence
  * is now checked rather than remembered — this page carried four pillars for a
  * while after the bar grew to six tabs, and a visitor who meets a section on
  * the bar that the page never mentioned has been told, quietly, that the page
