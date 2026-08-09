@@ -38,6 +38,7 @@ name: Verify production
 # verification run: 10 — the mobile-polish batch ships: content-first landings, overflow fixes, safe areas
 # verification run: 11 — the closure batch ships: auth hidden, store opening-soon, no dead ends
 # verification run: 12 — the UI cleanup ships: no staging badge, no ledes, title straight to content
+# verification run: 13 — the build UX pass ships: Arabic-first vocabulary, phase arcs, the «بناءي» dock
 on:
   push:
     branches: [claude/web-platform-foundation]

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
-import { PART_CATEGORY_LABEL_AR } from '@core/data/project/store';
+import { partLabel } from '@/lib/build/labels';
 import {
   checkCandidate, checkEcosystemFit, CANDIDATE_VERDICT_LABEL_AR,
   type BuildContext, type CandidateVerdict,
@@ -20,11 +20,15 @@ import type { TierPreference } from '@/lib/build/draft';
  * whyChoose, notFor, the notes — because a recommendation without its
  * counter-case is advertising, not guidance.
  *
- * WHAT SELECTION REFUSES
- * ----------------------
- * A documented incompatibility cannot be selected in the guided modes — the
- * card stays visible WITH its reasons, because seeing why something is wrong
- * teaches more than hiding it. Advanced mode may select it anyway (the reader
+ * WHAT SELECTION REFUSES — AND WHAT GUIDED MODES FOLD AWAY
+ * --------------------------------------------------------
+ * A documented incompatibility cannot be selected in the guided modes. It is
+ * also not the first thing a first-time builder should wade through: a wall
+ * of red cards reads as «كله غلط» before the eye finds the green ones. So the
+ * guided modes fold the incompatible candidates behind one labelled toggle —
+ * still one tap away WITH their reasons, because seeing why something is
+ * wrong teaches more than hiding it, but no longer in the way of the actual
+ * decision. Advanced mode folds nothing and may select anything (the reader
  * asked for control), and the full report will carry the same objection.
  */
 
@@ -84,10 +88,15 @@ export const PartPicker: React.FC<PartPickerProps> = ({
     return 0;
   });
 
+  // Guided modes fold the incompatible away; advanced folds nothing.
+  const shown = advanced ? ordered : ordered.filter(x => x.verdict !== 'incompatible');
+  const folded = advanced ? [] : ordered.filter(x => x.verdict === 'incompatible');
+  const [showFolded, setShowFolded] = useState(false);
+
   return (
     <div data-testid={`part-picker-${category}`}>
       <h3 style={{ fontSize: 15.5, fontWeight: 900, margin: '0 0 4px' }}>
-        {PART_CATEGORY_LABEL_AR[category] ?? category}
+        {partLabel(category)}
         {optional && (
           <span className="admin-badge" style={{ marginInlineStart: 8, fontSize: 10.5 }}>اختياري</span>
         )}
@@ -113,7 +122,7 @@ export const PartPicker: React.FC<PartPickerProps> = ({
       )}
 
       <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-        {ordered.map(({ part, verdict, reasonsAr }) => (
+        {shown.map(({ part, verdict, reasonsAr }) => (
           <PartCard
             key={part.id}
             part={part}
@@ -132,7 +141,44 @@ export const PartPicker: React.FC<PartPickerProps> = ({
               : 'لا قطع متوافقة مع اختياراتك الحالية — عد خطوة وغيّر ما قبلها.'}
           </p>
         )}
+        {shown.length === 0 && folded.length > 0 && (
+          <p className="card-sm" style={{ padding: '13px 15px', fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+            كل قطع هذه الفئة غير متوافقة مع اختياراتك الحالية — اقرأ الأسباب
+            أدناه، أو عد خطوة وغيّر ما قبلها.
+          </p>
+        )}
       </div>
+
+      {folded.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <button type="button" className="btn-ghost" aria-expanded={showFolded}
+            data-testid={`show-blocked-${category}`}
+            onClick={() => setShowFolded(o => !o)}
+            style={{ fontSize: 12.5 }}>
+            {/* The count is one LTR token, parentheses included — split
+                around the digit they shatter when this label wraps in RTL. */}
+            {showFolded
+              ? 'أخفِ غير المتوافقة'
+              : <>غير المتوافقة مع بنائك <span dir="ltr">({folded.length})</span> — اعرض لماذا لا تصلح</>}
+          </button>
+          {showFolded && (
+            <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+              {folded.map(({ part, verdict, reasonsAr }) => (
+                <PartCard
+                  key={part.id}
+                  part={part}
+                  verdict={verdict}
+                  reasonsAr={reasonsAr}
+                  selected={selectedId === part.id}
+                  selectable={false}
+                  recommended={false}
+                  onSelect={() => onSelect(part)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -186,7 +232,7 @@ const PartCard: React.FC<{
           </span>
         )}
         {part.confidence && (
-          <span style={{ fontSize: 11, color: 'var(--text-dimmer)' }}>{part.confidence}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-dimmer)' }}>التوثيق: {part.confidence}</span>
         )}
       </p>
 

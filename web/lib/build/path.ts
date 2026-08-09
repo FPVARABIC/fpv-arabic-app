@@ -104,26 +104,26 @@ export const BUILD_PATH: readonly BuildStep[] = [
   {
     id: 'esc', number: 6, kind: 'parts', phoneStageIndex: 6,
     categories: ['escs'],
-    titleAr: 'اختيار الـESC',
-    introAr: 'وحدة التحكم بسرعة المحركات — تيارها المستمر يجب أن يتحمل ما تسحبه محركاتك.',
+    titleAr: 'منظّم سرعة المحركات (ESC)',
+    introAr: 'يغذّي المحركات الأربعة ويتحكم بسرعتها — تصنيف تياره يجب أن يفوق ما تسحبه محركاتك.',
   },
   {
     id: 'fc', number: 7, kind: 'parts', phoneStageIndex: 7,
     categories: ['flightControllers'],
-    titleAr: 'اختيار الـFlight Controller',
-    introAr: 'دماغ الطيران. عدد منافذ UART فيه يحدد كم جهازاً (ريسيفر، فيديو، GPS) يمكن توصيله.',
+    titleAr: 'متحكّم الطيران (Flight Controller)',
+    introAr: 'دماغ الطائرة. منافذ UART فيه هي مقاعد أجهزتك: المستقبل والفيديو وGPS يحتاج كلٌّ منها مقعداً.',
   },
   {
     id: 'rc', number: 8, kind: 'parts', phoneStageIndex: 8,
     categories: ['receivers'],
-    titleAr: 'اختيار الـReceiver',
-    introAr: 'مستقبل إشارة جهاز التحكم — يجب أن يكون من نفس بروتوكول جهازك (ELRS أو Crossfire…).',
+    titleAr: 'المستقبل (Receiver)',
+    introAr: 'بروتوكول جهاز تحكمك أولاً — ELRS أو Crossfire — ثم المنتج: المستقبل يسمع لغة جهازك فقط.',
   },
   {
     id: 'video', number: 9, kind: 'parts', phoneStageIndex: 2,
     categories: ['videoUnits'],
-    titleAr: 'نظام الفيديو (VTX/Camera)',
-    introAr: 'وحدة البث يجب أن تكون من نفس منظومة نظارتك — DJI وWalksnail وHDZero وAnalog لا تتخاطب.',
+    titleAr: 'نظام الفيديو (VTX)',
+    introAr: 'منظومة نظارتك أولاً ثم المنتج — DJI وWalksnail وHDZero وAnalog لا تتخاطب فيما بينها.',
   },
   {
     id: 'extras', number: 10, kind: 'parts', phoneStageIndex: 14,
@@ -185,6 +185,18 @@ export const BUILD_PATH: readonly BuildStep[] = [
 ];
 
 export const TOTAL_BUILD_STEPS = BUILD_PATH.length;
+
+/** The four arcs of the journey — one list for the landing AND the header. */
+export const BUILD_PHASES: readonly { titleAr: string; from: number; to: number }[] = [
+  { titleAr: 'الاختيار', from: 1, to: 10 },
+  { titleAr: 'التحقق', from: 11, to: 12 },
+  { titleAr: 'التنفيذ', from: 13, to: 16 },
+  { titleAr: 'التشغيل الآمن', from: 17, to: 20 },
+];
+
+export function phaseForStep(number: number): string {
+  return BUILD_PHASES.find(p => number >= p.from && number <= p.to)?.titleAr ?? '';
+}
 
 /** The gate steps, exported so the wizard and the test agree on what gates exist. */
 export const GATE_STEP_IDS = BUILD_PATH.filter(s => s.kind === 'gate').map(s => s.id);

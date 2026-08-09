@@ -56,8 +56,10 @@ const mem = new Map<string, string>();
   clear: () => mem.clear(),
 };
 
-const { BUILD_PATH, TOTAL_BUILD_STEPS, GATE_STEP_IDS, phoneStageIndexFor } =
+const { BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS, GATE_STEP_IDS, phaseForStep, phoneStageIndexFor } =
   await import('../web/lib/build/path');
+const { PART_VOCAB, partLabel, partLabelAr, vocabCoversCatalogue, SIZE_MEANING_AR, VOLTAGE_MEANING_AR } =
+  await import('../web/lib/build/labels');
 const { SAFETY_GATES, gateFor } = await import('../web/lib/build/gates');
 const {
   checkCandidate, checkEcosystemFit, snapshotFromContext,
@@ -484,6 +486,91 @@ console.log('\n[9] The hard scenarios: insufficiency, shortage, and honest gaps'
     checkEcosystemFit('videoUnits', anyUnit, { videoSystem: UNDECIDED_PREF }).verdict === 'ok');
   ok('an undecided RC preference mismatches nothing',
     checkEcosystemFit('receivers', receivers[0], { rcProtocol: UNDECIDED_PREF }).verdict === 'ok');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[10] The UX pass: Arabic-first vocabulary, the journey\'s arcs, the anchor');
+{
+  // The vocabulary: every catalogue category has an Arabic-FIRST name, and
+  // the web's own build surfaces use it — the shared English-led labels stay
+  // the phone's.
+  ok('every catalogue category has an Arabic-first name', vocabCoversCatalogue());
+  ok('the label leads with Arabic, the technical term follows as the helper',
+    partLabel('flightControllers') === 'متحكّم الطيران (FC)'
+    && partLabelAr('escs') === 'منظّم سرعة المحركات');
+  ok('an unknown category falls through un-invented', partLabel('no-such-cat') === 'no-such-cat');
+  ok('every vocabulary entry carries both forms',
+    Object.values(PART_VOCAB).every(v => v.ar.length > 0 && v.en.length > 0));
+  for (const f of [
+    'web/components/build/MyBuildPanel.tsx',
+    'web/components/build/PartPicker.tsx',
+    'web/components/build/ReportStep.tsx',
+    'web/components/build/BuildWizard.tsx',
+  ]) {
+    ok(`${f.split('/').pop()} uses the web vocabulary, not the English-led shared labels`,
+      !stripComments(read(f)).includes('PART_CATEGORY_LABEL_AR'));
+  }
+
+  // The four arcs: they tile the twenty steps exactly — no gap, no overlap —
+  // and the landing derives its overview from the SAME list the wizard's
+  // header renders, so the promise and the journey cannot drift.
+  const covered = BUILD_PHASES.flatMap(p =>
+    Array.from({ length: p.to - p.from + 1 }, (_, i) => p.from + i));
+  ok('the four phases tile steps 1..20 exactly',
+    BUILD_PHASES.length === 4
+    && JSON.stringify(covered) === JSON.stringify(BUILD_PATH.map(s => s.number)));
+  ok('phaseForStep answers at both ends',
+    phaseForStep(1) === 'الاختيار' && phaseForStep(20) === 'التشغيل الآمن');
+  ok('the landing builds its overview from BUILD_PHASES, not a private copy',
+    read('web/app/build/page.tsx').includes('BUILD_PHASES.map'));
+  const wizard = stripComments(read('web/components/build/BuildWizard.tsx'));
+  ok('the wizard header renders the phase segments', wizard.includes('BUILD_PHASES.map'));
+  ok('a new step opens at its title — the wizard scrolls to the top on step change',
+    /useEffect\(\(\) => \{\s*window\.scrollTo\(0, 0\);\s*\}, \[draft\.stepIndex, phase\]\)/.test(wizard));
+
+  // What the size and voltage numbers MEAN — the decision line beside the
+  // spec line, from labels.ts, never invented inline.
+  ok('the size step explains what 5" and 7" mean for the decision',
+    wizard.includes('SIZE_MEANING_AR') && SIZE_MEANING_AR[5]?.length > 0 && SIZE_MEANING_AR[7]?.length > 0);
+  ok('the voltage step explains what 4S and 6S mean for the decision',
+    wizard.includes('VOLTAGE_MEANING_AR') && VOLTAGE_MEANING_AR[4]?.length > 0 && VOLTAGE_MEANING_AR[6]?.length > 0);
+
+  // Progressive disclosure: the guided modes fold documented incompatibility
+  // behind one labelled toggle — reachable with its reasons, out of the way
+  // of the decision. Advanced folds nothing.
+  const picker = stripComments(read('web/components/build/PartPicker.tsx'));
+  ok('guided modes fold incompatible candidates behind a labelled toggle',
+    picker.includes('show-blocked-') && picker.includes("advanced ? [] : ordered.filter(x => x.verdict === 'incompatible')"));
+  ok('advanced mode folds nothing', picker.includes('advanced ? ordered'));
+
+  // The report groups findings by what the reader must DO, and the passed
+  // checks fold under their count when anything demands attention.
+  const report = stripComments(read('web/components/build/ReportStep.tsx'));
+  ok('the compat report groups findings by severity',
+    ['blocker', 'warning', 'unknown'].every(s => report.includes(`'${s}'`))
+    && report.includes('compat-group-'));
+  ok('the passed checks are the whole report when nothing demands attention',
+    report.includes('attention.length === 0'));
+  ok('the BOM opens with its status pills', report.includes('bom-pills'));
+
+  // «بناءي» the anchor: one body, two homes — the desktop side column and
+  // the phone dock's sheet — plus the pulse chip between السابق and التالي.
+  const panel = stripComments(read('web/components/build/MyBuildPanel.tsx'));
+  ok('the panel body is ONE component shared by aside and sheet',
+    panel.includes('MyBuildBody') && wizard.includes('<MyBuildBody'));
+  ok('the anchor names the next destination', panel.includes('my-build-next'));
+  ok('the dock carries the pulse chip and the sheet',
+    wizard.includes('my-build-toggle') && wizard.includes('my-build-sheet')
+    && wizard.includes('wizard-dock'));
+  ok('the chip\'s numbers come from the one derivation, not a second count',
+    panel.includes('export function buildPulse') && wizard.includes('buildPulse('));
+  ok('navigation closes the sheet — it can never shadow the next step',
+    /goNext = \(\) => \{\s*setAnchorOpen\(false\)/.test(wizard)
+    && /goPrev = \(\) => \{\s*setAnchorOpen\(false\)/.test(wizard));
+
+  // The landing says which door is whose.
+  ok('the guided door is marked as the first-build door',
+    read('web/app/build/page.tsx').includes('الأنسب لأول بناء'));
 }
 
 console.log(`\n✅ testWebBuild: ${passed} assertions passed`);

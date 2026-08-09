@@ -7,12 +7,15 @@ import { droneTypes } from '@core/data/assembly/droneTypes';
 import { getAvailableSizeOptions, frameMatchesSize } from '@core/data/assembly/frameSizeMatch';
 import { batteryVoltageOptions } from '@core/data/assembly/batteryVoltageOptions';
 import { buildStages } from '@core/data/assembly/buildStages';
-import { PART_CATEGORY_MAP, PART_CATEGORY_LABEL_AR } from '@core/data/project/store';
+import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import { computeFindings, sortFindings } from '@core/data/project/verdicts';
+import type { Finding } from '@core/data/project/types';
 import type { BasePart, Frame } from '@core/data/assembly/types';
 import {
-  BUILD_PATH, TOTAL_BUILD_STEPS, phoneStageIndexFor, type BuildStep,
+  BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS, phaseForStep, phoneStageIndexFor,
+  type BuildStep,
 } from '@/lib/build/path';
+import { partLabel, SIZE_MEANING_AR, VOLTAGE_MEANING_AR } from '@/lib/build/labels';
 import {
   loadDraft, saveDraft, seedFromProject, emptyDraft, mirrorToProject,
   draftParts, firstUnresolvedStep,
@@ -24,7 +27,7 @@ import {
 } from '@/lib/build/checks';
 import { gateFor } from '@/lib/build/gates';
 import { PartPicker } from './PartPicker';
-import { MyBuildPanel } from './MyBuildPanel';
+import { MyBuildPanel, MyBuildBody, buildPulse } from './MyBuildPanel';
 import { GateStep, isGateComplete } from './GateStep';
 import { CompatReport, BomView } from './ReportStep';
 import { WiringStep, AssemblyStep, SoftwareStep, FirstFlightStep } from './GuideSteps';
@@ -77,6 +80,7 @@ export const BuildWizard: React.FC = () => {
   });
   const [phase, setPhase] = useState<'questions' | 'owned' | 'path'>(() =>
     draft.mode ? (needsQuestions(draft) ? 'questions' : 'path') : 'questions');
+  const [anchorOpen, setAnchorOpen] = useState(false);
 
   // Persist + mirror on every draft change. The draft is the truth; the
   // shared store follows it.
@@ -84,6 +88,13 @@ export const BuildWizard: React.FC = () => {
     saveDraft(draft);
     mirrorToProject(draft);
   }, [draft]);
+
+  // A new step must open AT ITS TITLE. Without this, «التالي» keeps the
+  // scroll position of the previous (often longer) step, and the reader
+  // lands mid-content — the compat step used to open on the footer.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [draft.stepIndex, phase]);
 
   const update = (patch: Partial<BuildDraft>) => setDraft(d => ({ ...d, ...patch }));
 
@@ -182,8 +193,12 @@ export const BuildWizard: React.FC = () => {
     }
   };
 
-  const goNext = () => update({ stepIndex: Math.min(draft.stepIndex + 1, TOTAL_BUILD_STEPS - 1) });
+  const goNext = () => {
+    setAnchorOpen(false);
+    update({ stepIndex: Math.min(draft.stepIndex + 1, TOTAL_BUILD_STEPS - 1) });
+  };
   const goPrev = () => {
+    setAnchorOpen(false);
     if (draft.stepIndex === 0) setPhase('questions');
     else update({ stepIndex: draft.stepIndex - 1 });
   };
@@ -264,11 +279,18 @@ export const BuildWizard: React.FC = () => {
                       aria-pressed={draft.sizeInch === opt.sizeInch}
                       className="card-sm"
                       style={{
-                        flex: '1 1 140px', cursor: 'pointer', padding: '16px',
-                        textAlign: 'center', fontSize: 15, fontWeight: 900,
+                        flex: '1 1 170px', cursor: 'pointer', padding: '16px',
+                        textAlign: 'start',
                         border: draft.sizeInch === opt.sizeInch ? '2px solid var(--accent-ink)' : undefined,
                       }}>
-                      {opt.labelAr}
+                      <span style={{ display: 'block', fontSize: 15, fontWeight: 900 }}>{opt.labelAr}</span>
+                      {/* What the number MEANS for the decision — editorial
+                          use-case guidance from labels.ts, not a spec. */}
+                      {SIZE_MEANING_AR[opt.sizeInch] && (
+                        <span style={{ display: 'block', marginTop: 5, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.85, fontWeight: 400 }}>
+                          {SIZE_MEANING_AR[opt.sizeInch]}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -335,36 +357,77 @@ export const BuildWizard: React.FC = () => {
           })()}
         </div>
 
-        {/* ── The two directions ─────────────────────────────────────────── */}
-        <div style={{
-          display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap',
-          justifyContent: 'space-between',
-        }}>
-          <button type="button" className="btn-ghost" data-testid="wizard-prev"
-            onClick={goPrev} style={{ fontSize: 13.5 }}>
-            → السابق
-          </button>
-          {draft.stepIndex < TOTAL_BUILD_STEPS - 1 ? (
-            <button type="button" className="btn-primary" data-testid="wizard-next"
-              disabled={!canAdvance()} onClick={goNext} style={{ fontSize: 13.5 }}>
-              التالي ←
-            </button>
-          ) : (
-            <Link href="/project" className="btn-primary" data-testid="wizard-finish"
-              style={{ fontSize: 13.5 }}>
-              البناء مكتمل — افتح مشروعي ←
-            </Link>
-          )}
-        </div>
         {!canAdvance() && step.kind === 'report' && blockers > 0 && (
-          <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--sev-blocker)' }}>
+          <p style={{ margin: '14px 0 0', fontSize: 12, color: 'var(--sev-blocker)' }}>
             «التالي» مقفل حتى تُعالج الموانع أعلاه.
           </p>
         )}
+
+        {/* ── The dock: the two directions + «بناءي» under the thumb ──────
+            On a phone this whole block rides sticky above the tab bar, so
+            «التالي» is always reachable and the anchor chip opens the SAME
+            panel body the desktop side column shows — upward, as a sheet
+            that never covers the tab bar and never pushes content around. */}
+        <div className="wizard-dock" data-testid="wizard-dock">
+          {anchorOpen && (
+            <div className="mybuild-sheet" data-testid="my-build-sheet">
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 900, margin: 0, flex: 1 }}>بناءي</h2>
+                <button type="button" className="btn-ghost" data-testid="my-build-close"
+                  onClick={() => setAnchorOpen(false)} style={{ fontSize: 12 }}>
+                  أغلق ✕
+                </button>
+              </div>
+              <MyBuildBody draft={draft} findings={findings} />
+            </div>
+          )}
+          <div className="wizard-actions">
+            <button type="button" className="btn-ghost" data-testid="wizard-prev"
+              onClick={goPrev} style={{ fontSize: 13.5 }}>
+              → السابق
+            </button>
+            <MyBuildChip draft={draft} findings={findings}
+              open={anchorOpen} onToggle={() => setAnchorOpen(o => !o)} />
+            {draft.stepIndex < TOTAL_BUILD_STEPS - 1 ? (
+              <button type="button" className="btn-primary" data-testid="wizard-next"
+                disabled={!canAdvance()} onClick={goNext} style={{ fontSize: 13.5 }}>
+                التالي ←
+              </button>
+            ) : (
+              <Link href="/project" className="btn-primary" data-testid="wizard-finish"
+                style={{ fontSize: 13.5 }}>
+                البناء مكتمل — افتح مشروعي ←
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
       <MyBuildPanel draft={draft} findings={findings} />
     </div>
+  );
+};
+
+/** The compact «بناءي» pulse in the dock — phone widths only (see CSS). */
+const MyBuildChip: React.FC<{
+  draft: BuildDraft;
+  findings: Finding[];
+  open: boolean;
+  onToggle: () => void;
+}> = ({ draft, findings, open, onToggle }) => {
+  const pulse = buildPulse(draft, findings);
+  return (
+    <button type="button" className="btn-ghost mybuild-chip" data-testid="my-build-toggle"
+      aria-expanded={open} onClick={onToggle} style={{ fontSize: 12.5 }}>
+      بناءي <span dir="ltr">{pulse.requiredDone}/{pulse.requiredTotal}</span>
+      {pulse.blockers > 0 && (
+        <span className="admin-badge admin-badge-bad" style={{ fontSize: 10 }}>⛔ {pulse.blockers}</span>
+      )}
+      {pulse.blockers === 0 && pulse.warnings > 0 && (
+        <span className="admin-badge admin-badge-warn" style={{ fontSize: 10 }}>⚠ {pulse.warnings}</span>
+      )}
+      <span aria-hidden style={{ fontSize: 10, color: 'var(--text-dimmer)' }}>{open ? '▼' : '▲'}</span>
+    </button>
   );
 };
 
@@ -392,19 +455,31 @@ const ProgressHeader: React.FC<{ step: BuildStep; onEditAnswers: () => void }> =
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
       <p data-testid="wizard-progress" style={{ margin: 0, fontSize: 12, fontWeight: 900, color: 'var(--accent-ink)' }}>
         الخطوة <span dir="ltr">{step.number}</span> من <span dir="ltr">{TOTAL_BUILD_STEPS}</span>
+        <span style={{ fontWeight: 700, color: 'var(--text-dimmer)' }}> · مرحلة {phaseForStep(step.number)}</span>
       </p>
       <button type="button" className="btn-ghost" onClick={onEditAnswers}
         data-testid="wizard-edit-answers" style={{ fontSize: 11.5, marginInlineStart: 'auto' }}>
         عدّل إجاباتك
       </button>
     </div>
-    <div aria-hidden style={{
-      height: 5, borderRadius: 999, background: 'var(--surface-2)', marginTop: 8, overflow: 'hidden',
-    }}>
-      <div style={{
-        height: '100%', borderRadius: 999, background: 'var(--accent)',
-        width: `${Math.round((step.number / TOTAL_BUILD_STEPS) * 100)}%`,
-      }} />
+    {/* Four segments, one per arc of the journey — a form has one bar, a
+        journey has stages you can SEE yourself crossing. Widths are
+        proportional to each arc's step count. */}
+    <div aria-hidden data-testid="wizard-phase-bar" style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+      {BUILD_PHASES.map(p => {
+        const total = p.to - p.from + 1;
+        const fill = step.number > p.to ? 100
+          : step.number < p.from ? 0
+          : Math.round(((step.number - p.from + 1) / total) * 100);
+        return (
+          <div key={p.titleAr} title={p.titleAr} style={{
+            flex: total, height: 5, borderRadius: 999,
+            background: 'var(--surface-2)', overflow: 'hidden',
+          }}>
+            <div style={{ height: '100%', width: `${fill}%`, borderRadius: 999, background: 'var(--accent)' }} />
+          </div>
+        );
+      })}
     </div>
     <h2 style={{ fontSize: 20, fontWeight: 900, margin: '14px 0 0' }}>{step.titleAr}</h2>
     <p style={{ margin: '6px 0 0', fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
@@ -588,7 +663,7 @@ const OwnedParts: React.FC<{
           return (
             <div key={category} className="card-sm" style={{ padding: '14px 16px', minWidth: 0 }}>
               <p style={{ margin: '0 0 9px', fontSize: 14, fontWeight: 900 }}>
-                {PART_CATEGORY_LABEL_AR[category] ?? category}
+                {partLabel(category)}
               </p>
               <select
                 value={owned ?? ''}
@@ -675,6 +750,12 @@ const PowerStep: React.FC<{
                 border: draft.batteryVoltage === opt.sCount ? '2px solid var(--accent-ink)' : undefined,
               }}>
               <span style={{ display: 'block', fontSize: 15, fontWeight: 900 }}>{opt.labelAr}</span>
+              {/* The decision the number stands for, before the number. */}
+              {VOLTAGE_MEANING_AR[opt.sCount] && (
+                <span style={{ display: 'block', marginTop: 5, fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.85 }}>
+                  {VOLTAGE_MEANING_AR[opt.sCount]}
+                </span>
+              )}
               <span dir="ltr" style={{ display: 'block', marginTop: 4, fontSize: 11.5, color: 'var(--text-dimmer)' }}>
                 nominal {opt.nominalVoltage}V · full {opt.maxVoltage}V
               </span>

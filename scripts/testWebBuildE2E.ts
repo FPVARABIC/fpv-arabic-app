@@ -183,28 +183,45 @@ async function main() {
 
       await page.locator('[data-testid="voltage-6s"]').click();
       await page.waitForSelector('[data-testid="part-picker-batteries"]');
-      // The documented-incompatibility rule, visible right here: any battery
-      // of another cell count must be marked and refused.
-      const badBattery = page.locator('[data-testid="part-picker-batteries"] [data-verdict="incompatible"]').first();
-      if (await badBattery.count() > 0) {
-        const refuseBtn = badBattery.locator('[data-testid^="part-select-"]');
-        ok('a wrong-voltage battery is marked «غير متوافق» and unselectable in guided mode',
+      // The documented-incompatibility rule, one fold away: in guided mode a
+      // battery of another cell count is folded behind the labelled toggle —
+      // revealed WITH its reasons, still unselectable.
+      const foldToggle = page.locator('[data-testid="show-blocked-batteries"]');
+      if (await foldToggle.count() > 0) {
+        ok('incompatible batteries are folded away from the guided decision',
+          await page.locator('[data-testid="part-picker-batteries"] [data-verdict="incompatible"]').count() === 0);
+        await foldToggle.click();
+        const refuseBtn = page
+          .locator('[data-testid="part-picker-batteries"] [data-verdict="incompatible"]')
+          .first().locator('[data-testid^="part-select-"]');
+        ok('a wrong-voltage battery, once revealed, is marked «غير متوافق» and unselectable',
           await refuseBtn.isDisabled());
+        await foldToggle.click();
       } else {
         ok('no wrong-voltage battery exists in the catalogue to refuse (rule still wired)', true);
       }
       await pickFirst(page, 'batteries');
       await next(page, 5);
+      ok('a new step opens at its title — the wizard scrolled back to the top',
+        await page.waitForFunction(() => window.scrollY === 0).then(() => true).catch(() => false));
 
       await pickFirst(page, 'motors');
       ok('motors alone do not open the step — the propeller is part of the same decision',
         await page.locator(sel.next).isDisabled());
-      // «بناءي» must reflect a pick the INSTANT it is made.
+      // «بناءي» must reflect a pick the INSTANT it is made. On a phone the
+      // anchor is the dock's chip: open the sheet, read it, close it.
       const pickedMotor = await page
         .locator('[data-testid="part-picker-motors"] [data-testid^="part-card-"]:has(button:has-text("مختارة")) h4')
         .first().innerText();
-      ok(`«بناءي» lists the motor the instant it is tapped (${pickedMotor})`,
-        (await page.locator('[data-testid="my-build-panel"]').innerText()).includes(pickedMotor));
+      await page.locator('[data-testid="my-build-toggle"]').click();
+      await page.waitForSelector('[data-testid="my-build-sheet"]');
+      ok(`the «بناءي» sheet lists the motor the instant it is tapped (${pickedMotor})`,
+        (await page.locator('[data-testid="my-build-sheet"]').innerText()).includes(pickedMotor));
+      const sheetBox = await page.locator('[data-testid="my-build-sheet"]').boundingBox();
+      const navBox = await page.locator('nav.nav-bottom').boundingBox();
+      ok('the open sheet never covers the bottom tab bar',
+        !!sheetBox && !!navBox && sheetBox.y + sheetBox.height <= navBox.y + 1);
+      await page.locator('[data-testid="my-build-close"]').click();
       await pickFirst(page, 'propellers');
       ok('motor + propeller together unlock it', !(await page.locator(sel.next).isDisabled()));
       await next(page, 6);
@@ -321,11 +338,14 @@ async function main() {
       await page.locator('[data-testid="owned-done"]').click();
 
       await page.waitForSelector(sel.progress);
-      const panel = await page.locator('[data-testid="my-build-panel"]').innerText();
-      ok('«بناءي» lists the owned frame and FC from the catalogue',
-        panel.includes('الإطار') && panel.includes('Flight Controller'));
+      await page.locator('[data-testid="my-build-toggle"]').click();
+      await page.waitForSelector('[data-testid="my-build-sheet"]');
+      const panel = await page.locator('[data-testid="my-build-sheet"]').innerText();
+      ok('«بناءي» lists the owned frame and FC from the catalogue, Arabic-first',
+        panel.includes('الإطار') && panel.includes('متحكّم الطيران'));
       ok('…and the uncatalogued receiver, marked as outside the catalogue',
         panel.includes('ريسيفر قديم عندي') && panel.includes('خارج الكتالوج'));
+      await page.locator('[data-testid="my-build-close"]').click();
 
       // The path builds AROUND the owned parts: after goal and size, the
       // owned frame arrives at its step already selected.

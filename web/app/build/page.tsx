@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BUILD_PATH, TOTAL_BUILD_STEPS } from '@/lib/build/path';
+import { BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS } from '@/lib/build/path';
 import { BuildResume } from '@/components/build/BuildResume';
 
 export const metadata: Metadata = {
@@ -36,6 +36,8 @@ export default function BuildPage() {
         'لأول بناء: أسئلة قليلة عن هدفك وميزانيتك، ثم مسار كامل يقترح كل قطعة '
         + 'ويشرح لماذا — حتى أول طيران آمن.',
       ctaAr: 'ابدأ من الصفر',
+      /** The door most visitors need is SAID to be theirs, not left to guessing. */
+      primary: true,
     },
     {
       id: 'parts',
@@ -44,6 +46,7 @@ export default function BuildPage() {
         'سجّل ما تملكه — من الكتالوج أو باسمه — ونكمل بقية المنظومة حوله، '
         + 'مع فحص التوافق على كل إضافة.',
       ctaAr: 'أكمل ما عندي',
+      primary: false,
     },
     {
       id: 'advanced',
@@ -52,15 +55,15 @@ export default function BuildPage() {
         'كل الخيارات ظاهرة بلا ترشيح، وأنت من يقرر — ومحرك التوافق يراجع '
         + 'خلفك ويقول رأيه بالسبب والدليل.',
       ctaAr: 'افتح التحكم الكامل',
+      primary: false,
     },
   ];
 
-  const phases = [
-    { titleAr: 'الاختيار', stepsAr: BUILD_PATH.filter(s => s.number <= 10) },
-    { titleAr: 'التحقق', stepsAr: BUILD_PATH.filter(s => s.number > 10 && s.number <= 12) },
-    { titleAr: 'التنفيذ', stepsAr: BUILD_PATH.filter(s => s.number > 12 && s.number <= 16) },
-    { titleAr: 'التشغيل الآمن', stepsAr: BUILD_PATH.filter(s => s.number > 16) },
-  ];
+  // The same four arcs the wizard's own header shows — one list, two homes.
+  const phases = BUILD_PHASES.map(p => ({
+    titleAr: p.titleAr,
+    stepsAr: BUILD_PATH.filter(s => s.number >= p.from && s.number <= p.to),
+  }));
 
   return (
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 44 }}>
@@ -89,7 +92,13 @@ export default function BuildPage() {
               href={`/build/wizard?mode=${m.id}`}
               className="card pillar"
               data-testid={`build-mode-${m.id}`}
+              style={m.primary ? { border: '2px solid var(--accent-ink)' } : undefined}
             >
+              {m.primary && (
+                <span className="admin-badge admin-badge-ok" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>
+                  الأنسب لأول بناء
+                </span>
+              )}
               <h3 style={{ fontSize: 17, fontWeight: 900, margin: 0 }}>{m.titleAr}</h3>
               <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9, margin: '10px 0 0', flex: 1 }}>
                 {m.bodyAr}
