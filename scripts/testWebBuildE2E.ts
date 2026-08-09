@@ -379,7 +379,7 @@ async function main() {
       await next(page, 2);
       await page.locator('[data-testid="size-5"]').click();
       await next(page, 3);
-      ok('a premium candidate is flagged «مقترح لميزانيتك» when one exists',
+      ok('a premium candidate is flagged «ضمن فئة ميزانيتك» when one exists',
         await page.locator('[data-testid^="part-recommended-"]').count() > 0
         || await page.locator('[data-testid="part-picker-frames"] [data-testid^="part-card-"]').count() > 0);
       const firstCard = page.locator('[data-testid="part-picker-frames"] [data-testid^="part-card-"]').first();

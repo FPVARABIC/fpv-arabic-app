@@ -54,17 +54,18 @@ export function vocabCoversCatalogue(): boolean {
 }
 
 /**
- * What each SIZE means in practice — the decision, not the number.
+ * What each SIZE is commonly used for — the decision context, not a rule.
  * Editorial use-case guidance (like the drone types' own descriptions),
- * never a specification.
+ * never a specification and never a guarantee: the actual outcome always
+ * depends on the rest of the system.
  */
 export const SIZE_MEANING_AR: Record<number, string> = {
-  5: 'الخيار القياسي — قوة ومناورة، وأوسع تشكيلة قطع متاحة',
-  7: 'أذرع أطول لمدى أبعد وثبات أعلى — بناءات الرحلات البعيدة',
+  5: 'الحجم الأكثر شيوعاً — توازن بين القوة والمناورة، وأوسع تشكيلة قطع متاحة',
+  7: 'شائع في بناءات الرحلات البعيدة — أذرع أطول ومراوح أكبر، والأداء الفعلي يتبع بقية المنظومة',
 };
 
-/** What each battery voltage CHOICE means in practice. */
+/** What each battery voltage CHOICE is commonly used for — context, not a rule. */
 export const VOLTAGE_MEANING_AR: Record<number, string> = {
-  4: 'أبسط وأقل كلفة — شائع في البناءات الصغيرة والبدايات',
-  6: 'معيار بناءات 5 إنش الحديثة — كفاءة أعلى وتيار أقل لنفس القدرة',
+  4: 'شائع في البناءات الصغيرة وكثير من بناءات التعلّم — البساطة والكلفة تعتمدان على القطع نفسها',
+  6: 'شائع في بناءات 5 إنش الحديثة — جهد أعلى يعني نظرياً تياراً أقل لنفس القدرة، والاختيار يتبع المحرك والمروحة والـESC',
 };

@@ -223,7 +223,7 @@ const PartCard: React.FC<{
         {recommended && (
           <span className="admin-badge admin-badge-ok" style={{ fontSize: 10.5 }}
             data-testid={`part-recommended-${part.id}`}>
-            مقترح لميزانيتك
+            ضمن فئة ميزانيتك
           </span>
         )}
         {part.priceRangeUSD && (

@@ -105,7 +105,7 @@ export const BUILD_PATH: readonly BuildStep[] = [
     id: 'esc', number: 6, kind: 'parts', phoneStageIndex: 6,
     categories: ['escs'],
     titleAr: 'منظّم سرعة المحركات (ESC)',
-    introAr: 'يغذّي المحركات الأربعة ويتحكم بسرعتها — تصنيف تياره يجب أن يفوق ما تسحبه محركاتك.',
+    introAr: 'يغذّي المحركات ويتحكم بسرعتها — كل قناة يجب أن تتحمل تيار محركها مع المروحة والجهد المختارين؛ وعند غياب بيانات موثقة راجع جدول اختبار الشركة المصنّعة.',
   },
   {
     id: 'fc', number: 7, kind: 'parts', phoneStageIndex: 7,
