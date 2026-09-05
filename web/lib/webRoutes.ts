@@ -7,6 +7,7 @@ import { kbTerms } from '@core/data/kb/glossary/terms';
 import { bfPageRegistry } from '@core/data/betaflight/pageRegistry';
 import { allEdgeTxPages } from '@core/data/edgetx/registry';
 import { allVideoToolPages } from '@core/data/video/software/registry';
+import { lessonsData } from '@core/data/lessonsData';
 
 /**
  * The ONE place a destination becomes a web URL.
@@ -50,6 +51,7 @@ const WEB_CHECKS: DestinationChecks = {
   moduleIdOfArticle: id => getArticle(id)?.moduleId,
   dxExists: id => !!getDxTree(id),
   glossaryExists: id => kbTerms.some(t => t.id === id),
+  lessonExists: id => lessonsData.some(l => l.id === id),
 
   /*
    * These three MUST mirror the `generateStaticParams` of the routes they
@@ -85,12 +87,10 @@ export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // one specific stage or checklist group has no web address, and sending
   // someone to a page that does not scroll to what they asked for is worse
   // than telling them where it is.
-  // Found by the search end-to-end run: sixteen lessons are in the shared
-  // index, and every one of them rendered as a live link to `/lessons/:id`,
-  // which this surface has never had. They 404'd — silently, because nobody
-  // clicks a lesson result while testing a Betaflight page. Declaring the kind
-  // here turns the dead link into a visible «متاح في التطبيق».
-  lesson: 'الدروس المصوّرة والتفاعلية متاحة في تطبيق الهاتف',
+  // `lesson` was declared here until the lessons rebuild: sixteen search
+  // results used to render as live links to a `/lessons/:id` this surface did
+  // not have. It has one now — web/app/lessons — so the kind resolves like any
+  // other. The existence check lives in WEB_CHECKS above.
   assembly: 'تدفّق البناء خطوة بخطوة متاح في تطبيق الهاتف',
   roadmap: 'مراحل البناء معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
   checklist: 'قوائم الفحص معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
@@ -164,6 +164,8 @@ export function href(d: Destination): string | null {
  * and `scripts/testWebCore.ts` fails the build when one appears.
  */
 export const SECTION_ROUTES = {
+  /** The lessons index — the beginner path's front door. */
+  lessons: '/lessons',
   /** The software centre's index. */
   programming: '/programming',
   /** The ExpressLRS front page, in front of the setup and troubleshooting flows. */

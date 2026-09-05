@@ -65,6 +65,23 @@
       // nothing — and keeps working until somebody renames a key.
       "@core/utils/*": [
         "../src/utils/*"
+      ],
+      // ── Added in the lessons rebuild ──────────────────────────────────────
+      //
+      // The lesson journeys are typed in src/types, and the sixteen interactive
+      // SVG diagrams the lessons are built around live in src/components. They
+      // are the phone app's components, rendered here untouched inside the
+      // frame web/app/lessons/lessons.css paints for them — one copy, both
+      // surfaces, the same rule as the data above. Only `lessons/` and
+      // `diagrams/` are imported; nothing else under src/components is.
+      "@core/types": [
+        "../src/types/index"
+      ],
+      "@core/types/*": [
+        "../src/types/*"
+      ],
+      "@core/components/*": [
+        "../src/components/*"
       ]
     }
   },

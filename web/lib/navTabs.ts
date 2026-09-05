@@ -50,7 +50,7 @@
  */
 
 import {
-  House, Hammer, Wrench, Library, CircuitBoard, Store,
+  House, BookOpen, Hammer, Wrench, Library, CircuitBoard, Store,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -70,6 +70,17 @@ export interface NavTab {
 
 export const NAV_TABS: NavTab[] = [
   { id: 'home', labelAr: 'الرئيسية', href: '/', Icon: House },
+  /*
+   * «الدروس», the seventh tab, right after home.
+   *
+   * Added in the lessons rebuild (docs/LESSONS-REBUILD-PLAN.md). The first
+   * tester's first note was that the lessons and their quizzes had vanished
+   * from the new site; they had — the phone app carried them and nothing
+   * deployed the phone app. The tab uses the phone's icon so a returning
+   * learner recognises it without reading. Seven tabs is what the phone bar
+   * already holds, so the width cost is known.
+   */
+  { id: 'lessons', labelAr: 'الدروس', href: '/lessons', Icon: BookOpen },
   { id: 'community', labelAr: 'المجتمع', href: '/community', Icon: Wrench },
   { id: 'store', labelAr: 'المتجر', href: '/store', Icon: Store },
   { id: 'programming', labelAr: 'البرامج', href: '/programming', Icon: CircuitBoard,

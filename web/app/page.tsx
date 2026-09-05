@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { Wrench, Store, CircuitBoard, Library, Hammer, type LucideIcon } from 'lucide-react';
+import { BookOpen, Wrench, Store, CircuitBoard, Library, Hammer, type LucideIcon } from 'lucide-react';
 import { allKbModules } from '@core/data/kb/registry';
 import { allDxTrees } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
+import { lessonsData } from '@core/data/lessonsData';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
@@ -98,9 +99,25 @@ export default function HomePage() {
   const softwarePages =
     HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
 
-  /* The five load-bearing sections, in navigation order. One array, one
+  /* The six load-bearing sections, in navigation order. One array, one
      renderer — see the note above on why that matters more than it looks. */
   const pillars: Pillar[] = [
+    /*
+     * الدروس first. The beginner path is what the product is named for, and
+     * the first tester's first note was that it had disappeared from the site.
+     */
+    {
+      id: 'lessons',
+      labelAr: 'الدروس',
+      href: sectionHref('lessons'),
+      Icon: BookOpen,
+      blurbAr:
+        'من «ما هو الكوادكابتر؟» حتى أول تحليق: شرح قصير، ثم سؤال، ثم مخطّط تضغطه '
+        + 'بنفسك. كل إجابة وكل مرحلة تُحفظ في متصفّحك، فتعود حيث توقّفت.',
+      count: lessonsData.length,
+      countLabelAr: 'درساً في أربع محطّات',
+      ctaAr: 'ابدأ الدروس',
+    },
     {
       id: 'community',
       labelAr: 'المجتمع',

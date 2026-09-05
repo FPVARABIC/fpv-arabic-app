@@ -413,13 +413,33 @@ console.log('\n[9] The phone app is untouched by the web surface');
 {
   // The web must not have reached back into the phone's UI. Shared code lives
   // in src/data and src/platform; anything else would couple the two builds.
+  //
+  // Two exceptions, admitted by the lessons rebuild and checked right below:
+  // the interactive SVG diagrams (src/components/diagrams) and the adapter
+  // that maps them onto lesson stages. They are the lessons' teaching visuals,
+  // rendered on both surfaces from one copy — the same rule as the data. They
+  // stay admissible only while they import nothing from the phone's shell,
+  // which the next assertion proves on every run.
+  const SHARED_UI = /@core\/components\/(diagrams\/|lessons\/interactiveDiagramAdapters)/;
   const reachesIntoPhoneUi = [...SOURCES.entries()]
-    .filter(([, s]) => /@core\/(components|views|contexts|lib)\//.test(s)
+    .filter(([, s]) =>
+      [...s.matchAll(/@core\/(components|views|contexts|lib)\/[^'"]+/g)].some(m => !SHARED_UI.test(m[0]))
       || /from\s+['"]\.\.\/\.\.\/src\/(components|views|contexts)/.test(s))
     .map(([f]) => f);
   if (reachesIntoPhoneUi.length) console.error('  REACHES INTO PHONE UI:', reachesIntoPhoneUi);
-  ok('no web file imports the phone app\'s components, views or contexts',
+  ok('no web file imports the phone app\'s components, views or contexts (beyond the shared diagrams)',
     reachesIntoPhoneUi.length === 0);
+
+  const diagramsDir = path.join(ROOT, 'src/components/diagrams');
+  const sharedUiFiles = [
+    ...readdirSync(diagramsDir).filter(f => f.endsWith('.tsx')).map(f => path.join(diagramsDir, f)),
+    path.join(ROOT, 'src/components/lessons/interactiveDiagramAdapters.tsx'),
+  ];
+  const shellBound = sharedUiFiles.filter(f =>
+    /from\s+['"](react-router|firebase|\.\.\/\.\.\/(contexts|views|hooks|lib)\/)/.test(readFileSync(f, 'utf8')));
+  if (shellBound.length) console.error('  SHARED UI BOUND TO THE PHONE SHELL:', shellBound);
+  ok(`the shared diagrams import nothing from the phone shell (${sharedUiFiles.length} files checked)`,
+    shellBound.length === 0);
 
   // And the phone must not have started importing the web.
   const phoneImportsWeb: string[] = [];
