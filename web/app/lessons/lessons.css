@@ -259,10 +259,10 @@
 .lesson-diagram .w-full { width: 100%; }
 .lesson-diagram .w-1\.5 { width: 6px; } .lesson-diagram .w-3 { width: 12px; } .lesson-diagram .w-5 { width: 20px; }
 .lesson-diagram .w-6 { width: 24px; } .lesson-diagram .w-7 { width: 28px; } .lesson-diagram .w-8 { width: 32px; }
-.lesson-diagram .w-14 { width: 56px; } .lesson-diagram .w-20 { width: 80px; } .lesson-diagram .w-28 { width: 112px; }
+.lesson-diagram .w-14 { width: 56px; } .lesson-diagram .w-16 { width: 64px; } .lesson-diagram .w-20 { width: 80px; } .lesson-diagram .w-24 { width: 96px; } .lesson-diagram .w-28 { width: 112px; }
 .lesson-diagram .h-1 { height: 4px; } .lesson-diagram .h-1\.5 { height: 6px; } .lesson-diagram .h-3 { height: 12px; }
 .lesson-diagram .h-5 { height: 20px; } .lesson-diagram .h-6 { height: 24px; } .lesson-diagram .h-7 { height: 28px; }
-.lesson-diagram .h-8 { height: 32px; } .lesson-diagram .h-20 { height: 80px; } .lesson-diagram .h-28 { height: 112px; }
+.lesson-diagram .h-8 { height: 32px; } .lesson-diagram .h-16 { height: 64px; } .lesson-diagram .h-20 { height: 80px; } .lesson-diagram .h-24 { height: 96px; } .lesson-diagram .h-28 { height: 112px; }
 
 /* borders & radii */
 .lesson-diagram .border { border-width: 1px; border-style: solid; border-color: rgba(255,255,255,0.08); }

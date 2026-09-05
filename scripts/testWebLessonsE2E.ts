@@ -72,6 +72,23 @@ async function goto(page: Page, url: string, anchor: string) {
   await page.waitForSelector(anchor, { timeout: 30_000 });
 }
 
+/**
+ * Whether the document scrolls sideways — measured by scrolling, because in an
+ * RTL document scrollWidth vs clientWidth disagree between engines. A
+ * screenshot pass found the stick diagram overflowing a 390px viewport; this
+ * is the assertion that would have caught it.
+ */
+async function scrollsSideways(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const el = document.scrollingElement ?? document.documentElement;
+    const before = el.scrollLeft;
+    el.scrollLeft = before - 400; const left = el.scrollLeft;
+    el.scrollLeft = before + 400; const right = el.scrollLeft;
+    el.scrollLeft = before;
+    return left !== before || right !== before;
+  });
+}
+
 const journey = (page: Page) => page.locator('[data-testid="lesson-journey"]');
 const stageId = (page: Page) => journey(page).getAttribute('data-stage-id');
 const stageNo = async (page: Page) => Number(await journey(page).getAttribute('data-stage'));
@@ -112,6 +129,7 @@ async function main() {
     ok('a fresh reader is offered lesson 1 as the place to start', (await page.locator('[data-testid="lesson-suggest-link"]').getAttribute('href')) === '/lessons/lesson-quadcopter-intro');
     ok('the progress bar reads 0 done', (await page.locator('[data-testid="lessons-progress"]').getAttribute('data-done')) === '0');
     ok('the header tab for الدروس is lit', await page.locator('a[href="/lessons"][aria-current="page"]').count() >= 1);
+    ok('the index never scrolls sideways at 390px', !(await scrollsSideways(page)));
 
     console.log('\n[2] Opening a lesson: stage 1, the objective, and focus on stage change');
     await page.locator('[data-testid="lesson-card-lesson-lipo-batteries"]').click();
@@ -133,6 +151,7 @@ async function main() {
     await page.locator(`[data-testid="checkpoint-${cpId}-option-a"]`).click();
     await page.waitForSelector(`[data-testid="checkpoint-${cpId}-feedback"]`);
     ok(`answered checkpoint "${cpId}" on stage ${cpStage}`, true);
+    ok('a checkpoint stage never scrolls sideways at 390px', !(await scrollsSideways(page)));
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForSelector('[data-testid="lesson-journey"]');
     ok('after reload the lesson reopens on the same stage', await stageNo(page) === cpStage);
@@ -155,7 +174,13 @@ async function main() {
         const n = await motors.count();
         // The motors spin continuously (the phone app's `spin-slow` animation), so
         // Playwright's stability check never settles — force the click, as a finger would.
-        for (let i = 0; i < n; i++) { await motors.nth(i).click({ force: true }); await page.waitForTimeout(30); }
+        for (let i = 0; i < n; i++) {
+          // Centre first: the fixed bottom tab bar covers the last 70px of a phone viewport,
+          // and a forced click that lands there navigates away instead of exploring a motor.
+          await motors.nth(i).evaluate(node => node.scrollIntoView({ block: 'center' }));
+          await motors.nth(i).click({ force: true });
+          await page.waitForTimeout(30);
+        }
       }
       const reveals = page.locator('[data-testid$="-reveal"]');
       while ((await reveals.count()) > 0) { await reveals.first().click(); await page.waitForTimeout(30); }
@@ -194,6 +219,7 @@ async function main() {
       await page.locator(`[data-testid="${id}"]`).click(); await page.waitForTimeout(30);
     }
     ok('all four axes count as explored', (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('4 من 4'));
+    ok('the stick diagram stage never scrolls sideways at 390px', !(await scrollsSideways(page)));
 
     ok(`no page errors during the run (${errors.length})`, errors.length === 0);
     if (errors.length) console.error(errors);

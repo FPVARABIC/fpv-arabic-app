@@ -87,7 +87,7 @@ const StickPad: React.FC<{
   return (
     <div className="flex-1 flex flex-col items-center gap-1.5">
       <p className="text-[11px] font-bold text-cyan-300">{title}</p>
-      <div className="relative w-28 h-28 rounded-2xl border border-cyan-400/15 bg-white/3 flex items-center justify-center">
+      <div className="relative w-24 h-24 rounded-2xl border border-cyan-400/15 bg-white/3 flex items-center justify-center">
         <div className="absolute top-1.5">{btn('up')}</div>
         <div className="absolute inset-0 flex items-center justify-between px-1.5 pointer-events-none">
           <span className="pointer-events-auto">{btn('left')}</span>
@@ -110,7 +110,7 @@ const QuadResponse: React.FC<{ move: Move | null }> = ({ move }) => {
     if (move.axis === 'roll') transform = `perspective(180px) rotateY(${move.dir === 'left' ? -28 : 28}deg)`;
   }
   return (
-    <svg viewBox="0 0 120 120" className="w-20 h-20 mx-auto" style={{ transform, transition: 'transform 0.25s ease' }} aria-hidden>
+    <svg viewBox="0 0 120 120" className="w-16 h-16 mx-auto" style={{ transform, transition: 'transform 0.25s ease' }} aria-hidden>
       <line x1="25" y1="25" x2="95" y2="95" stroke={C.stroke} strokeWidth="6" strokeLinecap="round" />
       <line x1="95" y1="25" x2="25" y2="95" stroke={C.stroke} strokeWidth="6" strokeLinecap="round" />
       {[[25, 25], [95, 25], [25, 95], [95, 95]].map(([x, y], i) => (
@@ -133,7 +133,7 @@ export const StickControl: React.FC<StickControlProps> = ({ onAxisExplore }) => 
 
   return (
     <DiagramFrame title="عصا التحكم — الوضع 2 (Mode 2)" hint="اضغط اتجاهاً على أي عصا لترى ما تفعله الطائرة ولماذا">
-      <div className="flex items-start gap-3" dir="ltr">
+      <div className="flex items-start justify-center gap-2" dir="ltr">
         <StickPad title="اليسرى: خانق + انحراف" moves={LEFT_STICK} selected={selected} onPick={pick} testId="stick-left" />
         <div className="flex-shrink-0 flex flex-col items-center justify-center pt-4">
           <QuadResponse move={selected} />
