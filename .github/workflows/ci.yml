@@ -64,6 +64,7 @@ jobs:
           npm run test:project
           npm run test:navigation-regression
           npm run test:kb
+          npm run test:lessons
 
       - name: Build — web (production)
         run: npm run web:build
