@@ -9,12 +9,12 @@
 import assert from 'node:assert/strict';
 import {
   createInitialSessionState, goToStageId, nextStage, prevStage,
-  recordCheckpointAnswer, recordRecallRevealed,
+  recordCheckpointAnswer, recordRecallRevealed, recordInteractionVariant,
   isCheckpointAnswered, areAllCheckpointsAnswered, isRecallComplete,
   getReadinessRequirements, isReadyToComplete, stageCount, currentStage,
 } from '../src/data/lessons/lessonJourneyEngine';
 import { lesson12JourneyDefinition as def } from '../src/data/lessons/lesson12Journey.definition';
-import type { CheckpointStage, RecallStage, GlossaryStage, ComparisonStage } from '../src/types/lessonJourney';
+import type { CheckpointStage, RecallStage, GlossaryStage, ComparisonStage, InteractiveDiagramStage } from '../src/types/lessonJourney';
 import { lessonsData } from '../src/data/lessonsData';
 import { getLessonJourneyDefinition } from '../src/data/lessons/journeyRegistry';
 
@@ -36,12 +36,16 @@ console.log('\n[1] Registration: Lesson 12 is registered in the journey registry
   const lesson12 = lessonsData.find(l => l.id === 'lesson-motor-install')!;
   ok('lesson12JourneyDefinition.lessonId matches the real Lesson 12 id', def.lessonId === lesson12.id);
   ok('getLessonJourneyDefinition resolves Lesson 12 to this exact definition', getLessonJourneyDefinition(lesson12.id) === def);
-  ok('Lesson 12 has 17 stages', STAGE_COUNT === 17);
+  ok('Lesson 12 has 18 stages (17 + the motor-mount interactive stage)', STAGE_COUNT === 18);
 }
 
-console.log('\n[2] No interactive_diagram stage exists — MotorMount.tsx is passive and was correctly not wired up');
+console.log('\n[2] Exactly one interactive_diagram stage exists — both screw cases must be opened');
 {
-  ok('zero interactive_diagram stages exist', def.stages.filter(s => s.type === 'interactive_diagram').length === 0);
+  const diagrams = def.stages.filter((s): s is InteractiveDiagramStage => s.type === 'interactive_diagram');
+  ok('exactly one interactive_diagram stage exists', diagrams.length === 1);
+  ok('it renders the motor-mount diagram', diagrams[0].diagramType === 'motor-mount');
+  ok('it requires both cases', JSON.stringify(diagrams[0].requiredVariants) === JSON.stringify(['correct', 'wrong']));
+  ok('it is listed in readinessOrder', (def.readinessOrder ?? []).includes(diagrams[0].id));
 }
 
 console.log('\n[3] Initial state — nothing satisfied, completion unavailable at initial render');
@@ -52,8 +56,8 @@ console.log('\n[3] Initial state — nothing satisfied, completion unavailable a
   ok('final recall not complete', !isRecallComplete(RECALL, s));
   ok('readiness gate is NOT satisfied at initial state', !isReadyToComplete(def, s));
   ok(
-    'readiness requirement list has one entry per gate (4 checkpoints + recall, no diagram)',
-    getReadinessRequirements(def, s).length === CHECKPOINT_STAGES.length + 1,
+    'readiness requirement list has one entry per gate (4 checkpoints + diagram + recall)',
+    getReadinessRequirements(def, s).length === CHECKPOINT_STAGES.length + 2,
   );
   ok('every requirement reports unmet at initial state', getReadinessRequirements(def, s).every(r => !r.met));
 }
@@ -128,7 +132,10 @@ console.log('\n[8] Completion remains unavailable until every checkpoint and rec
 
   for (const p of RECALL.prompts) s = recordRecallRevealed(s, RECALL.id, p.id);
   ok('final recall now complete', isRecallComplete(RECALL, s));
-  ok('READY once all 4 (even all-wrong) checkpoints + final recall are all engaged with', isReadyToComplete(def, s));
+  ok('still not ready — the diagram has not been explored', !isReadyToComplete(def, s));
+  const DIAGRAM = def.stages.find((st): st is InteractiveDiagramStage => st.type === 'interactive_diagram')!;
+  for (const v of DIAGRAM.requiredVariants) s = recordInteractionVariant(s, DIAGRAM.id, v);
+  ok('READY once all 4 (even all-wrong) checkpoints + diagram + final recall are all engaged with', isReadyToComplete(def, s));
 }
 
 console.log('\n[9] Readiness checklist always names exactly what remains, in the declared order');
@@ -158,7 +165,7 @@ console.log('\n[11] A fresh session (equivalent to a page refresh) starts with z
   const fresh = createInitialSessionState(def);
   ok('fresh state has no checkpoints answered', Object.values(fresh.checkpointAnswers).every(v => v === null));
   ok('fresh state has no recall prompts revealed', Object.values(fresh.recallRevealed[RECALL.id]).every(v => v === false));
-  ok('fresh state has no interaction-variant tracking at all (no interactive_diagram stage exists)', Object.keys(fresh.interactionVariants).length === 0);
+  ok('fresh state tracks exactly the one interactive stage', Object.keys(fresh.interactionVariants).length === 1);
 }
 
 console.log('\n[12] The comparison stage preserves MotorMount.tsx\'s correct-vs-wrong screw contrast in text form');
@@ -253,10 +260,10 @@ console.log('\n[18] Quality-correction: the weak "screw color" distractor was re
   ok('the replacement distractor has substantive feedback', replacement.feedback.length > 30);
 }
 
-console.log('\n[19] Regression: stage count, interactive_diagram absence, and Lesson 13 bridge remain unchanged by the quality correction');
+console.log('\n[19] Regression: stage count, the single interactive_diagram stage, and Lesson 13 bridge remain unchanged by the quality correction');
 {
-  ok('Lesson 12 still has exactly 17 stages (quality correction did not change stage count)', STAGE_COUNT === 17);
-  ok('still zero interactive_diagram stages exist', def.stages.filter(s => s.type === 'interactive_diagram').length === 0);
+  ok('Lesson 12 still has exactly 18 stages (quality correction did not change stage count)', STAGE_COUNT === 18);
+  ok('still exactly one interactive_diagram stage exists', def.stages.filter(s => s.type === 'interactive_diagram').length === 1);
   ok('still exactly 4 checkpoint stages', CHECKPOINT_STAGES.length === 4);
   let s = createInitialSessionState(def);
   for (const stage of CHECKPOINT_STAGES) {
@@ -265,6 +272,8 @@ console.log('\n[19] Regression: stage count, interactive_diagram absence, and Le
   }
   ok('wrong answers on every checkpoint (including the replaced distractor) still count as "answered"', areAllCheckpointsAnswered(def, s));
   for (const p of RECALL.prompts) s = recordRecallRevealed(s, RECALL.id, p.id);
+  const DIAGRAM2 = def.stages.find((st): st is InteractiveDiagramStage => st.type === 'interactive_diagram')!;
+  for (const v of DIAGRAM2.requiredVariants) s = recordInteractionVariant(s, DIAGRAM2.id, v);
   ok('the lesson is still completable end-to-end with every checkpoint wrong', isReadyToComplete(def, s));
   const lesson13 = lessonsData.find(l => l.id === 'lesson-esc-install')!;
   const completionStage = def.stages[def.stages.length - 1];

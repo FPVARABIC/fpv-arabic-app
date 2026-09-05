@@ -97,7 +97,7 @@ console.log('\n[1] One index, one engine — and everything is in it');
 
   // And the ones that were already there stayed.
   for (const [t, min] of [
-    ['article', 90], ['term', 170], ['dx', 28], ['lesson', 16], ['bf-page', 26],
+    ['article', 90], ['term', 170], ['dx', 28], ['lesson', 17], ['bf-page', 26],
     ['bf-field', 500], ['part', 60], ['elrs-step', 12], ['elrs-issue', 40],
     ['edgetx-topic', 30], ['edgetx-setting', 60], ['video-tool', 18], ['software-scope', 5],
   ] as const) {

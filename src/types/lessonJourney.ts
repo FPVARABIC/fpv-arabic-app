@@ -2,8 +2,8 @@
  * Generic interactive-lesson-journey data model.
  *
  * Content is data: a LessonJourneyDefinition fully describes one lesson's
- * staged learning experience (Lesson 01's journey is the first and, for now,
- * only definition — see src/data/lessons/lesson01Journey.definition.ts).
+ * staged learning experience. Every lesson in `lessonsData` has one — see
+ * src/data/lessons/journeyRegistry.ts.
  * Progression/readiness logic lives in src/data/lessons/lessonJourneyEngine.ts
  * and is driven entirely by this data, never by a lesson-specific stage
  * constant. Rendering lives in src/components/lessons/InteractiveLessonJourney.tsx.
@@ -43,6 +43,12 @@ interface JourneyStageBase {
 export interface OrientationStage extends JourneyStageBase {
   type: 'orientation';
   body: string;
+  /**
+   * The lesson's one-line objective, shown under the orientation body.
+   * Filled by `enrichJourneyDefinition` from `Lesson.objective`; a definition
+   * may also set it directly. Optional so existing definitions stay valid.
+   */
+  objective?: string;
 }
 
 export interface ExplanationStage extends JourneyStageBase {
@@ -100,6 +106,31 @@ export interface RecallStage extends JourneyStageBase {
   requirementLabel: string;
 }
 
+/**
+ * A short, tone-marked block the learner must notice: a safety warning, a
+ * common mistake, a plain note. It carries no requirement and never gates
+ * completion — its job is to be impossible to miss, not to be answered.
+ *
+ * `danger` is reserved for things that hurt people or destroy hardware
+ * (a LiPo charged wrong, propellers on during a bench test). `warn` is for
+ * the mistake that wastes an afternoon. `info` is for everything else.
+ */
+export interface CalloutStage extends JourneyStageBase {
+  type: 'callout';
+  tone: 'danger' | 'warn' | 'info';
+  body: string;
+}
+
+/**
+ * The lesson's key points, restated as a short list before the glossary.
+ * Filled by `enrichJourneyDefinition` from `Lesson.importantPoints`.
+ */
+export interface KeyPointsStage extends JourneyStageBase {
+  type: 'key_points';
+  intro?: string;
+  points: string[];
+}
+
 export interface CompletionStage extends JourneyStageBase {
   type: 'completion';
   summary: string;
@@ -115,6 +146,8 @@ export type JourneyStage =
   | InteractiveDiagramStage
   | GlossaryStage
   | RecallStage
+  | CalloutStage
+  | KeyPointsStage
   | CompletionStage;
 
 export interface LessonJourneyDefinition {

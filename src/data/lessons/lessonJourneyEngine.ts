@@ -3,14 +3,14 @@
  *
  * Pure, framework-agnostic, and driven entirely by a LessonJourneyDefinition
  * (src/types/lessonJourney.ts) — no lesson-specific stage constants live here.
- * React-state-only for the duration of a single lesson visit: nothing here is
- * persisted to localStorage/Firestore. The existing completedLessons storage
- * (useProgress/ProgressContext) is untouched and remains the only durable
- * record that a lesson was completed.
+ * The state is plain data and fully serialisable; persisting it is the job of
+ * `lessonJourneyPersistence.ts`, which the renderers call. The existing
+ * completedLessons storage (useProgress/ProgressContext) is untouched and
+ * remains the record that a lesson was completed.
  *
  * Exercised with plain assertions in scripts/testLessonJourneyEngine.ts and
- * scripts/testLesson01Journey.ts, the same way the rest of this repo tests
- * pure logic.
+ * the per-lesson scripts/testLessonNNJourney.ts, the same way the rest of
+ * this repo tests pure logic.
  */
 import type {
   LessonJourneyDefinition, JourneyStage, JourneyRequirement,
@@ -19,7 +19,15 @@ import type {
 
 export interface JourneySessionState {
   currentStageIndex: number;
+  /** checkpointId -> the option currently selected (the learner may change it). */
   checkpointAnswers: Record<string, string | null>;
+  /**
+   * checkpointId -> the FIRST option the learner ever chose. Never overwritten,
+   * so a quiz result can honestly say «3 of 4 on the first try» even after
+   * every wrong answer has since been corrected. Cleared only by
+   * `resetCheckpoints`.
+   */
+  checkpointFirstAnswers: Record<string, string | null>;
   /** stageId -> variant -> whether that variant has been recorded at least once. */
   interactionVariants: Record<string, Record<string, boolean>>;
   /** stageId -> promptId -> whether that recall prompt has been revealed. */
@@ -28,18 +36,20 @@ export interface JourneySessionState {
 
 export function createInitialSessionState(definition: LessonJourneyDefinition): JourneySessionState {
   const checkpointAnswers: Record<string, string | null> = {};
+  const checkpointFirstAnswers: Record<string, string | null> = {};
   const interactionVariants: Record<string, Record<string, boolean>> = {};
   const recallRevealed: Record<string, Record<string, boolean>> = {};
   for (const stage of definition.stages) {
     if (stage.type === 'checkpoint') {
       checkpointAnswers[stage.checkpoint.id] = null;
+      checkpointFirstAnswers[stage.checkpoint.id] = null;
     } else if (stage.type === 'interactive_diagram') {
       interactionVariants[stage.id] = Object.fromEntries(stage.requiredVariants.map(v => [v, false]));
     } else if (stage.type === 'recall') {
       recallRevealed[stage.id] = Object.fromEntries(stage.prompts.map(p => [p.id, false]));
     }
   }
-  return { currentStageIndex: 0, checkpointAnswers, interactionVariants, recallRevealed };
+  return { currentStageIndex: 0, checkpointAnswers, checkpointFirstAnswers, interactionVariants, recallRevealed };
 }
 
 export function stageCount(definition: LessonJourneyDefinition): number {
@@ -81,7 +91,12 @@ export function prevStage(definition: LessonJourneyDefinition, state: JourneySes
 export function recordCheckpointAnswer(
   state: JourneySessionState, checkpointId: string, optionId: string,
 ): JourneySessionState {
-  return { ...state, checkpointAnswers: { ...state.checkpointAnswers, [checkpointId]: optionId } };
+  const first = state.checkpointFirstAnswers ?? {};
+  return {
+    ...state,
+    checkpointAnswers: { ...state.checkpointAnswers, [checkpointId]: optionId },
+    checkpointFirstAnswers: { ...first, [checkpointId]: first[checkpointId] ?? optionId },
+  };
 }
 
 export function recordInteractionVariant(
@@ -164,4 +179,71 @@ export function getReadinessRequirements(
 /** The single master gate: is this lesson's completion action allowed to fire? */
 export function isReadyToComplete(definition: LessonJourneyDefinition, state: JourneySessionState): boolean {
   return getReadinessRequirements(definition, state).every(r => r.met);
+}
+
+// ── Quiz result and retry ─────────────────────────────────────────────────────
+
+export interface QuizMissedItem {
+  checkpointId: string;
+  /** Stage id, so a result card can offer «go back to this question». */
+  stageId: string;
+  question: string;
+}
+
+export interface QuizResult {
+  total: number;
+  answered: number;
+  /** Correct as currently selected — what the readiness gate cares about. */
+  correctNow: number;
+  /** Correct on the very first choice — what the learner actually knew. */
+  correctFirstTry: number;
+  missedFirstTry: QuizMissedItem[];
+}
+
+/**
+ * The lesson's quiz, scored two ways. `correctFirstTry` is the honest number;
+ * `correctNow` is what the learner has since fixed. Neither gates anything —
+ * the gate is `isReadyToComplete`, which only asks that each checkpoint has
+ * been engaged with.
+ */
+export function quizResult(definition: LessonJourneyDefinition, state: JourneySessionState): QuizResult {
+  const stages = definition.stages.filter((s): s is CheckpointStage => s.type === 'checkpoint');
+  const first = state.checkpointFirstAnswers ?? {};
+  let answered = 0, correctNow = 0, correctFirstTry = 0;
+  const missedFirstTry: QuizMissedItem[] = [];
+  for (const stage of stages) {
+    const cp = stage.checkpoint;
+    const now = state.checkpointAnswers[cp.id];
+    const firstChoice = first[cp.id];
+    if (now != null) answered++;
+    if (now != null && cp.options.find(o => o.id === now)?.correct) correctNow++;
+    if (firstChoice != null) {
+      if (cp.options.find(o => o.id === firstChoice)?.correct) correctFirstTry++;
+      else missedFirstTry.push({ checkpointId: cp.id, stageId: stage.id, question: cp.question });
+    }
+  }
+  return { total: stages.length, answered, correctNow, correctFirstTry, missedFirstTry };
+}
+
+/**
+ * «أعِد الاختبار»: forget every checkpoint answer — current and first — and
+ * stand on the first checkpoint stage. Everything else (diagram explorations,
+ * recall reveals) is kept: the learner asked to retake the quiz, not the lesson.
+ */
+export function resetCheckpoints(definition: LessonJourneyDefinition, state: JourneySessionState): JourneySessionState {
+  const checkpointAnswers: Record<string, string | null> = {};
+  const checkpointFirstAnswers: Record<string, string | null> = {};
+  for (const stage of definition.stages) {
+    if (stage.type === 'checkpoint') {
+      checkpointAnswers[stage.checkpoint.id] = null;
+      checkpointFirstAnswers[stage.checkpoint.id] = null;
+    }
+  }
+  const firstCheckpointIndex = definition.stages.findIndex(s => s.type === 'checkpoint');
+  return {
+    ...state,
+    checkpointAnswers,
+    checkpointFirstAnswers,
+    currentStageIndex: firstCheckpointIndex === -1 ? state.currentStageIndex : firstCheckpointIndex,
+  };
 }

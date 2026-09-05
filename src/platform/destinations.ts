@@ -69,6 +69,8 @@ export interface DestinationChecks {
   moduleExists?(id: string): boolean;
   glossaryExists?(id: string): boolean;
   dxExists?(id: string): boolean;
+  /** A surface that ships only some lessons (or none) says so here. */
+  lessonExists?(id: string): boolean;
   /** Article ids do not encode their module, so the route needs a lookup. */
   moduleIdOfArticle?(id: string): string | undefined;
 
@@ -125,7 +127,9 @@ export function resolveDestination(d: Destination, checks: DestinationChecks = {
       if (checks.dxExists && !checks.dxExists(d.id)) return null;
       return `/diagnose/${d.id}`;
     case 'lesson':
-      return d.id ? `/lessons/${d.id}` : null;
+      if (!d.id) return null;
+      if (checks?.lessonExists && !checks.lessonExists(d.id)) return null;
+      return `/lessons/${d.id}`;
     case 'betaflight':
       if (!d.id) return '/betaflight';
       if (checks.betaflightPageExists && !checks.betaflightPageExists(d.id)) return null;

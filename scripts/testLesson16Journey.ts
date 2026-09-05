@@ -231,8 +231,9 @@ console.log('\n[16] Lesson 16 is now the final lesson — its generic nextLesson
 {
   ok('lesson-motor-test no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-motor-test') === undefined);
   ok('lesson-first-flight no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-first-flight') === undefined);
-  ok('lessonsData has exactly 16 lessons', lessonsData.length === 16);
-  ok('lesson-video-system (Lesson 16) is now the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-video-system');
+  ok('lessonsData has exactly 17 lessons (16 + the stick-control lesson added in the rebuild)', lessonsData.length === 17);
+  ok('lesson-video-system (Lesson 16) is the sixteenth entry in lessonsData', lessonsData[15].id === 'lesson-video-system');
+  ok('lesson-stick-control-first-flight (Lesson 17) is the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-stick-control-first-flight');
 
   // The completion stage's nextLessonBridge is a generic reusable template
   // (shared shape across every lesson's journey definition) — it is only ever

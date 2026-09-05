@@ -36,6 +36,7 @@ export const appManifest: readonly AppResource[] = [
   { id: "lesson-fc-install", title: "تركيب Flight Controller", route: "/lessons/lesson-fc-install", type: 'lesson', conceptIds: ["flight_controller_basic"], order: 14 },
   { id: "lesson-receiver-install", title: "تركيب Receiver", route: "/lessons/lesson-receiver-install", type: 'lesson', conceptIds: ["receiver_basic"], order: 15 },
   { id: "lesson-video-system", title: "تركيب نظام الفيديو", route: "/lessons/lesson-video-system", type: 'lesson', conceptIds: ["vtx_basic"], order: 16 },
+  { id: "lesson-stick-control-first-flight", title: "التحكم بالعصا والطيران الأول", route: "/lessons/lesson-stick-control-first-flight", type: 'lesson', conceptIds: [], order: 17 },
   { id: "build-soldering-basics", title: "أساسيات اللحام والتوصيل", route: "/roadmap", type: 'roadmap_step', conceptIds: ["wiring_basics"], order: 1 },
   { id: "build-parts-tools", title: "تجهيز القطع والأدوات", route: "/roadmap", type: 'roadmap_step', conceptIds: ["drone_build_basics"], order: 2 },
   { id: "build-frame", title: "تركيب الفريم", route: "/roadmap", type: 'roadmap_step', conceptIds: ["drone_build_basics"], order: 3 },
@@ -67,4 +68,4 @@ export const appManifest: readonly AppResource[] = [
   { id: "ts-6", title: "GPS لا يأخذ Fix", route: "/troubleshooting", type: 'troubleshooting_item', conceptIds: [] }
 ];
 
-export const MANIFEST_RESOURCE_COUNT = 45;
+export const MANIFEST_RESOURCE_COUNT = 46;

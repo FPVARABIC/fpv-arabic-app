@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { Header } from '../components/Header';
 import { lessonsData } from '../data/lessonsData';
+import { groupLessonsByTrack } from '../data/lessons/lessonTracks';
 import { useProgressContext } from '../contexts/ProgressContext';
 import { CheckCircle2, Clock, ChevronLeft } from 'lucide-react';
 
@@ -10,11 +11,11 @@ export const LessonsView: React.FC = () => {
   const navigate = useNavigate();
   const { completedLessons } = useProgressContext();
 
-  const stages = [
-    { title: 'الأساسيات', subtitle: 'افهم الفكرة والقطع قبل الشراء', lessons: lessonsData.slice(0, 5) },
-    { title: 'الكهرباء والسلامة', subtitle: 'تعلّم الطاقة والتوصيل الآمن قبل البطارية', lessons: lessonsData.slice(5, 10) },
-    { title: 'التركيب', subtitle: 'ركّب القطع خطوة بخطوة', lessons: lessonsData.slice(10, 16) },
-  ];
+  // Grouped by each lesson's own `track`, never by array position — the old
+  // slice(0,5)/(5,10)/(10,16) silently dropped any seventeenth lesson.
+  const stages = groupLessonsByTrack(lessonsData).map(g => ({
+    title: g.titleAr, subtitle: g.subtitleAr, lessons: g.lessons,
+  }));
 
   return (
     <AppShell>

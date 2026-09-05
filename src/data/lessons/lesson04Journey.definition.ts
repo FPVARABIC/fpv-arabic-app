@@ -6,11 +6,10 @@
  * Uses only stage types already defined in src/types/lessonJourney.ts —
  * no engine, renderer, or stage-system change was needed for this lesson.
  *
- * Unlike Lessons 01–03, this lesson has no interactive_diagram stage: its
- * existing diagram (PartsCompatibility.tsx) has zero interaction today (no
- * useReveal, no click handler), so none was invented for it, per the
- * explicit instruction to only extend a diagram that genuinely already
- * requires interaction.
+ * This lesson's diagram was passive when the lesson was written, so the
+ * definition originally had no interactive_diagram stage. The lessons rebuild
+ * gave the diagram an explore callback and this definition an interactive
+ * stage — every lesson now has one.
  */
 import type { LessonJourneyDefinition } from '../../types/lessonJourney';
 
@@ -18,6 +17,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-define-goal',
   readinessOrder: [
     'checkpoint-qualityNotCompatibility',
+    'partsCompatibilityDiagram',
     'checkpoint-orderMatters',
     'checkpoint-damageNotJustPerformance',
     'checkpoint-notJustPhysicalFit',
@@ -91,6 +91,29 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
         'ذلك التيار. ثم تتأكد أن FC يوفّر منافذ (UART) كافية لكل ما تحتاجه لاحقًا مثل Receiver وVTX. وأخيرًا تختار ' +
         'البطارية (LiPo) بجهد يتوافق مع كل ما سبق. كل خطوة تعتمد على القرار الذي قبلها مباشرة — لهذا لا يمكن اختيار ' +
         'القطع بترتيب عشوائي.',
+    },
+    {
+      // Added for the lessons rebuild: PartsCompatibility.tsx gained an explore
+      // callback, so the selection chain the previous stage described is now
+      // walked by hand, one step at a time.
+      id: 'partsCompatibilityDiagram',
+      type: 'interactive_diagram',
+      title: 'امشِ سلسلة الاختيار بنفسك: خطوة تقود إلى التالية',
+      diagramType: 'parts-compatibility',
+      instructions:
+        'اضغط الخطوات الخمس بالترتيب. عند كل خطوة اقرأ لماذا لا يمكن اتخاذها قبل التي سبقتها — هذا الترتيب هو ما يمنع شراء قطعة لا تتوافق مع ما قبلها.',
+      requiredVariants: ['frame', 'motors', 'esc', 'fc', 'lipo'],
+      requirementLabel: 'استكشاف خطوات الاختيار الخمس على المخطّط',
+      hints: {
+        none: 'ابدأ بالخطوة الأولى: الهيكل. كل شيء بعده يُشتقّ من حجمه.',
+        partial: {
+          frame: 'حدّدتَ الهيكل. تابع إلى المحركات — حجمها يأتي من حجمه.',
+          motors: 'المحركات معروفة الآن. الـESC يُختار من تيارها.',
+          esc: 'الـESC اختير. المتحكم يحتاج منافذ بعدد أجهزتك.',
+          fc: 'المتحكم اختير. بقي جهد البطارية — ويجب أن يقبله الـESC والمحرك معاً.',
+          lipo: 'وصلتَ إلى البطارية. ارجع واقرأ أي خطوة تخطّيتها.',
+        },
+      },
     },
     {
       id: 'orderCheckpoint',

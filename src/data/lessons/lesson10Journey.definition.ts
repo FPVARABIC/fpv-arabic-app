@@ -6,16 +6,11 @@
  * Uses only stage types already defined in src/types/lessonJourney.ts —
  * no engine, renderer, or stage-system change was needed for this lesson.
  *
- * Like Lesson 09, this lesson has NO interactive_diagram stage: its existing
- * diagram (SafetyBeforeBattery.tsx) is entirely passive (no useReveal, no
- * click handlers, no state, no callback extension point), and inventing new
- * interaction for it would violate the standing rule against adding
- * interactivity to a diagram that doesn't already have any. The correct
- * sequence vs. unsafe-shortcut contrast the diagram illustrates is instead
- * taught through a `comparison` stage (see `sequenceComparisonStage` below).
- * SafetyBeforeBattery.tsx is therefore left completely untouched and becomes
- * an unreferenced (retained, not deleted) dead-code candidate once this
- * lesson is journey-routed, mirroring TxRxCross.tsx's status after Lesson 09.
+ * This lesson's diagram (SafetyBeforeBattery.tsx) was passive when the lesson
+ * was written, so the definition originally had no interactive_diagram stage.
+ * The lessons rebuild gave the diagram an explore callback and this definition
+ * an interactive stage (`safetyProtocolDiagram`) — the safety lesson was the
+ * one that most deserved it.
  */
 import type { LessonJourneyDefinition } from '../../types/lessonJourney';
 
@@ -25,6 +20,7 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
     'checkpoint-propellerRemovalTiming',
     'checkpoint-smokeStopperMechanism',
     'checkpoint-continuityReadingInterpretation',
+    'safetyProtocolDiagram',
     'checkpoint-bothChecksRequired',
     'recall',
   ],
@@ -210,6 +206,28 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
       footer:
         'الترتيب هنا ليس تفصيلاً شكليًا؛ كل خطوة تكتشف نوعًا مختلفًا من المشاكل، وتخطي أي خطوة يزيد الخطر حتى لو ' +
         'بدت الخطوات السابقة طبيعية تمامًا.',
+    },
+    {
+      // Added for the lessons rebuild: SafetyBeforeBattery.tsx gained an
+      // explore callback. The protocol the previous stage compared is now
+      // opened step by step, and the learner reads what each step alone catches.
+      id: 'safetyProtocolDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح خطوات البروتوكول الأربع: ماذا تكتشف كلٌّ منها وحدها',
+      diagramType: 'safety-before-battery',
+      instructions:
+        'اضغط كل خطوة بالترتيب. لكل خطوة شيء تكتشفه لا تكتشفه غيرها — وهذا هو الجواب على «لماذا لا يكفي واحد منها».',
+      requiredVariants: ['no-props', 'smoke-stopper', 'multimeter', 'battery'],
+      requirementLabel: 'استكشاف خطوات البروتوكول الأربع على المخطّط',
+      hints: {
+        none: 'ابدأ بالخطوة الأولى: لا مراوح مركبة.',
+        partial: {
+          'no-props': 'المراوح منزوعة. تابع إلى Smoke Stopper.',
+          'smoke-stopper': 'Smoke Stopper مفهوم. تابع إلى المقياس — يلتقط ما لا يلتقطه.',
+          multimeter: 'المقياس مفهوم. بقيت الخطوة الأخيرة: البطارية — وهي آخر شيء لا أوّله.',
+          battery: 'وصلتَ إلى البطارية. ارجع واقرأ أي خطوة تخطّيتها.',
+        },
+      },
     },
     {
       id: 'bothChecksCheckpoint',

@@ -23,6 +23,7 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-tx-rx',
   readinessOrder: [
     'checkpoint-txConnectsToRxReasoning',
+    'txRxCrossDiagram',
     'checkpoint-correctMappingIdentification',
     'checkpoint-communicationFailureNotDamage',
     'checkpoint-sharedGndStillRequired',
@@ -135,6 +136,26 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
       footer:
         'الفرق بين التوصيلين ليس في المظهر (تسميات متطابقة قد تبدو "منظمة")، بل في اتجاه الإشارة الفعلي؛ التوصيل ' +
         'الصحيح يتبع اتجاه الإرسال والاستقبال، وليس تطابق الأسماء.',
+    },
+    {
+      // Added for the lessons rebuild: TxRxCross.tsx gained an explore
+      // callback, so both wirings are opened by the learner rather than only
+      // looked at.
+      id: 'txRxCrossDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح الحالتَين على المخطّط: لماذا تعمل الأولى ولا تعمل الثانية',
+      diagramType: 'tx-rx-cross',
+      instructions:
+        'اضغط «لماذا؟» على التوصيل الصحيح ثم على الخاطئ. الخطأ لا يُحرق شيئاً — وهذا بالضبط ما يجعله أول ما تفحصه حين «لا يستجيب الراديو».',
+      requiredVariants: ['correct', 'wrong'],
+      requirementLabel: 'فتح الحالتَين على المخطّط: الصحيحة والخاطئة',
+      hints: {
+        none: 'ابدأ بالتوصيل الصحيح — اقرأ لماذا تتقاطع الأسلاك.',
+        partial: {
+          correct: 'قرأتَ الصحيح. افتح الخاطئ الآن لتعرف كيف يبدو الفشل الصامت.',
+          wrong: 'قرأتَ الخاطئ. افتح الصحيح لتعرف القاعدة التي تمنعه.',
+        },
+      },
     },
     {
       id: 'correctMappingCheckpoint',

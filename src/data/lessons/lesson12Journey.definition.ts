@@ -21,6 +21,7 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-motor-install',
   readinessOrder: [
     'checkpoint-whyScrewLengthMatters',
+    'motorMountDiagram',
     'checkpoint-correctScrewChoice',
     'checkpoint-tighteningPrinciple',
     'checkpoint-whyRoutingAndPinchPointsMatter',
@@ -101,6 +102,25 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
         'في المقابل، مسمار قصير جدًا لا يُمسك عددًا كافيًا من اللفات داخل الفتحة، فلا يثبّت المحرك بثبات حتى مع الشد ' +
         'الكامل. النتيجة المحتملة: محرك مهتز أو غير ثابت تمامًا في مكانه أثناء الطيران. ليس كل قِصَر آمنًا لمجرد أن ' +
         'المسمار "أمسك بضع لفات" — يجب أن يكون الإمساك كافيًا لتثبيت حقيقي.',
+    },
+    {
+      // Added for the lessons rebuild: MotorMount.tsx gained an explore
+      // callback, so the two screw cases are opened by the learner.
+      id: 'motorMountDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح حالتَي المسمار على المخطّط',
+      diagramType: 'motor-mount',
+      instructions:
+        'اضغط الحالة الصحيحة ثم الخاطئة. الفرق مليمتران — ونتيجته محرك محترق في أول طيران، لا على الطاولة.',
+      requiredVariants: ['correct', 'wrong'],
+      requirementLabel: 'فتح حالتَي المسمار على المخطّط: الصحيح والخاطئ',
+      hints: {
+        none: 'ابدأ بالحالة الصحيحة — كيف يُحسب الطول.',
+        partial: {
+          correct: 'قرأتَ الصحيح. افتح الخاطئ لتعرف لماذا لا يظهر الضرر على الطاولة.',
+          wrong: 'قرأتَ الخاطئ. افتح الصحيح لتعرف القاعدة العملية للطول.',
+        },
+      },
     },
     {
       id: 'correctChoiceCheckpoint',

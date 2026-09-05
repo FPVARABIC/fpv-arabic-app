@@ -30,10 +30,24 @@ export const lesson03JourneyDefinition: LessonJourneyDefinition = {
         '(Frame)، والبطارية (LiPo)، والمراوح (Props). كالعادة، لا بأس إن أخطأت في الأسئلة — كل خطأ يأتي بشرح واضح.',
     },
     {
+      // Was a single 410-character paragraph naming eight parts. A tester's
+      // screenshot showed it as one wall of text; it is now one card per part,
+      // in the order the signal-flow lesson taught them, ending with the two
+      // this lesson introduces.
       id: 'overview',
-      type: 'explanation',
-      title: 'جولة سريعة: كل القطع الأساسية',
-      body: 'lesson-explanation',
+      type: 'comparison',
+      title: 'جولة سريعة: كل القطع الأساسية — قطعة قطعة',
+      items: [
+        { label: 'Frame — الهيكل', body: 'يحمل كل القطع ويحدّد حجم الدرون وشكله. القطعة الوحيدة هنا بلا أي إلكترونيات.' },
+        { label: 'Motors — المحركات', body: 'أربعة، تدير المراوح وتولّد القوة الرافعة. كلٌّ منها بسرعته المستقلة — وهذا سرّ كل حركة.' },
+        { label: 'ESC — منظّم السرعة', body: 'يتحكم في سرعة كل محرك ويوفر له طاقة نظيفة من البطارية. غالباً أربعة منظّمات في لوحة واحدة (4‑in‑1).' },
+        { label: 'Flight Controller — متحكم الطيران', body: 'الدماغ: يقرأ الجيروسكوب وأوامر الطيار، ويحسب سرعة كل محرك مئات المرات في الثانية.' },
+        { label: 'Receiver — المستقبل', body: 'يستقبل أوامر جهاز التحكم لاسلكياً ويسلّمها إلى متحكم الطيران. بلا استقبال لا معنى للعصا.' },
+        { label: 'VTX — مرسل الفيديو', body: 'يبثّ صورة الكاميرا لاسلكياً إلى نظارتك. هو ما يجعل الطيران «من منظور الطيار».' },
+        { label: 'Props — المراوح', body: 'تحوّل دوران المحرك إلى دفع. مستهلكة: تُكسر وتُبدَّل، وتُنزع دائماً قبل أي عمل على الطاولة.' },
+        { label: 'LiPo — البطارية', body: 'مصدر الطاقة الوحيد، عالي التيار. كل قطعة سبقتها لها حجم ومواصفات، ويجب أن تتوافق معها.' },
+      ],
+      footer: 'ثماني قطع، وظيفة واحدة لكلٍّ منها. في بقية هذا الدرس ستتأكّد أنك تعرف من يفعل ماذا — وهذا وحده يمنع أشيع أخطاء الشراء والتوصيل.',
     },
     {
       id: 'framePassiveCheckpoint',

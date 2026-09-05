@@ -1,10 +1,10 @@
 import type { Lesson } from '../types';
 
-export const TOTAL_LESSONS = 16;
+export const TOTAL_LESSONS = 17;
 
 export const lessonsData: Lesson[] = [
   {
-    id: 'lesson-quadcopter-intro', number: 1,
+    id: 'lesson-quadcopter-intro', number: 1, track: 'basics',
     title: 'ما هو الكوادكابتر؟',
     description: 'تعرف على الكوادكابتر وكيف يختلف عن الطائرات المسيّرة الأخرى',
     level: 'مبتدئ', duration: '20 دقائق',
@@ -22,7 +22,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-quadcopter-how-it-works', number: 2,
+    id: 'lesson-quadcopter-how-it-works', number: 2, track: 'basics',
     title: 'كيف يعمل الكوادكابتر؟',
     description: 'فهم مسار الإشارة من جهاز التحكم إلى المحركات',
     level: 'مبتدئ', duration: '12 دقائق',
@@ -40,7 +40,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-drone-parts', number: 3,
+    id: 'lesson-drone-parts', number: 3, track: 'basics',
     title: 'القطع الأساسية في الدرون',
     description: 'تعرف على كل قطعة أساسية وما وظيفتها',
     level: 'مبتدئ', duration: '15 دقائق',
@@ -58,7 +58,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-define-goal', number: 4,
+    id: 'lesson-define-goal', number: 4, track: 'basics',
     title: 'لا تشترِ عشوائيًا',
     description: 'لماذا التوافق بين القطع ضروري جداً قبل الشراء',
     level: 'مبتدئ', duration: '10 دقائق',
@@ -77,7 +77,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-drone-size', number: 5,
+    id: 'lesson-drone-size', number: 5, track: 'basics',
     title: 'اختيار حجم الدرون',
     description: 'الفرق بين 3 بوصة و5 بوصة و7 بوصة وما يناسب المبتدئ',
     level: 'مبتدئ', duration: '10 دقائق',
@@ -95,7 +95,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-electricity-basics', number: 6,
+    id: 'lesson-electricity-basics', number: 6, track: 'power-safety',
     title: 'أساسيات الكهرباء',
     description: 'الجهد والتيار والقطبية والدائرة القصيرة',
     level: 'مبتدئ', duration: '15 دقائق',
@@ -114,7 +114,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['wiring_basics', 'power_battery'],
   },
   {
-    id: 'lesson-lipo-batteries', number: 7,
+    id: 'lesson-lipo-batteries', number: 7, track: 'power-safety',
     title: 'بطاريات LiPo للمبتدئين',
     description: 'فهم الخلايا والشحن وجهد التخزين والمخاطر',
     level: 'مبتدئ', duration: '15 دقائق',
@@ -133,7 +133,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['power_battery', 'lipo_safety'],
   },
   {
-    id: 'lesson-power-rails', number: 8,
+    id: 'lesson-power-rails', number: 8, track: 'power-safety',
     title: 'GND / 5V / VBAT',
     description: 'الفرق بين مصادر الطاقة وأهمية GND المشترك',
     level: 'مبتدئ', duration: '12 دقائق',
@@ -151,7 +151,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['wiring_basics'],
   },
   {
-    id: 'lesson-tx-rx', number: 9,
+    id: 'lesson-tx-rx', number: 9, track: 'power-safety',
     title: 'قاعدة TX/RX',
     description: 'التوصيل الصحيح بين Receiver و Flight Controller',
     level: 'مبتدئ', duration: '10 دقائق',
@@ -169,7 +169,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['tx_rx_rule'],
   },
   {
-    id: 'lesson-pre-battery-safety', number: 10,
+    id: 'lesson-pre-battery-safety', number: 10, track: 'power-safety',
     title: 'السلامة قبل البطارية',
     description: 'Smoke Stopper والـ Multimeter والخطوات الأمنية الإلزامية',
     level: 'مبتدئ', duration: '12 دقائق',
@@ -187,7 +187,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['lipo_safety', 'wiring_basics'],
   },
   {
-    id: 'lesson-frame-assembly', number: 11,
+    id: 'lesson-frame-assembly', number: 11, track: 'assembly',
     title: 'تركيب الهيكل Frame',
     description: 'تركيب قاعدة الفريم والأذرع والتأهيل للخطوات التالية',
     level: 'مبتدئ', duration: '20 دقائق',
@@ -205,7 +205,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['drone_build_basics'],
   },
   {
-    id: 'lesson-motor-install', number: 12,
+    id: 'lesson-motor-install', number: 12, track: 'assembly',
     title: 'تركيب المحركات',
     description: 'اتجاه المحركات والمسامير وتنظيم الأسلاك',
     level: 'مبتدئ', duration: '20 دقائق',
@@ -224,7 +224,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['motor_basic'],
   },
   {
-    id: 'lesson-esc-install', number: 13,
+    id: 'lesson-esc-install', number: 13, track: 'assembly',
     title: 'تركيب ESC',
     description: 'موضع ESC والتبريد وتنظيم مسار الطاقة',
     level: 'مبتدئ', duration: '15 دقائق',
@@ -242,7 +242,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['esc_basic'],
   },
   {
-    id: 'lesson-fc-install', number: 14,
+    id: 'lesson-fc-install', number: 14, track: 'assembly',
     title: 'تركيب Flight Controller',
     description: 'سهم الاتجاه والـ Grommets وحماية الجيروسكوب',
     level: 'مبتدئ', duration: '15 دقائق',
@@ -260,7 +260,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['flight_controller_basic'],
   },
   {
-    id: 'lesson-receiver-install', number: 15,
+    id: 'lesson-receiver-install', number: 15, track: 'assembly',
     title: 'تركيب Receiver',
     description: 'ELRS و SBUS والـ UART و 5V و GND و TX/RX',
     level: 'مبتدئ', duration: '12 دقائق',
@@ -278,7 +278,7 @@ export const lessonsData: Lesson[] = [
     conceptIds: ['receiver_basic'],
   },
   {
-    id: 'lesson-video-system', number: 16,
+    id: 'lesson-video-system', number: 16, track: 'assembly',
     title: 'تركيب نظام الفيديو',
     description: 'أساسيات نظام الفيديو التناظري والرقمي للمبتدئين',
     level: 'مبتدئ', duration: '12 دقائق',
@@ -294,5 +294,22 @@ export const lessonsData: Lesson[] = [
     ],
     commonMistake: 'شراء نظام فيديو قبل إتقان الأساسيات',
     conceptIds: ['vtx_basic'],
+  },
+  {
+    id: 'lesson-stick-control-first-flight', number: 17, track: 'flight',
+    title: 'التحكم بالعصا والطيران الأول',
+    description: 'ماذا تفعل كل عصا، وكيف تُسلّح الطائرة وتطير أول تحليق آمن',
+    level: 'مبتدئ', duration: '20 دقائق',
+    objective: 'فهم القنوات الأربع والتسليح وأوضاع الطيران، وتنفيذ أول تحليق منخفض بأمان',
+    explanation: 'جهاز التحكم يحمل عصوَين، وكل عصا تتحرّك في محورَين، فالمجموع أربع قنوات. الخانق (Throttle) يرفع الطائرة ويخفضها. الانحراف (Yaw) يدوّرها حول محورها. الميل الطولي (Pitch) يدفعها إلى الأمام والخلف. الميل الجانبي (Roll) يزحلقها يميناً ويساراً. في الوضع 2 — الافتراضي في FPV — الخانق والانحراف على العصا اليسرى، والميل الطولي والجانبي على اليمنى. لا تدور المحركات إلا بعد التسليح (Arm) بمفتاح مخصّص. وضع الطيران يحدّد كم تساعدك اللوحة: Angle يُعيدها إلى الاستواء بنفسه، وAcro لا يفعل. أول تحليق يكون في مكان مفتوح، بارتفاع الركبة، بمدخلات صغيرة، والمراوح آخر ما يُركَّب.',
+    imagePlaceholder: 'مخطط: عصوان، أربع قنوات، واستجابة الطائرة لكل حركة',
+    diagramType: 'stick-control',
+    importantPoints: [
+      'أربع قنوات — خانق، انحراف، ميل طولي، ميل جانبي — وكل واحدة فرقُ سرعة بين محركات مختلفة',
+      'لا تدور المحركات قبل التسليح بمفتاح مخصّص، وتدور ببطء بعده وهذا طبيعي؛ إلغاء التسليح هو ردّك الطارئ الأول',
+      'ابدأ أول تحليق في وضع Angle، وتعلّم Acro على المحاكي في اليوم نفسه',
+    ],
+    commonMistake: 'دفع الخانق إلى الأعلى بسرعة عند أول تحليق فتقفز الطائرة إلى ارتفاع مخيف — ثم سحبه إلى الصفر فتسقط',
+    warning: 'لا تُسلّح الطائرة أبداً وهي على الطاولة أو في يدك أو ومراوحها مركبة داخل الغرفة. التسليح يعني أن أي حركة عصا تُدير المراوح بكامل قوّتها.',
   },
 ];

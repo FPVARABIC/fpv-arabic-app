@@ -12,4 +12,6 @@ export const STORAGE_KEYS = {
   EXPRESSLRS_SETUP_PROGRESS: 'fpv_expresslrs_setup_progress',
   EXPRESSLRS_TROUBLESHOOTING_PROGRESS: 'fpv_expresslrs_troubleshooting_progress',
   LESSON_REMINDER_LAST_SHOWN: 'fpv_lesson_reminder_last_shown',
+  /** Per-lesson journey session state (stage, answers, explorations, reveals). */
+  LESSON_JOURNEY_PROGRESS: 'fpv_lesson_journey_progress',
 } as const;
