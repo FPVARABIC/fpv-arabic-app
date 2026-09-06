@@ -1,4 +1,8 @@
 import type { Lesson } from '../types';
+// Lesson 12 states the default rotation. It reads it from the same table
+// Lesson 1's diagram draws, so the two can never disagree again — see the
+// header of motorLayout.ts for what they used to say.
+import { DEFAULT_SPIN_SENTENCE_AR } from './lessons/motorLayout';
 
 export const TOTAL_LESSONS = 17;
 
@@ -27,7 +31,7 @@ export const lessonsData: Lesson[] = [
     description: 'فهم مسار الإشارة من جهاز التحكم إلى المحركات',
     level: 'مبتدئ', duration: '12 دقائق',
     objective: 'فهم مسار الإشارة الكامل: Radio → Receiver → FC → ESC → Motors',
-    explanation: 'عندما تحرك عصا جهاز التحكم، يُرسل الجهاز إشارة لاسلكية إلى Receiver الموجود في الطائرة. يستقبل Receiver هذه الإشارة ويحوّلها إلى بيانات رقمية ويرسلها إلى Flight Controller عبر بروتوكول SBUS أو ELRS. Flight Controller هو الدماغ الذي يحلل هذه البيانات جنبًا إلى جنب مع بيانات الجيروسكوب والمسرّع لحساب السرعة المطلوبة لكل محرك. يرسل FC أوامر إلى ESC لكل محرك، وESC يتحكم في سرعة المحرك بدقة عالية. كل هذه العملية تتكرر مئات المرات في الثانية لضمان الاستقرار.',
+    explanation: 'عندما تحرك عصا جهاز التحكم، يُرسل الجهاز إشارة لاسلكية إلى Receiver الموجود في الطائرة. يستقبل Receiver هذه الإشارة ويحوّلها إلى بيانات رقمية ويرسلها إلى Flight Controller عبر بروتوكول تسلسلي مثل CRSF (وهو بروتوكول أنظمة ELRS) أو SBUS. Flight Controller هو الدماغ الذي يحلل هذه البيانات جنبًا إلى جنب مع بيانات الجيروسكوب والمسرّع لحساب السرعة المطلوبة لكل محرك. يرسل FC أوامر إلى ESC لكل محرك، وESC يتحكم في سرعة المحرك بدقة عالية. كل هذه العملية تتكرر مئات المرات في الثانية لضمان الاستقرار.',
     imagePlaceholder: 'مخطط: Radio → Receiver → FC → ESC → Motors',
     image: '/assets/lesson-images/lesson-02-how-quadcopter-works.png',
     diagramType: 'signal-flow',
@@ -157,11 +161,11 @@ export const lessonsData: Lesson[] = [
     level: 'مبتدئ', duration: '10 دقائق',
     objective: 'فهم قاعدة TX/RX وتجنب خطأ التوصيل الأكثر شيوعًا',
     explanation: 'TX تعني Transmitter (مُرسِل) وRX تعني Receiver (مُستقبِل). القاعدة هي: TX يتصل مع RX وRX يتصل مع TX. أي: TX في Receiver يتصل مع RX في FC. RX في Receiver يتصل مع TX في FC. هذا يعني أن طرف الإرسال يتصل بطرف الاستقبال والعكس. إذا وصّلت TX مع TX أو RX مع RX لن يعمل الاتصال. هذا الخطأ شائع جداً عند المبتدئين لأن الاسم يبدو وكأنهما يجب أن يتطابقا. ولا تنسَ أن GND يجب أن يكون مشتركًا.',
-    imagePlaceholder: 'مخطط واضح: TX ← RX و RX ← TX',
+    imagePlaceholder: 'مخطط واضح: TX من المستقبل يدخل RX في المتحكم، وRX منه يدخل TX فيه',
     diagramType: 'tx-rx-cross',
     importantPoints: [
-      'TX (من Receiver) → RX (في FC)',
-      'RX (من Receiver) → TX (في FC)',
+      'TX من المستقبل يدخل RX في FC',
+      'RX من المستقبل يدخل TX في FC',
       'لا تنسَ GND المشترك بين الجهازين',
     ],
     commonMistake: 'توصيل TX مع TX أو RX مع RX',
@@ -210,7 +214,9 @@ export const lessonsData: Lesson[] = [
     description: 'اتجاه المحركات والمسامير وتنظيم الأسلاك',
     level: 'مبتدئ', duration: '20 دقائق',
     objective: 'تركيب المحركات بشكل صحيح مع الانتباه للاتجاه وطول المسامير',
-    explanation: 'لكل محرك اتجاه دوران محدد. في معظم الإعدادات، المحركان الأمامي الأيسر والخلفي الأيمن يدوران عكس عقارب الساعة (CCW)، والآخران مع عقارب الساعة (CW). مسامير التثبيت يجب أن لا تكون طويلة حتى لا تلمس ملفات الموتور من الداخل. المسامير القصيرة جداً لن تمسك جيداً. استخدم الطول المناسب عادةً 6-8mm. رتّب أسلاك الموتور الثلاثة في اتجاه ESC من البداية حتى لا تضطر للمرور بها لاحقًا.',
+    explanation: 'لكل محرك اتجاه دوران محدد يحدّده موضعه على الفريم. '
+      + `${DEFAULT_SPIN_SENTENCE_AR} `
+      + 'مسامير التثبيت يجب أن لا تكون طويلة حتى لا تلمس ملفات الموتور من الداخل. المسامير القصيرة جداً لن تمسك جيداً. استخدم الطول المناسب عادةً 6-8mm. رتّب أسلاك الموتور الثلاثة في اتجاه ESC من البداية حتى لا تضطر للمرور بها لاحقًا.',
     imagePlaceholder: 'مخطط: اتجاه دوران المحركات الأربعة',
     image: '/assets/lesson-images/lesson-12-motor-installation.png',
     diagramType: 'motor-mount',
@@ -229,7 +235,7 @@ export const lessonsData: Lesson[] = [
     description: 'موضع ESC والتبريد وتنظيم مسار الطاقة',
     level: 'مبتدئ', duration: '15 دقائق',
     objective: 'تثبيت ESC في الموضع الصحيح مع ضمان التبريد الجيد',
-    explanation: 'ESC يتحكم في سرعة المحركات ويولّد حرارة أثناء الطيران. لذلك يجب أن يكون في مكان يسمح بمرور الهواء عليه. في الفريمات الحديثة يُثبَّت ESC عادةً في أسفل الفريم أو بين الطبقات. تأكد من تثبيته بشكل جيد لمنع الاهتزاز. أسلاك الطاقة (VBAT وGND) من المحركات تذهب إلى ESC ثم إلى power distribution. أسلاك الإشارة من ESC تذهب إلى FC. حافظ على قِصَر الأسلاك بالقدر الممكن لتقليل التداخل الكهربائي.',
+    explanation: 'ESC يتحكم في سرعة المحركات ويولّد حرارة أثناء الطيران. لذلك يجب أن يكون في مكان يسمح بمرور الهواء عليه. في الفريمات الحديثة يُثبَّت ESC عادةً في أسفل الفريم أو بين الطبقات. تأكد من تثبيته بشكل جيد لمنع الاهتزاز. أسلاك المحرك الثلاثة تصل من ESC إلى المحرك — ثلاثة أطوار، لا موجب وسالب. أما أسلاك الطاقة (VBAT وGND) فتصل من البطارية إلى ESC، ومنه إلى بقية اللوحات. وأسلاك الإشارة تذهب من ESC إلى FC. حافظ على قِصَر الأسلاك بالقدر الممكن لتقليل التداخل الكهربائي.',
     imagePlaceholder: 'صورة: تثبيت ESC على الفريم',
     image: '/assets/lesson-images/lesson-13-esc-installation.png',
     diagramType: 'esc-placement',
@@ -262,19 +268,19 @@ export const lessonsData: Lesson[] = [
   {
     id: 'lesson-receiver-install', number: 15, track: 'assembly',
     title: 'تركيب Receiver',
-    description: 'ELRS و SBUS والـ UART و 5V و GND و TX/RX',
+    description: 'التثبيت والعزل وموضع الهوائي وتوصيلات 5V وGND وTX/RX',
     level: 'مبتدئ', duration: '12 دقائق',
     objective: 'توصيل Receiver بشكل صحيح إلى FC',
-    explanation: 'Receiver يحتاج إلى ثلاثة توصيلات: 5V للطاقة، GND للأرضي، وسلك الإشارة. إذا كان البروتوكول ELRS أو SBUS فستحتاج TX وRX لنقل البيانات. تذكر القاعدة: TX من Receiver يذهب إلى RX في FC. اختر UART محدداً في FC لـ Receiver وفعّل Serial RX على هذا UART في Betaflight. إذا كان ELRS فتأكد من اختيار بروتوكول CRSF في Betaflight. وثّق أي UART استخدمته لتسهيل الإعداد لاحقاً.',
+    explanation: 'Receiver يحتاج 5V للطاقة وGND للأرضي وسلك إشارة واحداً على الأقل. عدد أسلاك الإشارة يتبع نوع المستقبل: الأنظمة أحادية الاتجاه يكفيها سلك واحد يدخل طرف RX في FC، والأنظمة ثنائية الاتجاه — التي تعيد إليك قوة الإشارة وجهد البطارية — تحتاج TX وRX معاً. والقاعدة من الدرس السابق تبقى: TX من المستقبل إلى RX في FC، وRX منه إلى TX فيه. ثبّت المستقبل بشريط لاصق أو رغوة ولا تعلّقه بأسلاكه، واعزل نقاطه المكشوفة عن سطح الكربون، وأبعد الهوائي عن مسار المراوح ولا تطوِه بزاوية حادة. أما اختيار المنفذ في البرنامج وتفعيله فمكانه مركز البرامج، بعد أن ينتهي التركيب.',
     imagePlaceholder: 'مخطط: توصيل Receiver مع FC',
     image: '/assets/lesson-images/lesson-15-receiver-installation.png',
     diagramType: 'receiver-uart',
     importantPoints: [
-      'TX(RX) → RX(FC) وRX(RX) → TX(FC)',
-      'فعّل Serial RX على UART الصحيح في Betaflight',
-      'اختر بروتوكول الاستقبال الصحيح',
+      'TX من المستقبل يدخل RX في FC، وRX منه يدخل TX فيه',
+      'ثبّت المستقبل بشريط أو رغوة — الأسلاك ليست وسيلة تثبيت',
+      'أبعد الهوائي عن مسار المراوح، ولا تطوِه بزاوية حادة ولا تدفنه في الكربون',
     ],
-    commonMistake: 'تفعيل Serial RX على UART خاطئ أو نسيان تفعيله',
+    commonMistake: 'تعليق المستقبل بأسلاكه دون تثبيت حقيقي، فتُجهَد نقاط اتصاله مع كل اهتزاز',
     conceptIds: ['receiver_basic'],
   },
   {
@@ -283,8 +289,8 @@ export const lessonsData: Lesson[] = [
     description: 'أساسيات نظام الفيديو التناظري والرقمي للمبتدئين',
     level: 'مبتدئ', duration: '12 دقائق',
     objective: 'فهم نظام الفيديو وتوصيله بشكل أساسي',
-    explanation: 'نظام الفيديو في FPV يتكون من كاميرا تلتقط الصورة وجهاز VTX يبثها لاسلكيًا. هناك نظامان رئيسيان: التناظري (Analog) وهو الأقدم والأقل تكلفة لكن جودته محدودة. الرقمي (Digital) يعطي جودة عالية لكن تكلفته أعلى. للمبتدئين، يمكن البدء بدون نظام فيديو للتعلم على الـ Simulator أولاً. عند توصيل VTX تأكد من توصيل VBAT و GND وإشارة الكاميرا. بعض VTX يدعم OSD لعرض معلومات على الشاشة.',
-    imagePlaceholder: 'مخطط: كاميرا → VTX → نظارات',
+    explanation: 'نظام الفيديو في FPV يتكون من كاميرا تلتقط الصورة وجهاز VTX يبثها لاسلكيًا. هناك نظامان رئيسيان: التناظري (Analog) وهو الأقدم والأقل تكلفة لكن جودته محدودة. الرقمي (Digital) يعطي جودة عالية لكن تكلفته أعلى. للمبتدئين، يمكن البدء بدون نظام فيديو للتعلم على الـ Simulator أولاً. عند توصيل VTX تأكد من توصيل VBAT و GND وإشارة الكاميرا. أما OSD — الأرقام التي تظهر فوق الصورة — فيولّده متحكم الطيران لا VTX: في النظام التناظري تُطبع فوق الصورة قبل بثّها، وفي الرقمي تصل النظارات كطبقة منفصلة.',
+    imagePlaceholder: 'مخطط: من الكاميرا إلى VTX إلى النظارات',
     image: '/assets/lesson-images/lesson-16-video-system-installation.png',
     diagramType: 'camera-vtx',
     importantPoints: [

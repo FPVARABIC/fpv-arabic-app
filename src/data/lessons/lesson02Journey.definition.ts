@@ -91,7 +91,7 @@ export const lesson02JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'يستقبل الإشارة اللاسلكية من جهاز التحكم ويحوّلها إلى بيانات رقمية يرسلها إلى Flight Controller.',
+            text: 'يستقبل الإشارة اللاسلكية ويحوّلها بيانات رقمية إلى Flight Controller.',
             feedback: 'صحيح تمامًا! هذا هو الدور الكامل لـ Receiver: استقبال، تحويل، ثم تمرير البيانات إلى Flight Controller — دون أي قرار أو حساب من جانبه.',
           },
           {

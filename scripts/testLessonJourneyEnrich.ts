@@ -63,13 +63,21 @@ console.log('\n[2] Enrichment adds no requirement and is idempotent');
 {
   for (const lesson of lessonsData) {
     const base = getLessonJourneyDefinition(lesson.id)!;
+    const idsBefore = base.stages.map(s => s.id).join('|');
     const e = enrichJourneyDefinition(base, lesson);
     const reqBase = getReadinessRequirements(base, createInitialSessionState(base)).map(r => r.id);
     const reqE = getReadinessRequirements(e, createInitialSessionState(e)).map(r => r.id);
     ok(`${lesson.id}: readiness requirements unchanged`, JSON.stringify(reqBase) === JSON.stringify(reqE));
     const twice = enrichJourneyDefinition(e, lesson);
     ok(`${lesson.id}: enriching twice adds nothing`, twice.stages.length === e.stages.length);
-    ok(`${lesson.id}: the input definition was not mutated`, base.stages.every(s => s.type !== 'key_points' && !s.id.startsWith('enriched-')));
+    // Compares the input's own stage list before and after, rather than
+    // asserting «the input has no key_points stage» — which stopped being a
+    // proxy for mutation the moment Lesson 17 authored a numbered checklist
+    // of its own. This is the stronger check: nothing was inserted, removed
+    // or reordered, and no enriched id leaked into the source definition.
+    ok(`${lesson.id}: the input definition was not mutated`,
+      base.stages.map(s => s.id).join('|') === idsBefore
+      && base.stages.every(s => !s.id.startsWith('enriched-')));
   }
 }
 
@@ -78,7 +86,11 @@ console.log('\n[3] The whole section, counted');
   const enriched = lessonsData.map(l => enrichJourneyDefinition(getLessonJourneyDefinition(l.id)!, l));
   const stages = enriched.reduce((n, d) => n + d.stages.length, 0);
   const callouts = enriched.reduce((n, d) => n + d.stages.filter(s => s.type === 'callout').length, 0);
-  const points = enriched.reduce((n, d) => n + d.stages.filter((s): s is KeyPointsStage => s.type === 'key_points').reduce((m, s) => m + s.points.length, 0), 0);
+  // Counted by the ENRICHED stage's id rather than by stage type: Lesson 17
+  // authors a key_points stage of its own (the pre-flight checklist), and this
+  // assertion is about enrichment surfacing every authored importantPoint —
+  // not about how many numbered lists the section happens to contain.
+  const points = enriched.reduce((n, d) => n + d.stages.filter((s): s is KeyPointsStage => s.id === ENRICHED_STAGE_IDS.keyPoints).reduce((m, s) => m + s.points.length, 0), 0);
   console.log(`      stages=${stages} callouts=${callouts} keyPoints=${points}`);
   ok('every lesson has at least one interactive stage', enriched.every(d => d.stages.some(s => s.type === 'interactive_diagram')));
   ok('all 51 authored key points are shown (17 lessons × 3)', points === 51);

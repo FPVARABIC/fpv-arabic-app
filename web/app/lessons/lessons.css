@@ -176,6 +176,14 @@
   cursor: pointer; text-align: inherit;
 }
 .lesson-diagram button:focus-visible { outline: 2px solid #5EEAD4; outline-offset: 2px; }
+/* Diagram parts that are SVG shapes rather than buttons — same ring. The
+   drop-shadow is the fallback for engines that do not paint outline on SVG. */
+.lesson-diagram .diagram-hotspot { outline: none; }
+.lesson-diagram .diagram-hotspot:focus-visible {
+  outline: 2px solid #5EEAD4;
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 3px #5EEAD4);
+}
 
 /* phone-app classes the diagrams reference */
 .lesson-diagram .card-feature {

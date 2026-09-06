@@ -1,22 +1,25 @@
 import React from 'react';
-import { DiagramFrame, DiagramInfo, Legend, useReveal, C } from './_shared';
+import { DiagramFrame, DiagramInfo, HotSpot, Legend, useReveal, C } from './_shared';
 
 const info: Record<string, string> = {
   v5: '5V: تغذية المستقبل من منفذ 5V في FC.',
   gnd: 'GND: الأرضي المشترك — إلزامي.',
-  tx: 'TX من Receiver → RX في FC (نقل البيانات).',
-  rx: 'RX من Receiver → TX في FC.',
+  tx: 'TX من Receiver يدخل RX في FC (نقل البيانات).',
+  rx: 'RX من Receiver يدخل TX في FC.',
 };
 
 const Pin: React.FC<{ y: number; color: string; id: string; label: string; sel: string | null; on: (v: string) => void; cross?: boolean }> =
 ({ y, color, id, label, sel, on, cross }) => {
   const active = sel === id;
   return (
-    <g onClick={() => on(id)} style={{ cursor: 'pointer' }} data-testid={`receiver-uart-part-${id}`}>
+    <HotSpot onActivate={() => on(id)} active={active} testId={`receiver-uart-part-${id}`} label={`توصيلة ${label}`}>
       <line x1="95" y1={y} x2="185" y2={cross ? (y === 80 ? 105 : 80) : y} stroke={color} strokeWidth={active ? 4 : 2.4} className="flow-dash receiver-uart-anim" />
       <circle cx="95" cy={y} r="5" fill={color} />
       <text x="85" y={y + 4} textAnchor="end" fill="#cbd5e1" fontSize="10">{label}</text>
-    </g>
+      {/* A line is a hairline to a finger and to a focus ring: this invisible
+          band gives the pin a real target without changing the drawing. */}
+      <rect x="85" y={y - 9} width="105" height="18" fill="transparent" />
+    </HotSpot>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiagramFrame, DiagramInfo, DiagramWarn, Legend, useReveal, C } from './_shared';
+import { DiagramFrame, DiagramInfo, DiagramWarn, HotSpot, Legend, useReveal, C } from './_shared';
 
 const info: Record<string, string> = {
   vbat: 'VBAT: جهد البطارية الكامل (14–25V) — للأجهزة القوية مثل VTX والكاميرا. احذر: جهد عالٍ جدًا للأجهزة الحساسة.',
@@ -40,7 +40,7 @@ export const GndFiveVbat: React.FC<GndFiveVbatProps> = ({ onRailExplore }) => {
         <text x="160" y="105" textAnchor="middle" fill="#475569" fontSize="9">Power Distribution</text>
 
         {/* VBAT rail — thick red */}
-        <g onClick={() => handleToggle('vbat')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-vbat">
+        <HotSpot onActivate={() => handleToggle('vbat')} active={sel === 'vbat'} testId="gnd-five-vbat-item-vbat" label="مسار VBAT — جهد البطارية الكامل">
           <rect x="0" y="55" width="320" height="18" rx="4" fill={sel==='vbat' ? 'rgba(248,113,113,0.15)' : 'transparent'}/>
           <line x1="20" y1="64" x2="115" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
           <line x1="205" y1="64" x2="300" y2="64" stroke={C.red} strokeWidth={sel==='vbat' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
@@ -53,10 +53,10 @@ export const GndFiveVbat: React.FC<GndFiveVbatProps> = ({ onRailExplore }) => {
           {/* Right device */}
           <rect x="270" y="72" width="50" height="20" rx="4" fill="rgba(248,113,113,0.1)" stroke={`${C.red}50`} strokeWidth="1"/>
           <text x="295" y="85" textAnchor="middle" fill={C.red} fontSize="8">Camera</text>
-        </g>
+        </HotSpot>
 
         {/* 5V rail — amber */}
-        <g onClick={() => handleToggle('v5')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-v5">
+        <HotSpot onActivate={() => handleToggle('v5')} active={sel === 'v5'} testId="gnd-five-vbat-item-v5" label="مسار 5V — الجهد المنظَّم">
           <rect x="0" y="96" width="320" height="18" rx="4" fill={sel==='v5' ? 'rgba(251,191,36,0.15)' : 'transparent'}/>
           <line x1="20" y1="105" x2="115" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
           <line x1="205" y1="105" x2="300" y2="105" stroke={C.amber} strokeWidth={sel==='v5' ? 6 : 4} className="flow-dash gnd-five-vbat-anim"/>
@@ -69,10 +69,10 @@ export const GndFiveVbat: React.FC<GndFiveVbatProps> = ({ onRailExplore }) => {
           {/* Right device */}
           <rect x="270" y="113" width="50" height="20" rx="4" fill="rgba(251,191,36,0.1)" stroke={`${C.amber}50`} strokeWidth="1"/>
           <text x="295" y="126" textAnchor="middle" fill={C.amber} fontSize="8">GPS</text>
-        </g>
+        </HotSpot>
 
         {/* GND rail — gray */}
-        <g onClick={() => handleToggle('gnd')} style={{cursor:'pointer'}} data-testid="gnd-five-vbat-item-gnd">
+        <HotSpot onActivate={() => handleToggle('gnd')} active={sel === 'gnd'} testId="gnd-five-vbat-item-gnd" label="مسار GND — الأرضي المشترك">
           <rect x="0" y="137" width="320" height="18" rx="4" fill={sel==='gnd' ? 'rgba(148,163,184,0.15)' : 'transparent'}/>
           <line x1="20" y1="146" x2="115" y2="146" stroke={C.ground} strokeWidth={sel==='gnd' ? 6 : 4} strokeDasharray="4,3"/>
           <line x1="205" y1="146" x2="300" y2="146" stroke={C.ground} strokeWidth={sel==='gnd' ? 6 : 4} strokeDasharray="4,3"/>
@@ -80,7 +80,7 @@ export const GndFiveVbat: React.FC<GndFiveVbatProps> = ({ onRailExplore }) => {
           <circle cx="300" cy="146" r="7" fill={C.ground} opacity="0.7"/>
           <text x="8" y="138" fill={C.ground} fontSize="9" fontWeight="bold">GND</text>
           <text x="160" y="165" textAnchor="middle" fill={C.ground} fontSize="9">مشترك لكل الأجهزة</text>
-        </g>
+        </HotSpot>
 
         {/* Battery symbol at left edge */}
         <rect x="0" y="155" width="22" height="35" rx="3" fill="none" stroke="#94a3b8" strokeWidth="1"/>

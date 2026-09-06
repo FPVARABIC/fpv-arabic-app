@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { JourneyCheckpoint } from '../../types/lessonJourney';
+import { displayOptions } from '../../data/lessons/checkpointOrder';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const ACCENT = '#5EEAD4';
@@ -54,7 +55,9 @@ export const CheckpointCard: React.FC<{
   <div className="card-subtle p-4 space-y-3" style={{ background: CARD_BG }} data-testid={`checkpoint-${checkpoint.id}`}>
     <p className="text-sm font-bold" style={{ color: '#F8FAFC' }}>{checkpoint.question}</p>
     <div className="space-y-2">
-      {checkpoint.options.map(opt => {
+      {/* Shown in a stable, seeded order — the answer used to sit at «b» in
+          57 of the section's 68 questions. Ids are untouched. */}
+      {displayOptions(checkpoint).map(opt => {
         const isSelected = answeredOptionId === opt.id;
         return (
           <button

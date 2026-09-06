@@ -20,6 +20,7 @@ import { lessonsData, TOTAL_LESSONS } from '../src/data/lessonsData';
 import { interactiveDiagramAdapters } from '../src/components/lessons/interactiveDiagramAdapters';
 import type {
   CheckpointStage, InteractiveDiagramStage, RecallStage, GlossaryStage, CalloutStage,
+  KeyPointsStage,
 } from '../src/types/lessonJourney';
 
 let passed = 0;
@@ -49,7 +50,8 @@ console.log('\n[1] Registration and shape');
   ok('registry resolves it to this definition', getLessonJourneyDefinition(lesson.id) === def);
   ok('registry lists seventeen lessons', LESSON_JOURNEY_IDS.length === 17);
   ok('TOTAL_LESSONS agrees with lessonsData', TOTAL_LESSONS === 17 && lessonsData.length === 17);
-  ok('lesson 17 has 19 stages', STAGE_COUNT === 19);
+  // 19 until the audit's P0 safety fix added the pre-flight checklist.
+  ok('lesson 17 has 20 stages', STAGE_COUNT === 20);
   ok('stage ids are unique', new Set(def.stages.map(s => s.id)).size === STAGE_COUNT);
   ok('every lesson has a journey', lessonsData.every(l => !!getLessonJourneyDefinition(l.id)));
 }
@@ -182,6 +184,37 @@ console.log('\n[10] Quiz result and retry');
   ok('reset lands on the first checkpoint stage', currentStage(def, reset).type === 'checkpoint'
     && reset.currentStageIndex === def.stages.findIndex(st => st.type === 'checkpoint'));
   ok('a fresh quiz result is empty', quizResult(def, reset).answered === 0 && quizResult(def, reset).correctFirstTry === 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[11] The pre-flight checklist — the three checks a first flight cannot skip');
+{
+  const CHECKLIST = def.stages.find((s): s is KeyPointsStage => s.id === 'preFlightChecklist');
+  ok('the checklist stage exists', !!CHECKLIST && CHECKLIST.type === 'key_points');
+  if (!CHECKLIST) throw new Error('no checklist stage');
+
+  const at = def.stages.findIndex(s => s.id === CHECKLIST.id);
+  const hover = def.stages.findIndex(s => s.id === 'firstHoverWorkedExample');
+  ok('it comes before the first hover, not after it', at !== -1 && hover !== -1 && at < hover);
+
+  const text = CHECKLIST.points.join(' ');
+  ok('it makes the learner TEST failsafe, not just know the word',
+    /Failsafe/.test(text) && /أطفئ جهاز التحكم/.test(text) && /يجب أن تتوقف المحركات/.test(text));
+  ok('…with the props off and the quad on the ground',
+    /المراوح منزوعة/.test(text) && /على الأرض/.test(text));
+  ok('it checks each prop against its motor\'s direction and the nut',
+    /يوافق اتجاهها/.test(text) && /الصامولة مشدودة/.test(text));
+  ok('it says what a reversed prop does, so the check has a reason',
+    /تنقلب الطائرة/.test(text));
+  ok('it sends the learner to their own country\'s law before the first flight',
+    /قانون بلدك/.test(text) && /(تسجيل|ترخيص)/.test(text));
+  ok('it keeps the props last', /المراوح آخر شيء/.test(text));
+
+  // The gate is unchanged: a checklist is read, not answered.
+  const fresh = createInitialSessionState(def);
+  ok('the checklist adds no readiness requirement',
+    getReadinessRequirements(def, fresh).every(r => r.id !== CHECKLIST.id));
+  ok('the readiness gate is still the same six', getReadinessRequirements(def, fresh).length === 6);
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

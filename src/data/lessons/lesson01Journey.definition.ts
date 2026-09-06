@@ -4,6 +4,9 @@
  * lessonJourneyEngine.ts and InteractiveLessonJourney.tsx renderer.
  */
 import type { LessonJourneyDefinition } from '../../types/lessonJourney';
+// The motor numbers this lesson's worked example names are Betaflight's, from
+// the same table its X-layout diagram draws.
+import { FRONT_MOTOR_NUMBERS_AR, REAR_MOTOR_NUMBERS_AR } from './motorLayout';
 
 export const lesson01JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-quadcopter-intro',
@@ -145,7 +148,8 @@ export const lesson01JourneyDefinition: LessonJourneyDefinition = {
       type: 'worked_example',
       title: 'مثال عملي: ماذا لو زاد دفع المحركين الخلفيين؟',
       body:
-        'تخيّل أن المحركين الخلفيين (M2 وM4) زادا دفعهما بينما بقي المحركان الأماميان (M1 وM3) كما هما. الجزء ' +
+        `تخيّل أن المحركين الخلفيين (${REAR_MOTOR_NUMBERS_AR}) زادا دفعهما بينما بقي المحركان الأماميان ` +
+        `(${FRONT_MOTOR_NUMBERS_AR}) كما هما. الجزء ` +
         'الخلفي من الطائرة يرتفع نسبيًا، فيصبح الجزء الأمامي أخفض بالمقارنة، فتنحني الطائرة للأمام وتبدأ بالتقدم في ' +
         'ذلك الاتجاه. هذا بالضبط ما يحدث عندما تدفع عصا جهاز التحكم للأمام.',
     },

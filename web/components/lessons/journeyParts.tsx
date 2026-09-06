@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { JourneyCheckpoint, CalloutStage, KeyPointsStage } from '@core/types/lessonJourney';
 import type { QuizResult } from '@core/data/lessons/lessonJourneyEngine';
 import { toReadableChunks } from '@core/data/lessons/readableText';
+import { displayOptions } from '@core/data/lessons/checkpointOrder';
 
 /**
  * The pieces a lesson stage is built from. No content lives here; every string
@@ -49,7 +50,10 @@ export const CheckpointCard: React.FC<{
     <div className="lj-card" data-testid={`checkpoint-${checkpoint.id}`}>
       <p className="lj-question" id={`q-${checkpoint.id}`}>{checkpoint.question}</p>
       <div className="lj-options" role="group" aria-labelledby={`q-${checkpoint.id}`}>
-        {checkpoint.options.map(opt => {
+        {/* Shown in a stable, seeded order — the answer used to sit at «b» in
+            57 of the section's 68 questions. Ids are untouched, so a saved
+            answer, its feedback and the browser test all still find it. */}
+        {displayOptions(checkpoint).map(opt => {
           const selected = answeredOptionId === opt.id;
           const state = selected ? (opt.correct ? 'correct' : 'wrong') : 'idle';
           return (

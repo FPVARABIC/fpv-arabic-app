@@ -337,6 +337,16 @@
   .programming-card:not(:disabled):active { transform: scale(0.98); }
   .programming-card:disabled { cursor: not-allowed; }
 
+  /* A diagram part that can be reached with a keyboard (see _shared.tsx's
+     HotSpot). SVG shapes take `outline` in modern engines; the drop-shadow is
+     the fallback where they do not, so the ring is never invisible. */
+  .diagram-hotspot { outline: none; }
+  .diagram-hotspot:focus-visible {
+    outline: 2px solid #5EEAD4;
+    outline-offset: 3px;
+    filter: drop-shadow(0 0 3px #5EEAD4);
+  }
+
   .programming-card-icon {
     width: 46px; height: 46px; border-radius: 16px;
     display: flex; align-items: center; justify-content: center;

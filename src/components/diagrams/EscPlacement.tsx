@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiagramFrame, DiagramInfo, useReveal, C } from './_shared';
+import { DiagramFrame, DiagramInfo, HotSpot, useReveal, C } from './_shared';
 import { Wind } from 'lucide-react';
 
 const info: Record<string, string> = {
@@ -38,18 +38,21 @@ export const EscPlacement: React.FC<EscPlacementProps> = ({ onPartExplore }) => 
           {/* stack */}
           <rect x="90" y="30" width="80" height="22" rx="5" fill={C.frame} stroke={C.stroke} strokeWidth="1.4" />
           <text x="130" y="45" textAnchor="middle" fill="#7fe9e9" fontSize="9">FC</text>
-          <g onClick={() => handleToggle('esc')} style={{ cursor: 'pointer' }} data-testid="esc-placement-part-esc">
+          <HotSpot onActivate={() => handleToggle('esc')} active={sel === 'esc'} testId="esc-placement-part-esc" label="لوحة ESC وموضعها">
             <rect x="90" y="95" width="80" height="26" rx="5" fill="rgba(24,230,230,0.08)" stroke={sel === 'esc' ? C.cyan : C.stroke} strokeWidth={sel === 'esc' ? 3 : 1.4} />
             <text x="130" y="112" textAnchor="middle" fill="#7fe9e9" fontSize="9">ESC</text>
-          </g>
+          </HotSpot>
           {/* signal */}
-          <line x1="130" y1="52" x2="130" y2="95" stroke={sel === 'signal' ? C.cyan : C.green} strokeWidth="2" className="flow-dash esc-placement-anim" onClick={() => handleToggle('signal')} style={{ cursor: 'pointer' }} data-testid="esc-placement-part-signal" />
+          <HotSpot onActivate={() => handleToggle('signal')} active={sel === 'signal'} testId="esc-placement-part-signal" label="أسلاك الإشارة بين ESC وFC">
+            <line x1="130" y1="52" x2="130" y2="95" stroke={sel === 'signal' ? C.cyan : C.green} strokeWidth="2" className="flow-dash esc-placement-anim" />
+            <rect x="122" y="52" width="16" height="43" fill="transparent" />
+          </HotSpot>
           {/* power wires */}
-          <g onClick={() => handleToggle('power')} style={{ cursor: 'pointer' }} data-testid="esc-placement-part-power">
+          <HotSpot onActivate={() => handleToggle('power')} active={sel === 'power'} testId="esc-placement-part-power" label="أسلاك الطاقة VBAT وGND">
             <line x1="90" y1="108" x2="40" y2="108" stroke={C.red} strokeWidth="2.5" />
             <line x1="90" y1="115" x2="40" y2="115" stroke={C.ground} strokeWidth="2.5" />
             <text x="38" y="105" textAnchor="end" fill="#64748b" fontSize="8">VBAT</text>
-          </g>
+          </HotSpot>
           {/* airflow */}
           <g className="float-soft esc-placement-anim">
             <path d="M180 108 q 20 -8 40 0" fill="none" stroke="rgba(148,163,184,0.5)" strokeWidth="1.5" />

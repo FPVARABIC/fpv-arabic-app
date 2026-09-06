@@ -282,6 +282,31 @@ export const lesson17JourneyDefinition: LessonJourneyDefinition = {
       },
     },
     {
+      /*
+       * The audit's P0 safety gap: the lesson walked a learner through a first
+       * hover without ever asking them to test failsafe, to check that each
+       * prop matches its motor's direction, or to find out whether flying is
+       * legal where they are standing. The first two are the two ways a first
+       * flight hurts somebody; the third is the one that ends the hobby.
+       *
+       * It is a checklist rather than prose because that is how it will be
+       * used — in a field, on a phone, one line at a time — and the order is
+       * the order of the evening: choose the place, prove the failsafe with
+       * the props still off, then power up, and only then fit the props.
+       */
+      id: 'preFlightChecklist',
+      type: 'key_points',
+      title: 'فحص ما قبل الطيران — أربع نقاط قبل أن ترفع الخانق',
+      intro:
+        'ليست نصائح عامة؛ كل نقطة منها سببها حادث متكرّر. مرّ عليها بهذا الترتيب في الميدان — المراوح آخر شيء.',
+      points: [
+        'المكان والقانون: مساحة مفتوحة بلا ناس ولا سيارات ولا خطوط كهرباء، وأنت بعيد عن الطائرة ثلاث خطوات. وقبل أول طيران اعرف قانون بلدك: كثير من الدول تشترط تسجيل الطائرة أو ترخيص الطيار، وتمنع الطيران قرب المطارات وفوق التجمّعات.',
+        'اختبر Failsafe والمراوح منزوعة: ضع الطائرة على الأرض، سلّح، ثم أطفئ جهاز التحكم. يجب أن تتوقف المحركات في اللحظة نفسها. إن استمرّت في الدوران فلا تطر — طائرة تفقد الإشارة بلا Failsafe مضبوط تهرب أو تسقط على أحد.',
+        'البطارية: مشحونة، ومثبّتة بحزام لا تتزحلق من تحته عند أول ميلة، وسلكها وموصّلها بعيدان عن مسار المراوح.',
+        'المراوح آخر شيء: كل مروحة على المحرك الذي يوافق اتجاهها — الاتجاه مطبوع عليها أو يميّزه شكل حافتها — والصامولة مشدودة والمروحة بلا شقوق. مروحة معكوسة تدفع الهواء إلى الأعلى، فتنقلب الطائرة لحظة رفع الخانق بدل أن ترتفع.',
+      ],
+    },
+    {
       id: 'firstHoverWorkedExample',
       type: 'worked_example',
       title: 'مثال عملي: أول تحليق، دقيقة بدقيقة',

@@ -221,6 +221,50 @@ async function main() {
     ok('all four axes count as explored', (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('4 من 4'));
     ok('the stick diagram stage never scrolls sideways at 390px', !(await scrollsSideways(page)));
 
+    console.log('\n[9] A diagram requirement can be met with the keyboard alone');
+    {
+      // The audit's finding: seven lessons gate completion on exploring an SVG
+      // shape that had no role, no name and no tab stop — so a learner without
+      // a pointer could not finish them. Lesson 8's three power rails are one
+      // of those seven; here they are explored with Tab, Enter and Space only.
+      await goto(page, `${BASE}/lessons/lesson-power-rails`, '[data-testid="lesson-journey"]');
+      guard = 0;
+      while ((await page.locator('[data-testid="gnd-five-vbat-item-vbat"]').count()) === 0 && guard++ < 15) await clickNext(page);
+      const rail = page.locator('[data-testid="gnd-five-vbat-item-vbat"]');
+      ok('the power-rail diagram is on its stage', await rail.count() === 1);
+      ok('its parts announce themselves as buttons with a name',
+        await rail.getAttribute('role') === 'button'
+        && (await rail.getAttribute('aria-label') ?? '').length > 3
+        && await rail.getAttribute('tabindex') === '0');
+      ok('nothing is explored yet', (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('0 من 3'));
+
+      // Tab from the document into the diagram, then activate what we land on.
+      let tabs = 0;
+      let focused = '';
+      while (tabs++ < 40) {
+        await page.keyboard.press('Tab');
+        focused = await page.evaluate(() => document.activeElement?.getAttribute('data-testid') ?? '');
+        if (focused.startsWith('gnd-five-vbat-item-')) break;
+      }
+      ok(`Tab reaches a diagram part (${tabs} presses, landed on ${focused || 'nothing'})`,
+        focused.startsWith('gnd-five-vbat-item-'));
+
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(60);
+      ok('Enter explores it', (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('1 من 3'));
+      ok('and the part reports itself as pressed',
+        await page.locator(`[data-testid="${focused}"]`).getAttribute('aria-pressed') === 'true');
+
+      for (const id of ['gnd-five-vbat-item-vbat', 'gnd-five-vbat-item-v5', 'gnd-five-vbat-item-gnd']) {
+        if (id === focused) continue;
+        await page.locator(`[data-testid="${id}"]`).evaluate(el => (el as unknown as HTMLElement).focus());
+        await page.keyboard.press(' ');
+        await page.waitForTimeout(60);
+      }
+      ok('Space explores the rest, and the requirement is met without a pointer',
+        (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('3 من 3'));
+    }
+
     ok(`no page errors during the run (${errors.length})`, errors.length === 0);
     if (errors.length) console.error(errors);
   } finally {

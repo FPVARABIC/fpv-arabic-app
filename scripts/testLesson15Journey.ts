@@ -212,7 +212,18 @@ console.log('\n[14] Glossary covers the key receiver-installation vocabulary wit
 
 console.log('\n[15] Content-boundary check: Lesson 15 stays at physical-installation level, not protocol/UART-config/binding/failsafe depth');
 {
-  const allText = JSON.stringify(def).toLowerCase();
+  // The definition alone was not enough. Its overview stage body is the
+  // literal 'lesson-explanation', so the prose a learner actually reads never
+  // reached this check — and that is exactly where the contradiction lived:
+  // the orientation promised no software setup while the explanation walked
+  // the learner through enabling serial reception on a port. Everything the
+  // renderers show is checked now: the lesson's own text and derived stages.
+  const lesson = lessonsData.find(l => l.id === def.lessonId)!;
+  const rendered = [
+    lesson.description, lesson.objective, lesson.explanation,
+    ...lesson.importantPoints, lesson.commonMistake, lesson.warning ?? '',
+  ].join(' ');
+  const allText = `${JSON.stringify(def)} ${rendered}`.toLowerCase();
   // Note: bare 'لحام'/'soldering' is intentionally NOT banned — the lesson
   // legitimately references an existing "exposed solder point" (نقطة لحام
   // مكشوفة) as a physical hazard to insulate against (a required teaching
