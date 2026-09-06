@@ -505,6 +505,19 @@ console.log('\n[10] The media pipeline is shared, not duplicated');
   ok('the web still declares firebase-admin, which only it uses',
     'firebase-admin' in webDeps);
 
+  // The other half of the same rule. Keeping those packages out of
+  // web/package.json means the ONLY place they can resolve from is the
+  // repository root's node_modules — a bare import inside ../src looks upward
+  // from src/, and web/node_modules is not on that path. So a build rooted at
+  // web/ must install the root manifest too, or it dies at «Can't resolve
+  // 'firebase/storage'». That is exactly how the Vercel deployment failed:
+  // its project is rooted at web/, so it installed there and nowhere else.
+  const webVercel = JSON.parse(readFileSync(path.join(ROOT, 'web/vercel.json'), 'utf8')) as
+    { installCommand?: string };
+  ok('web/vercel.json installs the root manifest before its own, so a build rooted at web/ can resolve the shared packages',
+    /npm ci --prefix \.\./.test(webVercel.installCommand ?? '')
+    && /&&\s*npm ci\s*$/.test(webVercel.installCommand ?? ''));
+
   // The web must never invent its own storage path — the path IS the
   // authorization in storage.rules.
   ok('the folder path comes from the shared helper, never rebuilt in web code',
