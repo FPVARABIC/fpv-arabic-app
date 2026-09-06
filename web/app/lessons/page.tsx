@@ -12,8 +12,8 @@ import {
 export const metadata: Metadata = {
   title: 'الدروس — مسار المبتدئ من الصفر حتى أول تحليق',
   description:
-    'سبعة عشر درساً تفاعلياً بالعربية في أربع محطّات: الأساسيات، الكهرباء والسلامة، التركيب، '
-    + 'والطيران. كل درس رحلة مرحلية بأسئلة تحقّق ومخطّطات تفاعلية، وتقدّمك يُحفظ في متصفّحك.',
+    'عشرون درساً تفاعلياً بالعربية في خمس محطّات: الأساسيات، الكهرباء والسلامة، التركيب، '
+    + 'والتشغيل والإعداد، والطيران. كل درس رحلة مرحلية بأسئلة تحقّق ومخطّطات تفاعلية، وتقدّمك يُحفظ في متصفّحك.',
   alternates: { canonical: SECTION_ROUTES.lessons },
   openGraph: { type: 'website', title: 'الدروس — FPVARABIC' },
 };
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
  *
  * WHAT IS SERVER-RENDERED AND WHAT IS NOT
  * ---------------------------------------
- * The seventeen lessons, their stations, titles, descriptions, durations and
+ * The twenty lessons, their stations, titles, descriptions, durations and
  * stage counts are content, and arrive in the HTML. What this reader has done
  * with them — completed, in progress, suggested — is personal and lives in the
  * browser; the islands in `indexIslands.tsx` add it after hydration. The page
@@ -53,7 +53,7 @@ export default function LessonsIndex() {
 
       <h1 className="page-title" style={{ marginTop: 10 }}>الدروس</h1>
       <p className="page-lede">
-        {lessonCountLabel(lessonsData.length)} في أربع محطّات، من «ما هو الكوادكابتر؟» حتى أول تحليق.
+        {lessonCountLabel(lessonsData.length)} في خمس محطّات، من «ما هو الكوادكابتر؟» حتى أول تحليق.
         كل درس رحلة مرحلية: شرح قصير، ثم سؤال، ثم مخطّط تضغط عليه بنفسك. تقدّمك — كل إجابة
         وكل مرحلة — يُحفظ في هذا المتصفّح وتعود إليه متى شئت.
       </p>

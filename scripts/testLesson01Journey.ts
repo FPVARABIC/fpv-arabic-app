@@ -186,9 +186,11 @@ console.log('\n[11] Lesson 1 duration was corrected; Lessons 2-16 metadata is un
     'lesson-power-rails': '12 دقائق', 'lesson-tx-rx': '10 دقائق', 'lesson-pre-battery-safety': '12 دقائق',
     'lesson-frame-assembly': '20 دقائق', 'lesson-motor-install': '20 دقائق', 'lesson-esc-install': '15 دقائق',
     'lesson-fc-install': '15 دقائق', 'lesson-receiver-install': '12 دقائق', 'lesson-video-system': '12 دقائق',
+    'lesson-first-power-up': '18 دقيقة', 'lesson-betaflight-minimum': '25 دقيقة',
+    'lesson-propellers': '20 دقيقة',
     'lesson-stick-control-first-flight': '20 دقائق',
   };
-  ok('Lessons 2-17 durations are byte-identical to their authored values (only Lesson 1 was ever corrected)',
+  ok('Lessons 2-20 durations are byte-identical to their authored values (only Lesson 1 was ever corrected)',
     otherLessons.every(l => expectedOtherDurations[l.id] === l.duration));
 }
 

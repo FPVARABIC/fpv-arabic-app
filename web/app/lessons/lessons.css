@@ -221,6 +221,7 @@
 .lesson-diagram .flex { display: flex; }
 .lesson-diagram .grid { display: grid; }
 .lesson-diagram .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lesson-diagram .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .lesson-diagram .flex-1 { flex: 1 1 0%; }
 .lesson-diagram .flex-col { flex-direction: column; }
 .lesson-diagram .flex-wrap { flex-wrap: wrap; }
@@ -301,7 +302,9 @@
 .lesson-diagram .text-\[8px\] { font-size: 8px; } .lesson-diagram .text-\[9px\] { font-size: 9px; }
 .lesson-diagram .text-\[10px\] { font-size: 10px; } .lesson-diagram .text-\[11px\] { font-size: 11px; }
 .lesson-diagram .text-xs { font-size: 12px; line-height: 1.4; } .lesson-diagram .text-sm { font-size: 14px; line-height: 1.45; }
+.lesson-diagram .text-base { font-size: 16px; line-height: 1.5; }
 .lesson-diagram .font-bold { font-weight: 700; } .lesson-diagram .font-semibold { font-weight: 600; }
+.lesson-diagram .font-black { font-weight: 900; }
 .lesson-diagram .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .lesson-diagram .leading-tight { line-height: 1.25; }
 .lesson-diagram .text-center { text-align: center; } .lesson-diagram .text-left { text-align: left; } .lesson-diagram .text-right { text-align: right; }

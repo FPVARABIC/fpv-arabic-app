@@ -3,7 +3,7 @@
  * build — the proof that the rebuild's promises hold where a reader meets them.
  *
  * What it proves, in the order a learner meets it:
- *   1. /lessons lists seventeen lessons in four stations, whole cards clickable,
+ *   1. /lessons lists twenty lessons in five stations, whole cards clickable,
  *      and offers lesson 1 as the place to start.
  *   2. A lesson opens on stage 1 with its objective; moving stages hands focus
  *      to the new stage's title.
@@ -15,7 +15,7 @@
  *      4/4 on the first try, the completion button unlocks, and the index
  *      marks the lesson done with its score.
  *   6. «أعِد الاختبار» clears the four answers and returns to the first question.
- *   7. Lesson 17's stick diagram renders and all four axes can be explored.
+ *   7. Lesson 20's stick diagram renders and all four axes can be explored.
  *
  * Requires a production build (`npm run web:build`); pass SKIP_BUILD=1 to reuse
  * one. Uses the pre-installed Chromium.
@@ -119,11 +119,12 @@ async function main() {
   page.on('pageerror', e => errors.push(String(e)));
 
   try {
-    console.log('\n[1] The index: seventeen lessons, four stations, whole-card links');
+    console.log('\n[1] The index: twenty lessons, five stations, whole-card links');
     await goto(page, `${BASE}/lessons`, '[data-testid="lesson-card-lesson-quadcopter-intro"]');
-    ok('17 lesson cards', await page.locator('[data-testid^="lesson-card-"]').count() === 17);
-    ok('4 stations', await page.locator('[data-testid^="lesson-track-"]').count() === 4);
-    ok('the flight station holds lesson 17', await page.locator('[data-testid="lesson-track-flight"] [data-testid="lesson-card-lesson-stick-control-first-flight"]').count() === 1);
+    ok('20 lesson cards', await page.locator('[data-testid^="lesson-card-"]').count() === 20);
+    ok('5 stations', await page.locator('[data-testid^="lesson-track-"]').count() === 5);
+    ok('the flight station holds lesson 20', await page.locator('[data-testid="lesson-track-flight"] [data-testid="lesson-card-lesson-stick-control-first-flight"]').count() === 1);
+    ok('the new setup station holds lessons 17 and 18', await page.locator('[data-testid="lesson-track-setup"] [data-testid^="lesson-card-"]').count() === 2);
     ok('a card is an anchor to the lesson', (await page.locator('[data-testid="lesson-card-lesson-lipo-batteries"]').getAttribute('href')) === '/lessons/lesson-lipo-batteries');
     await page.waitForSelector('[data-testid="lesson-suggest-card"]');
     ok('a fresh reader is offered lesson 1 as the place to start', (await page.locator('[data-testid="lesson-suggest-link"]').getAttribute('href')) === '/lessons/lesson-quadcopter-intro');
@@ -210,7 +211,7 @@ async function main() {
     ok('the completed chip is shown', (await page.locator('[data-testid="lesson-status-lesson-quadcopter-intro"]').innerText()).startsWith('مكتمل'));
     ok('lesson 2 is now the suggestion', (await page.locator('[data-testid="lesson-suggest-link"]').getAttribute('href')) === '/lessons/lesson-quadcopter-how-it-works');
 
-    console.log('\n[8] Lesson 17: the stick diagram renders and all four axes are explorable');
+    console.log('\n[8] Lesson 20: the stick diagram renders and all four axes are explorable');
     await goto(page, `${BASE}/lessons/lesson-stick-control-first-flight`, '[data-testid="lesson-journey"]');
     guard = 0;
     while ((await page.locator('[data-testid="stick-left-throttle-up"]').count()) === 0 && guard++ < 10) await clickNext(page);

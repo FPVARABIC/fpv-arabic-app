@@ -231,7 +231,7 @@ console.log('\n[16] Lesson 16 is now the final lesson — its generic nextLesson
 {
   ok('lesson-motor-test no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-motor-test') === undefined);
   ok('lesson-first-flight no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-first-flight') === undefined);
-  ok('lessonsData has exactly 17 lessons (16 + the stick-control lesson added in the rebuild)', lessonsData.length === 17);
+  ok('lessonsData has exactly 20 lessons (16 + the three setup/propeller lessons + the stick-control lesson)', lessonsData.length === 20);
   ok('lesson-video-system (Lesson 16) is the sixteenth entry in lessonsData', lessonsData[15].id === 'lesson-video-system');
   ok('lesson-stick-control-first-flight (Lesson 17) is the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-stick-control-first-flight');
 

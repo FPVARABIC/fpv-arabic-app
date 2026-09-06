@@ -56,7 +56,7 @@ console.log('\n[1] Every lesson: objective, key points and common mistake reach 
       return JSON.stringify(ids) === JSON.stringify(base.stages.map(s => s.id));
     })());
   }
-  ok('seven lessons carry a safety warning (the original six plus lesson 17)', warnings === 7);
+  ok('ten lessons carry a safety warning (the original seven plus the three setup/propeller lessons)', warnings === 10);
 }
 
 console.log('\n[2] Enrichment adds no requirement and is idempotent');
@@ -93,8 +93,8 @@ console.log('\n[3] The whole section, counted');
   const points = enriched.reduce((n, d) => n + d.stages.filter((s): s is KeyPointsStage => s.id === ENRICHED_STAGE_IDS.keyPoints).reduce((m, s) => m + s.points.length, 0), 0);
   console.log(`      stages=${stages} callouts=${callouts} keyPoints=${points}`);
   ok('every lesson has at least one interactive stage', enriched.every(d => d.stages.some(s => s.type === 'interactive_diagram')));
-  ok('all 51 authored key points are shown (17 lessons × 3)', points === 51);
-  ok('at least 24 callouts across the section (17 mistakes + 7 warnings, plus authored ones)', callouts >= 24);
+  ok('all 60 authored key points are shown (20 lessons × 3)', points === 60);
+  ok('at least 30 callouts across the section (20 mistakes + 10 warnings, plus authored ones)', callouts >= 30);
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

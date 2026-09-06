@@ -1,27 +1,29 @@
 /**
- * Lesson 17 — stick control and the first flight — proven with plain
- * assertions against the pure engine, the same way lessons 01–16 are.
+ * Lesson 17 — أول تشغيل آمن.
  *
- * What is specific to this lesson: it is the first to use `callout` stages
- * directly, it carries the new `stick-control` diagram, and it closes the
- * beginner path — so it also checks the `flight` track and the seventeen-
- * lesson totals the rest of the platform now reports.
+ * WHAT THIS EXISTS TO CATCH
+ * -------------------------
+ * This lesson is a safety gate wearing a lesson's clothes. Two properties
+ * matter more than anything it teaches:
+ *   1. It ends BEFORE anything spins. If a motor test ever drifts into it,
+ *      the props-off gate and the motor-numbering context stop lining up.
+ *   2. Its "no propellers" rule is stated where a learner cannot miss it, and
+ *      its last question is the gate itself.
+ * The rest of the file holds the ordinary shape down: five checkpoints, one
+ * correct option each, per-option feedback, a five-step gated diagram.
  */
 import assert from 'node:assert/strict';
 import {
-  createInitialSessionState, nextStage, recordCheckpointAnswer, recordRecallRevealed,
-  recordInteractionVariant, areAllCheckpointsAnswered, isRecallComplete, isInteractionComplete,
+  createInitialSessionState, recordCheckpointAnswer, recordRecallRevealed,
+  recordInteractionVariant, areAllCheckpointsAnswered, isRecallComplete,
   getReadinessRequirements, isReadyToComplete, stageCount, currentStage,
-  quizResult, resetCheckpoints,
 } from '../src/data/lessons/lessonJourneyEngine';
 import { lesson17JourneyDefinition as def } from '../src/data/lessons/lesson17Journey.definition';
-import { getLessonJourneyDefinition, LESSON_JOURNEY_IDS } from '../src/data/lessons/journeyRegistry';
-import { lessonsData, TOTAL_LESSONS } from '../src/data/lessonsData';
-import { interactiveDiagramAdapters } from '../src/components/lessons/interactiveDiagramAdapters';
 import type {
-  CheckpointStage, InteractiveDiagramStage, RecallStage, GlossaryStage, CalloutStage,
-  KeyPointsStage,
+  CheckpointStage, RecallStage, GlossaryStage, InteractiveDiagramStage, CalloutStage,
 } from '../src/types/lessonJourney';
+import { lessonsData } from '../src/data/lessonsData';
+import { getLessonJourneyDefinition } from '../src/data/lessons/journeyRegistry';
 
 let passed = 0;
 function ok(label: string, cond: boolean) {
@@ -30,191 +32,132 @@ function ok(label: string, cond: boolean) {
   passed++;
 }
 
-const CHECKPOINT_STAGES = def.stages.filter((s): s is CheckpointStage => s.type === 'checkpoint');
-const DIAGRAM = def.stages.find((s): s is InteractiveDiagramStage => s.type === 'interactive_diagram')!;
+const CHECKPOINTS = def.stages.filter((s): s is CheckpointStage => s.type === 'checkpoint');
 const RECALL = def.stages.find((s): s is RecallStage => s.type === 'recall')!;
 const GLOSSARY = def.stages.find((s): s is GlossaryStage => s.type === 'glossary')!;
+const DIAGRAM = def.stages.find((s): s is InteractiveDiagramStage => s.type === 'interactive_diagram')!;
 const CALLOUTS = def.stages.filter((s): s is CalloutStage => s.type === 'callout');
 const STAGE_COUNT = stageCount(def);
+const ALL_TEXT = JSON.stringify(def);
 
 console.log('\n[1] Registration and shape');
 {
-  const lesson = lessonsData.find(l => l.id === 'lesson-stick-control-first-flight')!;
+  const lesson = lessonsData.find(l => l.id === 'lesson-first-power-up')!;
   ok('lesson 17 exists in lessonsData', !!lesson);
   ok('it is number 17', lesson.number === 17);
-  ok('it sits on the flight track', lesson.track === 'flight');
-  ok('its diagram type is stick-control', lesson.diagramType === 'stick-control');
+  ok('it sits on the setup track', lesson.track === 'setup');
+  ok('its diagram type is pre-power-check', lesson.diagramType === 'pre-power-check');
   ok('it carries a safety warning', typeof lesson.warning === 'string' && lesson.warning.length > 40);
   ok('it carries a common mistake', lesson.commonMistake.length > 20);
   ok('definition.lessonId matches', def.lessonId === lesson.id);
   ok('registry resolves it to this definition', getLessonJourneyDefinition(lesson.id) === def);
-  ok('registry lists seventeen lessons', LESSON_JOURNEY_IDS.length === 17);
-  ok('TOTAL_LESSONS agrees with lessonsData', TOTAL_LESSONS === 17 && lessonsData.length === 17);
-  // 19 until the audit's P0 safety fix added the pre-flight checklist.
-  ok('lesson 17 has 20 stages', STAGE_COUNT === 20);
+  ok('lesson 17 has 19 stages', STAGE_COUNT === 19);
   ok('stage ids are unique', new Set(def.stages.map(s => s.id)).size === STAGE_COUNT);
-  ok('every lesson has a journey', lessonsData.every(l => !!getLessonJourneyDefinition(l.id)));
+  ok('starts on the orientation stage', currentStage(def, createInitialSessionState(def)).id === 'orientation');
 }
 
-console.log('\n[2] The stick diagram: four axes, all required, adapter wired');
+console.log('\n[2] The pre-power protocol: five checks, all gated, in the safe order');
 {
-  ok('exactly one interactive_diagram stage', def.stages.filter(s => s.type === 'interactive_diagram').length === 1);
-  ok('it renders stick-control', DIAGRAM.diagramType === 'stick-control');
-  ok('it requires exactly throttle, yaw, pitch, roll',
-    JSON.stringify([...DIAGRAM.requiredVariants].sort()) === JSON.stringify(['pitch', 'roll', 'throttle', 'yaw']));
-  ok('a partial hint exists for every axis', DIAGRAM.requiredVariants.every(v => !!DIAGRAM.hints.partial[v]));
-  ok('it is in readinessOrder', (def.readinessOrder ?? []).includes(DIAGRAM.id));
-  ok('an adapter exists for stick-control', typeof interactiveDiagramAdapters['stick-control'] === 'function');
-  ok('every lesson\'s interactive stages have an adapter', lessonsData.every(l =>
-    getLessonJourneyDefinition(l.id)!.stages
-      .filter((s): s is InteractiveDiagramStage => s.type === 'interactive_diagram')
-      .every(s => typeof interactiveDiagramAdapters[s.diagramType] === 'function')));
-  ok('every lesson now has at least one interactive stage', lessonsData.every(l =>
-    getLessonJourneyDefinition(l.id)!.stages.some(s => s.type === 'interactive_diagram')));
+  ok('exactly one interactive_diagram stage exists', def.stages.filter(s => s.type === 'interactive_diagram').length === 1);
+  ok('it renders the pre-power-check diagram', DIAGRAM.diagramType === 'pre-power-check');
+  ok('it requires the five checks in the order that protects',
+    JSON.stringify(DIAGRAM.requiredVariants) === JSON.stringify(['visual', 'polarity', 'no-props', 'smoke-stopper', 'resistance']));
+  ok('it is listed in readinessOrder', (def.readinessOrder ?? []).includes(DIAGRAM.id));
+  ok('every required check has its own hint', DIAGRAM.requiredVariants.every(v => !!DIAGRAM.hints?.partial?.[v]));
+  // The order is the teaching. Connecting the battery before measuring is the
+  // exact mistake the protocol exists to prevent.
+  const vs = DIAGRAM.requiredVariants;
+  ok('the visual check comes before every instrument check', vs.indexOf('visual') === 0);
+  ok('propellers come off before anything is energised',
+    vs.indexOf('no-props') < vs.indexOf('smoke-stopper') && vs.indexOf('no-props') < vs.indexOf('resistance'));
 }
 
-console.log('\n[3] Initial state — nothing satisfied');
+console.log('\n[3] SAFETY GATE — nothing spins in this lesson, and it says so');
 {
-  const s = createInitialSessionState(def);
-  ok('starts on orientation', currentStage(def, s).id === 'orientation');
-  ok('not ready', !isReadyToComplete(def, s));
-  ok('six requirements: diagram + 4 checkpoints + recall', getReadinessRequirements(def, s).length === 6);
-  ok('all unmet', getReadinessRequirements(def, s).every(r => !r.met));
-  ok('callouts add no requirement', getReadinessRequirements(def, s).every(r => !CALLOUTS.some(c => c.id === r.id)));
-}
+  const propsCallout = CALLOUTS.find(c => c.id === 'propsOffCallout')!;
+  ok('a dedicated propellers callout exists', !!propsCallout);
+  ok('it is a danger callout, not a note', propsCallout.tone === 'danger');
+  ok('it extends the rule to the NEXT lesson too, not just this one', /الدرس الذي يليه/.test(propsCallout.body));
 
-console.log('\n[4] Reaching the end alone grants nothing');
-{
-  let s = createInitialSessionState(def);
-  for (let i = 0; i < STAGE_COUNT; i++) s = nextStage(def, s);
-  ok('on the final stage', s.currentStageIndex === STAGE_COUNT - 1);
-  ok('still not ready', !isReadyToComplete(def, s));
-}
-
-console.log('\n[5] Four checkpoints, one correct option each, feedback on every option');
-{
-  ok('exactly 4 checkpoint stages', CHECKPOINT_STAGES.length === 4);
-  for (const st of CHECKPOINT_STAGES) {
-    const cp = st.checkpoint;
-    ok(`"${cp.id}" has exactly one correct option`, cp.options.filter(o => o.correct).length === 1);
-    ok(`"${cp.id}" has four options`, cp.options.length === 4);
-    ok(`"${cp.id}" feedback on every option`, cp.options.every(o => o.feedback.length > 20));
-    ok(`"${cp.id}" is in readinessOrder`, (def.readinessOrder ?? []).includes(`checkpoint-${cp.id}`));
+  // The hard property: this lesson may REFER to motor testing as what comes
+  // next — it must not TEACH it. Naming the configurator, or telling a learner
+  // to spin anything, would put a props-off procedure in a lesson whose gate
+  // and whose motor-numbering context both live in lesson 18.
+  const noProcedure = ['betaflight', 'motor test', 'تبويب المحركات', 'ارفع الشريط', 'شغّل محركًا'];
+  for (const term of noProcedure) {
+    ok(`lesson 17 carries no motor-test procedure ("${term}")`, !ALL_TEXT.toLowerCase().includes(term.toLowerCase()));
   }
+  // …and where it does mention them, it does so as a deferral.
+  ok('motor testing appears only as something with its own later lesson', /اختبار المحركات له درسه/.test(ALL_TEXT));
+  ok('it names what it has NOT proved, rather than implying the build is flight-ready',
+    /لم تثبت/.test(ALL_TEXT) && /لم تتحقق/.test(ALL_TEXT));
 }
 
-console.log('\n[6] Wrong first, right later — never blocked');
+console.log('\n[4] Five checkpoints: safety reasoning, recognition, and the gate itself');
 {
-  let s = createInitialSessionState(def);
-  const cp = CHECKPOINT_STAGES[0].checkpoint;
-  const wrong = cp.options.find(o => !o.correct)!;
-  const right = cp.options.find(o => o.correct)!;
-  s = recordCheckpointAnswer(s, cp.id, wrong.id);
-  ok('wrong answer is recorded', s.checkpointAnswers[cp.id] === wrong.id);
-  s = recordCheckpointAnswer(s, cp.id, right.id);
-  ok('can change to the right answer', s.checkpointAnswers[cp.id] === right.id);
-  ok('the first attempt is remembered as the wrong one', s.checkpointFirstAnswers[cp.id] === wrong.id);
-}
-
-console.log('\n[7] Completion needs checkpoints + recall + all four axes');
-{
-  let s = createInitialSessionState(def);
-  for (const st of CHECKPOINT_STAGES) {
-    const wrong = st.checkpoint.options.find(o => !o.correct)!;
-    s = recordCheckpointAnswer(s, st.checkpoint.id, wrong.id);
+  ok('exactly 5 checkpoint stages defined', CHECKPOINTS.length === 5);
+  const ids = CHECKPOINTS.map(s => s.checkpoint.id);
+  ok('checkpoint ids are stable and in teaching order',
+    JSON.stringify(ids) === JSON.stringify([
+      'debrisBeforePower', 'polarityIsCheckedTwice', 'abnormalFirstSeconds',
+      'usbPowerIsNotAFault', 'propsStayOffGate',
+    ]));
+  for (const stage of CHECKPOINTS) {
+    const cp = stage.checkpoint;
+    ok(`checkpoint "${cp.id}" has exactly four options`, cp.options.length === 4);
+    ok(`checkpoint "${cp.id}" has exactly one correct option`, cp.options.filter(o => o.correct).length === 1);
+    ok(`checkpoint "${cp.id}": every option carries its own feedback`, cp.options.every(o => o.feedback.trim().length > 20));
   }
-  ok('all checkpoints answered (all wrong)', areAllCheckpointsAnswered(def, s));
+  const byId = (id: string) => CHECKPOINTS.find(s => s.checkpoint.id === id)!.checkpoint;
+
+  const debris = byId('debrisBeforePower').options.find(o => o.correct)!;
+  ok('the debris answer removes the cause and re-checks, rather than testing through it', /أزلها/.test(debris.text) && /أعد الفحص/.test(debris.text));
+
+  const abnormal = byId('abnormalFirstSeconds').options.find(o => o.correct)!;
+  ok('the abnormal-behaviour answer puts disconnection FIRST and diagnosis after', /افصل/.test(abnormal.text) && abnormal.text.indexOf('افصل') < abnormal.text.indexOf('الفحص'));
+
+  const usb = byId('usbPowerIsNotAFault').options.find(o => o.correct)!;
+  ok('the USB answer names it as expected behaviour, not a fault', /لا؛/.test(usb.text) && /مسار البطارية/.test(usb.text));
+
+  const gate = byId('propsStayOffGate').options.find(o => o.correct)!;
+  ok('the gate answer defers propellers until every bench test is done', /بعد أن تنتهي اختبارات الطاولة/.test(gate.text));
+  ok('the gate is the LAST checkpoint of the lesson', CHECKPOINTS[CHECKPOINTS.length - 1].checkpoint.id === 'propsStayOffGate');
+}
+
+console.log('\n[5] Readiness: every gate must be engaged with, and answers may be wrong');
+{
+  let s = createInitialSessionState(def);
+  ok('not ready at the start', !isReadyToComplete(def, s));
+  ok('readiness lists one entry per gate (5 checkpoints + diagram + recall)',
+    getReadinessRequirements(def, s).length === CHECKPOINTS.length + 2);
+  for (const stage of CHECKPOINTS) {
+    s = recordCheckpointAnswer(s, stage.checkpoint.id, stage.checkpoint.options.find(o => !o.correct)!.id);
+  }
+  ok('all checkpoints answered, every one of them wrong', areAllCheckpointsAnswered(def, s));
+  ok('still not ready — the diagram and recall remain', !isReadyToComplete(def, s));
+  for (const v of DIAGRAM.requiredVariants) s = recordInteractionVariant(s, DIAGRAM.id, v);
+  ok('still not ready — recall remains', !isReadyToComplete(def, s));
   for (const p of RECALL.prompts) s = recordRecallRevealed(s, RECALL.id, p.id);
   ok('recall complete', isRecallComplete(RECALL, s));
-  ok('still not ready — axes unexplored', !isReadyToComplete(def, s));
-  s = recordInteractionVariant(s, DIAGRAM.id, 'throttle');
-  s = recordInteractionVariant(s, DIAGRAM.id, 'yaw');
-  s = recordInteractionVariant(s, DIAGRAM.id, 'pitch');
-  ok('three of four axes is not enough', !isInteractionComplete(DIAGRAM, s) && !isReadyToComplete(def, s));
-  s = recordInteractionVariant(s, DIAGRAM.id, 'roll');
-  ok('READY with all four axes', isInteractionComplete(DIAGRAM, s) && isReadyToComplete(def, s));
+  ok('READY once every gate has been engaged with', isReadyToComplete(def, s));
 }
 
-console.log('\n[8] Callouts: arming is a danger, the simulator is a warning');
+console.log('\n[6] Glossary, recall and the bridge to lesson 18');
 {
-  ok('exactly two authored callouts', CALLOUTS.length === 2);
-  const danger = CALLOUTS.find(c => c.tone === 'danger');
-  const warn = CALLOUTS.find(c => c.tone === 'warn');
-  ok('one danger callout about arming', !!danger && /تسليح/.test(danger.body));
-  ok('one warn callout about the simulator', !!warn && /محاك/.test(warn.body));
-  const armIdx = def.stages.findIndex(s => s.id === 'armingExplanation');
-  const dangerIdx = def.stages.findIndex(s => s.id === danger!.id);
-  ok('the arming danger callout follows the arming explanation directly', dangerIdx === armIdx + 1);
-}
+  ok('exactly 6 glossary terms', GLOSSARY.terms.length === 6);
+  ok('every definition is substantive', GLOSSARY.terms.every(t => t.definition.length > 40));
+  ok('the glossary names the safety gate itself', GLOSSARY.terms.some(t => t.term.includes('بوابة السلامة')));
+  ok('the glossary explains USB power not spinning motors', GLOSSARY.terms.some(t => t.term.includes('تغذية USB')));
+  ok('three recall prompts, each with a model answer', RECALL.prompts.length === 3 && RECALL.prompts.every(p => p.modelAnswer.length > 80));
 
-console.log('\n[9] The glossary names the four channels, arming, and both flight modes');
-{
-  const terms = GLOSSARY.terms.map(t => t.term).join(' | ');
-  for (const needle of ['Throttle', 'Yaw', 'Pitch', 'Roll', 'Mode 2', 'Arm', 'Angle', 'Acro', 'Failsafe']) {
-    ok(`glossary defines ${needle}`, terms.includes(needle));
+  const completion = def.stages[def.stages.length - 1];
+  ok('the final stage is a completion stage', completion.type === 'completion');
+  if (completion.type === 'completion') {
+    const next = lessonsData.find(l => l.id === 'lesson-betaflight-minimum')!;
+    const bridge = completion.nextLessonBridge(next);
+    ok('the bridge is built from the real next lesson, not hardcoded', bridge.includes(next.title) && bridge.includes(next.description));
+    ok('the bridge names the four things still unproven', /الريسيفر/.test(bridge) && /التسليح/.test(bridge) && /Failsafe/.test(bridge));
   }
-  ok('every term has a definition', GLOSSARY.terms.every(t => t.definition.length > 30));
-}
-
-console.log('\n[10] Quiz result and retry');
-{
-  let s = createInitialSessionState(def);
-  const [a, b, c, d] = CHECKPOINT_STAGES.map(st => st.checkpoint);
-  const right = (cp: typeof a) => cp.options.find(o => o.correct)!.id;
-  const wrong = (cp: typeof a) => cp.options.find(o => !o.correct)!.id;
-  s = recordCheckpointAnswer(s, a.id, right(a));
-  s = recordCheckpointAnswer(s, b.id, right(b));
-  s = recordCheckpointAnswer(s, c.id, wrong(c));
-  s = recordCheckpointAnswer(s, d.id, wrong(d));
-  s = recordCheckpointAnswer(s, c.id, right(c));
-  s = recordCheckpointAnswer(s, d.id, right(d));
-  s = recordInteractionVariant(s, DIAGRAM.id, 'throttle');
-  const r = quizResult(def, s);
-  ok('total is 4', r.total === 4);
-  ok('answered is 4', r.answered === 4);
-  ok('correct now is 4 (both mistakes corrected)', r.correctNow === 4);
-  ok('correct on first try is 2', r.correctFirstTry === 2);
-  ok('the two missed questions are named, with their stage ids', r.missedFirstTry.length === 2
-    && r.missedFirstTry.every(m => def.stages.some(st => st.id === m.stageId) && m.question.length > 10));
-
-  const reset = resetCheckpoints(def, s);
-  ok('reset clears every current answer', Object.values(reset.checkpointAnswers).every(v => v === null));
-  ok('reset clears every first answer', Object.values(reset.checkpointFirstAnswers).every(v => v === null));
-  ok('reset keeps the diagram exploration', reset.interactionVariants[DIAGRAM.id].throttle === true);
-  ok('reset lands on the first checkpoint stage', currentStage(def, reset).type === 'checkpoint'
-    && reset.currentStageIndex === def.stages.findIndex(st => st.type === 'checkpoint'));
-  ok('a fresh quiz result is empty', quizResult(def, reset).answered === 0 && quizResult(def, reset).correctFirstTry === 0);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[11] The pre-flight checklist — the three checks a first flight cannot skip');
-{
-  const CHECKLIST = def.stages.find((s): s is KeyPointsStage => s.id === 'preFlightChecklist');
-  ok('the checklist stage exists', !!CHECKLIST && CHECKLIST.type === 'key_points');
-  if (!CHECKLIST) throw new Error('no checklist stage');
-
-  const at = def.stages.findIndex(s => s.id === CHECKLIST.id);
-  const hover = def.stages.findIndex(s => s.id === 'firstHoverWorkedExample');
-  ok('it comes before the first hover, not after it', at !== -1 && hover !== -1 && at < hover);
-
-  const text = CHECKLIST.points.join(' ');
-  ok('it makes the learner TEST failsafe, not just know the word',
-    /Failsafe/.test(text) && /أطفئ جهاز التحكم/.test(text) && /يجب أن تتوقف المحركات/.test(text));
-  ok('…with the props off and the quad on the ground',
-    /المراوح منزوعة/.test(text) && /على الأرض/.test(text));
-  ok('it checks each prop against its motor\'s direction and the nut',
-    /يوافق اتجاهها/.test(text) && /الصامولة مشدودة/.test(text));
-  ok('it says what a reversed prop does, so the check has a reason',
-    /تنقلب الطائرة/.test(text));
-  ok('it sends the learner to their own country\'s law before the first flight',
-    /قانون بلدك/.test(text) && /(تسجيل|ترخيص)/.test(text));
-  ok('it keeps the props last', /المراوح آخر شيء/.test(text));
-
-  // The gate is unchanged: a checklist is read, not answered.
-  const fresh = createInitialSessionState(def);
-  ok('the checklist adds no readiness requirement',
-    getReadinessRequirements(def, fresh).every(r => r.id !== CHECKLIST.id));
-  ok('the readiness gate is still the same six', getReadinessRequirements(def, fresh).length === 6);
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

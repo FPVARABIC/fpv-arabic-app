@@ -1,12 +1,12 @@
 import type { BotConceptId } from '../data/knowledge/botConceptRegistry';
 
 /**
- * The four stations of the beginner path, in order. A lesson names its own
+ * The five stations of the beginner path, in order. A lesson names its own
  * station so the index page groups by DATA, not by array position — the
  * previous `slice(0,5)/slice(5,10)/slice(10,16)` silently misfiled any lesson
  * added or reordered. Labels live in `src/data/lessons/lessonTracks.ts`.
  */
-export type LessonTrackId = 'basics' | 'power-safety' | 'assembly' | 'flight';
+export type LessonTrackId = 'basics' | 'power-safety' | 'assembly' | 'setup' | 'flight';
 
 export interface Lesson {
   id: string;
@@ -44,6 +44,9 @@ export type DiagramType =
   | 'fc-orientation'
   | 'receiver-uart'
   | 'camera-vtx'
+  | 'pre-power-check'
+  | 'motor-test-check'
+  | 'prop-direction'
   | 'stick-control';
 
 export interface RoadmapStep {

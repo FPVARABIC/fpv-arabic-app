@@ -17,6 +17,9 @@ import { PartsCompatibility } from '../diagrams/PartsCompatibility';
 import { TxRxCross } from '../diagrams/TxRxCross';
 import { SafetyBeforeBattery } from '../diagrams/SafetyBeforeBattery';
 import { MotorMount } from '../diagrams/MotorMount';
+import { PrePowerCheck } from '../diagrams/PrePowerCheck';
+import { MotorTestCheck } from '../diagrams/MotorTestCheck';
+import { PropDirection } from '../diagrams/PropDirection';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -77,5 +80,17 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'motor-mount': ({ onVariant }) => (
     <MotorMount onScrewExplore={which => onVariant(which)} />
+  ),
+  // The three diagrams the setup and propeller lessons brought with them. The
+  // last two render the shared motor table (src/data/lessons/motorLayout.ts)
+  // rather than restating the numbering, so their variants ARE the motor ids.
+  'pre-power-check': ({ onVariant }) => (
+    <PrePowerCheck onCheckExplore={checkId => onVariant(checkId)} />
+  ),
+  'motor-test-check': ({ onVariant }) => (
+    <MotorTestCheck onMotorCheck={motorId => onVariant(motorId)} />
+  ),
+  'prop-direction': ({ onVariant }) => (
+    <PropDirection onArmExplore={motorId => onVariant(motorId)} />
   ),
 };

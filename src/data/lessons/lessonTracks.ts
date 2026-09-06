@@ -1,5 +1,5 @@
 /**
- * The beginner path's four stations, and the grouping the index pages use.
+ * The beginner path's five stations, and the grouping the index pages use.
  *
  * WHY THIS FILE EXISTS
  * --------------------
@@ -25,7 +25,8 @@ export const LESSON_TRACKS: readonly LessonTrack[] = [
   { id: 'basics', titleAr: 'الأساسيات', subtitleAr: 'افهم الفكرة والقطع قبل الشراء' },
   { id: 'power-safety', titleAr: 'الكهرباء والسلامة', subtitleAr: 'تعلّم الطاقة والتوصيل الآمن قبل البطارية' },
   { id: 'assembly', titleAr: 'التركيب', subtitleAr: 'ركّب القطع خطوة بخطوة' },
-  { id: 'flight', titleAr: 'الطيران', subtitleAr: 'من العصا إلى أول تحليق' },
+  { id: 'setup', titleAr: 'التشغيل والإعداد', subtitleAr: 'شغّلها بأمان وأعدّها قبل أن يدور شيء' },
+  { id: 'flight', titleAr: 'الطيران', subtitleAr: 'من المروحة إلى أول تحليق' },
 ];
 
 export interface LessonTrackGroup extends LessonTrack {
