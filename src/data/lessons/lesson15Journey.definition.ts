@@ -166,6 +166,26 @@ export const lesson15JourneyDefinition: LessonJourneyDefinition = {
         'الأمان الفيزيائي وجودة الاستقبال.',
     },
     {
+      // Curriculum expansion, phase 1. Lesson 4 told the learner an FC must
+      // have "enough UARTs"; Lesson 9 taught TX/RX crossing; this lesson wires
+      // one — and until now never said which port, or why the choice is not
+      // arbitrary. This stage closes that, and prepares the later software
+      // step WITHOUT teaching it: no port is chosen in a configurator here,
+      // no protocol is named, no procedure is given. The one instruction is
+      // to write the number down, because the later step will ask for it.
+      id: 'whichUartAndWhy',
+      type: 'explanation',
+      title: 'أي منفذ توصّل إليه — ولماذا يهمّ ذلك لاحقًا',
+      body:
+        'لوحة التحكم لا تحمل منفذ اتصال واحدًا بل عدة منافذ (UART)، وقد عرفتَ في الدرس الرابع أن عددها الكافي جزء ' +
+        'من التوافق نفسه. لكن أيّها توصّل إليه Receiver؟ على المستوى الفيزيائي — وهو كل ما يخصّ هذا الدرس — ' +
+        'المنفذ المناسب هو منفذ لم تحجزه لقطعة أخرى، وتبقى نقاطه في متناولك بعد تثبيت كل شيء، وقريب بما يكفي ' +
+        'ليصل السلك دون شدّ ودون طول فائض يتدلّى. ' +
+        'والأهم من ذلك كله نقطة تُنسى كثيرًا: المنفذ الذي تختاره الآن ليس تفصيلاً ينتهي عند اللحظة. اللوحة لا ' +
+        'تعرف من تلقاء نفسها أن Receiver على هذا المنفذ تحديدًا؛ ستأتي خطوة برمجية لاحقة تسألك عنه بالاسم. ' +
+        'لذلك سجّل رقم المنفذ الآن — في ملاحظة أو صورة — قبل أن تُغلق الهيكل وتصبح قراءة الرقم نفسه مهمة صعبة.',
+    },
+    {
       id: 'receiverUartDiagram',
       type: 'interactive_diagram',
       title: 'استكشف بنفسك: توصيلات Receiver الأربعة',
@@ -189,7 +209,7 @@ export const lesson15JourneyDefinition: LessonJourneyDefinition = {
       title: 'طبّق ما تعلّمته: موضع الهوائي',
       checkpoint: {
         id: 'antennaPlacementPrinciple',
-        question: 'أيّ من التالي صحيح بخصوص موضع هوائي الاستقبال؟',
+        question: 'أنهيتَ تركيب Receiver، والهوائي الآن مطويٌّ بزاوية حادة وممرَّر قريبًا من مسار المروحة، لكنه يبدو مرتبًا وثابتًا. ما التصرف الصحيح؟',
         options: [
           {
             id: 'a', correct: false,
@@ -253,7 +273,7 @@ export const lesson15JourneyDefinition: LessonJourneyDefinition = {
       title: 'طبّق ما تعلّمته: هل التركيب الفيزيائي منفصل عن الإعداد البرمجي؟',
       checkpoint: {
         id: 'serviceabilityAndInstallVsConfigPrinciple',
-        question: 'أيّ من التالي صحيح بخصوص إتمام تركيب Receiver فيزيائيًا؟',
+        question: 'أتممتَ التركيب الفيزيائي، ثم نجح الربط بين جهاز التحكم وReceiver من أول محاولة، فقال صديقك: «إذن التركيب سليم تمامًا». ما ردّك؟',
         options: [
           {
             id: 'a', correct: false,
@@ -288,6 +308,7 @@ export const lesson15JourneyDefinition: LessonJourneyDefinition = {
         { term: 'العزل عن الكربون الموصل', definition: 'تجنّب ملامسة نقاط أو أطراف مكشوفة من Receiver مباشرة لسطح كربوني دون فاصل عازل، لأن الكربون يوصّل الكهرباء جزئيًا.' },
         { term: 'مطابقة جهد التغذية', definition: 'توصيل Receiver بمنفذ الجهد المطابق تحديدًا لمواصفاته، وليس أي منفذ طاقة متاح.' },
         { term: 'موضع الهوائي الآمن', definition: 'إبقاء هوائي الاستقبال بعيدًا عن مسار دوران المراوح، دون طيّه بزاوية حادة أو حشره أو دفنه داخل كربون كثيف.' },
+        { term: 'منفذ UART المستخدَم', definition: 'المنفذ الذي وُصِّل إليه Receiver فعليًا على لوحة التحكم؛ يُختار متاحًا وقريبًا ويمكن الوصول إليه، ويُسجَّل رقمه لأن خطوة الإعداد البرمجي اللاحقة تسأل عنه بالاسم.' },
         { term: 'تنظيم الأسلاك دون إجهاد', definition: 'توجيه الأسلاك بمرونة كافية بحيث لا تتحمل نقاط اتصالها أي شد أو وزن ميكانيكي.' },
       ],
     },
@@ -332,7 +353,8 @@ export const lesson15JourneyDefinition: LessonJourneyDefinition = {
         'بقوة مفرطة، وأن نقاطه المكشوفة يجب أن تكون معزولة عن أي سطح كربوني، وأن جهد تغذيته يجب أن يطابق مواصفاته ' +
         'تحديدًا. وتعرف أن هوائي الاستقبال يجب أن يبقى بعيدًا عن مسار دوران المراوح ودون طيّ أو حشر. وتعلّمتَ أن ' +
         'الأسلاك يجب أن تُنظَّم دون شد على نقاط الاتصال، وأن التركيب الفيزيائي الصحيح منفصل تمامًا عن أي خطوة إعداد ' +
-        'برمجي لاحقة.',
+        'برمجي لاحقة. وتخرج من هذا الدرس بشيء ملموس تحتاجه في تلك الخطوة: رقم المنفذ الذي وصّلت إليه Receiver — ' +
+        'سجّله الآن، فالربط وتعريف اللوحة به يأتيان لاحقًا ولن يفيدك حينها أن تتذكّر «أحد المنافذ».',
       nextLessonBridge: (nextLesson) =>
         `أصبح Receiver مركّبًا الآن فيزيائيًا بأمان. في الدرس التالي، "${nextLesson.title}"، ستتعرف على ` +
         `${nextLesson.description}.`,

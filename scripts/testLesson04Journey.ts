@@ -39,7 +39,7 @@ console.log('\n[1] Registration: Lesson 04 is registered in the journey registry
   const lesson4 = lessonsData.find(l => l.id === 'lesson-define-goal')!;
   ok('lesson04JourneyDefinition.lessonId matches the real Lesson 4 id', def.lessonId === lesson4.id);
   ok('getLessonJourneyDefinition resolves Lesson 4 to this exact definition', getLessonJourneyDefinition(lesson4.id) === def);
-  ok('Lesson 4 has 16 stages (15 + the parts-compatibility interactive stage)', STAGE_COUNT === 16);
+  ok('Lesson 4 has 18 stages (16 + the KV explanation and its checkpoint)', STAGE_COUNT === 18);
 }
 
 console.log('\n[2] Exactly one interactive_diagram stage exists — the parts-compatibility chain, all five steps required');
@@ -90,7 +90,7 @@ console.log('\n[5] Checkpoints: wrong-first-attempt never permanently blocks, re
 
 console.log('\n[6] All four required concept checks exist and each has exactly one correct option with feedback');
 {
-  ok('exactly 4 checkpoint stages defined', CHECKPOINT_STAGES.length === 4);
+  ok('exactly 5 checkpoint stages defined (the fifth is Motor KV)', CHECKPOINT_STAGES.length === 5);
   for (const stage of CHECKPOINT_STAGES) {
     const cp = stage.checkpoint;
     const correctCount = cp.options.filter(o => o.correct).length;
@@ -98,8 +98,8 @@ console.log('\n[6] All four required concept checks exist and each has exactly o
     ok(`checkpoint "${cp.id}": every option has feedback text`, cp.options.every(o => o.feedback && o.feedback.trim().length > 0));
   }
   const ids = CHECKPOINT_STAGES.map(s => s.checkpoint.id);
-  ok('checkpoint ids are: qualityNotCompatibility, orderMatters, damageNotJustPerformance, notJustPhysicalFit',
-    JSON.stringify(ids) === JSON.stringify(['qualityNotCompatibility', 'orderMatters', 'damageNotJustPerformance', 'notJustPhysicalFit']));
+  ok('checkpoint ids are: qualityNotCompatibility, kvIsNotPower, orderMatters, damageNotJustPerformance, notJustPhysicalFit',
+    JSON.stringify(ids) === JSON.stringify(['qualityNotCompatibility', 'kvIsNotPower', 'orderMatters', 'damageNotJustPerformance', 'notJustPhysicalFit']));
 }
 
 console.log('\n[7] Misconception targeting: each checkpoint explicitly names the correct distinction, not just asserts it');
@@ -119,19 +119,31 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
   const physicalCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'notJustPhysicalFit')!.checkpoint;
   const physicalCorrect = physicalCp.options.find(o => o.correct)!;
   ok('physical-fit correct option explicitly separates shape compatibility from electrical compatibility', physicalCorrect.text.includes('شكليًا') && physicalCorrect.text.includes('كهربائيًا'));
+
+  // KV is introduced in this lesson, so the checkpoint that guards it must
+  // reject BOTH misreadings at once: KV as a power rating, and KV as the
+  // aircraft's real in-flight RPM. The distractors carry one each.
+  const kvCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'kvIsNotPower')!.checkpoint;
+  const kvCorrect = kvCp.options.find(o => o.correct)!;
+  const kvWrong = kvCp.options.filter(o => !o.correct);
+  ok('KV correct option ties KV to battery voltage and explicitly denies it means "stronger"',
+    kvCorrect.text.includes('جهد بطارية') && kvCorrect.text.includes('أقوى'));
+  ok('a KV distractor carries the "higher KV = stronger motor" misconception', kvWrong.some(o => o.text.includes('أقوى')));
+  ok('a KV distractor carries the "KV is the real in-flight RPM" misconception', kvWrong.some(o => o.text.includes('أثناء الطيران')));
+  ok('a KV distractor carries the "KV does not affect compatibility" misconception', kvWrong.some(o => o.text.includes('لا يغيّر اختيار بقية القطع')));
 }
 
 console.log('\n[8] Completion remains unavailable until every checkpoint has been engaged with (perfect answers not required)');
 {
   let s = createInitialSessionState(def);
-  for (const stage of CHECKPOINT_STAGES.slice(0, 3)) {
+  for (const stage of CHECKPOINT_STAGES.slice(0, -1)) {
     const wrong = stage.checkpoint.options.find(o => !o.correct)!;
     s = recordCheckpointAnswer(s, stage.checkpoint.id, wrong.id);
   }
   ok('still not ready with one checkpoint unanswered', !isReadyToComplete(def, s));
-  const lastWrong = CHECKPOINT_STAGES[3].checkpoint.options.find(o => !o.correct)!;
-  s = recordCheckpointAnswer(s, CHECKPOINT_STAGES[3].checkpoint.id, lastWrong.id);
-  ok('all 4 checkpoints now answered (even though every answer was wrong)', areAllCheckpointsAnswered(def, s));
+  const last = CHECKPOINT_STAGES[CHECKPOINT_STAGES.length - 1].checkpoint;
+  s = recordCheckpointAnswer(s, last.id, last.options.find(o => !o.correct)!.id);
+  ok('all checkpoints now answered (even though every answer was wrong)', areAllCheckpointsAnswered(def, s));
   ok('still not ready — final recall not yet viewed', !isReadyToComplete(def, s));
 
   for (const p of RECALL.prompts) s = recordRecallRevealed(s, RECALL.id, p.id);
@@ -139,7 +151,7 @@ console.log('\n[8] Completion remains unavailable until every checkpoint has bee
   ok('still not ready — the diagram has not been explored', !isReadyToComplete(def, s));
   const DIAGRAM = def.stages.find((st): st is InteractiveDiagramStage => st.type === 'interactive_diagram')!;
   for (const v of DIAGRAM.requiredVariants) s = recordInteractionVariant(s, DIAGRAM.id, v);
-  ok('READY once all 4 (even all-wrong) checkpoints + diagram + final recall are all engaged with', isReadyToComplete(def, s));
+  ok('READY once all (even all-wrong) checkpoints + diagram + final recall are all engaged with', isReadyToComplete(def, s));
 }
 
 console.log('\n[9] Readiness checklist always names exactly what remains, in the declared order');
@@ -177,11 +189,15 @@ console.log('\n[11] A fresh session (equivalent to a page refresh) starts with z
 
 console.log('\n[12] Glossary covers the key compatibility vocabulary with real, non-empty MSA definitions');
 {
-  ok('exactly 6 glossary terms defined', GLOSSARY_STAGE.terms.length === 6);
+  ok('exactly 7 glossary terms defined', GLOSSARY_STAGE.terms.length === 7);
   const termNames = GLOSSARY_STAGE.terms.map(t => t.term);
   ok('glossary defines Compatibility', termNames.some(t => t.includes('Compatibility')));
   ok('glossary defines Selection Chain', termNames.some(t => t.includes('Selection Chain')));
+  ok('glossary defines Motor KV', termNames.some(t => t.includes('Motor KV')));
   ok('glossary defines Current Headroom', termNames.some(t => t.includes('Current Headroom')));
+  const kvTerm = GLOSSARY_STAGE.terms.find(t => t.term.includes('Motor KV'))!;
+  ok('the KV definition keeps both qualifiers that stop it being read as in-flight RPM',
+    kvTerm.definition.includes('النظرية') && kvTerm.definition.includes('بلا مروحة'));
   ok('glossary defines Cell Count / S Rating', termNames.some(t => t.includes('S Rating')));
   ok('glossary defines UART', termNames.some(t => t.includes('UART')));
   ok('glossary defines Electrical Compatibility (Arabic term)', termNames.some(t => t.includes('التوافق الكهربائي')));

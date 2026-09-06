@@ -36,7 +36,7 @@ console.log('\n[1] Registration: Lesson 07 is registered in the journey registry
   const lesson7 = lessonsData.find(l => l.id === 'lesson-lipo-batteries')!;
   ok('lesson07JourneyDefinition.lessonId matches the real Lesson 7 id', def.lessonId === lesson7.id);
   ok('getLessonJourneyDefinition resolves Lesson 7 to this exact definition', getLessonJourneyDefinition(lesson7.id) === def);
-  ok('Lesson 7 has 16 stages, matching Lesson 6\'s depth', STAGE_COUNT === 16);
+  ok('Lesson 7 has 17 stages (16 + the capacity/discharge-rating explanation)', STAGE_COUNT === 17);
 }
 
 console.log('\n[2] The lipo-cells diagram stage exists with exactly the 2 real pack ids as required variants');
@@ -191,13 +191,18 @@ console.log('\n[12] A fresh session (equivalent to a page refresh) starts with z
 
 console.log('\n[13] Glossary covers the key LiPo-safety vocabulary with real, non-empty MSA definitions');
 {
-  ok('exactly 6 glossary terms defined', GLOSSARY_STAGE.terms.length === 6);
+  ok('exactly 8 glossary terms defined', GLOSSARY_STAGE.terms.length === 8);
   const termNames = GLOSSARY_STAGE.terms.map(t => t.term);
   ok('glossary defines Nominal Voltage', termNames.some(t => t.includes('Nominal Voltage')));
   ok('glossary defines Full-Charge Voltage', termNames.some(t => t.includes('Full-Charge Voltage')));
   ok('glossary defines Storage Voltage', termNames.some(t => t.includes('Storage Voltage')));
   ok('glossary defines Cell Count / S Rating', termNames.some(t => t.includes('S Rating')));
+  ok('glossary defines Capacity', termNames.some(t => t.includes('Capacity')));
+  ok('glossary defines C-Rating', termNames.some(t => t.includes('C-Rating')));
   ok('glossary defines Puffing', termNames.some(t => t.includes('Puffing')));
+  const cTerm = GLOSSARY_STAGE.terms.find(t => t.term.includes('C-Rating'))!;
+  ok('the C-Rating definition sends the learner to the pack label rather than quoting a figure',
+    cTerm.definition.includes('يُقرأ') && !/[0-9]+\s*c\b/i.test(cTerm.definition));
   ok('glossary defines Balance Charging', termNames.some(t => t.includes('Balance Charging')));
   ok('every glossary definition is substantive (non-empty)', GLOSSARY_STAGE.terms.every(t => t.definition.length > 10));
 }
@@ -207,7 +212,11 @@ console.log('\n[14] Content-boundary check: Lesson 7 stays at LiPo-battery level
   const allText = JSON.stringify(def).toLowerCase();
   const outOfScopeTerms = [
     'betaflight', 'uart', 'binding', 'pid tuning', 'soldering', 'لحام',
-    'vbat', 'gnd', 'xt60', 'c-rating', 'smoke stopper', 'multimeter',
+    // 'c-rating' left this list in the curriculum expansion: the discharge
+    // rating is a property of the PACK, printed on its own label, and naming
+    // it here is what closes the current chain Lesson 4 opened. Everything
+    // else about power rails and bench testing stays out.
+    'vbat', 'gnd', 'xt60', 'smoke stopper', 'multimeter',
     'continuity', 'wire gauge',
   ];
   // "5v" is checked separately (not via plain substring) because legitimate

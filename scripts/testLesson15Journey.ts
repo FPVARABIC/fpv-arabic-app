@@ -37,7 +37,7 @@ console.log('\n[1] Registration: Lesson 15 is registered in the journey registry
   const lesson15 = lessonsData.find(l => l.id === 'lesson-receiver-install')!;
   ok('lesson15JourneyDefinition.lessonId matches the real Lesson 15 id', def.lessonId === lesson15.id);
   ok('getLessonJourneyDefinition resolves Lesson 15 to this exact definition', getLessonJourneyDefinition(lesson15.id) === def);
-  ok('Lesson 15 has 17 stages', STAGE_COUNT === 17);
+  ok('Lesson 15 has 18 stages (17 + the UART-choice explanation)', STAGE_COUNT === 18);
 }
 
 console.log('\n[2] The receiver-uart diagram stage exists with exactly the 4 real pin ids as required variants');
@@ -200,7 +200,8 @@ console.log('\n[13] The comparison stage carries the secured/insulated/antenna-s
 
 console.log('\n[14] Glossary covers the key receiver-installation vocabulary with real, non-empty MSA definitions');
 {
-  ok('exactly 5 glossary terms defined', GLOSSARY_STAGE.terms.length === 5);
+  ok('exactly 6 glossary terms defined', GLOSSARY_STAGE.terms.length === 6);
+  ok('glossary names the UART port actually used', GLOSSARY_STAGE.terms.some(t => t.term.includes('منفذ UART')));
   const termNames = GLOSSARY_STAGE.terms.map(t => t.term);
   ok('glossary defines real mechanical mounting', termNames.some(t => t.includes('التثبيت الميكانيكي الحقيقي')));
   ok('glossary defines conductive-carbon separation', termNames.some(t => t.includes('العزل عن الكربون')));
@@ -208,6 +209,24 @@ console.log('\n[14] Glossary covers the key receiver-installation vocabulary wit
   ok('glossary defines safe antenna placement', termNames.some(t => t.includes('موضع الهوائي الآمن')));
   ok('glossary defines strain-free wire routing', termNames.some(t => t.includes('تنظيم الأسلاك دون إجهاد')));
   ok('every glossary definition is substantive (non-empty)', GLOSSARY_STAGE.terms.every(t => t.definition.length > 10));
+}
+
+console.log('\n[14b] The install now prepares the software step that follows it, and two questions stopped being recognition prompts');
+{
+  const uart = def.stages.find(s => s.id === 'whichUartAndWhy');
+  ok('a stage explains which port the receiver goes to and why it matters later', uart !== undefined);
+  const uartText = JSON.stringify(uart);
+  ok('it asks the learner to record the port number for the later software step', uartText.includes('سجّل رقم المنفذ'));
+  ok('it still teaches no configuration: no port is chosen in software here',
+    !/اختر\s*uart|فعّل|تبويب/i.test(uartText));
+
+  // Lessons 13-16 answered 16 of their 16 questions with the same stem,
+  // "أيّ من التالي صحيح بخصوص…". Two of this lesson's four are now scenarios.
+  const stems = CHECKPOINT_STAGES.map(s => s.checkpoint.question);
+  const recognition = stems.filter(q => q.startsWith('أيّ من التالي صحيح بخصوص')).length;
+  ok(`at most half of this lesson's stems are still recognition prompts (${recognition}/4)`, recognition <= 2);
+  ok('the antenna question is now a situation to act on', stems.some(q => q.includes('ما التصرف الصحيح؟')));
+  ok('the install-vs-config question is now a claim to answer', stems.some(q => q.includes('ما ردّك؟')));
 }
 
 console.log('\n[15] Content-boundary check: Lesson 15 stays at physical-installation level, not protocol/UART-config/binding/failsafe depth');

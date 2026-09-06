@@ -6,6 +6,13 @@
  * Uses only stage types already defined in src/types/lessonJourney.ts —
  * no engine, renderer, or stage-system change was needed for this lesson.
  *
+ * Motor KV is INTRODUCED here (curriculum expansion, phase 1). It is taught as
+ * a compatibility spec beside ESC current, not as a performance figure, and
+ * every number it uses is either already established by this lesson
+ * (2306, 20A, 35A-45A, 4S/6S) or read off the learner's own part. The only new
+ * KV figures anywhere in phase 1 come from the platform's own parts catalogue
+ * (src/data/assembly/parts/motors.ts), which carries provenance per entry.
+ *
  * This lesson's diagram was passive when the lesson was written, so the
  * definition originally had no interactive_diagram stage. The lessons rebuild
  * gave the diagram an explore callback and this definition an interactive
@@ -17,6 +24,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-define-goal',
   readinessOrder: [
     'checkpoint-qualityNotCompatibility',
+    'checkpoint-kvIsNotPower',
     'partsCompatibilityDiagram',
     'checkpoint-orderMatters',
     'checkpoint-damageNotJustPerformance',
@@ -47,7 +55,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
       body:
         'من أكثر الأخطاء شيوعًا عند المبتدئين الاعتقاد بأن شراء أفضل أو أغلى قطعة متاحة يضمن نتيجة جيدة. هذا غير ' +
         'صحيح: قطعة ممتازة الجودة قد تكون غير متوافقة تمامًا مع باقي مكوناتك. مثلاً، ESC فاخر مصمم لتيار 20A لن ' +
-        'يعمل بأمان مع محرك يحتاج فعليًا 35-45A، بغض النظر عن جودة تصنيعه. التوافق ليس مقياسًا للجودة، بل مطابقة ' +
+        'يعمل بأمان مع محرك يحتاج فعليًا 35A-45A، بغض النظر عن جودة تصنيعه. التوافق ليس مقياسًا للجودة، بل مطابقة ' +
         'دقيقة بين مواصفات كل قطعة والقطعة المجاورة لها.',
     },
     {
@@ -56,7 +64,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
       title: 'تأكد من فهمك: هل الجودة تكفي؟',
       checkpoint: {
         id: 'qualityNotCompatibility',
-        question: 'اشتريتَ أغلى وأفضل ESC متاح في السوق، لكنه مصمم لتيار 20A بينما محركك يحتاج 35-45A. ماذا سيحدث؟',
+        question: 'اشتريتَ أغلى وأفضل ESC متاح في السوق، لكنه مصمم لتيار 20A بينما محركك يحتاج 35A-45A. ماذا سيحدث؟',
         options: [
           {
             id: 'a', correct: false,
@@ -91,6 +99,60 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
         'ذلك التيار. ثم تتأكد أن FC يوفّر منافذ (UART) كافية لكل ما تحتاجه لاحقًا مثل Receiver وVTX. وأخيرًا تختار ' +
         'البطارية (LiPo) بجهد يتوافق مع كل ما سبق. كل خطوة تعتمد على القرار الذي قبلها مباشرة — لهذا لا يمكن اختيار ' +
         'القطع بترتيب عشوائي.',
+    },
+    {
+      // Motor KV enters the curriculum here, and only here, as a COMPATIBILITY
+      // SPEC — the same role ESC current already plays in this lesson. The
+      // definition is stated with both qualifiers it needs ("theoretical",
+      // "no propeller"), because the misconception this stage exists to
+      // prevent is reading KV as the aircraft's in-flight RPM.
+      //
+      // No arithmetic here on purpose: 6S = 22.2V is first taught in Lesson 6,
+      // so a KV x voltage worked figure would violate its own prerequisite.
+      // Lesson 12 does that calculation, once the learner has the voltage.
+      id: 'motorKvExplanation',
+      type: 'explanation',
+      title: 'الرقم الثاني المكتوب على المحرك: ما معنى KV؟',
+      body:
+        'على المحرك رقمان لا رقم واحد. الأول هو المقاس (مثل 2306) وقد مرّ بك في سلسلة الاختيار. والثاني هو KV، ' +
+        'وتعريفه دقيق وبسيط معًا: عدد الدورات النظرية في الدقيقة لكل فولت واحد، والمحرك بلا مروحة. الكلمتان ' +
+        '"نظرية" و"بلا مروحة" هما جوهر التعريف وليستا تفصيلاً: ما إن تركّب مروحة حتى تصبح السرعة الفعلية أقل، ' +
+        'لأن المروحة حِمل يقاوم الدوران. لذلك KV ليس سرعة طائرتك أثناء الطيران، وليس مقياسًا لـ"قوة" المحرك — ' +
+        'محرك برقم KV أقل ليس أضعف من محرك برقم أعلى، بل كلٌّ منهما مصمَّم لجهد بطارية مختلف. ما يعنيك في هذا ' +
+        'الدرس تحديدًا: KV مواصفة توافق تمامًا مثل تيار ESC — تُقرأ من ورقة مواصفات القطعة، وتُطابَق مع جهد ' +
+        'البطارية وحجم المروحة، ولا تُختار وحدها. وهناك قاعدة إبهام شائعة تُوجّه بحثك ولا تُحسب بها: كلما ارتفع ' +
+        'عدد خلايا البطارية، اتّجه الاختيار إلى KV أقل.',
+    },
+    {
+      id: 'kvCheckpoint',
+      type: 'checkpoint',
+      title: 'تأكد من فهمك: ماذا يقول رقم KV، وماذا لا يقول؟',
+      checkpoint: {
+        id: 'kvIsNotPower',
+        question: 'محرّكان من المقاس نفسه، لكن أحدهما مكتوب عليه رقم KV أعلى من الآخر. ما الذي يخبرك به هذا الفرق؟',
+        options: [
+          {
+            id: 'a', correct: false,
+            text: 'أن الأعلى KV أقوى، فهو الخيار الأفضل ما دام يتّسع للفريم نفسه.',
+            feedback: 'رقم KV الأعلى يعني سرعة دوران نظرية أعلى لكل فولت، ولا يعني عزمًا أعلى ولا أداءً أفضل داخل النظام؛ الأداء الفعلي يعتمد على المحرك والمروحة والبطارية معًا.',
+          },
+          {
+            id: 'b', correct: true,
+            text: 'أن سرعتهما النظرية لكل فولت مختلفة، فيُختار كلٌّ منهما لجهد بطارية مختلف — لا أن أحدهما أقوى.',
+            feedback: 'صحيح تمامًا! KV يصف علاقة السرعة النظرية بالفولت، ولهذا يُطابَق مع جهد البطارية وحجم المروحة معًا — لا يُقرأ وحده، ولا يُقرأ باعتباره مقياس قوة.',
+          },
+          {
+            id: 'c', correct: false,
+            text: 'أن الأعلى KV يدور بذلك العدد من الدورات في الدقيقة فعليًا أثناء الطيران.',
+            feedback: 'رقم KV موصوف بلا مروحة وبفولت واحد فقط؛ فور تركيب مروحة وتوصيل بطارية يختلف الرقم الفعلي تمامًا. إنه تعريف حسابي لا قراءة عدّاد أثناء الطيران.',
+          },
+          {
+            id: 'd', correct: false,
+            text: 'لا شيء يخصّ التوافق؛ KV رقم تجاري لا يغيّر اختيار بقية القطع.',
+            feedback: 'KV مواصفة توافق حقيقية تمامًا مثل تيار ESC: تُقرأ من ورقة المواصفات وتُطابَق مع جهد البطارية وحجم المروحة قبل الشراء، لا بعده.',
+          },
+        ],
+      },
     },
     {
       // Added for the lessons rebuild: PartsCompatibility.tsx gained an explore
@@ -151,7 +213,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
       type: 'worked_example',
       title: 'مثال عملي: ماذا يحدث فعليًا عند تركيب ESC غير متوافق؟',
       body:
-        'تخيّل أنك ركّبت ESC مصمم لتيار أقصى 20A على محرك يسحب فعليًا 35-45A عند الدفع الكامل. عند أول تشغيل وزيادة ' +
+        'تخيّل أنك ركّبت ESC مصمم لتيار أقصى 20A على محرك يسحب فعليًا 35A-45A عند الدفع الكامل. عند أول تشغيل وزيادة ' +
         'الدفع، سيحاول ESC تمرير تيار أعلى بكثير مما صُمم له. النتيجة عادة ليست تباطؤًا تدريجيًا، بل تلفًا فوريًا في ' +
         'دوائر ESC الداخلية — وقد يصل الأمر لاشتعال أو رائحة احتراق. هذا يوضح أن عدم التوافق هنا ليس مجرد أداء أضعف، ' +
         'بل عطل فعلي يحدث خلال ثوانٍ من التشغيل.',
@@ -262,6 +324,7 @@ export const lesson04JourneyDefinition: LessonJourneyDefinition = {
       terms: [
         { term: 'التوافق (Compatibility)', definition: 'مطابقة مواصفات كل قطعة مع القطعة المجاورة لها (الحجم أو التيار أو الجهد أو عدد المنافذ)، وليس مجرد الجودة أو السعر.' },
         { term: 'سلسلة الاختيار (Selection Chain)', definition: 'الترتيب المنطقي لاختيار القطع: Frame ثم Motors ثم ESC ثم FC ثم LiPo، حيث تعتمد كل خطوة على القرار الذي قبلها.' },
+        { term: 'KV المحرك (Motor KV)', definition: 'عدد الدورات النظرية في الدقيقة لكل فولت واحد والمحرك بلا مروحة — مواصفة توافق تُطابَق مع جهد البطارية وحجم المروحة، وليست سرعة الطيران الفعلية ولا مقياسًا للقوة.' },
         { term: 'هامش الأمان في التيار (Current Headroom)', definition: 'الفرق بين التيار الذي يحتاجه المحرك فعليًا والحد الأقصى الذي يتحمله ESC بأمان — كلما زاد الهامش زاد الأمان.' },
         { term: 'تصنيف الخلايا S (Cell Count / S Rating)', definition: 'رقم يوضح عدد خلايا البطارية المتصلة على التوالي (مثل 4S أو 6S)، ويحدد الجهد الكلي الذي يجب أن تتوافق معه باقي القطع.' },
         { term: 'منافذ UART', definition: 'منافذ اتصال في FC تُستخدم لتوصيل قطع مثل Receiver وVTX؛ يجب أن يكون عددها كافيًا لكل ما تحتاجه.' },

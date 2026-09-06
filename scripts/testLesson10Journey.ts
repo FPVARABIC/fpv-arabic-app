@@ -206,6 +206,18 @@ console.log('\n[14] Content-boundary check: Lesson 10 stays at pre-power-safety 
   }
 }
 
+console.log('\n[14b] The protocol is tied to the moment it gets executed, and to the current concept it rests on');
+{
+  const smoke = def.stages.find(s => s.id === 'smokeStopperExplanation')!;
+  const smokeText = JSON.stringify(smoke);
+  ok('the Smoke Stopper stage names where the current idea came from (Lessons 4 and 6)',
+    smokeText.includes('الدرس السادس') && smokeText.includes('الدرس الرابع'));
+  const completion = def.stages[def.stages.length - 1];
+  const completionText = JSON.stringify(completion);
+  ok('the summary tells the learner this protocol is executed at first power-up, not left here',
+    completionText.includes('أول توصيل طاقة') && completionText.includes('اكتمال التركيب'));
+}
+
 console.log('\n[15] Lesson 10\'s transition bridge to Lesson 11 is built from real lessonsData, not hardcoded text');
 {
   const lesson11 = lessonsData.find(l => l.id === 'lesson-frame-assembly')!;

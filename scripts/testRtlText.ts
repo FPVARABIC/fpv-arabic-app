@@ -19,6 +19,15 @@
  * leftwards arrow marooned between two Latin tokens.
  *
  * Prose beats punctuation for this anyway; the fixes said «يدخل».
+ *
+ * A SECOND SHAPE, FOUND THE SAME WAY
+ * ----------------------------------
+ * A browser pass over the enriched lessons caught «35-45A» rendering as
+ * «45A-35». Digits are bidi-WEAK and a trailing Latin unit is bidi-STRONG, so
+ * a range that carries its unit on one end only splits into two runs, which an
+ * RTL paragraph then orders right-to-left — the learner reads the range
+ * backwards. Repeating the unit on both ends («35A-45A», «6mm-8mm») keeps it a
+ * single left-to-right island. «3S-4S» was already safe for the same reason.
  */
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -67,6 +76,19 @@ export function badArrows(text: string): string[] {
       const neighbours = `${prevToken}${nextToken}`;
       if (!ARABIC.test(neighbours) && LATIN.test(neighbours)) out.push(snippet);
     }
+  }
+  return out;
+}
+
+/**
+ * Every hyphenated range whose two ends disagree on bidi class, as a snippet.
+ * Both halves must carry the unit, or neither may.
+ */
+export function flippedRanges(text: string): string[] {
+  const out: string[] = [];
+  // unit on the right only: 35-45A  ·  unit on the left only: 35A-45
+  for (const re of [/\d+-\d+[A-Za-z]/g, /\d+[A-Za-z]+-\d+(?![A-Za-z0-9.])/g]) {
+    for (const m of text.matchAll(re)) out.push(m[0]);
   }
   return out;
 }
@@ -149,6 +171,35 @@ console.log('\n[5] The two points the screenshot caught now read as sentences');
   ok('lesson 15 states it in words too', l15.importantPoints.some(p => /يدخل RX في FC/.test(p)));
   ok('neither uses an arrow any more',
     [...l9.importantPoints, ...l15.importantPoints].every(p => !p.includes('→') && !p.includes('←')));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[6] Hyphenated ranges survive the bidi algorithm too');
+{
+  ok('a range with the unit on one end only is caught', flippedRanges('يحتاج 35-45A فعليًا').length === 1);
+  ok('…and so is the mirror of it', flippedRanges('يحتاج 35A-45 فعليًا').length === 1);
+  ok('a range with the unit on both ends is left alone', flippedRanges('يحتاج 35A-45A فعليًا').length === 0);
+  ok('…including a two-letter unit', flippedRanges('بطول 6mm-8mm تقريبًا').length === 0);
+  ok('a cell-count range is already safe', flippedRanges('لبطاريات 3S-4S فقط').length === 0);
+  ok('a plain year or a lone figure is not a range', flippedRanges('راجعناه 2026 وبتيار 20A').length === 0);
+
+  const offenders: string[] = [];
+  for (const lesson of lessonsData) {
+    const def = enrichJourneyDefinition(getLessonJourneyDefinition(lesson.id)!, lesson);
+    for (const s of [...strings(lesson), ...strings(def.stages)]) {
+      for (const bad of flippedRanges(s)) offenders.push(`L${lesson.number}: ${bad}`);
+    }
+  }
+  if (offenders.length) console.error('  RANGES THAT RENDER BACKWARDS:', [...new Set(offenders)].join(', '));
+
+  // A ratchet: this may fall, never rise. The one left is Lesson 8's «14-25V»
+  // on the VBAT rail, which sits outside the lessons this phase was scoped to
+  // (4, 5, 7, 10, 12, 15) and is reported rather than quietly changed.
+  const KNOWN_UNFIXED = 1;
+  const distinct = [...new Set(offenders)];
+  ok(`at most ${KNOWN_UNFIXED} lesson range still renders backwards (found ${distinct.length})`,
+    distinct.length <= KNOWN_UNFIXED);
+  ok('and the one that does is Lesson 8\'s, not a new one', distinct.every(o => o.startsWith('L8: ')));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);

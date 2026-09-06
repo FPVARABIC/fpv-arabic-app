@@ -36,7 +36,7 @@ console.log('\n[1] Registration: Lesson 12 is registered in the journey registry
   const lesson12 = lessonsData.find(l => l.id === 'lesson-motor-install')!;
   ok('lesson12JourneyDefinition.lessonId matches the real Lesson 12 id', def.lessonId === lesson12.id);
   ok('getLessonJourneyDefinition resolves Lesson 12 to this exact definition', getLessonJourneyDefinition(lesson12.id) === def);
-  ok('Lesson 12 has 18 stages (17 + the motor-mount interactive stage)', STAGE_COUNT === 18);
+  ok('Lesson 12 has 19 stages (18 + the motor-label reading stage)', STAGE_COUNT === 19);
 }
 
 console.log('\n[2] Exactly one interactive_diagram stage exists — both screw cases must be opened');
@@ -188,7 +188,11 @@ console.log('\n[12] The comparison stage preserves MotorMount.tsx\'s correct-vs-
 
 console.log('\n[13] Glossary covers the key motor-installation vocabulary with real, non-empty MSA definitions');
 {
-  ok('exactly 5 glossary terms defined', GLOSSARY_STAGE.terms.length === 5);
+  ok('exactly 6 glossary terms defined', GLOSSARY_STAGE.terms.length === 6);
+  const kvTerm = GLOSSARY_STAGE.terms.find(t => t.term.includes('KV'));
+  ok('glossary names the two numbers printed on the motor', kvTerm !== undefined);
+  ok('the retrieved KV definition keeps the no-load qualifier, without naming propellers',
+    kvTerm!.definition.includes('بلا حِمل') && !kvTerm!.definition.includes('مروحة'));
   const termNames = GLOSSARY_STAGE.terms.map(t => t.term);
   ok('glossary defines correct screw length', termNames.some(t => t.includes('طول المسمار')));
   ok('glossary defines motor windings', termNames.some(t => t.includes('ملفات المحرك')));
@@ -260,9 +264,9 @@ console.log('\n[18] Quality-correction: the weak "screw color" distractor was re
   ok('the replacement distractor has substantive feedback', replacement.feedback.length > 30);
 }
 
-console.log('\n[19] Regression: stage count, the single interactive_diagram stage, and Lesson 13 bridge remain unchanged by the quality correction');
+console.log('\n[19] Regression: the single interactive_diagram stage and the Lesson 13 bridge survive both the quality correction and the KV retrieval stage');
 {
-  ok('Lesson 12 still has exactly 18 stages (quality correction did not change stage count)', STAGE_COUNT === 18);
+  ok('Lesson 12 has exactly 19 stages (18 + the motor-label reading stage added for KV retrieval)', STAGE_COUNT === 19);
   ok('still exactly one interactive_diagram stage exists', def.stages.filter(s => s.type === 'interactive_diagram').length === 1);
   ok('still exactly 4 checkpoint stages', CHECKPOINT_STAGES.length === 4);
   let s = createInitialSessionState(def);

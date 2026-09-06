@@ -46,7 +46,7 @@ const CHECKPOINTS = lessonsData.flatMap(l =>
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('\n[1] The order is a permutation, and the same one every time');
 {
-  ok(`the section has ${CHECKPOINTS.length} checkpoints to order`, CHECKPOINTS.length === 68);
+  ok(`the section has ${CHECKPOINTS.length} checkpoints to order`, CHECKPOINTS.length === 69);
 
   for (const { checkpoint } of CHECKPOINTS) {
     const shown = displayOptions(checkpoint);

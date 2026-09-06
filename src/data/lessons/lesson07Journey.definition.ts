@@ -115,6 +115,29 @@ export const lesson07JourneyDefinition: LessonJourneyDefinition = {
       },
     },
     {
+      // Curriculum expansion, phase 1. The pack label carries two numbers this
+      // lesson never read: capacity and the discharge rating. Both belong to
+      // the battery, and the second one closes the current chain that Lesson 4
+      // opened (motor demands current -> ESC must survive it -> and the PACK
+      // must be able to deliver it in the first place).
+      //
+      // No figures are quoted: capacity and C vary per pack and are read off
+      // the label, which is exactly the habit this stage is teaching.
+      id: 'capacityAndDischargeExplanation',
+      type: 'explanation',
+      title: 'الرقمان الآخران على ملصق الحزمة: السعة ومعدل التفريغ',
+      body:
+        'على ملصق البطارية أكثر من عدد الخلايا. الرقم المكتوب بوحدة mAh هو السعة: مقدار الشحنة المخزّنة داخل ' +
+        'الحزمة، وأقرب تشبيه له هو حجم خزّان الوقود. سعة أكبر تعني زمن طيران أطول عند نفس معدل الاستهلاك — لكنها ' +
+        'تعني أيضًا حزمة أثقل، والوزن الزائد يجعل المحركات تسحب تيارًا أكثر لحمله. لذلك زيادة السعة ليست زيادة ' +
+        'مضمونة في زمن الطيران، بل مقايضة بين شحنة أكبر ووزن أكبر، ولكل بناء نقطة توازن مختلفة. ' +
+        'والرقم الثاني هو معدل التفريغ، ويُكتب بحرف C: وهو وصف لمقدار التيار الذي تستطيع الحزمة تسليمه دون أن ' +
+        'تُجهَد. وهنا يلتقي هذا الدرس بالدرس الرابع: هناك عرفتَ أن المحرك يطلب تيارًا وأن ESC يجب أن يتحمّله، ' +
+        'وهنا يتّضح أن الحزمة طرف ثالث في المعادلة نفسها — فهي التي يجب أن تسلّم ذلك التيار من الأصل. ' +
+        'وككل رقم مكتوب على قطعة: هذان الرقمان يُقرآن من ملصق الحزمة وورقة مواصفاتها، ولا يُخمَّنان ولا يُنقلان ' +
+        'من حزمة إلى أخرى بالمشابهة.',
+    },
+    {
       id: 'puffedBatteryExplanation',
       type: 'explanation',
       title: 'لماذا تنتفخ بطارية LiPo، ولماذا هذا خطر حقيقي؟',
@@ -260,6 +283,8 @@ export const lesson07JourneyDefinition: LessonJourneyDefinition = {
         { term: 'جهد الشحن الكامل (Full-Charge Voltage)', definition: 'أعلى جهد تصل إليه الخلية عند الشحن الكامل، حتى حوالي 4.2V.' },
         { term: 'جهد التخزين الآمن (Storage Voltage)', definition: 'حوالي 3.8V لكل خلية — الجهد الأنسب لتخزين البطارية لفترة طويلة دون استخدام.' },
         { term: 'تصنيف الخلايا S (Cell Count / S Rating)', definition: 'عدد الخلايا المتصلة على التوالي (مثل 4S أو 6S)؛ يحدد جهد الحزمة الكلي حسابيًا.' },
+        { term: 'السعة (Capacity)', definition: 'مقدار الشحنة المخزّنة في الحزمة ويُكتب بوحدة mAh على ملصقها؛ سعة أكبر تعني شحنة أكبر ووزنًا أكبر معًا، فهي مقايضة لا زيادة مجانية في زمن الطيران.' },
+        { term: 'معدل التفريغ (C-Rating)', definition: 'وصف لمقدار التيار الذي تستطيع الحزمة تسليمه دون إجهاد، ويُكتب بحرف C على الملصق؛ يُقرأ من ورقة الحزمة نفسها ولا يُعمَّم من حزمة إلى أخرى.' },
         { term: 'الانتفاخ (Puffing)', definition: 'تورّم غلاف الخلية، إشارة على تلف داخلي حقيقي يستدعي التوقف الفوري عن الاستخدام والشحن.' },
         { term: 'Balance Charging', definition: 'ميزة شحن تتأكد أن كل خلية داخل الحزمة تُشحن بالتساوي وضمن الحد الآمن.' },
       ],
