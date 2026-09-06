@@ -28,6 +28,7 @@
  * RTL paragraph then orders right-to-left — the learner reads the range
  * backwards. Repeating the unit on both ends («35A-45A», «6mm-8mm») keeps it a
  * single left-to-right island. «3S-4S» was already safe for the same reason.
+ * Three lessons carried the broken shape — 4, 8 and 12 — and none does now.
  */
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -182,6 +183,10 @@ console.log('\n[6] Hyphenated ranges survive the bidi algorithm too');
   ok('…including a two-letter unit', flippedRanges('بطول 6mm-8mm تقريبًا').length === 0);
   ok('a cell-count range is already safe', flippedRanges('لبطاريات 3S-4S فقط').length === 0);
   ok('a plain year or a lone figure is not a range', flippedRanges('راجعناه 2026 وبتيار 20A').length === 0);
+  // Lesson 8's rail range sat inside brackets, which are neutral and hide
+  // nothing: «(14-25V)» rendered as «25V-14». Both forms are pinned here.
+  ok('brackets do not excuse a one-ended range', flippedRanges('جهد البطارية الكامل (14-25V) يُستخدم').length === 1);
+  ok('…and the fixed form inside brackets is clean', flippedRanges('جهد البطارية الكامل (14V-25V) يُستخدم').length === 0);
 
   const offenders: string[] = [];
   for (const lesson of lessonsData) {
@@ -192,14 +197,25 @@ console.log('\n[6] Hyphenated ranges survive the bidi algorithm too');
   }
   if (offenders.length) console.error('  RANGES THAT RENDER BACKWARDS:', [...new Set(offenders)].join(', '));
 
-  // A ratchet: this may fall, never rise. The one left is Lesson 8's «14-25V»
-  // on the VBAT rail, which sits outside the lessons this phase was scoped to
-  // (4, 5, 7, 10, 12, 15) and is reported rather than quietly changed.
-  const KNOWN_UNFIXED = 1;
+  // The ratchet reached zero: Lesson 4's «35-45A», Lesson 12's «6-8mm» and
+  // Lesson 8's «14-25V» were the whole set, and all three now carry the unit
+  // on both ends. There is no allowance left to spend — a single new one
+  // fails this suite.
   const distinct = [...new Set(offenders)];
-  ok(`at most ${KNOWN_UNFIXED} lesson range still renders backwards (found ${distinct.length})`,
-    distinct.length <= KNOWN_UNFIXED);
-  ok('and the one that does is Lesson 8\'s, not a new one', distinct.every(o => o.startsWith('L8: ')));
+  ok(`no lesson range renders backwards (found ${distinct.length})`, distinct.length === 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[7] The three ranges that were flipped, stated the way that survives');
+{
+  const l4 = lessonsData.find(l => l.id === 'lesson-define-goal')!;
+  const l8 = lessonsData.find(l => l.id === 'lesson-power-rails')!;
+  const l12 = lessonsData.find(l => l.id === 'lesson-motor-install')!;
+  ok('lesson 4 states the motor current range with the unit on both ends', l4.explanation.includes('35A-45A'));
+  ok('lesson 8 states the VBAT rail range with the unit on both ends', l8.explanation.includes('14V-25V'));
+  ok('lesson 12 states the screw length range with the unit on both ends', l12.explanation.includes('6mm-8mm'));
+  ok('and none of the three kept its one-ended form',
+    ![l4, l8, l12].some(l => /35-45A|14-25V|6-8mm/.test(l.explanation)));
 }
 
 console.log(`\nAll ${passed} assertions passed.`);
