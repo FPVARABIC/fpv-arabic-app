@@ -37,6 +37,14 @@ jobs:
       - name: Install (web)
         run: npm ci --prefix web
 
+      # `test:navigation-regression` drives a real browser. Playwright is a
+      # dependency; the browser BINARY is not — npm installs the library, not
+      # Chromium. Without this step every run on this repository failed with
+      # «Failed to launch chromium because executable doesn't exist», before a
+      # single assertion could be reported, and CI never reached the web build.
+      - name: Install Chromium for the browser regression suite
+        run: npx playwright install --with-deps chromium
+
       - name: Typecheck — phone app
         run: npx tsc -b --pretty false
 
