@@ -112,8 +112,8 @@ export default function HomePage() {
       href: sectionHref('lessons'),
       Icon: BookOpen,
       blurbAr:
-        'من «ما هو الكوادكابتر؟» حتى أول تحليق: شرح قصير، ثم سؤال، ثم مخطّط تضغطه '
-        + 'بنفسك. كل إجابة وكل مرحلة تُحفظ في متصفّحك، فتعود حيث توقّفت.',
+        'مسار مرتّب خطوة بخطوة من الأساسيات حتى أول طيران آمن: شرح قصير، ثم سؤال، '
+        + 'ثم مخطّط تضغطه بنفسك. كل إجابة وكل مرحلة تُحفظ في متصفّحك، فتعود حيث توقّفت.',
       count: lessonsData.length,
       countLabelAr: 'درساً في خمس محطّات',
       ctaAr: 'ابدأ الدروس',
@@ -160,8 +160,8 @@ export default function HomePage() {
       href: sectionHref('kb'),
       Icon: Library,
       blurbAr:
-        'المبدأ قبل الخطوة: كيف يعمل النظام، ولماذا يفشل، وكيف تفحصه — بمصادر '
-        + 'وإصدارات وتواريخ مراجعة مذكورة في كل مقال.',
+        'مرجع ترجع إليه عندما تحتاج معلومة عن موضوع بعينه — لا مسارًا تسير فيه: '
+        + 'كيف يعمل النظام، ولماذا يفشل، وكيف تفحصه، بمصادر وتواريخ مراجعة.',
       count: articleCount,
       countLabelAr: `مقالاً في ${modules.length} منظومات`,
       ctaAr: 'افتح الموسوعة',
@@ -238,10 +238,34 @@ export default function HomePage() {
           <span style={{ color: 'var(--accent-ink)' }}>بالعربية</span>
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.95 }}>
-          منصّة واحدة على الهاتف والويب: مجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات
-          موثّقة، ومركز برامج يشرح كل إعداد، وموسوعة تشرح المبدأ قبل الخطوة. الحساب
-          نفسه، والمشروع نفسه، والمحتوى نفسه — أينما فتحتها.
+          منصّة واحدة على الهاتف والويب: مسار تعليمي مرتّب من الأساسيات حتى أول طيران
+          آمن، ومجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات موثّقة، ومركز برامج يشرح
+          كل إعداد، وموسوعة ترجع إليها عند الحاجة.
         </p>
+
+        {/*
+          The one thing a first-time visitor is here to do.
+
+          WHY IT SITS ABOVE THE SEARCH FIELD
+          ----------------------------------
+          A phone at 390px showed the old order costing a beginner one and a half
+          screens of scrolling before any section appeared: banner, header field,
+          headline, paragraph, a second search field, and only then «أركان المنصّة».
+          Search answers «I have a specific question»; it cannot answer «I do not
+          know enough to have one yet», which is the state the lessons exist for.
+
+          It is a link, not a button — it navigates, so a reader can open it in a
+          new tab and a screen reader announces it as a link.
+        */}
+        <div className="hero-cta">
+          <Link href={sectionHref('lessons')} className="btn-primary hero-cta-main" data-testid="home-hero-lessons">
+            ابدأ الدروس
+          </Link>
+          <span className="hero-cta-note">
+            <span dir="ltr" style={{ fontWeight: 900, color: 'var(--accent-ink)' }}>{lessonsData.length}</span>
+            {' '}درساً مرتّبة في خمس محطّات — من «ما هو الكوادكابتر؟» حتى أول تحليق.
+          </span>
+        </div>
 
         {/* The site's search, repeated here at full size. The header field is
             the global entry; on the page a visitor is looking AT, a wide field
@@ -280,6 +304,7 @@ export default function HomePage() {
               key={p.id}
               href={p.href}
               className="card pillar"
+              data-primary={p.id === 'lessons' ? '' : undefined}
               data-testid={`home-pillar-${p.id}`}
             >
               <span aria-hidden className="pillar-icon">

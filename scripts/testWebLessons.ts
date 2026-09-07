@@ -53,6 +53,51 @@ console.log('\n[2] Navigation names the section');
   ok('الدروس is the second tab, right after home', NAV_TABS[0]?.id === 'home' && NAV_TABS[1]?.id === 'lessons' && NAV_TABS[1]?.href === '/lessons');
   ok('the home page has a lessons pillar', /id: 'lessons'/.test(read('web/app/page.tsx')));
   ok('the sitemap lists lesson pages through the resolver', /kind: 'lesson'/.test(read('web/app/sitemap.ts')));
+
+  // Projects was on the bar before the lessons tab was added and must survive
+  // every later reshuffle: a tab that quietly disappears is a section a reader
+  // can no longer reach at all.
+  ok('المشاريع is still a tab', NAV_TABS.some(t => t.id === 'projects' && t.href === '/projects'));
+  ok('every tab has a distinct id and a real path',
+    new Set(NAV_TABS.map(t => t.id)).size === NAV_TABS.length && NAV_TABS.every(t => t.href.startsWith('/')));
+
+  // The bar renders from ONE array at both widths — the phone bar and the
+  // header are the same component — so «الدروس» cannot be present on a desktop
+  // header and dropped from a phone bar without this list changing. That is the
+  // property worth asserting; a second list is what would let them diverge.
+  const navTabsSrc = read('web/components/NavTabs.tsx');
+  ok('one component renders both the header bar and the phone bar',
+    /variant: 'header' \| 'bottom'/.test(navTabsSrc) && /NAV_TABS\.map/.test(navTabsSrc));
+  ok('no width-conditional filtering hides a tab from the phone bar',
+    !/slice\(|filter\(/.test(navTabsSrc.split('NAV_TABS.map')[0].split('export const NavTabs')[1] ?? ''));
+}
+
+console.log('\n[2b] The home page leads with the learning path');
+{
+  const home = read('web/app/page.tsx');
+
+  // A first-time visitor on a phone met a headline, a paragraph and a second
+  // search field before any section appeared. Search answers «I have a specific
+  // question»; it cannot answer «I do not know enough to have one».
+  ok('the hero carries a lessons call to action', /data-testid="home-hero-lessons"/.test(home));
+  ok('…and it is a link to the lessons index, resolved through the site map',
+    /<Link\s+href=\{sectionHref\('lessons'\)\}[\s\S]{0,120}home-hero-lessons/.test(home));
+  ok('…and it sits before the search form', home.indexOf('home-hero-lessons') < home.indexOf('home-search-input'));
+
+  // The count is read from the data, so it cannot drift from the curriculum.
+  ok('the lesson count comes from lessonsData, not a typed number',
+    /\{lessonsData\.length\}/.test(home) && !/\b20 درس/.test(home));
+
+  // The two learning surfaces must not read as the same offer.
+  ok('the lessons blurb says it is an ordered path', /مسار مرتّب خطوة بخطوة/.test(home));
+  ok('the encyclopedia blurb says it is a reference, not a path', /مرجع ترجع إليه[\s\S]{0,40}لا مسارًا/.test(home));
+
+  // Visually primary, and by one attribute rather than a second card component.
+  ok('the lessons pillar is marked primary', /data-primary=\{p\.id === 'lessons'/.test(home));
+  ok('the primary marker is styled', /\.pillar\[data-primary\]/.test(read('web/app/globals.css')));
+
+  // No claim the curriculum does not make.
+  ok('the home page promises no expertise', !/محترف|خبير|Expert|احترافي/.test(home));
 }
 
 console.log('\n[3] Every diagram utility class is styled on the web');

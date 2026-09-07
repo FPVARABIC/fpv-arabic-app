@@ -119,6 +119,69 @@ async function main() {
   page.on('pageerror', e => errors.push(String(e)));
 
   try {
+    // ── The route a beginner actually takes, before anything about the index ──
+    console.log('\n[0] Discoverability: home leads to the lessons, and stays lit there');
+    {
+      // networkidle, not domcontentloaded: the assertions below press Enter on a
+      // Next <Link>, and an unhydrated link falls back to a full page load —
+      // which lands in the same place but adds a history entry, so the «Back,
+      // Back, home» check below would depend on hydration timing.
+      await page.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-testid="home-hero-lessons"]');
+
+      // The bar is fixed to the bottom below 900px; the whole point is that a
+      // thumb finds «الدروس» without scrolling or opening anything.
+      const bar = page.locator('.nav-bottom');
+      const lessonsTab = bar.locator('[data-testid="nav-lessons"]');
+      ok('the phone bar is the visible one at 390px', await bar.isVisible());
+      ok('the phone bar shows الدروس without any menu being opened', await lessonsTab.isVisible());
+      const box = await lessonsTab.boundingBox();
+      ok('…and it is a real touch target', !!box && box.height >= 44, `${Math.round(box!.width)}x${Math.round(box!.height)}`);
+      ok('المشاريع is still on the bar too', await bar.locator('[data-testid="nav-projects"]').isVisible());
+      // Second position, counted from the markup rather than from pixels, so it
+      // holds in RTL where «second» is second from the right.
+      const ids = await bar.locator('[data-testid^="nav-"]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.testid));
+      ok('الدروس is the second tab on the phone bar', ids[1] === 'nav-lessons', ids.join(' '));
+
+      // Above the fold at 390px — measured, not assumed.
+      const cta = page.locator('[data-testid="home-hero-lessons"]');
+      const ctaBox = await cta.boundingBox();
+      const vh = page.viewportSize()!.height;
+      ok('the hero call to action is above the fold at 390px', !!ctaBox && ctaBox.y < vh, `y=${Math.round(ctaBox!.y)} vh=${vh}`);
+      ok('it is a link, not a div with a handler', (await cta.evaluate(el => el.tagName)) === 'A');
+      ok('the home page never scrolls sideways at 390px', !(await scrollsSideways(page)));
+
+      // Keyboard: focus it and open it with Enter.
+      await cta.focus();
+      ok('the call to action takes keyboard focus',
+        (await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))) === 'home-hero-lessons');
+      await page.keyboard.press('Enter');
+      await page.waitForURL('**/lessons');
+      ok('Enter opens the lessons index', page.url().endsWith('/lessons'));
+
+      // The section a reader is in must be the section the bar says they are in.
+      ok('«الدروس» is the lit tab on the index',
+        await page.locator('.nav-bottom [data-testid="nav-lessons"][aria-current="page"]').count() === 1);
+      ok('and it is the ONLY lit tab', await page.locator('.nav-bottom [data-testid^="nav-"][aria-current="page"]').count() === 1);
+
+      await page.locator('[data-testid="lesson-card-lesson-quadcopter-intro"]').click();
+      await page.waitForSelector('[data-testid="lesson-journey"]');
+      ok('«الدروس» stays lit inside a lesson, not «الموسوعة»',
+        await page.locator('.nav-bottom [data-testid="nav-lessons"][aria-current="page"]').count() === 1);
+      ok('no other tab is lit inside a lesson', await page.locator('.nav-bottom [data-testid^="nav-"][aria-current="page"]').count() === 1);
+      ok('a lesson page never scrolls sideways at 390px', !(await scrollsSideways(page)));
+
+      // Wait for the URL the step expects rather than for the network to fall
+      // quiet: a client-side Back resolves its promise before the router has
+      // finished, and the next Back then runs against the previous entry.
+      await page.goBack();
+      await page.waitForURL(u => new URL(u).pathname === '/lessons', { timeout: 15_000 });
+      ok('Back returns to the index', new URL(page.url()).pathname === '/lessons');
+      await page.goBack();
+      await page.waitForURL(u => new URL(u).pathname === '/', { timeout: 15_000 });
+      ok('Back again returns home', new URL(page.url()).pathname === '/');
+    }
+
     console.log('\n[1] The index: twenty lessons, five stations, whole-card links');
     await goto(page, `${BASE}/lessons`, '[data-testid="lesson-card-lesson-quadcopter-intro"]');
     ok('20 lesson cards', await page.locator('[data-testid^="lesson-card-"]').count() === 20);
