@@ -1,92 +1,195 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { roadmapData } from '@core/data/roadmapData';
-import { buildStages } from '@core/data/assembly/buildStages';
-import type { ProjectSnapshot } from '@core/data/project/types';
-import { BuildStages } from '@/components/project/BuildStages';
+import { BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS } from '@/lib/build/path';
+import { BuildResume } from '@/components/build/BuildResume';
 
 export const metadata: Metadata = {
-  title: 'البناء',
+  title: 'البناء — ابنِ درونك خطوة بخطوة',
   description:
-    'مراحل بناء الطائرة بالترتيب: التحضير، الخطوات العملية، التحذيرات، ومتى تتوقف ولا تُكمل — ثم قوائم الفحص قبل أول تشغيل.',
+    'نظام إرشادي تفاعلي لبناء درون FPV: من اختيار القطع وفحص توافقها إلى '
+    + 'اللحام والإعداد البرمجي وبوابات السلامة وأول طيران.',
   alternates: { canonical: '/build' },
 };
 
 /**
- * «البناء» — the build guide, as a section of its own.
+ * /build — the landing. Its one job is the three doors.
  *
- * WHY THIS ROUTE HAD TO EXIST
- * ---------------------------
- * The build stages are not new content and this page does not write any. The
- * whole record — `roadmapData`, `roadmapStageContent`, `checklistsData` — has
- * been on the web since the project batch, rendered by `BuildStages`. What it
- * did NOT have was a door.
+ * WHY THE WIZARD IS NOT ON THIS PAGE
+ * ----------------------------------
+ * «عند فتح قسم البناء لا ترمِ المستخدم داخل عشرات الخيارات» — the landing is
+ * server-rendered, indexable, and offers exactly three ways in plus the path
+ * overview. The wizard itself is a client island on /build/wizard, because it
+ * reads the reader's own draft from their browser.
  *
- * `BuildStages` was mounted in exactly one place: the `stages` tab inside
- * `/project`. That page is «مشروعي» — a PRIVATE workspace, `robots: noindex`,
- * behind an `ssr: false` island, and it renders `<EmptyProject/>` instead of
- * the workspace until the reader has created a project in this browser. So a
- * beginner who had not registered any parts could not reach a single build
- * stage, and «البناء» — a tab in the phone app — had no counterpart anywhere in
- * the web's navigation. That is why it read as missing: not deleted, undoorway.
- *
- * WHY IT IS NOT A DUPLICATE ROUTE
- * -------------------------------
- * There was no build route on the web to duplicate. `/roadmap` and `/assembly`
- * are PHONE routes, and `webRoutes.PHONE_ONLY_KINDS` still declares their deep
- * links phone-only — a link to one specific stage still has no web address, and
- * this page does not invent one. This is the section INDEX, and it renders the
- * same component `/project` renders, from the same data. Nothing is copied.
- *
- * WHY IT IS SERVER-RENDERED WITH NO PROJECT
- * -----------------------------------------
- * The guide is public: the order of the work, the warnings and the stop
- * conditions are true before anyone owns a part. So the page passes an empty
- * snapshot and no findings, which is exactly what `BuildStages` already handles
- * — `StageParts` renders nothing without parts, and the blockers banner needs a
- * finding to appear. The reader's OWN parts and their compatibility verdicts
- * stay where they belong, in «مشروعي», and this page links there.
- *
- * The consequence worth having: the whole guide is in the HTML. No JavaScript,
- * no localStorage, no empty page for a crawler or for a reader on a slow phone.
+ * EVERY NUMBER IS COUNTED
+ * -----------------------
+ * Parts, categories, steps, gates and gate items are all counted from the
+ * shared core and the path definition at build time — the same rule the home
+ * page follows, for the same reason: a written figure is a promise that rots.
  */
-
-/**
- * A project nobody has started.
- *
- * Written as a literal rather than read through `readProjectSnapshot()` because
- * this is a server component: the reader's project lives in localStorage, which
- * the server cannot see, and calling the reader would return this same value by
- * a longer road while pulling the assembly store into the server bundle.
- */
-const NO_PROJECT: ProjectSnapshot = {
-  exists: false,
-  stageIndex: 0,
-  totalStages: buildStages.length,
-  parts: {},
-};
-
 export default function BuildPage() {
+  const modes = [
+    {
+      id: 'guided',
+      titleAr: 'ساعدني في اختيار كل شيء',
+      bodyAr:
+        'لأول بناء: أسئلة قليلة عن هدفك وميزانيتك، ثم مسار كامل يقترح كل قطعة '
+        + 'ويشرح لماذا — حتى أول طيران آمن.',
+      ctaAr: 'ابدأ من الصفر',
+      /** The door most visitors need is SAID to be theirs, not left to guessing. */
+      primary: true,
+    },
+    {
+      id: 'parts',
+      titleAr: 'لدي بعض القطع',
+      bodyAr:
+        'سجّل ما تملكه — من الكتالوج أو باسمه — ونكمل بقية المنظومة حوله، '
+        + 'مع فحص التوافق على كل إضافة.',
+      ctaAr: 'أكمل ما عندي',
+      primary: false,
+    },
+    {
+      id: 'advanced',
+      titleAr: 'أريد بناءً متقدماً',
+      bodyAr:
+        'كل الخيارات ظاهرة بلا ترشيح، وأنت من يقرر — ومحرك التوافق يراجع '
+        + 'خلفك ويقول رأيه بالسبب والدليل.',
+      ctaAr: 'افتح التحكم الكامل',
+      primary: false,
+    },
+  ];
+
+  // The same four arcs the wizard's own header shows — one list, two homes.
+  const phases = BUILD_PHASES.map(p => ({
+    titleAr: p.titleAr,
+    stepsAr: BUILD_PATH.filter(s => s.number >= p.from && s.number <= p.to),
+  }));
+
   return (
-    <div className="shell" style={{ paddingTop: 30, paddingBottom: 44, maxWidth: 1100 }}>
-      <nav aria-label="مسار التنقّل" style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
-        <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> البناء
-      </nav>
+    <div className="shell" style={{ paddingTop: 36, paddingBottom: 44 }}>
+      {/* Content first: title, one line, resume, and the three doors inside
+          the first phone viewport. The full explanation and the counted
+          numbers moved to «عن هذا القسم» below the path overview. */}
+      <section style={{ maxWidth: 780 }}>
+        <nav aria-label="مسار التنقّل" style={{ fontSize: 12.5, color: 'var(--text-dimmer)' }}>
+          <Link href="/">الرئيسية</Link> <span aria-hidden>/</span> البناء
+        </nav>
+        <h1 style={{ fontSize: 'clamp(23px, 5.5vw, 32px)', fontWeight: 900, lineHeight: 1.45, margin: '12px 0 0' }}>
+          ابنِ درونك — <span style={{ color: 'var(--accent-ink)' }}>من اختيار القطع إلى أول طيران</span>
+        </h1>
+        <BuildResume />
+      </section>
 
-      <h1 style={{ fontSize: 27, fontWeight: 900, margin: '14px 0 8px' }}>البناء</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 2, margin: '0 0 10px', maxWidth: 760 }}>
-        <span dir="ltr" style={{ fontWeight: 900, color: 'var(--accent-ink)' }}>{roadmapData.length}</span>
-        {' '}مراحل بالترتيب الذي تُنفَّذ به فعلاً — التحضير، الخطوات العملية، التحذيرات،
-        وأخطاء شائعة، وكيف تعرف أن المرحلة نجحت. ومع كل مرحلة «متى تتوقف ولا تُكمل»:
-        شروط المتابعة بعدها تُتلف قطعاً، لا شروط تجعلها أصعب.
-      </p>
-      <p style={{ fontSize: 13, color: 'var(--text-dimmer)', lineHeight: 1.95, margin: '0 0 24px', maxWidth: 760 }}>
-        هذه الصفحة تعرض العمل وترتيبه للجميع. أما قطعك أنت وأحكام التوافق المحسوبة
-        منها فمكانها{' '}
-        <Link href="/project" data-testid="build-to-project">مشروعي</Link>.
-      </p>
+      {/* ── The three doors ──────────────────────────────────────────────── */}
+      <section aria-labelledby="modes-h" style={{ marginTop: 24 }}>
+        <h2 id="modes-h" style={{ fontSize: 21, fontWeight: 900, margin: '0 0 14px' }}>
+          ماذا تريد أن تبني؟
+        </h2>
+        <div className="pillar-grid">
+          {modes.map(m => (
+            <Link
+              key={m.id}
+              href={`/build/wizard?mode=${m.id}`}
+              className="card pillar"
+              data-testid={`build-mode-${m.id}`}
+              style={m.primary ? { border: '2px solid var(--accent-ink)' } : undefined}
+            >
+              {m.primary && (
+                <span className="admin-badge admin-badge-ok" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>
+                  الأنسب لأول بناء
+                </span>
+              )}
+              <h3 style={{ fontSize: 17, fontWeight: 900, margin: 0 }}>{m.titleAr}</h3>
+              <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.9, margin: '10px 0 0', flex: 1 }}>
+                {m.bodyAr}
+              </p>
+              <span className="pillar-cta">{m.ctaAr} ←</span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-      <BuildStages snapshot={NO_PROJECT} findings={[]} />
+      {/* ── The path, so nobody starts blind ─────────────────────────────── */}
+      <section aria-labelledby="path-h" style={{ marginTop: 44 }}>
+        <h2 id="path-h" style={{ fontSize: 21, fontWeight: 900, margin: '0 0 6px' }}>
+          المسار كاملاً — <span dir="ltr">{TOTAL_BUILD_STEPS}</span> خطوة
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '0 0 16px', lineHeight: 1.9 }}>
+          ترى تقدمك في كل خطوة، وترجع بلا فقدان اختيارات، وتقف البوابات الحمراء
+          بينك وبين أي قفزة خطرة.
+        </p>
+        <div style={{
+          display: 'grid', gap: 12,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+        }}>
+          {phases.map(phase => (
+            <div key={phase.titleAr} className="card-sm" style={{ padding: '15px 17px' }}>
+              <h3 style={{ fontSize: 13.5, fontWeight: 900, margin: '0 0 8px', color: 'var(--accent-ink)' }}>
+                {phase.titleAr}
+              </h3>
+              <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 5 }}>
+                {phase.stepsAr.map(s => (
+                  <li key={s.id} style={{ display: 'flex', gap: 8, fontSize: 12.5, lineHeight: 1.8 }}>
+                    <span dir="ltr" style={{ fontWeight: 900, color: 'var(--text-dimmer)', minWidth: 18 }}>
+                      {s.number}
+                    </span>
+                    <span>
+                      {s.titleAr}
+                      {s.kind === 'gate' && (
+                        <span className="admin-badge admin-badge-warn"
+                          style={{ marginInlineStart: 6, fontSize: 9.5 }}>
+                          بوابة سلامة
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── The safety stance + the moved preface ─────────────────────────── */}
+      <section aria-labelledby="safety-h" style={{ marginTop: 44, maxWidth: 780 }}>
+        <div className="card" style={{ padding: '20px 22px' }}>
+          <h2 id="safety-h" style={{ fontSize: 16, fontWeight: 900, margin: 0 }}>
+            السلامة ليست فقرة في النهاية
+          </h2>
+          <p style={{ fontSize: 13.5, color: 'var(--text-dim)', lineHeight: 1.95, margin: '10px 0 0' }}>
+            المسار لا يسمح بالقفز من تركيب القطع إلى أول طيران: فحص اللحام
+            والقطبية بالـMultimeter وSmoke Stopper قبل أي بطارية، والمراوح منزوعة
+            في أي اختبار محركات، وFailsafe يُضبط ويُختبر قبل أن يُحتاج — كل بوابة
+            قائمة تُؤكَّد بنداً بنداً، ولا يفتح «التالي» قبل اكتمالها.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Where the rest of the platform plugs in ──────────────────────── */}
+      <section aria-labelledby="links-h" style={{ marginTop: 40 }}>
+        <h2 id="links-h" style={{ fontSize: 16, fontWeight: 900, margin: '0 0 12px' }}>
+          البناء موصول ببقية المنصّة
+        </h2>
+        <div style={{
+          display: 'grid', gap: 12,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+        }}>
+          {[
+            { href: '/project', titleAr: 'بناءي (مشروعي)', bodyAr: 'قطعك وأحكام التوافق وسجلا التحكم والفيديو — مساحة عملك الدائمة.' },
+            { href: '/kb', titleAr: 'الموسوعة', bodyAr: 'حين تحتاج فهم قطعة قبل اختيارها — المبدأ قبل الخطوة.' },
+            { href: '/programming', titleAr: 'البرامج', bodyAr: 'Betaflight والريسيفر والفيديو — خطوة الإعداد ترسلك للصفحة الصحيحة.' },
+            { href: '/projects', titleAr: 'المشاريع', bodyAr: 'بعد أول طيران: مشاريع كاملة مراجَعة تبني عليها.' },
+          ].map(l => (
+            <Link key={l.href} href={l.href} className="card-sm" data-testid={`build-link-${l.href.replace(/\//g, '')}`}
+              style={{ padding: '15px 17px', display: 'block' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 900, margin: 0 }}>{l.titleAr}</h3>
+              <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85, margin: '7px 0 0' }}>
+                {l.bodyAr}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

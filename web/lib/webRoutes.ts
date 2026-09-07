@@ -79,8 +79,10 @@ const WEB_CHECKS: DestinationChecks = {
 export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // The build flow is a long stateful wizard whose value is in being in your
   // hand at the bench, and per-stage completion is tracked there. What the web
-  // now has is the full roadmap and checklist CONTENT, in its own section at
-  // /build — so these messages point at it rather than simply refusing.
+  // now has is the project workspace those flows feed, including the full
+  // roadmap and checklist CONTENT under /project — so these messages point at
+  // it rather than simply refusing. `/build` is the guided path, not that
+  // stage-by-stage record, so it is not what a `roadmap` deep link means.
   //
   // They stay listed because the DEEP LINK is what is unavailable: a link to
   // one specific stage or checklist group has no web address, and sending
@@ -91,8 +93,8 @@ export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // not have. It has one now — web/app/lessons — so the kind resolves like any
   // other. The existence check lives in WEB_CHECKS above.
   assembly: 'تدفّق البناء خطوة بخطوة متاح في تطبيق الهاتف',
-  roadmap: 'مراحل البناء معروضة كاملة في قسم «البناء» — وتتبّع إنجازها في التطبيق',
-  checklist: 'قوائم الفحص معروضة كاملة في قسم «البناء» — وتتبّع إنجازها في التطبيق',
+  roadmap: 'مراحل البناء معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
+  checklist: 'قوائم الفحص معروضة كاملة في صفحة «مشروعي» — وتتبّع إنجازها في التطبيق',
 };
 
 /**

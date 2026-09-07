@@ -6,8 +6,8 @@ import { kbTerms } from '@core/data/kb/glossary/terms';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { lessonsData } from '@core/data/lessonsData';
-import { roadmapData } from '@core/data/roadmapData';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
+import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import { href } from '@/lib/webRoutes';
 import { navItem } from '@/lib/siteNav';
 import { BRAND_NAME } from '@core/data/brand';
@@ -69,7 +69,7 @@ function sectionHref(id: string): string {
  *
  * EVERY NUMBER IS COUNTED, NONE IS WRITTEN
  * ----------------------------------------
- * `STORE_PRODUCTS.length`, `allDxTrees.length`, `roadmapData.length` — all read
+ * `STORE_PRODUCTS.length`, `allDxTrees.length`, `PART_CATEGORY_MAP` — all read
  * from the shared core at build time. This was the rule the old page followed and it is
  * kept: a hand-written figure is a promise that rots the first time content
  * changes, and here it would rot into a lie about the size of the platform.
@@ -100,6 +100,8 @@ export default function HomePage() {
   const modules = allKbModules;
   const articleCount = modules.reduce((n, m) => n + m.articles.length, 0);
   const publishedProjectCount = ALL_PROJECTS.filter(p => p.published).length;
+  const buildPartCount = Object.values(PART_CATEGORY_MAP).reduce((n, l) => n + l.length, 0);
+  const buildCategoryCount = Object.keys(PART_CATEGORY_MAP).length;
 
   /* The five load-bearing sections, in navigation order. One array, one
      renderer — see the note above on why that matters more than it looks. */
@@ -133,13 +135,13 @@ export default function HomePage() {
       ctaAr: 'افتح الموسوعة',
     },
     /*
-     * البناء, restored to the front page with the tab.
+     * البناء, restored to the front page with its tab.
      *
-     * The stages were on the web already — but only inside «مشروعي», a private
-     * workspace that renders nothing until you have created a project there. So
-     * a beginner could read this whole page, open every card, and never learn
-     * that the platform tells you how to build the aircraft. `/build` is the
-     * door; this is the sign on it.
+     * The section itself was never written twice: `/build` and its wizard came
+     * back verbatim from the branch that already carried them. What had gone
+     * missing on this line of work was every way IN — no tab and no card, so a
+     * beginner could read this whole page and never learn that the platform
+     * builds the aircraft with them.
      */
     {
       id: 'build',
@@ -147,11 +149,11 @@ export default function HomePage() {
       href: sectionHref('build'),
       Icon: Wrench,
       blurbAr:
-        'مراحل بناء الطائرة بالترتيب الذي تُنفَّذ به: التحضير، الخطوات العملية، '
-        + 'التحذيرات، وأخطاء شائعة، ومتى تتوقف ولا تُكمل — ثم قوائم الفحص قبل أول تشغيل.',
-      count: roadmapData.length,
-      countLabelAr: 'مراحل بناء مرتّبة',
-      ctaAr: 'افتح البناء',
+        'ابنِ درونك خطوة بخطوة: مسار تفاعلي يقترح القطعة ويقول لماذا، ويفحص '
+        + 'التوافق بمحرك أحكام يشرح كل حكم، ويقف عند بوابات السلامة قبل البطارية.',
+      count: buildPartCount,
+      countLabelAr: `قطعة موثّقة في ${buildCategoryCount} فئة`,
+      ctaAr: 'ابنِ درونك',
     },
     /*
      * المشاريع, added because the tab bar had six tabs and this page had four

@@ -316,6 +316,27 @@ figure img {
   margin: 0 auto;
   padding: 0 20px;
 }
+/* Both rules below came across with «البناء» and are its layout requirements,
+   not general polish — the wizard's own 360px assertion fails without the
+   first, and the second is the fix for the bug the comment describes. */
+@media (max-width: 480px) {
+  .shell { padding: 0 14px; }
+}
+
+/*
+ * FORM CONTROLS CAN NEVER BE WIDER THAN THEIR CONTAINER.
+ *
+ * A native <select> sizes itself to its LONGEST option, and a flex/grid item
+ * defaults to min-width:auto — so one long option label («اسم القطعة — its
+ * English name») silently made the whole page 723px wide on a 390px phone,
+ * with the header and the bottom bar both appearing "cut" because the reader
+ * was mid-way through a horizontal scroll nobody intended to exist. This rule
+ * kills the entire class of bug rather than the one instance found.
+ */
+select, input, textarea {
+  min-width: 0;
+  max-width: 100%;
+}
 
 /** Screen-reader-only text that still participates in the accessibility tree. */
 .sr-only {
@@ -908,6 +929,80 @@ details.card-sm > summary:focus-visible {
 }
 @media (min-width: 1080px) {
   .with-index { grid-template-columns: 250px minmax(0, 1fr); gap: 40px; }
+}
+
+/* The build wizard: the step in front, «بناءي» beside it where a screen can
+ * hold both. On a phone the side column disappears entirely — the SAME panel
+ * body docks at the bottom instead (see .wizard-dock below), because a
+ * full-height summary stacked under the step pushed the actual decision off
+ * screen, and a summary stacked above it buried the content. */
+.build-cols {
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .build-cols { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; }
+  .build-cols > aside { position: sticky; top: 92px; }
+}
+@media (max-width: 999px) {
+  .mybuild-aside { display: none; }
+}
+
+/* ── The wizard's dock — «بناءي» as the journey's anchor ──────────────────
+ *
+ * One sticky block at the bottom of the step column: «السابق», the «بناءي»
+ * pulse chip, and «التالي». On a phone it rides ABOVE the fixed tab bar
+ * (the bottom offset clears the bar's height plus the safe area), so the
+ * next action is always under the thumb and nothing ever covers the tabs.
+ * Tapping the chip opens the SAME panel body the desktop side column shows,
+ * UPWARD as a sheet inside the sticky block — it overlays content only while
+ * the reader holds it open, never pushes the step around, and closes on any
+ * navigation. On desktop the dock is an ordinary row and the chip and sheet
+ * do not exist: the side column is already the anchor there. */
+.wizard-dock { margin-top: 22px; }
+.wizard-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.mybuild-chip { display: none; }
+.mybuild-sheet { display: none; }
+@media (max-width: 999px) {
+  .wizard-dock { position: sticky; bottom: 12px; z-index: 35; }
+  .wizard-actions {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 6px 24px -10px rgba(21, 34, 50, 0.28);
+  }
+  .mybuild-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mybuild-sheet {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px -12px rgba(21, 34, 50, 0.35);
+    margin-bottom: 8px;
+    padding: 14px 16px;
+    max-height: 52vh;
+    max-height: 52dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (max-width: 899px) {
+  /* The fixed tab bar occupies the bottom ~58px plus the safe area; the dock
+   * floats just above both. Keep in step with the body's own reservation. */
+  .wizard-dock { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /*

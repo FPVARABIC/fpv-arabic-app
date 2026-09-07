@@ -369,7 +369,8 @@ async function main() {
         ok('«البناء» is the only lit tab on /build',
           await dpage.locator('.header-tabs [data-testid="nav-build"][aria-current="page"]').count() === 1
           && await dpage.locator('.header-tabs [data-testid^="nav-"][aria-current="page"]').count() === 1);
-        ok('…and the build stages are on the page', await dpage.locator('[data-testid="project-stages"]').isVisible());
+        ok('…and the build section itself answers there',
+          await dpage.locator('[data-testid="build-mode-guided"]').isVisible());
 
         await dpage.goto(`${BASE}/kb`, { waitUntil: 'domcontentloaded' });
         ok('«الموسوعة» is the only lit tab on /kb',

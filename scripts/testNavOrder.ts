@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { NAV_TABS, isTabActive } from '../web/lib/navTabs';
 import { navItem } from '../web/lib/siteNav';
 import { SECTION_ROUTES } from '../web/lib/webRoutes';
-import { roadmapData } from '../src/data/roadmapData';
+import { PART_CATEGORY_MAP } from '../src/data/project/store';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p: string) => readFileSync(path.join(ROOT, p), 'utf8');
@@ -101,12 +101,34 @@ console.log('\n[2] Nothing was deleted — only un-tabbed');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-console.log('\n[3] «البناء» has one real route, and it is not a second copy');
+console.log('\n[3] «البناء» is the section that already existed, not a second one');
 {
+  /*
+   * THE ROUTE WAS NOT INVENTED HERE.
+   *
+   * `/build` and `/build/wizard` — the landing with its three doors, the
+   * wizard, the compatibility checks, the safety gates and the report — were
+   * already written on `claude/web-platform-foundation`, which is the branch
+   * the production deployment builds from. They were never on this line of
+   * work, which is the whole reason «البناء» read as missing here.
+   *
+   * So this section asserts the PORT, not a rewrite: the landing, the wizard
+   * and the six `web/lib/build` modules are present and are the ones that
+   * carry the path. If somebody later starts a parallel build guide, the
+   * «one landing» assertions below are what catches it.
+   */
   ok('/build exists', existsSync(path.join(ROOT, 'web/app/build/page.tsx')));
+  ok('/build/wizard exists', existsSync(path.join(ROOT, 'web/app/build/wizard/page.tsx')));
   ok('the site map lists البناء', navItem('build')?.href === '/build' && navItem('build')?.labelAr === 'البناء');
   ok('البناء sits in the build group', navItem('build')?.group === 'build');
   ok('البناء needs no account', !navItem('build')?.requiresAuth);
+
+  for (const m of ['path', 'draft', 'checks', 'gates', 'bom', 'labels']) {
+    ok(`the ${m} module came across with it`, existsSync(path.join(ROOT, `web/lib/build/${m}.ts`)));
+  }
+  for (const c of ['BuildWizard', 'BuildResume', 'PartPicker', 'GateStep', 'GuideSteps', 'MyBuildPanel', 'ReportStep']) {
+    ok(`${c} came across with it`, existsSync(path.join(ROOT, `web/components/build/${c}.tsx`)));
+  }
 
   // NO DUPLICATE ROUTE. The phone's build routes are `/roadmap` and
   // `/assembly`; neither may be recreated on the web, because the deep links
@@ -114,20 +136,19 @@ console.log('\n[3] «البناء» has one real route, and it is not a second c
   ok('no /roadmap route was created on the web', !existsSync(path.join(ROOT, 'web/app/roadmap')));
   ok('no /assembly route was created on the web', !existsSync(path.join(ROOT, 'web/app/assembly')));
 
-  // NO DUPLICATE CONTENT. The page must RENDER the component that already
-  // exists rather than re-listing the stages, which is how two build guides
-  // start to disagree.
+  // The landing reads its path from the shared definition rather than listing
+  // steps of its own — the property that keeps one build path, not two.
   const build = read('web/app/build/page.tsx');
-  ok('the page renders the existing BuildStages component',
-    /import \{ BuildStages \} from '@\/components\/project\/BuildStages'/.test(build)
-    && /<BuildStages\b/.test(build));
-  ok('…and does not re-list the stages itself', !/roadmapData\.map|roadmapStageContent\[/.test(build));
-  ok('…and reads its own figure from the data', /\{roadmapData\.length\}/.test(build));
+  ok('the landing reads the path definition', /from '@\/lib\/build\/path'/.test(build));
+  ok('…and hands the interactive part to the wizard route',
+    build.includes('/build/wizard') || build.includes("href={`/build/wizard"));
 
-  // «مشروعي» keeps its stages tab: the personal workspace is not stripped to
-  // make room for the public guide.
-  ok('«مشروعي» still shows the stages too',
+  // «مشروعي» keeps its stages tab: the personal workspace was not stripped to
+  // make room for the section, and the `roadmap` deep links still name it.
+  ok('«مشروعي» still shows the build stages too',
     read('web/components/project/ProjectWorkspace.tsx').includes("['stages', 'مراحل البناء']"));
+  ok('the roadmap deep link still names «مشروعي», which is where those stages are',
+    read('web/lib/webRoutes.ts').includes("roadmap: 'مراحل البناء معروضة كاملة في صفحة «مشروعي»"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,8 +171,11 @@ console.log('\n[4] The home page names the same sections in the same order');
 
   ok('«البناء» is visible on the page, not hidden behind a fold or a details',
     home.includes("id: 'build'") && !/<details[\s\S]{0,400}id: 'build'/.test(home));
-  ok('the build card counts its stages from the data',
-    block.includes('count: roadmapData.length') && !block.includes(`count: ${roadmapData.length},`));
+  // Counted, never typed: a written figure here would rot into a claim about
+  // the size of the parts catalogue the moment a part is added.
+  const catalogueSize = Object.values(PART_CATEGORY_MAP).reduce((n, l) => n + l.length, 0);
+  ok('the build card counts the parts catalogue from the data',
+    block.includes('count: buildPartCount') && !block.includes(`count: ${catalogueSize},`));
   ok('every card resolves its href through the site map',
     [...block.matchAll(/^\s{6}href: (.+),$/gm)].every(m => m[1].startsWith('sectionHref(')));
 }
