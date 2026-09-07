@@ -62,10 +62,10 @@ console.log('\n[2] Navigation names the section');
   // can no longer reach at all.
   ok('المشاريع is still a tab', NAV_TABS.some(t => t.id === 'projects' && t.href === '/projects'));
   // Adding the lessons tab must never cost the reader the sections that were
-  // already there. «الموسوعة», «البناء» and «المتجر» are checked here for the
-  // same reason «المشاريع» is: this suite ships with the lessons work, so it is
-  // the suite that would otherwise be the one to drop them.
-  for (const id of ['kb', 'build', 'store']) {
+  // already there. These are checked here for the same reason «المشاريع» is:
+  // this suite ships with the lessons work, so it is the suite that would
+  // otherwise be the one to drop them.
+  for (const id of ['build', 'kb', 'programming', 'store']) {
     ok(`${id} is still a tab`, NAV_TABS.some(t => t.id === id));
   }
   ok('every tab has a distinct id and a real path',
