@@ -81,7 +81,8 @@ export const PHONE_ONLY_KINDS: Partial<Record<Destination['kind'], string>> = {
   // hand at the bench, and per-stage completion is tracked there. What the web
   // now has is the project workspace those flows feed, including the full
   // roadmap and checklist CONTENT under /project — so these messages point at
-  // it rather than simply refusing.
+  // it rather than simply refusing. `/build` is the guided path, not that
+  // stage-by-stage record, so it is not what a `roadmap` deep link means.
   //
   // They stay listed because the DEEP LINK is what is unavailable: a link to
   // one specific stage or checklist group has no web address, and sending

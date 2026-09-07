@@ -70,6 +70,10 @@ export const NAV_ITEMS: NavItem[] = [
 
   // ── Build ────────────────────────────────────────────────────────────────
   {
+    id: 'build', labelAr: 'البناء', href: '/build', group: 'build',
+    blurbAr: 'مسار تفاعلي يبني درونك معك: القطع، التوافق، السلامة، أول طيران.',
+  },
+  {
     id: 'projects', labelAr: 'المشاريع', href: '/projects', group: 'build',
     blurbAr: 'مشاريع حقيقية تجمع الطيران بالذكاء الاصطناعي والرؤية الحاسوبية.',
   },

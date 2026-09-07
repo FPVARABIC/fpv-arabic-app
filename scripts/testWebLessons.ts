@@ -49,7 +49,10 @@ console.log('\n[2] Navigation names the section');
   const nav = NAV_ITEMS.find(i => i.id === 'lessons');
   ok('siteNav has الدروس in the learn group', !!nav && nav.href === '/lessons' && nav.group === 'learn' && !nav.requiresAuth);
   ok('الدروس is the first learn item', NAV_ITEMS.filter(i => i.group === 'learn')[0]?.id === 'lessons');
-  ok('the tab bar has seven tabs', NAV_TABS.length === 7);
+  // The bar's full membership and its exact order are pinned in
+  // `scripts/testNavOrder.ts`, which owns that question. What THIS suite cares
+  // about is the one thing the lessons rebuild bought and must not lose: the
+  // lessons tab is on the bar, and it is the first section after home.
   ok('الدروس is the second tab, right after home', NAV_TABS[0]?.id === 'home' && NAV_TABS[1]?.id === 'lessons' && NAV_TABS[1]?.href === '/lessons');
   ok('the home page has a lessons pillar', /id: 'lessons'/.test(read('web/app/page.tsx')));
   ok('the sitemap lists lesson pages through the resolver', /kind: 'lesson'/.test(read('web/app/sitemap.ts')));
@@ -58,6 +61,13 @@ console.log('\n[2] Navigation names the section');
   // every later reshuffle: a tab that quietly disappears is a section a reader
   // can no longer reach at all.
   ok('المشاريع is still a tab', NAV_TABS.some(t => t.id === 'projects' && t.href === '/projects'));
+  // Adding the lessons tab must never cost the reader the sections that were
+  // already there. «الموسوعة», «البناء» and «المتجر» are checked here for the
+  // same reason «المشاريع» is: this suite ships with the lessons work, so it is
+  // the suite that would otherwise be the one to drop them.
+  for (const id of ['kb', 'build', 'store']) {
+    ok(`${id} is still a tab`, NAV_TABS.some(t => t.id === id));
+  }
   ok('every tab has a distinct id and a real path',
     new Set(NAV_TABS.map(t => t.id)).size === NAV_TABS.length && NAV_TABS.every(t => t.href.startsWith('/')));
 

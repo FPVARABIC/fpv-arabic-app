@@ -38,6 +38,17 @@ const WEB_ENV = {
   NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
 };
 
+/**
+ * The tab bar as the owner fixed it, in `data-testid` form.
+ *
+ * Declared here as well as in `scripts/testNavOrder.ts` on purpose: that suite
+ * proves the ARRAY is right, this one proves the BROWSER renders it — and the
+ * two must be able to disagree, or the second proves nothing.
+ */
+const PHONE_BAR_ORDER = [
+  'nav-home', 'nav-lessons', 'nav-kb', 'nav-build', 'nav-projects', 'nav-store',
+];
+
 let passed = 0;
 function ok(label: string, cond: boolean) {
   assert.ok(cond, `FAILED: ${label}`);
@@ -142,6 +153,12 @@ async function main() {
       // holds in RTL where «second» is second from the right.
       const ids = await bar.locator('[data-testid^="nav-"]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.testid));
       ok('الدروس is the second tab on the phone bar', ids[1] === 'nav-lessons', ids.join(' '));
+      // The whole bar, as it actually renders. `testNavOrder.ts` pins the array;
+      // this pins the DOM the array produces, which is the thing a thumb meets.
+      ok('the phone bar renders the six sections in the fixed order',
+        ids.join(' ') === PHONE_BAR_ORDER.join(' '), ids.join(' '));
+      ok('«المجتمع» is not on the phone bar', !ids.includes('nav-community'), ids.join(' '));
+      ok('«البناء» is on the phone bar', ids.includes('nav-build'), ids.join(' '));
 
       // Above the fold at 390px — measured, not assumed.
       const cta = page.locator('[data-testid="home-hero-lessons"]');
@@ -327,6 +344,41 @@ async function main() {
       }
       ok('Space explores the rest, and the requirement is met without a pointer',
         (await page.locator('[data-testid="lesson-diagram-progress"]').innerText()).includes('3 من 3'));
+    }
+
+    // ── The same bar, at a desktop width ────────────────────────────────
+    console.log('\n[10] The header bar at 1280px is the same bar, in the same order');
+    {
+      const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const dpage = await desktop.newPage();
+      try {
+        await dpage.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+        const header = dpage.locator('.header-tabs');
+        ok('the header bar is the visible one at 1280px', await header.isVisible());
+        ok('the phone bar is hidden at 1280px', !(await dpage.locator('.nav-bottom').isVisible()));
+
+        const dids = await header.locator('[data-testid^="nav-"]')
+          .evaluateAll(els => els.map(e => (e as HTMLElement).dataset.testid));
+        ok('the header renders the same six sections in the same order',
+          dids.join(' ') === PHONE_BAR_ORDER.join(' '));
+        ok('«المجتمع» is not on the header bar', !dids.includes('nav-community'));
+
+        // The section a reader is in is the section the bar says they are in —
+        // checked on the two routes this round moved.
+        await dpage.goto(`${BASE}/build`, { waitUntil: 'domcontentloaded' });
+        ok('«البناء» is the only lit tab on /build',
+          await dpage.locator('.header-tabs [data-testid="nav-build"][aria-current="page"]').count() === 1
+          && await dpage.locator('.header-tabs [data-testid^="nav-"][aria-current="page"]').count() === 1);
+        ok('…and the build section itself answers there',
+          await dpage.locator('[data-testid="build-mode-guided"]').isVisible());
+
+        await dpage.goto(`${BASE}/kb`, { waitUntil: 'domcontentloaded' });
+        ok('«الموسوعة» is the only lit tab on /kb',
+          await dpage.locator('.header-tabs [data-testid="nav-kb"][aria-current="page"]').count() === 1
+          && await dpage.locator('.header-tabs [data-testid^="nav-"][aria-current="page"]').count() === 1);
+      } finally {
+        await desktop.close();
+      }
     }
 
     ok(`no page errors during the run (${errors.length})`, errors.length === 0);
