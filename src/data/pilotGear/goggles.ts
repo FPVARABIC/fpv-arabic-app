@@ -30,7 +30,7 @@ export const goggles: PilotGearPart[] = [
     brand: 'Caddx / Walksnail',
     priceRangeUSD: [430, 500],
     function: 'نظارات نظام Walksnail Avatar HD.',
-    specs: 'وزن 290g؛ dual 1920×1080؛ 100FPS؛ FOV 50°؛ IPD حوالي 57-72 أو 54-74mm حسب الصفحة؛ جهد 7-26V؛ HDMI input؛ AV in؛ gyro.',
+    specs: 'وزن 290g؛ dual 1920×1080؛ 100FPS؛ FOV 50°؛ IPD حوالي من 57 إلى 72 أو 54mm-74mm حسب الصفحة؛ جهد 7V-26V؛ HDMI input؛ AV in؛ gyro.',
     compatibility: 'مناسبة لمن يختار Walksnail VTX ولا يريد DJI.',
     whyChoose: 'ممتازة لمن يريد HD رقمي مع مرونة HDMI/AV أكثر.',
     notFor: 'لا تختارها لو نظامك DJI أو HDZero إلا كاستخدام HDMI/AV محدود وليس native.',

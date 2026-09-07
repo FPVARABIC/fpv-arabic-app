@@ -50,7 +50,7 @@ export const accessories: PilotGearPart[] = [
     brand: 'Generic',
     priceRangeUSD: [5, 15],
     function: 'تثبيت البطارية على الفريم.',
-    specs: 'Kevlar/nylon؛ طول 250-300mm شائع لـ 5in؛ عرض 20mm شائع؛ يفضّل rubber pad.',
+    specs: 'Kevlar/nylon؛ طول 250mm-300mm شائع لـ 5in؛ عرض 20mm شائع؛ يفضّل rubber pad.',
     compatibility: 'متوافق مع 5in و7in حسب طول البطارية والفريم.',
     whyChoose: 'قطعة بسيطة لكنها تمنع فقدان البطارية في crash.',
     notFor: 'لا تعتمد على strap واحد فقط في مسافات طويلة أو بطارية ثقيلة.',

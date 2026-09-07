@@ -111,7 +111,7 @@ export const batteries: Battery[] = [
     priceRangeUSD: [25, 35],
     specs: { sCount: 4, capacityMah: 1550, cRating: 95, connector: 'XT60' },
     compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4] },
-    whyChoose: 'بطارية 4S كلاسيكية: 1550mAh، 14.8V، وزن حوالي 192-193g وموصل XT60، مناسبة لبناء 4S 5 إنش.',
+    whyChoose: 'بطارية 4S كلاسيكية: 1550mAh، 14.8V، وزن حوالي 192g-193g وموصل XT60، مناسبة لبناء 4S 5 إنش.',
     notFor: 'لا تختارها مع محركات KV منخفضة مخصصة غالباً لـ6S؛ الأداء سيكون ضعيفاً.',
     upgradePath: 'CNHL/Tattu 1300mAh 6S عند الانتقال لـ6S',
     lastReviewed: '2026-07',
@@ -125,7 +125,7 @@ export const batteries: Battery[] = [
     safetyNotes: ['لا تخلط بطاريات 4S و6S على نفس إعدادات المحرك دون فهم KV.'],
     buildNotes: [
       'مع 4S تحتاج KV أعلى من 6S عادة، وإلا يصبح الدرون بطيئاً.',
-      'ملاحظة وزن: النص المصدري يذكر نطاقاً ضيقاً "192-193g" وليس رقماً واحداً؛ تُرك حقل weightG فارغاً بدل اختيار طرف من النطاق تعسفياً.',
+      'ملاحظة وزن: النص المصدري يذكر نطاقاً ضيقاً "192g-193g" وليس رقماً واحداً؛ تُرك حقل weightG فارغاً بدل اختيار طرف من النطاق تعسفياً.',
     ],
   },
 ];

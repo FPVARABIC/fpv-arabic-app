@@ -172,7 +172,7 @@ export const chapter18BetaflightPractical: KnowledgeEntry[] = [
     category: 'السلامة',
     tags: ['failsafe', 'فقدان الإشارة', 'سلامة', 'هبوط', 'drop'],
     summary: 'Failsafe يُحدد سلوك الطائرة عند فقدان إشارة التحكم — إعداده الصحيح ينقذ الطائرة والأشخاص.',
-    body: 'للإعداد في تبويب Failsafe: (1) اختر Stage 2 Failsafe Action: Drop (السقوط الفوري) أو Land (الهبوط التدريجي). (2) اضبط Failsafe Throttle على قيمة منخفضة (950-1000 microseconds) لضمان الإيقاف. (3) في جهاز التحكم، اضبط أيضاً Failsafe ليُرسل إشارة تُطفئ ARM. (4) اختبر Failsafe بالتأكد من انطفاء المحركات عند إغلاق جهاز التحكم — مع إزالة الأجنحة أولاً. (5) تأكد من عمل Failsafe من جهاز الاستقبال ومن Betaflight معاً (طبقتان من الحماية).',
+    body: 'للإعداد في تبويب Failsafe: (1) اختر Stage 2 Failsafe Action: Drop (السقوط الفوري) أو Land (الهبوط التدريجي). (2) اضبط Failsafe Throttle على قيمة منخفضة (من 950 إلى 1000 microseconds) لضمان الإيقاف. (3) في جهاز التحكم، اضبط أيضاً Failsafe ليُرسل إشارة تُطفئ ARM. (4) اختبر Failsafe بالتأكد من انطفاء المحركات عند إغلاق جهاز التحكم — مع إزالة الأجنحة أولاً. (5) تأكد من عمل Failsafe من جهاز الاستقبال ومن Betaflight معاً (طبقتان من الحماية).',
     sourceType: 'explicit_from_book',
     safetyNote: 'عدم إعداد Failsafe يعني أن الطائرة ستستمر في الطيران بعيداً أو تدور بعشوائية عند فقدان الإشارة.',
     relatedIds: ['ch18-receiver-setup', 'ch18-modes-tab'],

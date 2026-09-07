@@ -409,7 +409,7 @@ const releaseInfoFields: BfField[] = [
     id: 'cloud-build-status',
     englishLabel: 'Cloud Build Details',
     arabicMeaning: 'حالة البناء السحابي (Cloud Build)',
-    arabicExplanation: 'النص الرسمي (firmwareFlasherCloudBuildDetails / firmwareFlasherCloudBuildStatus): يعرض رابط "Show Log" لسجل البناء السحابي الفعلي، وشريط تقدم بناء حقيقي (0-100)، ونص حالة حي (مثلًا "pending" أو "Processing" أثناء الاستطلاع الدوري لحالة البناء كل 5 ثوانٍ، حتى النجاح أو انتهاء المهلة أو الإلغاء)، مع زر "Cancel" لإلغاء طلب بناء قيد التنفيذ.',
+    arabicExplanation: 'النص الرسمي (firmwareFlasherCloudBuildDetails / firmwareFlasherCloudBuildStatus): يعرض رابط "Show Log" لسجل البناء السحابي الفعلي، وشريط تقدم بناء حقيقي (من 0 إلى 100)، ونص حالة حي (مثلًا "pending" أو "Processing" أثناء الاستطلاع الدوري لحالة البناء كل 5 ثوانٍ، حتى النجاح أو انتهاء المهلة أو الإلغاء)، مع زر "Cancel" لإلغاء طلب بناء قيد التنفيذ.',
     group: 'release-info',
     controlType: 'status',
     scope: 'feature-dependent',

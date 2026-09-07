@@ -24,7 +24,7 @@ export const edgeTxTelemetrySensors: EdgeTxPage = {
     'شاشة التليمتري هي المكان الذي يعرض فيه جهازك ما يعود من الطائرة: جهد البطارية، جودة الرابط، وغيرهما. القيمة الحقيقية ليست في رؤيتها بل في أن تنذرك قبل الانقطاع.',
   whenNeededAr:
     'بعد أول ربط ناجح، وبعد كل تحديث لبرنامج المستقبل أو الوحدة، وحين تريد بناء تحذير على قيمة عائدة.',
-  whereAr: `قوائم النموذج ثم شاشة التليمتري (Model ← Telemetry). ${PATH_CAVEAT}`,
+  whereAr: `قوائم النموذج ثم شاشة التليمتري (Model ثم Telemetry). ${PATH_CAVEAT}`,
   level: 'intermediate',
   risk: 'warning',
   prerequisitesAr: ['مستقبل مربوط وموصول بالطاقة', 'نظام راديوي يدعم عودة البيانات'],
@@ -148,7 +148,7 @@ export const edgeTxDiscoverSensors: EdgeTxPage = {
     'الاكتشاف هو أن يصغي الجهاز إلى ما يصله ويبني قائمة بما وجده. لا يخترع مستشعراً ولا يجلب واحداً غير موجود — يسجّل ما وصل فقط.',
   whenNeededAr:
     'بعد أول ربط، وبعد تحديث برنامج المستقبل أو متحكم الطيران، وبعد إضافة مستشعر جديد، وحين تختفي قيمة كانت تظهر.',
-  whereAr: `شاشة التليمتري، أمر اكتشاف المستشعرات (Model ← Telemetry ← Discover new sensors). ${PATH_CAVEAT}`,
+  whereAr: `شاشة التليمتري، أمر اكتشاف المستشعرات (Model ثم Telemetry ثم Discover new sensors). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'caution',
   prerequisitesAr: ['رابط قائم فعلاً', 'الطائرة موصولة بالطاقة', 'المراوح منزوعة'],
@@ -248,7 +248,7 @@ export const edgeTxLuaScripts: EdgeTxPage = {
     'النص البرمجي هو ملف يعمل على جهازك ويعطيك قائمة أو شاشة إضافية. أشهر استخدام له في FPV هو قائمة ضبط النظام الراديوي من الجهاز مباشرة.',
   whenNeededAr:
     'حين تريد تغيير معدل الرزم أو القدرة أو نسبة التليمتري من الجهاز، أو حين توفّر شركة عتادك أداة تعمل على الراديو.',
-  whereAr: `قائمة تشغيل النصوص من الشاشة الرئيسية أو من قوائم النموذج (Model ← Scripts؛ أو زر القائمة على الشاشة الرئيسية). ${PATH_CAVEAT}`,
+  whereAr: `قائمة تشغيل النصوص من الشاشة الرئيسية أو من قوائم النموذج (Model ثم Scripts؛ أو زر القائمة على الشاشة الرئيسية). ${PATH_CAVEAT}`,
   level: 'intermediate',
   risk: 'caution',
   prerequisitesAr: [
@@ -589,7 +589,7 @@ export const edgeTxTrainer: EdgeTxPage = {
     'وضع المدرّب يربط جهازين معاً بحيث يستطيع المدرّب انتزاع التحكم فوراً. هو أرخص تأمين على طائرة وعلى متعلّم في آن واحد.',
   whenNeededAr:
     'حين تعلّم شخصاً الطيران، أو حين تتعلم بإشراف، أو حين تريد استخدام جهازك كوحدة تحكم لمحاكي على الحاسوب.',
-  whereAr: `إعداد النموذج ضمن قسم المدرّب، وإعدادات عامة في قوائم النظام (Model ← Trainer؛ Radio ← Trainer). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج ضمن قسم المدرّب، وإعدادات عامة في قوائم النظام (Model ثم Trainer؛ Radio ثم Trainer). ${PATH_CAVEAT}`,
   level: 'intermediate',
   risk: 'warning',
   prerequisitesAr: [

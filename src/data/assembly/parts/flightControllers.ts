@@ -44,7 +44,7 @@ export const flightControllers: FlightController[] = [
     safetyNotes: ['لا تفترض أن كابل DJI/O4 pinout متطابق دائماً؛ راجع مخطط اللوحة والوحدة قبل التشغيل.'],
     buildNotes: [
       'مع DJI O3/O4 استخدم UART/MSP مخصصاً وراجع pinout؛ موصل DJI/O3 الرسمي لا يعني أن كل كابل O4 مطابق دون مراجعة الترتيب.',
-      'ملاحظة سعر: النص المصدري يسمي المنتج "Flight Controller / Stack" بنطاق سعر 35-70 دولار دون فصل صريح؛ الطرف الأقل على الأرجح للوحة FC وحدها، والطرف الأعلى لحزمة Stack كاملة مع ESC — المواصفات (MCU، عدد UART، دعم DJI O4) خاصة باللوحة نفسها ولا تتغير حسب طريقة الشراء.',
+      'ملاحظة سعر: النص المصدري يسمي المنتج "Flight Controller / Stack" بنطاق سعر من 35 إلى 70 دولار دون فصل صريح؛ الطرف الأقل على الأرجح للوحة FC وحدها، والطرف الأعلى لحزمة Stack كاملة مع ESC — المواصفات (MCU، عدد UART، دعم DJI O4) خاصة باللوحة نفسها ولا تتغير حسب طريقة الشراء.',
     ],
   },
   {
@@ -88,7 +88,7 @@ export const flightControllers: FlightController[] = [
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
     quickTags: {
-      whyTag: 'H7 قوية — 128MB logging ودعم 2-8S',
+      whyTag: 'H7 قوية — 128MB logging ودعم 2S-8S',
       noteTag: '6 UART قد تضيق بمزيج مدى طويل كامل — Matek تعطي 7',
       noteTagSource: 'build',
     },
@@ -108,7 +108,7 @@ export const flightControllers: FlightController[] = [
     priceRangeUSD: [110, 140],
     specs: { mcu: 'H7 / STM32H743VIH6', uartCount: 7, supportsDjiO4: true, mountingSizeMm: 30.5 },
     compatibilityTags: { droneTypes: ['freestyle', 'racing', 'cinematic', 'long-range'], batteryVoltages: [4, 6] },
-    whyChoose: 'لوحة H7 متقدمة: 2-8S، 7 UART، 2x I2C، CAN، microSD، مناسبة للمتقدمين وINAV/ArduPilot؛ دعم O4/DJI يكون بتوصيل MSP/UART يدوي لا plug-and-play دائماً.',
+    whyChoose: 'لوحة H7 متقدمة: 2S-8S، 7 UART، 2x I2C، CAN، microSD، مناسبة للمتقدمين وINAV/ArduPilot؛ دعم O4/DJI يكون بتوصيل MSP/UART يدوي لا plug-and-play دائماً.',
     notFor: 'لا تختارها لأول بناء FPV بسيط أو إذا تريد موصل DJI جاهز plug-and-play.',
     upgradePath: 'Holybro Kakute H7 V2',
     lastReviewed: '2026-07',

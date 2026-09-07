@@ -23,7 +23,7 @@ import type { Motor } from '../types';
 //
 
 // specs.maxFrameSizeInch on motor-emax-eco-ii-2306-budget (5.5) rests on
-// real textual evidence: its own whyChoose states "يدعم مراوح 5-5.5 إنش" —
+// real textual evidence: its own whyChoose states "يدعم مراوح من 5 إلى 5.5 إنش" —
 // an explicit 5.5" claim. None of the other 3 motors make this claim (they
 // only say "5 إنش"), so none of them get this field — a real gap, not
 // silently extended by similarity to the EMAX entry.
@@ -46,13 +46,13 @@ export const motors: Motor[] = [
     priceRangeUSD: [13, 20],
     specs: { kv: 1700, statorSize: '2306', compatibleVoltages: [6], maxFrameSizeInch: 5.5 },
     compatibilityTags: { droneTypes: ['freestyle', 'racing'], batteryVoltages: [6], frameSizeInch: 5 },
-    whyChoose: 'محرك اقتصادي 2306 موثق بوزن ~30.4g بدون السلك ويدعم مراوح 5-5.5 إنش؛ مناسب لـ5 إنش 6S عند اختيار KV الصحيح.',
+    whyChoose: 'محرك اقتصادي 2306 موثق بوزن ~30.4g بدون السلك ويدعم مراوح من 5 إلى 5.5 إنش؛ مناسب لـ5 إنش 6S عند اختيار KV الصحيح.',
     notFor: 'لا تختاره إذا أردت أخف وزن أو أعلى نعومة؛ الخطأ الشائع استخدام KV عالي مع 6S دون فهم.',
     upgradePath: 'iFlight XING2 2207 1750KV',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
     quickTags: {
-      whyTag: 'اقتصادي خفيف (~30.4g) — يدعم مراوح 5-5.5 إنش',
+      whyTag: 'اقتصادي خفيف (~30.4g) — يدعم مراوح من 5 إلى 5.5 إنش',
       noteTag: 'ليس الأخف ولا الأنعم — انتبه لاختيار KV مع 6S',
       noteTagSource: 'notFor',
     },
@@ -153,7 +153,7 @@ export const motors: Motor[] = [
     brand: 'NewBeeDrone',
     specs: { kv: 1750, statorSize: '2306.5', weightG: 37, shaftDiameterMm: 5, compatibleVoltages: [6] },
     compatibilityTags: { droneTypes: ['cinematic'], batteryVoltages: [6], frameSizeInch: 5 },
-    whyChoose: 'المسمى الرسمي من الشركة المصنعة هو "Cinematic FPV Motor"؛ تصميم Ring Magnet (بدل المغناطيس المربع التقليدي) موثق كمقلل لاهتزاز/ضوضاء المحرك، هيكل 7075 ألمنيوم أحادي القطعة (unibell)، 1750KV، 6S، تيار 30-60A، عمود M5، 14 قطباً (مرجع لضبط RPM filter في Betaflight).',
+    whyChoose: 'المسمى الرسمي من الشركة المصنعة هو "Cinematic FPV Motor"؛ تصميم Ring Magnet (بدل المغناطيس المربع التقليدي) موثق كمقلل لاهتزاز/ضوضاء المحرك، هيكل 7075 ألمنيوم أحادي القطعة (unibell)، 1750KV، 6S، تيار 30A-60A، عمود M5، 14 قطباً (مرجع لضبط RPM filter في Betaflight).',
     notFor: 'لا تختاره إذا لا تحتاج مزايا Ring Magnet الإضافية (تقليل الاهتزاز) ولا يهمك سعره غير المؤكد مقارنة ببدائل أرخص موثقة السعر في القاعدة.',
     upgradePath: 'لا يوجد حالياً بديل آخر مخصص لهذا الاستخدام موثق في القاعدة.',
     lastReviewed: '2026-07',
@@ -189,7 +189,7 @@ export const motors: Motor[] = [
     // multi-voltage spec, so no other motor's tag changes.
     compatibilityTags: { droneTypes: ['long-range'], batteryVoltages: [4, 6], frameSizeInch: 7 },
     whyChoose: 'المسمى الرسمي من الشركة المصنعة: "مصمم لطائرات FPV مدى طويل...، مثالي لإعدادات مراوح 7 إنش" — ادعاء مباشر من الشركة نفسها. مغناطيس N52SH قوسي، محامل NSK يابانية، جسم ألمنيوم، 12N14P (12 سن ستاتور/14 قطباً)، عمود 5mm.',
-    notFor: 'لا تختاره لبناء 5 إنش عادي؛ 1300KV منخفض جداً لهذا الحجم ومصمم خصيصاً لمراوح 6-7 إنش.',
+    notFor: 'لا تختاره لبناء 5 إنش عادي؛ 1300KV منخفض جداً لهذا الحجم ومصمم خصيصاً لمراوح من 6 إلى 7 إنش.',
     upgradePath: 'لا يوجد حالياً بديل مدى طويل آخر موثق في القاعدة.',
     lastReviewed: '2026-07',
     confidence: 'مؤكد',
@@ -240,7 +240,7 @@ export const motors: Motor[] = [
     // racing ("for Buzz Hawk RC Drone FPV Racing"), supporting the racing
     // tag on the same engineering-judgment basis already used elsewhere
     // in this file for other 2207/2306-class motors.
-    whyChoose: 'محرك EMAX Freestyle FS2306 بنسخة 2400KV مخصصة لـ3-4S — أحد المحركات القليلة الموثقة بدعم 4S فعلي لبناء فريستايل/سباقات 5 إنش؛ نفس الشركة تسوّقه أيضاً لسباقات FPV.',
+    whyChoose: 'محرك EMAX Freestyle FS2306 بنسخة 2400KV مخصصة لـ3S-4S — أحد المحركات القليلة الموثقة بدعم 4S فعلي لبناء فريستايل/سباقات 5 إنش؛ نفس الشركة تسوّقه أيضاً لسباقات FPV.',
     notFor: 'لا تختاره إذا تريد 6S (استخدم أحد المحركات الأخرى في هذا الملف) أو إذا تحتاج وزناً وسعراً مؤكدين قبل الشراء — هذا الصف لم يُتحقق من ورقة مواصفات المصنّع مباشرة (حجب 403 عند المحاولة)، راجع notFor/buildNotes.',
     lastReviewed: '2026-07',
     confidence: 'تجربة مجتمع',

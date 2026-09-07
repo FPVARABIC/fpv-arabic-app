@@ -247,7 +247,7 @@ export const styleRules: StyleRule[] = [
   {
     id: 'arabic-indic-digits',
     problemAr: 'أرقام هندية في المحتوى',
-    fixAr: 'استخدم الأرقام الشائعة (0-9) لتتسق مع أرقام البرامج والمواصفات وأوراق البيانات.',
+    fixAr: 'استخدم الأرقام الشائعة (من 0 إلى 9) لتتسق مع أرقام البرامج والمواصفات وأوراق البيانات.',
     // Built from code points rather than written literally: an earlier bulk
     // digit-normalisation pass rewrote the literal range inside this very
     // pattern, silently turning the rule into its own opposite. Constructing it

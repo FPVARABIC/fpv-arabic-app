@@ -90,7 +90,7 @@ export const expertRules: PilotGearExpertRule[] = [
     category: 'الكاميرا',
     scenario: 'Camera input voltage أقل من جهد التغذية',
     ruleType: 'BLOCK',
-    explanation: 'إذا كانت الكاميرا 4.5-20V لا توصلها مباشرة بـ 6S VBAT كامل؛ استخدم 5V/9V مناسب.',
+    explanation: 'إذا كانت الكاميرا 4.5V-20V لا توصلها مباشرة بـ 6S VBAT كامل؛ استخدم 5V/9V مناسب.',
     severity: 'high',
     validExample: 'Foxeer Predator V5 على 5V/9V',
     invalidExample: 'Predator V5 مباشرة على 6S',

@@ -31,7 +31,7 @@
  * Three lessons carried the broken shape — 4, 8 and 12 — and none does now.
  */
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lessonsData } from '../src/data/lessonsData';
@@ -219,3 +219,152 @@ console.log('\n[7] The three ranges that were flipped, stated the way that survi
 }
 
 console.log(`\nAll ${passed} assertions passed.`);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2-C — the same two defects, everywhere else the app renders Arabic.
+//
+// WHAT THE BROWSER PROVED, AND WHY THE RULE IS NARROWER THAN IT LOOKS
+// -------------------------------------------------------------------
+// A screenshot of every candidate shape, rendered in a real `dir="rtl"`
+// paragraph, settled three things that a source grep cannot:
+//
+//   «لجهد 2-6S»            shows «6S-2»          — broken
+//   «DC 10-28V»            shows «DC 10-28V»     — fine, the Latin token anchors it
+//   «operatingVoltageRange: 7-36V»               — fine, same reason
+//   «105-110dB تقريباً»    shows as written      — fine, Arabic AFTER does not split it
+//   «(Model ← Inputs)»     reader meets Inputs first — broken
+//   «(2207 ← 2306)»        reader meets 2207 first   — fine, both ends are weak digits
+//   «دخان → افصل فوراً»    order preserved       — fine, the glyph is the only wart
+//
+// So the rule is not «no hyphenated ranges» and not «no arrows». It is:
+//   1. a range whose leading digits have no strong left-to-right anchor in the
+//      same run, and whose two ends therefore land in different runs, and
+//   2. a «←» absorbed into a left-to-right island, which then points from the
+//      second item back to the first.
+//
+// Everything else measured clean and is left alone: 156 occurrences outside the
+// lessons are user-visible and correct, and 454 are ids, slugs, URLs and dates
+// that are never rendered as a range at all.
+{
+  const SHIPPED = ['src/data', 'src/components', 'src/views', 'web/app', 'web/components', 'web/lib'];
+  const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', 'out']);
+  const CODE = new Set(['.ts', '.tsx']);
+
+  const listFiles = (dir: string, into: string[] = []): string[] => {
+    let entries: string[];
+    try { entries = readdirSync(dir); } catch { return into; }
+    for (const e of entries) {
+      if (SKIP_DIRS.has(e)) continue;
+      const p = path.join(dir, e);
+      if (statSync(p).isDirectory()) listFiles(p, into);
+      else if (CODE.has(path.extname(e))) into.push(p);
+    }
+    return into;
+  };
+
+  /**
+   * String literals only. Comments, identifiers and JSX attribute names are not
+   * user-visible, and the brief for this pass is explicit that they are not to
+   * be touched — so they are not scanned either.
+   */
+  const literalsOf = (src: string): string[] => {
+    const out: string[] = [];
+    const re = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) out.push(m[1] ?? m[2] ?? m[3] ?? '');
+    return out;
+  };
+
+  // Never a range a reader sees: a URL or a fragment of one, a slug, an SVG
+  // path, a CSS-ish token, an ISO date. Excluding these is what keeps the guard
+  // from failing on semver, hashes and timestamps.
+  const notRendered = (s: string): boolean =>
+    /^https?:\/\//.test(s.trim())
+    || /^\/[\w/-]*$/.test(s.trim())
+    || /^[a-z0-9]+(?:-[a-z0-9.]+)+-?$/.test(s.trim())
+    || (/^[Mm][\d\s.,-]/.test(s.trim()) && /[cChHvVlLzZ]/.test(s))
+    || (/^[a-z-]+(?::|\s)|^[\w-]+\s+[\w-]+$/.test(s.trim()) && !ARABIC.test(s))
+    || /\d{4}-\d{2}/.test(s);
+
+  const ARABIC_STRONG = /[ؠ-ي٠-٬ٱ-ۓ]/;
+  const RANGE_ANYWHERE = /(?<![\w.:])\d+(?:\.\d+)?-\d+(?:\.\d+)?[A-Za-z]*(?![\w.:])/g;
+
+  /** Is there a strong left-to-right anchor before this index, in the same run? */
+  const anchoredLeft = (text: string, idx: number): boolean => {
+    for (let i = idx - 1; i >= 0; i--) {
+      const c = text[i];
+      if (/[\s،;؛:/·×(«"'[\]]/.test(c)) { if (ARABIC_STRONG.test(c)) return false; continue; }
+      if (ARABIC_STRONG.test(c)) return false;
+      if (LATIN.test(c)) return true;
+      if (/\d/.test(c)) continue;
+      return false;
+    }
+    // Nothing to its left at all: the range opens the string, so no run can
+    // split it. «105-110dB تقريباً» and a bare «7-36V» both measured clean.
+    return true;
+  };
+
+  /** Ranges that land in two different runs and therefore read backwards. */
+  const unanchoredRanges = (text: string): string[] => {
+    if (notRendered(text)) return [];
+    const out: string[] = [];
+    RANGE_ANYWHERE.lastIndex = 0;
+    for (const m of text.matchAll(RANGE_ANYWHERE)) {
+      if (!anchoredLeft(text, m.index!)) out.push(m[0]);
+    }
+    return out;
+  };
+
+  /** «←» inside a left-to-right island — it points back at what came first. */
+  const islandArrows = (text: string): string[] => {
+    const out: string[] = [];
+    const strip = (w: string) => w.replace(/^[()[\]{}«»؛،,.:"']+|[()[\]{}«»؛،,.:"']+$/g, '');
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] !== '←') continue;
+      const prev = strip(text.slice(0, i).trimEnd().split(/\s+/).pop() ?? '');
+      const next = strip(text.slice(i + 1).trimStart().split(/\s+/)[0] ?? '');
+      if (!prev || !next) continue;
+      if (!ARABIC_STRONG.test(prev + next) && LATIN.test(prev + next)) {
+        out.push(text.slice(Math.max(0, i - 26), i + 27).replace(/\s+/g, ' '));
+      }
+    }
+    return out;
+  };
+
+  console.log('\n[8] The rule, checked on the shapes the browser measured');
+  ok('an unanchored range is caught', unanchoredRanges('لجهد 2-6S فقط').length === 1);
+  ok('…and the repeated-unit fix is clean', unanchoredRanges('لجهد 2S-6S فقط').length === 0);
+  ok('a range anchored by a Latin token is left alone', unanchoredRanges('DC 10-28V؛ DC 200W').length === 0);
+  ok('…including a spec row keyed in Latin', unanchoredRanges('operatingVoltageRange: 7-36V').length === 0);
+  ok('a range with Arabic only AFTER it is left alone', unanchoredRanges('105-110dB تقريباً').length === 0);
+  ok('an ISO date is not a range', unanchoredRanges('2026-09-07T08:09:05Z').length === 0);
+  ok('a semver-ish build tag is not a range', unanchoredRanges('index-D7y28B7w').length === 0);
+  ok('a URL is not a range', unanchoredRanges('https://shop.example.com/xing2-2207-4s-6s-motor').length === 0);
+  ok('a «←» between two Latin words is caught', islandArrows('شاشة المدخلات (Model ← Inputs)').length === 1);
+  ok('…and one with a Latin token and a ratio is caught', islandArrows('معدل الحزم: 1000Hz ← 1:128').length === 1);
+  ok('a «←» between two Arabic runs is left alone', islandArrows('نزع المراوح ← فحص بصري').length === 0);
+  ok('a «←» between two bare numbers is left alone', islandArrows('قطر أكبر (2207 ← 2306)').length === 0);
+
+  console.log('\n[9] Every shipped surface outside the lessons');
+  {
+    const files = SHIPPED.flatMap(d => listFiles(path.join(ROOT, d)))
+      .filter(f => {
+        const rel = path.relative(ROOT, f);
+        return !rel.startsWith('src/data/lessons/') && rel !== 'src/data/lessonsData.ts';
+      });
+    const offenders: string[] = [];
+    let scanned = 0;
+    for (const f of files) {
+      const rel = path.relative(ROOT, f);
+      for (const s of literalsOf(readFileSync(f, 'utf8'))) {
+        scanned++;
+        for (const bad of unanchoredRanges(s)) offenders.push(`${rel}: range «${bad}»`);
+        for (const bad of islandArrows(s)) offenders.push(`${rel}: arrow …${bad}…`);
+      }
+    }
+    if (offenders.length) console.error('  UNSAFE:\n    ' + [...new Set(offenders)].join('\n    '));
+    // The ratchet is zero, with no allowance: the 66 real defects this pass found
+    // are all fixed, and one new one fails this suite.
+    ok(`no unsafe range or arrow in ${scanned} shipped strings across ${files.length} files`, offenders.length === 0);
+  }
+}
