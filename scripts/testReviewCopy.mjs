@@ -134,16 +134,16 @@ console.log('\n[3] The home page is a platform entrance, not a second encycloped
   // rather than being forgotten. Membership and order live in
   // `scripts/testNavOrder.ts`; this file checks the SHIPPED html.
   const pillars = [...new Set([...home.html.matchAll(/home-pillar-(\w+)/g)].map(m => m[1]))];
-  ok('all five pillars are present', pillars.length === 5, pillars.join(' · '));
+  ok('all six pillars are present', pillars.length === 6, pillars.join(' · '));
   ok('…the lessons among them', pillars.includes('lessons'));
-  ok('…the encyclopedia among them', pillars.includes('kb'));
   ok('…the build guide among them', pillars.includes('build'));
+  ok('…the encyclopedia among them', pillars.includes('kb'));
+  ok('…the software centre among them', pillars.includes('programming'));
   ok('…the project library among them', pillars.includes('projects'));
   ok('…store among them', pillars.includes('store'));
-  // Off the bar and off this row, by instruction — and not deleted: both
-  // sections still build and still answer on their own routes.
+  // Off the bar and off this row, by instruction — and not deleted: the
+  // section still builds and still answers on its own route.
   ok('no community card', !pillars.includes('community'));
-  ok('no software-centre card', !pillars.includes('programming'));
 
   // Every section on the tab bar must appear on the page. This is the rule the
   // count above is a shorthand for, and it is the one that actually matters.
@@ -157,7 +157,7 @@ console.log('\n[3] The home page is a platform entrance, not a second encycloped
   // class, so the check is that no pillar got a bespoke style attribute that
   // the others did not — the only way one could grow louder than the rest.
   const pillarBlocks = home.html.split('class="card pillar"').slice(1);
-  ok('every pillar uses the same card class', pillarBlocks.length === 5,
+  ok('every pillar uses the same card class', pillarBlocks.length === 6,
     `${pillarBlocks.length} blocks`);
 
   // The old page led with encyclopedia module cards. If those return, the
@@ -176,8 +176,9 @@ console.log('\n[3] The home page is a platform entrance, not a second encycloped
   // The visitor's questions must each have a visible answer.
   for (const [q, needle] of [
     ['where do I learn a path', 'الدروس'],
-    ['where do I look something up', 'الموسوعة'],
     ['where do I build', 'البناء'],
+    ['where do I look something up', 'الموسوعة'],
+    ['where are the programs', 'البرامج'],
     ['where do I buy', 'المتجر'],
     ['where do I start', 'من أين تبدأ'],
     ['what is my project', 'مشروعي'],

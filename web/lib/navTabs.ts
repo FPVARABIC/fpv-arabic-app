@@ -4,7 +4,7 @@
  * WHY THIS IS ITS OWN FILE AND NOT PART OF `siteNav.ts`
  * -----------------------------------------------------
  * `siteNav.ts` is the site MAP: every destination, with its blurb, its auth
- * requirement and its role. This is the TAB BAR: the six places a person
+ * requirement and its role. This is the TAB BAR: the seven places a person
  * navigates between constantly, with the icon the phone app uses. They are
  * different lists with different jobs, and merging them is how the tab bar ends
  * up with eleven entries.
@@ -13,13 +13,17 @@
  * -----------------------------
  * Fixed by the owner, and it is the whole point of this list:
  *
- *   الرئيسية · الدروس · الموسوعة · البناء · المشاريع · المتجر
+ *   الرئيسية · الدروس · البناء · الموسوعة · البرامج · المشاريع · المتجر
  *
- * It reads as the arc a person actually walks: learn the path, look a thing up,
- * build the aircraft, see what others built with it, buy what is missing. The
- * order is identical on the header bar and the phone bar because both render
- * from THIS array through one component — there is no second list that could
- * drift, and `scripts/testNavOrder.ts` pins the sequence id by id.
+ * It reads as the arc a person actually walks: learn the path, build the
+ * aircraft, look a thing up while building it, set the software that runs on
+ * it, see what others built, buy what is missing. «المتجر» closes the bar
+ * rather than leading it — a teaching platform with a shop attached, not the
+ * other way round.
+ *
+ * The order is identical on the header bar and the phone bar because both
+ * render from THIS array through one component — there is no second list that
+ * could drift, and `scripts/testNavOrder.ts` pins the sequence id by id.
  *
  * «البناء» IS BACK, AND WHY IT WAS GONE
  * -------------------------------------
@@ -27,18 +31,25 @@
  * The web never had a build route: the stages were rendered only inside
  * `/project` — «مشروعي» — as one tab of a private, `noindex`, client-only
  * workspace that shows nothing at all until the reader has created a project.
- * So the section existed, the content existed, and there was no door. There is
- * one now: `/build`, which renders the same component from the same data. It
- * sits directly after «الموسوعة» and before «المشاريع», by instruction.
+ * So the section existed, the content existed, and there was no door. The real
+ * section — `/build` and `/build/wizard` — was ported here from the branch that
+ * already carried it, and it now sits directly after «الدروس», by instruction:
+ * building is what a reader came to do, and the encyclopedia is what they open
+ * WHILE doing it.
  *
  * WHAT IS NOT ON THIS BAR, AND IS NOT DELETED
  * -------------------------------------------
- * «المجتمع» and «البرامج» are not tabs. That is a NAVIGATION decision and
- * nothing more — `/community` and `/programming` still exist, still build,
- * still carry every page they carried, are still in `siteNav.ts`, and are still
- * reached from search, from the encyclopedia's links and from their own routes.
- * Nothing about either section was removed, so putting either back is one line
- * in this array. The bar is six entries because the owner named six.
+ * «المجتمع» is not a tab. That is a NAVIGATION decision and nothing more —
+ * `/community` still exists, still builds, still carries every page it carried,
+ * is still in `siteNav.ts`, and is still reached from search and from its own
+ * route. Nothing about it was removed, so putting it back is one line in this
+ * array, and `scripts/testNavOrder.ts` [2] asserts every piece of it is still
+ * there so that a later cleanup cannot quietly finish the job.
+ *
+ * «البرامج» spent one revision off this bar and is back on it by instruction.
+ * That it could leave and return without a single change to `/programming`
+ * itself is the property this file is built for: the bar is a list of doors,
+ * never the rooms behind them.
  *
  * WHY THERE IS NO SEARCH TAB
  * --------------------------
@@ -55,7 +66,7 @@
  */
 
 import {
-  House, BookOpen, Hammer, Wrench, Library, Store,
+  House, BookOpen, Hammer, Wrench, Library, CircuitBoard, Store,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -85,15 +96,24 @@ export const NAV_TABS: NavTab[] = [
    * learner recognises it without reading.
    */
   { id: 'lessons', labelAr: 'الدروس', href: '/lessons', Icon: BookOpen },
-  { id: 'kb', labelAr: 'الموسوعة', href: '/kb', Icon: Library,
-    activeMatch: ['/kb', '/glossary', '/diagnose'] },
   /*
    * «البناء» — the build guide, restored as a section of its own.
    *
    * `Wrench` is the phone app's own icon for this tab (`BottomNavigation.tsx`),
    * kept so somebody with the app open recognises the bar without reading it.
+   *
+   * `/build/wizard` needs no `activeMatch` entry: the default rule already
+   * lights a tab for its own subtree.
    */
   { id: 'build', labelAr: 'البناء', href: '/build', Icon: Wrench },
+  { id: 'kb', labelAr: 'الموسوعة', href: '/kb', Icon: Library,
+    activeMatch: ['/kb', '/glossary', '/diagnose'] },
+  { id: 'programming', labelAr: 'البرامج', href: '/programming', Icon: CircuitBoard,
+    // Betaflight has a top-level route of its own but belongs to the software
+    // centre as far as a reader is concerned, so it lights this tab rather than
+    // putting the bar's lit state out while they are plainly still inside a
+    // section.
+    activeMatch: ['/programming', '/betaflight'] },
   { id: 'projects', labelAr: 'المشاريع', href: '/projects', Icon: Hammer,
     // «مشروعي» — the reader's OWN build — keeps its route and is reachable from
     // the home page and the account rail. It is not deleted and not merged: one

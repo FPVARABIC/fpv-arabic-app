@@ -46,7 +46,8 @@ const WEB_ENV = {
  * two must be able to disagree, or the second proves nothing.
  */
 const PHONE_BAR_ORDER = [
-  'nav-home', 'nav-lessons', 'nav-kb', 'nav-build', 'nav-projects', 'nav-store',
+  'nav-home', 'nav-lessons', 'nav-build', 'nav-kb',
+  'nav-programming', 'nav-projects', 'nav-store',
 ];
 
 let passed = 0;
@@ -129,6 +130,9 @@ async function main() {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(String(e)));
 
+  /** What the phone bar actually rendered, so [10] can compare the two bars. */
+  let phoneBarIds: (string | undefined)[] = [];
+
   try {
     // ── The route a beginner actually takes, before anything about the index ──
     console.log('\n[0] Discoverability: home leads to the lessons, and stays lit there');
@@ -152,10 +156,11 @@ async function main() {
       // Second position, counted from the markup rather than from pixels, so it
       // holds in RTL where «second» is second from the right.
       const ids = await bar.locator('[data-testid^="nav-"]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.testid));
+      phoneBarIds = ids;
       ok('الدروس is the second tab on the phone bar', ids[1] === 'nav-lessons', ids.join(' '));
       // The whole bar, as it actually renders. `testNavOrder.ts` pins the array;
       // this pins the DOM the array produces, which is the thing a thumb meets.
-      ok('the phone bar renders the six sections in the fixed order',
+      ok('the phone bar renders the seven sections in the fixed order',
         ids.join(' ') === PHONE_BAR_ORDER.join(' '), ids.join(' '));
       ok('«المجتمع» is not on the phone bar', !ids.includes('nav-community'), ids.join(' '));
       ok('«البناء» is on the phone bar', ids.includes('nav-build'), ids.join(' '));
@@ -359,9 +364,14 @@ async function main() {
 
         const dids = await header.locator('[data-testid^="nav-"]')
           .evaluateAll(els => els.map(e => (e as HTMLElement).dataset.testid));
-        ok('the header renders the same six sections in the same order',
+        ok('the header renders the same seven sections in the same order',
           dids.join(' ') === PHONE_BAR_ORDER.join(' '));
         ok('«المجتمع» is not on the header bar', !dids.includes('nav-community'));
+        ok('«البرامج» is on the header bar', dids.includes('nav-programming'));
+        // The claim the owner cares about: the phone and the desktop are not
+        // two designs. Compared to each other, not each to a constant.
+        ok('the two bars are the same list in the same sequence',
+          dids.join(' ') === phoneBarIds.join(' '));
 
         // The section a reader is in is the section the bar says they are in —
         // checked on the two routes this round moved.

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Wrench, Store, Library, Hammer, type LucideIcon } from 'lucide-react';
+import { BookOpen, Wrench, Store, Library, CircuitBoard, Hammer, type LucideIcon } from 'lucide-react';
 import { allKbModules } from '@core/data/kb/registry';
 import { allDxTrees } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
@@ -8,6 +8,7 @@ import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { lessonsData } from '@core/data/lessonsData';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import { PART_CATEGORY_MAP } from '@core/data/project/store';
+import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
 import { navItem } from '@/lib/siteNav';
 import { BRAND_NAME } from '@core/data/brand';
@@ -41,23 +42,28 @@ function sectionHref(id: string): string {
  *
  * HOW THIS ONE IS BUILT INSTEAD
  * -----------------------------
- * Five pillars, rendered from ONE array through ONE component, so they are
+ * Six pillars, rendered from ONE array through ONE component, so they are
  * equal by construction rather than by my remembering to keep them equal. Same
  * card, same icon size, same number treatment, same call to action. If a future
- * edit makes one of them louder, it makes all five louder — which is the only
+ * edit makes one of them louder, it makes all six louder — which is the only
  * way «وزناً متقارباً» survives contact with later changes.
  *
- * The order follows the navigation bar, so the page and the bar teach the same
- * shape: الدروس · الموسوعة · البناء · المشاريع · المتجر. That correspondence is
- * checked rather than remembered — this page carried four pillars for a while
- * after the bar grew, and a visitor who meets a section on the bar that the
- * page never mentioned has been told, quietly, that the page is not a map of
- * the platform. That is the one job it has.
+ * The order IS the navigation bar without «الرئيسية», so the page and the bar
+ * teach one shape rather than two:
  *
- * «المجتمع» and «البرامج» have no card here for the same reason they have no
- * tab: the owner named five sections for this row and neither is among them.
- * Neither section was touched — `/community` and `/programming` build, work and
- * stay in `siteNav.ts`; they are simply not what this page leads with today.
+ *   الدروس · البناء · الموسوعة · البرامج · المشاريع · المتجر
+ *
+ * That correspondence is checked rather than remembered — `testNavOrder.ts` [4]
+ * derives this row from `NAV_TABS` itself, so a reorder that touches only one
+ * of the two fails. This page carried four pillars for a while after the bar
+ * grew, and a visitor who meets a section on the bar that the page never
+ * mentioned has been told, quietly, that the page is not a map of the platform.
+ * That is the one job it has.
+ *
+ * «المجتمع» has no card here for the same reason it has no tab: the owner named
+ * six sections for this row and it is not among them. The section was not
+ * touched — `/community` builds, works, answers for itself and stays in
+ * `siteNav.ts`; it is simply not what this page leads with today.
  *
  * WHAT IS DELIBERATELY NOT ON THIS PAGE
  * -------------------------------------
@@ -103,7 +109,10 @@ export default function HomePage() {
   const buildPartCount = Object.values(PART_CATEGORY_MAP).reduce((n, l) => n + l.length, 0);
   const buildCategoryCount = Object.keys(PART_CATEGORY_MAP).length;
 
-  /* The five load-bearing sections, in navigation order. One array, one
+  const softwarePages =
+    HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
+
+  /* The six load-bearing sections, in navigation order. One array, one
      renderer — see the note above on why that matters more than it looks. */
   const pillars: Pillar[] = [
     /*
@@ -122,20 +131,8 @@ export default function HomePage() {
       countLabelAr: 'درساً في خمس محطّات',
       ctaAr: 'ابدأ الدروس',
     },
-    {
-      id: 'kb',
-      labelAr: 'الموسوعة',
-      href: sectionHref('kb'),
-      Icon: Library,
-      blurbAr:
-        'مرجع ترجع إليه عندما تحتاج معلومة عن موضوع بعينه — لا مسارًا تسير فيه: '
-        + 'كيف يعمل النظام، ولماذا يفشل، وكيف تفحصه، بمصادر وتواريخ مراجعة.',
-      count: articleCount,
-      countLabelAr: `مقالاً في ${modules.length} منظومات`,
-      ctaAr: 'افتح الموسوعة',
-    },
     /*
-     * البناء, restored to the front page with its tab.
+     * البناء second, right behind the lessons.
      *
      * The section itself was never written twice: `/build` and its wizard came
      * back verbatim from the branch that already carried them. What had gone
@@ -154,6 +151,30 @@ export default function HomePage() {
       count: buildPartCount,
       countLabelAr: `قطعة موثّقة في ${buildCategoryCount} فئة`,
       ctaAr: 'ابنِ درونك',
+    },
+    {
+      id: 'kb',
+      labelAr: 'الموسوعة',
+      href: sectionHref('kb'),
+      Icon: Library,
+      blurbAr:
+        'مرجع ترجع إليه عندما تحتاج معلومة عن موضوع بعينه — لا مسارًا تسير فيه: '
+        + 'كيف يعمل النظام، ولماذا يفشل، وكيف تفحصه، بمصادر وتواريخ مراجعة.',
+      count: articleCount,
+      countLabelAr: `مقالاً في ${modules.length} منظومات`,
+      ctaAr: 'افتح الموسوعة',
+    },
+    {
+      id: 'programming',
+      labelAr: 'مركز البرامج',
+      href: sectionHref('programming'),
+      Icon: CircuitBoard,
+      blurbAr:
+        'Betaflight وExpressLRS وEdgeTX وأدوات الفيديو — أين كل إعداد، وماذا '
+        + 'يفعل، وعلى أي قطعة ينطبق، وما الذي يتغيّر بعده.',
+      count: softwarePages,
+      countLabelAr: 'صفحة إعداد وشرح',
+      ctaAr: 'افتح مركز البرامج',
     },
     /*
      * المشاريع, added because the tab bar had six tabs and this page had four
