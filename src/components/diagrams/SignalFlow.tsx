@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiagramFrame, DiagramInfo, useReveal, C } from './_shared';
+import { DiagramFrame, DiagramInfo, HotSpot, useReveal, C } from './_shared';
 
 const nodes = [
   {
@@ -24,7 +24,7 @@ const nodes = [
   },
   {
     id: 'motors', label: 'Motors', sub: 'المحركات', color: C.green,
-    signal: '→ رفع',
+    signal: 'دفع ورفع',
     info: 'Motors: تدير المراوح Propellers وتولّد قوة الرفع Thrust والحركة في الاتجاهات المطلوبة.',
   },
 ];
@@ -67,7 +67,7 @@ export const SignalFlow: React.FC<SignalFlowProps> = ({ onNodeExplore }) => {
           return (
             <g key={n.id}>
               {/* Node box */}
-              <g onClick={() => handleToggle(n.id)} style={{ cursor: 'pointer' }} data-testid={`signal-flow-node-${n.id}`}>
+              <HotSpot onActivate={() => handleToggle(n.id)} active={active} testId={`signal-flow-node-${n.id}`} label={`${n.label} — ${n.sub}`}>
                 <rect
                   x="40" y={y} width="220" height={NODE_H} rx="10"
                   fill={active ? `${n.color}18` : 'rgba(15,23,42,0.7)'}
@@ -82,7 +82,7 @@ export const SignalFlow: React.FC<SignalFlowProps> = ({ onNodeExplore }) => {
                 <text x="88" y={y + 37} fill="#64748b" fontSize="9">{n.sub}</text>
                 {/* Active glow dot */}
                 {active && <circle cx="248" cy={y + 25} r="4" fill={n.color} className="glow-node signal-flow-anim"/>}
-              </g>
+              </HotSpot>
 
               {/* Arrow to next node */}
               {nextN && (

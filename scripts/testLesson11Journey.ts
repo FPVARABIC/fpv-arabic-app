@@ -37,7 +37,7 @@ console.log('\n[1] Registration: Lesson 11 is registered in the journey registry
   const lesson11 = lessonsData.find(l => l.id === 'lesson-frame-assembly')!;
   ok('lesson11JourneyDefinition.lessonId matches the real Lesson 11 id', def.lessonId === lesson11.id);
   ok('getLessonJourneyDefinition resolves Lesson 11 to this exact definition', getLessonJourneyDefinition(lesson11.id) === def);
-  ok('Lesson 11 has 16 stages', STAGE_COUNT === 16);
+  ok('Lesson 11 has 19 stages (16 + frame materials, frame shapes, carbon-conductive callout)', STAGE_COUNT === 19);
 }
 
 console.log('\n[2] The frame-assembly diagram stage exists with exactly the 3 real part ids as required variants');
@@ -131,7 +131,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const rigidCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyRigidityAndRoutingMatter')!.checkpoint;
   const rigidCorrect = rigidCp.options.find(o => o.correct)!;
-  ok('rigidity correct option explicitly states no arm movement should remain', rigidCorrect.text.includes('صلبًا تمامًا بدون أي حركة'));
+  ok('rigidity correct option explicitly states no arm movement should remain', rigidCorrect.text.includes('صلبًا بلا حركة'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');
@@ -189,7 +189,7 @@ console.log('\n[12] A fresh session (equivalent to a page refresh) starts with z
 
 console.log('\n[13] The comparison stage carries the rigid-vs-rushed contrast');
 {
-  ok('exactly one comparison stage exists', def.stages.filter(s => s.type === 'comparison').length === 1);
+  ok('exactly three comparison stages exist (rigid-vs-rushed, frame materials, frame shapes)', def.stages.filter(s => s.type === 'comparison').length === 3);
   ok('comparison has exactly 2 items (correct vs unsafe)', COMPARISON_STAGE.items.length === 2);
   const labels = COMPARISON_STAGE.items.map(i => i.label);
   ok('one item is the correct rigid/planned assembly', labels.some(l => l.includes('الصحيح')));

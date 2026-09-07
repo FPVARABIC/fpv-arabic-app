@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PROJECT_CATEGORIES, DIFFICULTY_LABEL_AR } from '@core/data/projects/types';
 import type { Project, ProjectDifficulty } from '@core/data/projects/types';
 import type { RefOptionGroup } from '@/lib/projectRefOptions';
-import { saveProject, type SaveProjectInput, type RefInput } from '@/app/admin/projects/actions';
+import { saveProject, type SaveProjectInput } from '@/app/admin/projects/actions';
 import { RefPicker, blankRef, refToInput } from './RefPicker';
 import { ProjectImageField } from './ProjectImageField';
 
@@ -620,8 +620,8 @@ function Rows<T>({
     <>
       <ol className="pe-rows">
         {items.map((item, i) => (
-          // eslint-disable-next-line react/no-array-index-key -- rows have no
-          // stable id until saved, and reordering is not offered.
+          // Rows have no stable id until saved, and reordering is not offered,
+          // so the index is the only key there is.
           <li key={i} className="pe-row" data-testid={`project-${testId}-row`}>
             {render(item, next => setItems(items.map((x, j) => (j === i ? next : x))))}
             <button

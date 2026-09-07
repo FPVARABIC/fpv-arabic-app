@@ -36,7 +36,7 @@ console.log('\n[1] Registration: Lesson 05 is registered in the journey registry
   const lesson5 = lessonsData.find(l => l.id === 'lesson-drone-size')!;
   ok('lesson05JourneyDefinition.lessonId matches the real Lesson 5 id', def.lessonId === lesson5.id);
   ok('getLessonJourneyDefinition resolves Lesson 5 to this exact definition', getLessonJourneyDefinition(lesson5.id) === def);
-  ok('Lesson 5 has 15 stages, matching Lessons 1-4\'s depth', STAGE_COUNT === 15);
+  ok('Lesson 5 has 16 stages (15 + the size/propeller/KV chain explanation)', STAGE_COUNT === 16);
 }
 
 console.log('\n[2] The size-comparison diagram stage exists with exactly the 3 real size ids as required variants');
@@ -116,7 +116,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const smallerCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'smallerNotEasier')!.checkpoint;
   const smallerCorrect = smallerCp.options.find(o => o.correct)!;
-  ok('smaller-size correct option explicitly separates "less risky" from "easier to control"', smallerCorrect.text.includes('أقل خطورة') && smallerCorrect.text.includes('حساسية'));
+  ok('smaller-size correct option explicitly separates "less risky" from "easier to control"', smallerCorrect.text.includes('أقل خطورة') && smallerCorrect.text.includes('حساسيته') && smallerCorrect.text.includes('تصعّب'));
 
   const biggerCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'biggerNotAlwaysBetter')!.checkpoint;
   const biggerCorrect = biggerCp.options.find(o => o.correct)!;
@@ -128,7 +128,15 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const scenarioCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'scenarioSizeChoice')!.checkpoint;
   const scenarioCorrect = scenarioCp.options.find(o => o.correct)!;
-  ok('scenario correct option applies the community/support reasoning to a concrete beginner scenario', scenarioCorrect.text.includes('5 بوصة'));
+  // This checkpoint used to be a second copy of the one above it — both were
+  // answered by "5 inch, because it has the biggest community". It now tests
+  // the size -> propeller -> KV chain instead: a motor whose STATOR SIZE fits
+  // but whose KV is described for a different cell count.
+  ok('scenario correct option rejects the motor on cell count, not on size', scenarioCorrect.text.includes('6S') && scenarioCorrect.text.includes('KV'));
+  ok('scenario correct option is no longer a restatement of the 5-inch community answer', !scenarioCorrect.text.includes('مجتمع'));
+  const whyFiveText = whyFiveCorrect.text;
+  ok('the third and fourth checkpoints no longer share an answer', scenarioCorrect.text !== whyFiveText
+    && !(scenarioCorrect.text.includes('دروس') && whyFiveText.includes('دروس')));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint and the diagram and recall have been engaged with');
@@ -188,7 +196,7 @@ console.log('\n[12] A fresh session (equivalent to a page refresh) starts with z
 
 console.log('\n[13] Glossary covers the key size-selection vocabulary with real, non-empty MSA definitions');
 {
-  ok('exactly 6 glossary terms defined', GLOSSARY_STAGE.terms.length === 6);
+  ok('exactly 7 glossary terms defined', GLOSSARY_STAGE.terms.length === 7);
   const termNames = GLOSSARY_STAGE.terms.map(t => t.term);
   ok('glossary defines Drone Size', termNames.some(t => t.includes('Drone Size')));
   ok('glossary defines Propeller Diameter', termNames.some(t => t.includes('Propeller Diameter')));
@@ -196,19 +204,33 @@ console.log('\n[13] Glossary covers the key size-selection vocabulary with real,
   ok('glossary defines Parts & Community Ecosystem', termNames.some(t => t.includes('Ecosystem')));
   ok('glossary defines Control Feel', termNames.some(t => t.includes('Control Feel')));
   ok('glossary defines Use Case', termNames.some(t => t.includes('Use Case')));
+  ok('glossary defines Thrust-to-Weight', termNames.some(t => t.includes('Thrust-to-Weight')));
+  const twTerm = GLOSSARY_STAGE.terms.find(t => t.term.includes('Thrust-to-Weight'))!;
+  ok('thrust-to-weight is labelled a rule of thumb, not a law', twTerm.definition.includes('قاعدة إبهام') && twTerm.definition.includes('لا قانون'));
   ok('every glossary definition is substantive (non-empty)', GLOSSARY_STAGE.terms.every(t => t.definition.length > 10));
 }
 
 console.log('\n[14] Content-boundary check: Lesson 5 stays at size-selection level, not electricity/battery/frame-assembly/Betaflight depth');
 {
   const allText = JSON.stringify(def).toLowerCase();
+  // The boundary moved deliberately, and only as far as the curriculum
+  // expansion needs: this lesson now PRACTISES the KV concept Lesson 4
+  // introduces, so 'kv', '6s' and '4s' left the ban list. What the ban was
+  // really protecting — that Lesson 5 stays out of electricity, which Lesson 6
+  // is the first lesson to teach — is unchanged and asserted harder below.
   const outOfScopeTerms = [
     'betaflight', 'binding', 'pid tuning', 'soldering', 'لحام', 'uart',
-    'فولت', 'أمبير', 'voltage', 'دائرة قصيرة', '6s', '4s', 'كيلو فولت', 'kv',
+    'فولت', 'أمبير', 'voltage', 'دائرة قصيرة', 'كيلو فولت',
   ];
   for (const term of outOfScopeTerms) {
     ok(`Lesson 5 does not mention out-of-scope term "${term}"`, !allText.includes(term.toLowerCase()));
   }
+  // KV may be USED here but must not be DEFINED here — the definition, and the
+  // per-volt phrasing it needs, belong to Lesson 4 and stay there.
+  ok('Lesson 5 uses KV without redefining it (no per-volt phrasing)', !allText.includes('لكل فولت'));
+  ok('Lesson 5 talks about batteries in cell counts, never in volts', !/[0-9]\s*v\b/.test(allText));
+  ok('the KV example is attributed to the platform catalogue, not asserted as a universal spec',
+    allText.includes('كتالوج المنصّة'));
 }
 
 console.log('\n[15] Lesson 5\'s transition bridge to Lesson 6 is built from real lessonsData, not hardcoded text');

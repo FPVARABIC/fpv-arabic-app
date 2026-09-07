@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "installCommand": "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --prefix .. && npm ci",
   "regions": [
     "fra1"
   ],

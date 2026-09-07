@@ -116,7 +116,7 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
 {
   const frameCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'framePassive')!.checkpoint;
   const frameCorrect = frameCp.options.find(o => o.correct)!;
-  ok('frame-passive correct option explicitly states no signal is processed', frameCorrect.text.includes('دون أن يعالج أي إشارة'));
+  ok('frame-passive correct option explicitly states no signal is processed', frameCorrect.text.includes('دون معالجة أي إشارة'));
 
   const boardsCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'threeBoardsDistinction')!.checkpoint;
   const boardsCorrect = boardsCp.options.find(o => o.correct)!;
@@ -128,7 +128,7 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
 
   const cameraCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cameraVtxDistinction')!.checkpoint;
   const cameraCorrect = cameraCp.options.find(o => o.correct)!;
-  ok('camera-vtx correct option explicitly separates capture (camera) from transmission (VTX)', cameraCorrect.text.includes('الكاميرا') && cameraCorrect.text.includes('نظارته'));
+  ok('camera-vtx correct option explicitly separates capture (camera) from transmission (VTX)', cameraCorrect.text.includes('الكاميرا') && cameraCorrect.text.includes('النظارة') && cameraCorrect.text.includes('يبثّها'));
 }
 
 console.log('\n[8] Completion remains unavailable until every checkpoint has been engaged with (perfect answers not required)');

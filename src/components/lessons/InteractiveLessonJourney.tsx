@@ -13,7 +13,43 @@ import {
   StageShell, CheckpointCard, GlossaryRevealCard, ACCENT, CARD_BG,
 } from './journeyStageComponents';
 import { interactiveDiagramAdapters } from './interactiveDiagramAdapters';
+import { enrichJourneyDefinition } from '../../data/lessons/lessonJourneyEnrich';
+import { SafetyWarning } from '../SafetyWarning';
+import { resolveDestination } from '../../platform/destinations';
+import { getDxTree } from '../../data/kb/diagnostics/trees';
+import type { JourneyStageTool } from '../../types/lessonJourney';
 import { CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, Circle, Star, Clock } from 'lucide-react';
+
+/**
+ * The optional tool a callout may point at.
+ *
+ * It is a button, not a journey control: it leaves the lesson entirely, and the
+ * lesson's saved progress is what brings the reader back where they were. It is
+ * never part of the readiness checklist — a callout carries no requirement, so
+ * skipping this cannot block completion.
+ *
+ * `resolveDestination` returns null for a target that no longer exists, and
+ * nothing is rendered in that case rather than a button that goes nowhere.
+ */
+const StageTool: React.FC<{ tool: JourneyStageTool; stageId: string }> = ({ tool, stageId }) => {
+  const navigate = useNavigate();
+  const path = resolveDestination(tool.destination, { dxExists: id => !!getDxTree(id) });
+  if (!path) return null;
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => navigate(path)}
+        data-testid={`stage-tool-${stageId}`}
+        className="w-full text-right rounded-xl px-4 py-3 text-sm font-bold leading-relaxed"
+        style={{ background: CARD_BG, border: `1px solid ${ACCENT}`, color: ACCENT }}
+      >
+        {tool.label}
+      </button>
+      <p className="text-xs mt-2 leading-relaxed" style={{ color: '#94A3B8' }}>{tool.note}</p>
+    </div>
+  );
+};
 
 interface Props {
   definition: LessonJourneyDefinition;
@@ -31,18 +67,22 @@ const LessonMetaBadges: React.FC<{ lesson: Lesson }> = ({ lesson }) => (
 
 /**
  * Renders any LessonJourneyDefinition — a sequence of typed stages driving a
- * generic progression/readiness engine (lessonJourneyEngine.ts). Lesson 01 is
- * the only lesson wired up to this in this phase (see journeyRegistry.ts);
- * Lessons 02-18 keep using LessonDetailView's existing generic page.
+ * generic progression/readiness engine (lessonJourneyEngine.ts). Every lesson
+ * in `lessonsData` has a definition (see journeyRegistry.ts) and renders here.
  *
- * The `lesson01-*` data-testid prefix below is kept literal for now since
- * only Lesson 01 uses this renderer yet — parameterize it if a second lesson
- * migrates onto this architecture.
+ * The definition is enriched on the way in (`enrichJourneyDefinition`), so the
+ * lesson's authored objective, key points, common mistake and safety warning
+ * appear as stages — the same view the web renders.
+ *
+ * The `lesson01-*` data-testid prefix is historical: the sixteen per-lesson UI
+ * scripts under scripts/ select by it, so it stays until they are updated
+ * together.
  */
-export const InteractiveLessonJourney: React.FC<Props> = ({ definition, lesson, nextLesson }) => {
+export const InteractiveLessonJourney: React.FC<Props> = ({ definition: baseDefinition, lesson, nextLesson }) => {
   const navigate = useNavigate();
   const { completedLessons, completeLesson } = useProgressContext();
   const isDone = completedLessons.includes(lesson.id);
+  const definition = React.useMemo(() => enrichJourneyDefinition(baseDefinition, lesson), [baseDefinition, lesson]);
   const [state, setState] = useState<JourneySessionState>(() => createInitialSessionState(definition));
 
   const total = stageCount(definition);
@@ -78,6 +118,48 @@ export const InteractiveLessonJourney: React.FC<Props> = ({ definition, lesson, 
         <StageShell stage={stageNumber} stageCount={total} title={stage.title} onNext={hasNext ? next : undefined}>
           <div className="pull-quote" style={{ background: CARD_BG }}>
             <p className="text-[15px] leading-loose" style={{ color: '#F8FAFC' }}>{stage.body}</p>
+            {stage.objective && (
+              <p className="text-xs font-bold mt-3 pt-3" style={{ color: ACCENT, borderTop: '1px dashed rgba(94,234,212,0.25)' }}>
+                🎯 الهدف من هذا الدرس: {stage.objective}
+              </p>
+            )}
+          </div>
+        </StageShell>
+      )}
+
+      {stage.type === 'callout' && (
+        <StageShell stage={stageNumber} stageCount={total} title={stage.title} onPrev={hasPrev ? prev : undefined} onNext={hasNext ? next : undefined}>
+          {stage.tone === 'danger' && <SafetyWarning message={stage.body} type="danger"/>}
+          {stage.tone === 'warn' && (
+            <div className="warning-card">
+              <p className="text-xs text-amber-300 font-bold mb-1">تنبيه</p>
+              <p className="text-sm text-amber-100/90 leading-relaxed">{stage.body}</p>
+            </div>
+          )}
+          {stage.tone === 'info' && (
+            <div className="card-subtle p-4" style={{ background: CARD_BG }}>
+              <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{stage.body}</p>
+            </div>
+          )}
+          {stage.tool && <StageTool tool={stage.tool} stageId={stage.id}/>}
+        </StageShell>
+      )}
+
+      {stage.type === 'key_points' && (
+        <StageShell stage={stageNumber} stageCount={total} title={stage.title} onPrev={hasPrev ? prev : undefined} onNext={hasNext ? next : undefined}>
+          {stage.intro && <p className="text-sm" style={{ color: '#CBD5E1' }}>{stage.intro}</p>}
+          <div className="grid gap-2.5">
+            {stage.points.map((point, i) => (
+              <div key={i} className="card-subtle p-3.5 flex items-start gap-3" style={{ background: CARD_BG }}>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, rgba(94,234,212,0.22), rgba(167,243,208,0.1))', border: '1px solid rgba(94,234,212,0.35)' }}
+                >
+                  <span className="text-sm font-extrabold" style={{ color: '#A7F3D0' }}>{i + 1}</span>
+                </div>
+                <p className="text-sm leading-relaxed pt-1" style={{ color: '#CBD5E1' }}>{point}</p>
+              </div>
+            ))}
           </div>
         </StageShell>
       )}

@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { siteOrigin, isCanonicalOrigin } from '@/lib/siteOrigin';
 import { allKbModules, moduleArticles } from '@core/data/kb/registry';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
+import { lessonsData } from '@core/data/lessonsData';
 import { NAV_ITEMS } from '@/lib/siteNav';
 import { href, SECTION_ROUTES } from '@/lib/webRoutes';
 
@@ -59,6 +60,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     entries.push({
       url: url(item.href), lastModified: now, changeFrequency: 'weekly', priority: 0.8,
     });
+  }
+
+  // The lessons — the beginner path, one page each, through the resolver.
+  for (const l of lessonsData) {
+    const lessonPath = href({ kind: 'lesson', id: l.id });
+    if (lessonPath) {
+      entries.push({ url: url(lessonPath), lastModified: now, changeFrequency: 'monthly', priority: 0.7 });
+    }
   }
 
   // The encyclopedia — the reason most people will arrive from a search engine.

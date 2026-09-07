@@ -1,0 +1,336 @@
+/*
+ * The lessons section — stage chrome, cards, and the dark instrument frame
+ * the shared diagrams render inside.
+ *
+ * TWO WORLDS ON ONE PAGE, ON PURPOSE
+ * ----------------------------------
+ * The page is the site's light cream. The interactive diagrams are the phone
+ * app's — sixteen SVG components written for a dark navy card with cyan
+ * strokes, and the single most recognisable thing a returning learner sees.
+ * They are rendered untouched, inside `.lesson-diagram`, which paints the
+ * navy frame they were designed for. A dark instrument panel on a light page
+ * is a deliberate contrast, like a code block in a document — not a theme
+ * leak.
+ *
+ * WHY THE UTILITY CLASSES ARE HERE
+ * --------------------------------
+ * The diagrams use Tailwind utility classes (`flex`, `gap-2`, `rounded-xl`,
+ * `bg-cyan-400/10`…) and a few of the phone app's own classes
+ * (`card-feature`, `badge-cyan`, `flow-dash`). The web deliberately has no
+ * Tailwind. Rather than fork sixteen components, the exact subset they use is
+ * defined below, scoped under `.lesson-diagram` so it cannot touch the rest of
+ * the site. `scripts/testWebLessons.ts` asserts every class the diagrams use
+ * is covered.
+ */
+
+/* ── Reading column ──────────────────────────────────────────────────────── */
+.lj-col { max-width: 760px; }
+
+.lj-stage-head {
+  display: flex; align-items: center; gap: 14px;
+  font-size: 12.5px; color: var(--text-dimmer); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lj-progress {
+  flex: 1; height: 6px; border-radius: 999px; background: var(--bg-sunk);
+  overflow: hidden; border: 1px solid var(--border-soft);
+}
+.lj-progress > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width var(--dur) var(--ease);
+}
+
+.lj-title {
+  font-size: 21px; font-weight: 900; margin: 18px 0 14px; letter-spacing: -0.01em;
+  line-height: 1.45; text-wrap: balance; outline: none;
+}
+.lj-title:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 4px; border-radius: 4px; }
+
+.lj-body { display: grid; gap: 14px; }
+
+.lj-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 16px 18px; }
+.lj-card-sunk { background: var(--surface-2); }
+
+.lj-prose { font-size: 15.5px; line-height: 2; color: var(--text); }
+.lj-prose p { margin: 0; max-width: 66ch; }
+.lj-prose p + p { margin-top: 13px; }
+.lj-objective {
+  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+  font-size: 13.5px; color: var(--accent-ink); font-weight: 700;
+}
+
+/* Callouts: the one place the page raises its voice. */
+.lj-callout { border-radius: var(--radius-sm); padding: 14px 16px; border: 1px solid; border-inline-start-width: 4px; }
+.lj-callout h3 { margin: 0 0 6px; font-size: 13px; font-weight: 900; letter-spacing: .01em; }
+.lj-callout p { margin: 0; font-size: 14.5px; line-height: 1.95; color: var(--text); }
+.lj-callout[data-tone='danger'] { background: var(--sev-blocker-wash); border-color: var(--sev-blocker); }
+.lj-callout[data-tone='danger'] h3 { color: var(--sev-blocker); }
+.lj-callout[data-tone='warn'] { background: var(--sev-warning-wash); border-color: var(--sev-warning); }
+.lj-callout[data-tone='warn'] h3 { color: var(--sev-warning); }
+.lj-callout[data-tone='info'] { background: var(--accent-wash-2); border-color: var(--accent-ink-2); }
+.lj-callout[data-tone='info'] h3 { color: var(--accent-ink-2); }
+
+/* The optional tool a callout may point at. Reads as a tool, not a journey
+   control: it sits under the body, carries its own "optional" note, and wraps
+   at narrow widths instead of forcing the card wider. */
+.lj-callout-tool { margin: 12px 0 0 !important; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.lj-tool-link {
+  display: inline-block; padding: 8px 14px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--accent-ink-2);
+  color: var(--accent-ink-2); font-weight: 800; font-size: 13.5px; line-height: 1.6;
+  text-decoration: none; max-width: 100%;
+}
+.lj-tool-link:hover { background: var(--accent-wash-2); }
+.lj-tool-link:focus-visible { outline: 2px solid var(--accent-ink-2); outline-offset: 2px; }
+.lj-tool-note { font-size: 12.5px; line-height: 1.7; color: var(--text-dim); }
+
+/* Key points */
+.lj-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lj-points li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 14.5px; line-height: 1.9; }
+.lj-points li > span:first-child {
+  width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink-on-fill);
+  font-weight: 900; font-size: 12px; margin-top: 3px;
+}
+
+/* Comparison / concept cards */
+.lj-items { display: grid; gap: 10px; }
+.lj-item { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 13px 15px; }
+.lj-item h3 { margin: 0 0 5px; font-size: 13.5px; font-weight: 900; color: var(--accent-ink); }
+.lj-item p { margin: 0; font-size: 14px; line-height: 1.9; color: var(--text-dim); }
+
+/* Checkpoint */
+.lj-question { margin: 0 0 12px; font-size: 15.5px; font-weight: 800; line-height: 1.7; }
+.lj-options { display: grid; gap: 8px; }
+.lj-option {
+  display: block; width: 100%; text-align: start; font-family: inherit; font-size: 14.5px; line-height: 1.8;
+  padding: 11px 14px; border-radius: 10px; cursor: pointer; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.lj-option:hover { border-color: var(--border-accent); background: var(--accent-wash); }
+.lj-option:active { transform: scale(0.99); }
+.lj-option[data-state='correct'] { background: var(--sev-ok-wash); border-color: var(--sev-ok); }
+.lj-option[data-state='wrong'] { background: var(--sev-blocker-wash); border-color: var(--sev-blocker); }
+.lj-feedback { margin-top: 12px; padding: 12px 14px; border-radius: 10px; font-size: 14px; line-height: 1.9; border: 1px solid; }
+.lj-feedback[data-tone='ok'] { background: var(--sev-ok-wash); border-color: var(--sev-ok); color: var(--text); }
+.lj-feedback[data-tone='retry'] { background: var(--sev-warning-wash); border-color: var(--sev-warning); color: var(--text); }
+.lj-feedback small { display: block; margin-top: 6px; color: var(--text-dimmer); font-size: 12.5px; }
+
+/* Glossary / recall reveal cards */
+.lj-reveal { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 15px; }
+.lj-reveal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lj-reveal-head strong { font-size: 14.5px; color: var(--accent-ink); }
+.lj-reveal p { margin: 10px 0 0; font-size: 14px; line-height: 1.9; color: var(--text-dim); }
+.lj-reveal-answer { color: var(--sev-ok) !important; }
+.lj-link-btn {
+  background: none; border: 0; padding: 0; font: inherit; font-size: 13px; font-weight: 800;
+  color: var(--accent-ink); text-decoration: underline; cursor: pointer; white-space: nowrap;
+}
+
+/* Navigation between stages */
+.lj-nav { display: flex; gap: 10px; margin-top: 8px; }
+.lj-nav > * { flex: 1; justify-content: center; }
+
+/* Readiness + quiz result */
+.lj-req { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.lj-req li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.8; }
+.lj-req li[data-met='true'] { color: var(--sev-ok); }
+.lj-req li[data-met='false'] { color: var(--text-dim); }
+.lj-req li .dot { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; margin-top: 5px; }
+.lj-req li[data-met='true'] .dot { background: currentColor; }
+.lj-quiz-score { display: flex; align-items: baseline; gap: 10px; }
+.lj-quiz-score b { font-size: 34px; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+.lj-quiz-missed { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.lj-quiz-missed li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; color: var(--text-dim); }
+
+/* Index page */
+.lj-resume { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 18px; }
+.lj-track { margin-top: 34px; }
+.lj-track-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.lj-track-head h2 { margin: 0; font-size: 18px; font-weight: 900; }
+.lj-track-head p { margin: 0; font-size: 13px; color: var(--text-dim); }
+.lj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.lj-lesson-card { display: grid; grid-template-columns: 40px 1fr; gap: 12px; padding: 15px 16px; color: inherit; text-decoration: none; }
+.lj-lesson-card[data-suggested='true'] { border-color: var(--border-accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.lj-num {
+  width: 40px; height: 40px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 15px; background: var(--accent-wash); color: var(--accent-ink); font-variant-numeric: tabular-nums;
+}
+.lj-num[data-done='true'] { background: var(--sev-ok-wash); color: var(--sev-ok); }
+.lj-lesson-card h3 { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.5; }
+.lj-lesson-card p { margin: 4px 0 0; font-size: 13px; color: var(--text-dim); line-height: 1.75; }
+.lj-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.lj-chip {
+  font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--bg-sunk); color: var(--text-dim); border: 1px solid var(--border-soft);
+  font-variant-numeric: tabular-nums;
+}
+.lj-chip[data-kind='done'] { background: var(--sev-ok-wash); color: var(--sev-ok); border-color: transparent; }
+.lj-chip[data-kind='progress'] { background: var(--accent-wash); color: var(--accent-ink); border-color: transparent; }
+.lj-chip[data-kind='suggest'] { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-ink-on-fill); border-color: transparent; }
+
+/* ── The dark instrument frame the shared diagrams live in ───────────────── */
+.lesson-diagram {
+  color-scheme: dark;
+  background: #0B1F2A;
+  color: #e2e8f0;
+  border-radius: 18px;
+  padding: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 10px 30px -18px rgba(11, 31, 42, 0.8);
+}
+.lesson-diagram * { box-sizing: border-box; }
+.lesson-diagram p, .lesson-diagram h1, .lesson-diagram h2, .lesson-diagram h3 { margin: 0; }
+.lesson-diagram svg { display: block; }
+.lesson-diagram button {
+  background: transparent; border: 0; padding: 0; margin: 0; color: inherit; font: inherit;
+  cursor: pointer; text-align: inherit;
+}
+.lesson-diagram button:focus-visible { outline: 2px solid #5EEAD4; outline-offset: 2px; }
+/* Diagram parts that are SVG shapes rather than buttons — same ring. The
+   drop-shadow is the fallback for engines that do not paint outline on SVG. */
+.lesson-diagram .diagram-hotspot { outline: none; }
+.lesson-diagram .diagram-hotspot:focus-visible {
+  outline: 2px solid #5EEAD4;
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 3px #5EEAD4);
+}
+
+/* phone-app classes the diagrams reference */
+.lesson-diagram .card-feature {
+  background: linear-gradient(155deg, rgba(17,34,52,0.9) 0%, rgba(9,24,40,0.9) 100%);
+  border: 1px solid rgba(34,211,238,0.26); border-radius: 20px;
+  box-shadow: 0 8px 30px -14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.lesson-diagram .ambient-glow { position: relative; overflow: hidden; }
+.lesson-diagram .ambient-glow::before {
+  content: ''; position: absolute; top: -30%; right: -20%; width: 70%; height: 70%;
+  background: radial-gradient(circle, rgba(24,230,230,0.16) 0%, transparent 70%);
+  filter: blur(40px); pointer-events: none; z-index: 0;
+}
+.lesson-diagram .ambient-glow::after {
+  content: ''; position: absolute; bottom: -25%; left: -15%; width: 60%; height: 60%;
+  background: radial-gradient(circle, rgba(0,180,255,0.11) 0%, transparent 70%);
+  filter: blur(40px); pointer-events: none; z-index: 0;
+}
+.lesson-diagram .badge-cyan { background: rgba(24,230,230,0.14); color: #5fe6e6; border: 1px solid rgba(24,230,230,0.3); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
+.lesson-diagram .press { transition: transform 0.12s ease; }
+.lesson-diagram .press:active { transform: scale(0.96); }
+.lesson-diagram .flow-dash { stroke-dasharray: 5 5; animation: lj-flowDash 0.7s linear infinite; }
+.lesson-diagram .float-soft { animation: lj-floatSoft 4s ease-in-out infinite; }
+.lesson-diagram .spin-slow { transform-origin: center; animation: lj-spinSlow 3s linear infinite; }
+.lesson-diagram .spin-rev { transform-origin: center; animation: lj-spinSlow 3s linear infinite reverse; }
+.lesson-diagram .glow-node { animation: lj-glowNode 1.6s ease-in-out infinite; }
+.lesson-diagram .quad-x-ring { border: 2px solid rgba(34,211,238,0.5); border-radius: 50%; animation: lj-pulseRing 2.2s ease-out infinite; }
+@keyframes lj-flowDash { to { stroke-dashoffset: -20; } }
+@keyframes lj-floatSoft { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes lj-spinSlow { to { transform: rotate(360deg); } }
+@keyframes lj-glowNode { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes lj-pulseRing { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.5); opacity: 0; } }
+
+/* utility subset — layout */
+.lesson-diagram .flex { display: flex; }
+.lesson-diagram .grid { display: grid; }
+.lesson-diagram .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lesson-diagram .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lesson-diagram .flex-1 { flex: 1 1 0%; }
+.lesson-diagram .flex-col { flex-direction: column; }
+.lesson-diagram .flex-wrap { flex-wrap: wrap; }
+.lesson-diagram .flex-shrink-0 { flex-shrink: 0; }
+.lesson-diagram .items-center { align-items: center; }
+.lesson-diagram .items-start { align-items: flex-start; }
+.lesson-diagram .items-end { align-items: flex-end; }
+.lesson-diagram .justify-center { justify-content: center; }
+.lesson-diagram .justify-between { justify-content: space-between; }
+.lesson-diagram .justify-around { justify-content: space-around; }
+.lesson-diagram .relative { position: relative; }
+.lesson-diagram .absolute { position: absolute; }
+.lesson-diagram .inset-0 { inset: 0; }
+.lesson-diagram .bottom-1\.5 { bottom: 6px; }
+.lesson-diagram .top-1\.5 { top: 6px; }
+.lesson-diagram .overflow-hidden { overflow: hidden; }
+.lesson-diagram .z-10 { z-index: 10; }
+.lesson-diagram .mx-auto { margin-left: auto; margin-right: auto; }
+.lesson-diagram .pointer-events-none { pointer-events: none; }
+.lesson-diagram .pointer-events-auto { pointer-events: auto; }
+.lesson-diagram .rotate-90 { transform: rotate(90deg); }
+.lesson-diagram .transition-all { transition: all 0.2s ease; }
+
+/* spacing */
+.lesson-diagram .gap-1 { gap: 4px; }   .lesson-diagram .gap-1\.5 { gap: 6px; }
+.lesson-diagram .gap-2 { gap: 8px; }   .lesson-diagram .gap-3 { gap: 12px; }
+.lesson-diagram .gap-x-4 { column-gap: 16px; } .lesson-diagram .gap-y-1\.5 { row-gap: 6px; }
+.lesson-diagram .mb-1 { margin-bottom: 4px; } .lesson-diagram .mb-2 { margin-bottom: 8px; } .lesson-diagram .mb-3 { margin-bottom: 12px; }
+.lesson-diagram .mt-1 { margin-top: 4px; }   .lesson-diagram .mt-2 { margin-top: 8px; }   .lesson-diagram .mt-3 { margin-top: 12px; }
+.lesson-diagram .p-2 { padding: 8px; } .lesson-diagram .p-3 { padding: 12px; } .lesson-diagram .p-4 { padding: 16px; }
+.lesson-diagram .pb-2 { padding-bottom: 8px; } .lesson-diagram .pt-4 { padding-top: 16px; }
+.lesson-diagram .px-1\.5 { padding-left: 6px; padding-right: 6px; }
+.lesson-diagram .px-2 { padding-left: 8px; padding-right: 8px; }
+.lesson-diagram .px-3 { padding-left: 12px; padding-right: 12px; }
+.lesson-diagram .py-1 { padding-top: 4px; padding-bottom: 4px; }
+.lesson-diagram .py-1\.5 { padding-top: 6px; padding-bottom: 6px; }
+.lesson-diagram .py-2 { padding-top: 8px; padding-bottom: 8px; }
+.lesson-diagram .py-2\.5 { padding-top: 10px; padding-bottom: 10px; }
+.lesson-diagram .py-3 { padding-top: 12px; padding-bottom: 12px; }
+.lesson-diagram .space-y-2 > * + * { margin-top: 8px; }
+.lesson-diagram .space-y-3 > * + * { margin-top: 12px; }
+
+/* sizing */
+.lesson-diagram .w-full { width: 100%; }
+.lesson-diagram .w-1\.5 { width: 6px; } .lesson-diagram .w-3 { width: 12px; } .lesson-diagram .w-5 { width: 20px; }
+.lesson-diagram .w-6 { width: 24px; } .lesson-diagram .w-7 { width: 28px; } .lesson-diagram .w-8 { width: 32px; }
+.lesson-diagram .w-14 { width: 56px; } .lesson-diagram .w-16 { width: 64px; } .lesson-diagram .w-20 { width: 80px; } .lesson-diagram .w-24 { width: 96px; } .lesson-diagram .w-28 { width: 112px; }
+.lesson-diagram .h-1 { height: 4px; } .lesson-diagram .h-1\.5 { height: 6px; } .lesson-diagram .h-3 { height: 12px; }
+.lesson-diagram .h-5 { height: 20px; } .lesson-diagram .h-6 { height: 24px; } .lesson-diagram .h-7 { height: 28px; }
+.lesson-diagram .h-8 { height: 32px; } .lesson-diagram .h-16 { height: 64px; } .lesson-diagram .h-20 { height: 80px; } .lesson-diagram .h-24 { height: 96px; } .lesson-diagram .h-28 { height: 112px; }
+
+/* borders & radii */
+.lesson-diagram .border { border-width: 1px; border-style: solid; border-color: rgba(255,255,255,0.08); }
+.lesson-diagram .rounded-sm { border-radius: 4px; } .lesson-diagram .rounded-lg { border-radius: 10px; }
+.lesson-diagram .rounded-xl { border-radius: 14px; } .lesson-diagram .rounded-2xl { border-radius: 18px; }
+.lesson-diagram .rounded-full { border-radius: 999px; }
+.lesson-diagram .border-white\/5 { border-color: rgba(255,255,255,0.05); }
+.lesson-diagram .border-white\/8 { border-color: rgba(255,255,255,0.08); }
+.lesson-diagram .border-cyan-400\/15 { border-color: rgba(34,211,238,0.15); }
+.lesson-diagram .border-cyan-400\/30 { border-color: rgba(34,211,238,0.30); }
+.lesson-diagram .border-cyan-400\/50 { border-color: rgba(34,211,238,0.50); }
+.lesson-diagram .border-amber-500\/30 { border-color: rgba(245,158,11,0.30); }
+.lesson-diagram .border-red-500\/30 { border-color: rgba(239,68,68,0.30); }
+.lesson-diagram .hover\:border-cyan-400\/30:hover { border-color: rgba(34,211,238,0.30); }
+
+/* backgrounds */
+.lesson-diagram .bg-white\/3 { background-color: rgba(255,255,255,0.03); }
+.lesson-diagram .bg-white\/4 { background-color: rgba(255,255,255,0.04); }
+.lesson-diagram .bg-cyan-400 { background-color: #22d3ee; }
+.lesson-diagram .bg-cyan-400\/8 { background-color: rgba(34,211,238,0.08); }
+.lesson-diagram .bg-cyan-400\/10 { background-color: rgba(34,211,238,0.10); }
+.lesson-diagram .bg-cyan-400\/14 { background-color: rgba(34,211,238,0.14); }
+.lesson-diagram .bg-cyan-400\/15 { background-color: rgba(34,211,238,0.15); }
+.lesson-diagram .bg-amber-500\/12 { background-color: rgba(245,158,11,0.12); }
+.lesson-diagram .bg-red-500\/12 { background-color: rgba(239,68,68,0.12); }
+
+/* type */
+.lesson-diagram .text-\[8px\] { font-size: 8px; } .lesson-diagram .text-\[9px\] { font-size: 9px; }
+.lesson-diagram .text-\[10px\] { font-size: 10px; } .lesson-diagram .text-\[11px\] { font-size: 11px; }
+.lesson-diagram .text-xs { font-size: 12px; line-height: 1.4; } .lesson-diagram .text-sm { font-size: 14px; line-height: 1.45; }
+.lesson-diagram .text-base { font-size: 16px; line-height: 1.5; }
+.lesson-diagram .font-bold { font-weight: 700; } .lesson-diagram .font-semibold { font-weight: 600; }
+.lesson-diagram .font-black { font-weight: 900; }
+.lesson-diagram .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lesson-diagram .leading-tight { line-height: 1.25; }
+.lesson-diagram .text-center { text-align: center; } .lesson-diagram .text-left { text-align: left; } .lesson-diagram .text-right { text-align: right; }
+.lesson-diagram .text-white { color: #fff; }
+.lesson-diagram .text-amber-300 { color: #fcd34d; }
+.lesson-diagram .text-red-300 { color: #fca5a5; }
+.lesson-diagram .text-cyan-200 { color: #a5f3fc; } .lesson-diagram .text-cyan-300 { color: #67e8f9; } .lesson-diagram .text-cyan-400 { color: #22d3ee; }
+.lesson-diagram .text-cyan-400\/60 { color: rgba(34,211,238,0.6); }
+.lesson-diagram .text-slate-100 { color: #f1f5f9; } .lesson-diagram .text-slate-300 { color: #cbd5e1; }
+.lesson-diagram .text-slate-400 { color: #94a3b8; } .lesson-diagram .text-slate-500 { color: #64748b; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-diagram .flow-dash, .lesson-diagram .float-soft, .lesson-diagram .spin-slow,
+  .lesson-diagram .spin-rev, .lesson-diagram .glow-node, .lesson-diagram .quad-x-ring { animation: none; }
+}

@@ -254,7 +254,7 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
   'iflight-nazgul5-v3': [
     official('المحرّكات', 'XING-E Pro 2207', '', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
     official('متحكّم الطيران', 'BLITZ F7', '', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
-    official('المسرّعات', 'BLITZ E45S رباعي 45A بنظام BLHeli32 لجهد 2-6S', '', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
+    official('المسرّعات', 'BLITZ E45S رباعي 45A بنظام BLHeli32 لجهد 2S-6S', '', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
     official('مرسل الفيديو', 'BLITZ بطاقة 1.6', 'واط', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
     official('الكاميرا', 'RaceCam R1', '', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
     official('الوزن بلا بطارية', '435', 'غرام', 'صفحة Nazgul5 V3 6S', IFLIGHT_NAZGUL5),
@@ -387,7 +387,7 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
     official('المراوح', 'Gemfan 45mm', '', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
     official(
       'متحكّم الطيران',
-      'F4 AIO لجهد 2-3S بمسرّع 20A، وزنه 5.92 غرام، مصمَّم لوحدة فيديو رقمية',
+      'F4 AIO لجهد 2S-3S بمسرّع 20A، وزنه 5.92 غرام، مصمَّم لوحدة فيديو رقمية',
       '', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO,
     ),
     official('الوزن مع وحدة DJI O3', '71.2', 'غرام', 'صفحة Pavo Pico', BETAFPV_PAVO_PICO),
@@ -572,7 +572,7 @@ export const LAUNCH_SPECS: Record<string, ProductSpec[]> = {
       'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2,
     ),
     official('متحكّم الطيران', 'BLITZ F722', '', 'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2),
-    official('المسرّعات', 'BLITZ E55 رباعي 55A لجهد 2-6S', '', 'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2),
+    official('المسرّعات', 'BLITZ E55 رباعي 55A لجهد 2S-6S', '', 'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2),
     official('وزن النسخة التماثلية بلا بطارية', '705', 'غرام', 'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2),
     official('وزن النسخة الرقمية بلا بطارية', '725', 'غرام', 'صفحة Chimera7 Pro V2 6S', IFLIGHT_CHIMERA7_PRO_V2),
     official(

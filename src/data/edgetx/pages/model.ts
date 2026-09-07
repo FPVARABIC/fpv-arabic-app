@@ -21,7 +21,7 @@ export const edgeTxModelSetup: EdgeTxPage = {
     'النموذج ملف إعدادات طائرة واحدة داخل جهازك: مدخلاتها ومزجها ومفاتيحها ووحدتها الراديوية. إنشاؤه بشكل نظيف هو ما يجعل بقية الإعداد قابلاً للتفسير.',
   whenNeededAr:
     'مع كل طائرة جديدة، وبعد أي تغيير جوهري مثل تبديل المستقبل أو الانتقال إلى نظام راديوي آخر.',
-  whereAr: `قائمة النماذج ثم إعداد النموذج (Model Select ← Model Setup). ${PATH_CAVEAT}`,
+  whereAr: `قائمة النماذج ثم إعداد النموذج (Model Select ثم Model Setup). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'warning',
   prerequisitesAr: [
@@ -154,7 +154,7 @@ export const edgeTxInternalModule: EdgeTxPage = {
     'الوحدة الداخلية هي الراديو المدمج داخل جسم الجهاز. تفعيلها واختيار نظامها هما ما يقرر هل يخرج بثّ من هوائي الجهاز أصلاً.',
   whenNeededAr:
     'حين يكون جهازك مزوّداً بوحدة مدمجة تريد استخدامها، أو حين تريد إيقافها لأنك انتقلت إلى وحدة خارجية.',
-  whereAr: `إعداد النموذج ثم قسم الوحدة الداخلية (Model Setup ← Internal RF). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج ثم قسم الوحدة الداخلية (Model Setup ثم Internal RF). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'warning',
   prerequisitesAr: ['نموذج منشأ لهذه الطائرة', 'معرفة أن جهازك يحوي وحدة داخلية أصلاً، من دليل الجهاز'],
@@ -257,7 +257,7 @@ export const edgeTxExternalModule: EdgeTxPage = {
     'الوحدة الخارجية هي الراديو المركّب في الفتحة الخلفية. هي ما يعطيك حرية تبديل النظام الراديوي دون تبديل الجهاز كله.',
   whenNeededAr:
     'حين تركّب وحدة في الفتحة الخلفية، أو حين تنتقل من الوحدة المدمجة إلى وحدة أقوى أو إلى نظام مختلف.',
-  whereAr: `إعداد النموذج ثم قسم الوحدة الخارجية (Model Setup ← External RF). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج ثم قسم الوحدة الخارجية (Model Setup ثم External RF). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'critical',
   prerequisitesAr: [
@@ -373,7 +373,7 @@ export const edgeTxRfSystem: EdgeTxPage = {
   summaryAr:
     'النظام الراديوي هو اللغة التي تتفاهم بها الوحدة والمستقبل. اختيار نظام لا يطابق مستقبلك ينتج العرَض نفسه الذي ينتجه عطل عتاد: مستقبل يضيء ولا يربط.',
   whenNeededAr: 'عند إعداد نموذج جديد، وبعد تبديل الوحدة أو المستقبل، وعند شراء مستقبل جديد.',
-  whereAr: `إعداد النموذج، داخل قسم الوحدة التي فعّلتها (Model Setup ← Internal/External RF ← Protocol). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج، داخل قسم الوحدة التي فعّلتها (Model Setup ثم Internal/External RF ثم Protocol). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'warning',
   prerequisitesAr: ['وحدة مفعّلة (داخلية أو خارجية)', 'معرفة طراز مستقبلك ونظامه من توثيقه'],
@@ -475,7 +475,7 @@ export const edgeTxCrsf: EdgeTxPage = {
     'CRSF هي اللغة التي تنقل بها الوحدة قنواتك وتعيد بها البيانات. كونها ثنائية الاتجاه هو ما يجعل التليمتري ممكناً بلا أسلاك إضافية.',
   whenNeededAr:
     'حين تستخدم نظاماً يعتمد CRSF مثل ExpressLRS أو Crossfire، وحين تريد فهم لماذا يصلك تليمتري بلا سلك إضافي.',
-  whereAr: `إعداد النموذج ثم إعدادات الوحدة، ومنها تُفتح قائمة النظام على الجهاز (Model Setup ← Module settings). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج ثم إعدادات الوحدة، ومنها تُفتح قائمة النظام على الجهاز (Model Setup ثم Module settings). ${PATH_CAVEAT}`,
   level: 'intermediate',
   risk: 'warning',
   prerequisitesAr: ['نموذج منشأ ووحدة مفعّلة', 'مستقبل مربوط أو جاهز للربط'],
@@ -603,7 +603,7 @@ export const edgeTxChannelRange: EdgeTxPage = {
     'مدى القنوات هو عدد القنوات التي تُرسلها الوحدة فعلاً من هذا النموذج. القناة التي تقع خارج المدى المرسَل غير موجودة بالنسبة للطائرة.',
   whenNeededAr:
     'عند إعداد نموذج جديد، وحين تضيف وضعاً في متحكم الطيران على قناة عالية، وحين ترفض الطائرة التسليح رغم أن الرابط سليم.',
-  whereAr: `إعداد النموذج، داخل إعدادات الوحدة (Model Setup ← Channel Range). ${PATH_CAVEAT}`,
+  whereAr: `إعداد النموذج، داخل إعدادات الوحدة (Model Setup ثم Channel Range). ${PATH_CAVEAT}`,
   level: 'intermediate',
   risk: 'warning',
   prerequisitesAr: ['وحدة مفعّلة ونظام مختار', 'معرفة القنوات التي تستخدمها فعلاً في متحكم الطيران'],

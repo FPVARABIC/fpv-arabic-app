@@ -1136,6 +1136,45 @@ details.card-sm > summary:focus-visible {
  * as one pillar being singled out.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ───────────────────────────────────────────────────────────────────────────
+ * THE HERO'S ONE CALL TO ACTION
+ *
+ * A 44px minimum target because a thumb is not a mouse, and the note wraps
+ * under the button rather than beside it at phone widths so neither is
+ * squeezed. `align-items: center` only once there is room for a row.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.hero-cta {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.hero-cta-main {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 22px;
+  font-size: 15.5px;
+  text-decoration: none;
+}
+.hero-cta-note { font-size: 13.5px; line-height: 1.85; color: var(--text-dim); }
+
+/* The lessons pillar is the one card that is not equal to the others.
+   The four sections the earlier brief asked to keep «وزناً متقارباً» — المجتمع
+   والمتجر ومركز البرامج والموسوعة — remain equal to EACH OTHER; the learning
+   path was not among them, and it is what a beginner is here for. One data
+   attribute, so the difference is visible in the markup and cannot spread. */
+.pillar[data-primary] {
+  border-color: var(--border-accent);
+  background:
+    linear-gradient(180deg, var(--accent-wash) 0%, transparent 120px),
+    var(--surface);
+  box-shadow: 0 10px 26px -18px var(--nav-active-glow, rgba(0, 150, 200, 0.5));
+}
+.pillar[data-primary] .pillar-icon { background: var(--accent-wash-2); color: var(--accent-ink-2); }
+
 .pillar-grid {
   display: grid;
   grid-template-columns: 1fr;

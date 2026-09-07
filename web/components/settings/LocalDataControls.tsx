@@ -34,8 +34,8 @@ const ACTIONS: ResetAction[] = [
   {
     id: 'lessons',
     label: 'إعادة ضبط تقدّم الدروس',
-    description: 'يحذف قائمة الدروس المكتملة.',
-    keys: [STORAGE_KEYS.PROGRESS_LESSONS],
+    description: 'يحذف قائمة الدروس المكتملة وموضعك وإجاباتك داخل كل درس.',
+    keys: [STORAGE_KEYS.PROGRESS_LESSONS, STORAGE_KEYS.LESSON_JOURNEY_PROGRESS],
   },
   {
     id: 'roadmap',
@@ -56,6 +56,7 @@ const ACTIONS: ResetAction[] = [
       'يحذف تقدّم الدروس ومراحل البناء وقوائم الفحص معاً. لا يمسّ حسابك ولا ما نشرته.',
     keys: [
       STORAGE_KEYS.PROGRESS_LESSONS,
+      STORAGE_KEYS.LESSON_JOURNEY_PROGRESS,
       STORAGE_KEYS.PROGRESS_ROADMAP,
       STORAGE_KEYS.CHECKLISTS,
     ],

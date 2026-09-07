@@ -12,6 +12,14 @@ import { EscPlacement } from '../diagrams/EscPlacement';
 import { FcOrientation } from '../diagrams/FcOrientation';
 import { ReceiverUart } from '../diagrams/ReceiverUart';
 import { CameraVtx } from '../diagrams/CameraVtx';
+import { StickControl } from '../diagrams/StickControl';
+import { PartsCompatibility } from '../diagrams/PartsCompatibility';
+import { TxRxCross } from '../diagrams/TxRxCross';
+import { SafetyBeforeBattery } from '../diagrams/SafetyBeforeBattery';
+import { MotorMount } from '../diagrams/MotorMount';
+import { PrePowerCheck } from '../diagrams/PrePowerCheck';
+import { MotorTestCheck } from '../diagrams/MotorTestCheck';
+import { PropDirection } from '../diagrams/PropDirection';
 
 /**
  * Narrow component slot: which diagram component handles which diagramType
@@ -54,5 +62,35 @@ export const interactiveDiagramAdapters: Partial<Record<DiagramType, React.FC<{ 
   ),
   'camera-vtx': ({ onVariant }) => (
     <CameraVtx onPartExplore={partId => onVariant(partId)} />
+  ),
+  'stick-control': ({ onVariant }) => (
+    <StickControl onAxisExplore={axis => onVariant(axis)} />
+  ),
+  // The four diagrams that were passive until the lessons rebuild. Each gained
+  // an explore callback so its lesson could have an interactive stage like the
+  // other twelve — every lesson now has one.
+  'parts-compatibility': ({ onVariant }) => (
+    <PartsCompatibility onStepExplore={stepId => onVariant(stepId)} />
+  ),
+  'tx-rx-cross': ({ onVariant }) => (
+    <TxRxCross onWiringExplore={panel => onVariant(panel)} />
+  ),
+  'safety-before-battery': ({ onVariant }) => (
+    <SafetyBeforeBattery onStepExplore={stepId => onVariant(stepId)} />
+  ),
+  'motor-mount': ({ onVariant }) => (
+    <MotorMount onScrewExplore={which => onVariant(which)} />
+  ),
+  // The three diagrams the setup and propeller lessons brought with them. The
+  // last two render the shared motor table (src/data/lessons/motorLayout.ts)
+  // rather than restating the numbering, so their variants ARE the motor ids.
+  'pre-power-check': ({ onVariant }) => (
+    <PrePowerCheck onCheckExplore={checkId => onVariant(checkId)} />
+  ),
+  'motor-test-check': ({ onVariant }) => (
+    <MotorTestCheck onMotorCheck={motorId => onVariant(motorId)} />
+  ),
+  'prop-direction': ({ onVariant }) => (
+    <PropDirection onArmExplore={motorId => onVariant(motorId)} />
   ),
 };

@@ -9,12 +9,12 @@
 import assert from 'node:assert/strict';
 import {
   createInitialSessionState, goToStageId, nextStage, prevStage,
-  recordCheckpointAnswer, recordRecallRevealed,
+  recordCheckpointAnswer, recordRecallRevealed, recordInteractionVariant,
   isCheckpointAnswered, areAllCheckpointsAnswered, isRecallComplete,
   getReadinessRequirements, isReadyToComplete, stageCount, currentStage,
 } from '../src/data/lessons/lessonJourneyEngine';
 import { lesson09JourneyDefinition as def } from '../src/data/lessons/lesson09Journey.definition';
-import type { CheckpointStage, RecallStage, GlossaryStage, ComparisonStage } from '../src/types/lessonJourney';
+import type { CheckpointStage, RecallStage, GlossaryStage, ComparisonStage, InteractiveDiagramStage } from '../src/types/lessonJourney';
 import { lessonsData } from '../src/data/lessonsData';
 import { getLessonJourneyDefinition } from '../src/data/lessons/journeyRegistry';
 
@@ -36,12 +36,16 @@ console.log('\n[1] Registration: Lesson 09 is registered in the journey registry
   const lesson9 = lessonsData.find(l => l.id === 'lesson-tx-rx')!;
   ok('lesson09JourneyDefinition.lessonId matches the real Lesson 9 id', def.lessonId === lesson9.id);
   ok('getLessonJourneyDefinition resolves Lesson 9 to this exact definition', getLessonJourneyDefinition(lesson9.id) === def);
-  ok('Lesson 9 has 16 stages', STAGE_COUNT === 16);
+  ok('Lesson 9 has 17 stages (16 + the TX/RX interactive stage)', STAGE_COUNT === 17);
 }
 
-console.log('\n[2] No interactive_diagram stage exists (TxRxCross.tsx is passive; no interaction was invented)');
+console.log('\n[2] Exactly one interactive_diagram stage exists — both wirings must be opened');
 {
-  ok('zero interactive_diagram stages in the definition', def.stages.filter(s => s.type === 'interactive_diagram').length === 0);
+  const diagrams = def.stages.filter((s): s is InteractiveDiagramStage => s.type === 'interactive_diagram');
+  ok('exactly one interactive_diagram stage exists', diagrams.length === 1);
+  ok('it renders the tx-rx-cross diagram', diagrams[0].diagramType === 'tx-rx-cross');
+  ok('it requires both panels', JSON.stringify(diagrams[0].requiredVariants) === JSON.stringify(['correct', 'wrong']));
+  ok('it is listed in readinessOrder', (def.readinessOrder ?? []).includes(diagrams[0].id));
 }
 
 console.log('\n[3] Initial state — nothing satisfied, completion unavailable at initial render');
@@ -52,8 +56,8 @@ console.log('\n[3] Initial state — nothing satisfied, completion unavailable a
   ok('final recall not complete', !isRecallComplete(RECALL, s));
   ok('readiness gate is NOT satisfied at initial state', !isReadyToComplete(def, s));
   ok(
-    'readiness requirement list has one entry per gate (4 checkpoints + recall)',
-    getReadinessRequirements(def, s).length === CHECKPOINT_STAGES.length + 1,
+    'readiness requirement list has one entry per gate (4 checkpoints + diagram + recall)',
+    getReadinessRequirements(def, s).length === CHECKPOINT_STAGES.length + 2,
   );
   ok('every requirement reports unmet at initial state', getReadinessRequirements(def, s).every(r => !r.met));
 }
@@ -128,7 +132,10 @@ console.log('\n[8] Completion remains unavailable until every checkpoint and rec
 
   for (const p of RECALL.prompts) s = recordRecallRevealed(s, RECALL.id, p.id);
   ok('final recall now complete', isRecallComplete(RECALL, s));
-  ok('READY once all 4 (even all-wrong) checkpoints + final recall are all engaged with', isReadyToComplete(def, s));
+  ok('still not ready — the diagram has not been explored', !isReadyToComplete(def, s));
+  const DIAGRAM = def.stages.find((st): st is InteractiveDiagramStage => st.type === 'interactive_diagram')!;
+  for (const v of DIAGRAM.requiredVariants) s = recordInteractionVariant(s, DIAGRAM.id, v);
+  ok('READY once all 4 (even all-wrong) checkpoints + diagram + final recall are all engaged with', isReadyToComplete(def, s));
 }
 
 console.log('\n[9] Readiness checklist always names exactly what remains, in the declared order');

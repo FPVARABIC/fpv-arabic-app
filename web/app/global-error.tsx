@@ -85,6 +85,9 @@ export default function GlobalError({
             >
               أعد المحاولة
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- this
+                boundary renders when the app router itself has failed, so a
+                plain anchor is the only navigation guaranteed to work. */}
             <a
               href="/"
               style={{

@@ -9,7 +9,7 @@ import type { Gps } from '../types';
 // No racing or cinematic tag added anywhere in this file: GPS was placed
 // in the strict/evidence-gated category (same standard as Receivers), and
 // none of the 5 entries' own text supports either type. gps-hglrc-m100-
-// mini-budget's "مناسب لـ 2-7 إنش" claim was considered and rejected —
+// mini-budget's "مناسب للمقاسات من 2 إلى 7 إنش" claim was considered and rejected —
 // broad size-range language, not purpose-specific evidence, same pattern
 // already rejected for DJI O4's initial "many users" framing.
 export const gps: Gps[] = [
@@ -22,7 +22,7 @@ export const gps: Gps[] = [
     priceRangeUSD: [13, 20],
     specs: { chipset: 'M10', hasCompass: false, weightG: 2.7 },
     compatibilityTags: { droneTypes: ['freestyle'], batteryVoltages: [4, 6] },
-    whyChoose: 'GPS صغير وخفيف مناسب لـ 2-7 إنش، جيد لإضافة Rescue/RTH في Betaflight.',
+    whyChoose: 'GPS صغير وخفيف مناسب للمقاسات من 2 إلى 7 إنش، جيد لإضافة Rescue/RTH في Betaflight.',
     notFor: 'لا تختاره إذا تحتاج Compass مدمج أو مشروع INAV/ArduPilot يعتمد على اتجاه مغناطيسي.',
     upgradePath: 'Matek M10Q-5883',
     lastReviewed: '2026-07',
@@ -115,7 +115,7 @@ export const gps: Gps[] = [
     buildNotes: [
       'مع مدى طويل حقيقي الأفضل GPS أكبر أو مع compass حسب firmware.',
       'المواصفات: 12×16×4.5mm، 1-10Hz (افتراضي 10Hz)، baud 4800-921600 (افتراضي 115200).',
-      'ملاحظة تدقيق: عمود الشريحة في المصدر كان نصاً وصفياً "M10050/M10 class / لا Compass"، والعمود المجاور له كان "3.3-5V / 2.2g" بدل حقل Compass المعتاد (نعم/لا) — chipset تُرك فارغاً بدل اختراع اسم شريحة دقيق.',
+      'ملاحظة تدقيق: عمود الشريحة في المصدر كان نصاً وصفياً "M10050/M10 class / لا Compass"، والعمود المجاور له كان "3.3V-5V / 2.2g" بدل حقل Compass المعتاد (نعم/لا) — chipset تُرك فارغاً بدل اختراع اسم شريحة دقيق.',
     ],
   },
   {
@@ -142,7 +142,7 @@ export const gps: Gps[] = [
     buildNotes: [
       'الـ compass يتأثر جداً بالكهرباء والتيار العالي.',
       'المواصفات: 12×17×5mm، 6 pins، 1-10Hz، UBLOX/NMEA حسب BF.',
-      'ملاحظة تدقيق: عمود الشريحة في المصدر كان نصاً وصفياً "GPS + Compass"، والعمود المجاور له كان "3.3-5V / 2.6g" بدل حقل Compass المعتاد (نعم/لا) — chipset تُرك فارغاً بدل اختراع اسم شريحة دقيق.',
+      'ملاحظة تدقيق: عمود الشريحة في المصدر كان نصاً وصفياً "GPS + Compass"، والعمود المجاور له كان "3.3V-5V / 2.6g" بدل حقل Compass المعتاد (نعم/لا) — chipset تُرك فارغاً بدل اختراع اسم شريحة دقيق.',
     ],
   },
 

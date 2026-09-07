@@ -4,7 +4,7 @@
 
 ## المميزات
 
-- **16 درسًا تفاعليًا** بمخططات SVG تعليمية قابلة للنقر
+- **17 درسًا تفاعليًا** بمخططات SVG تعليمية قابلة للنقر — في أربع محطّات: الأساسيات، الكهرباء والسلامة، التركيب، الطيران
 - **مساعد FPV العائم** — يظهر في كل صفحة للوصول السريع (FloatingAssistant)
 - **Betaflight بالعربي** — شرح مرئي لكل قسم من أقسام Betaflight Configurator
 - **خريطة البناء** — خطوات مرتبة من الصفر حتى الطيران
@@ -32,6 +32,7 @@ npm run build
 
 | المسار | القسم |
 |---|---|
+| `/lessons` · `/lessons/:lessonId` | الدروس السبعة عشر برحلاتها المرحلية — على الويب والهاتف، والتقدّم محفوظ في المتصفّح |
 | `/kb` | مركز الموسوعة — وحدات معرفية، مسارات تعلّم، ووضع مرجعي |
 | `/kb/:moduleId` | صفحة الوحدة: مسارات · كل المقالات · مصفوفة التغطية |
 | `/kb/:moduleId/:articleId` | المقال بست طبقات (سريعة/مبسطة/تقنية/تطبيقية/تشخيصية/مرجعية) |
@@ -45,6 +46,7 @@ npm run build
 
 ```bash
 npm run test:kb                    # النموذج + البحث + التشخيص (منطق)
+npm run test:lessons               # المحرّك + الإغناء + الحفظ + الدروس الـ17 + بنية الويب
 npm run test:kb-ui                 # واجهة الموسوعة والبحث والقاموس والتشخيص (Playwright)
 npm run test:navigation-regression # عدم التراجع في التنقّل (Playwright)
 npm run test:platform              # الكل
@@ -57,7 +59,8 @@ npm run test:platform              # الكل
 
 | الملف | المحتوى |
 |---|---|
-| `src/data/lessonsData.ts` | 16 درساً مع حقل `diagramType` لكل درس |
+| `src/data/lessonsData.ts` | 17 درساً مع حقل `diagramType` و`track` لكل درس |
+| `src/data/lessons/*.definition.ts` | رحلة مرحلية لكل درس (المحرّك في `lessonJourneyEngine.ts`، الإغناء في `lessonJourneyEnrich.ts`، الحفظ في `lessonJourneyPersistence.ts`) |
 | `src/data/betaflightData.ts` | 10 أقسام Betaflight مع شرح ونقاط مهمة |
 | `src/data/botResponses.ts` | ردود المساعد الذكي (11 سؤالاً شائعاً) |
 | `src/data/checklistsData.ts` | قوائم الفحص قبل الشراء والطيران |
@@ -86,8 +89,7 @@ npm run test:platform              # الكل
 | 14 | fc-orientation | FcOrientation |
 | 15 | receiver-uart | ReceiverUart |
 | 16 | camera-vtx | CameraVtx |
-| 17 | motor-test | MotorTest |
-| 18 | first-flight | FirstFlight |
+| 17 | stick-control | StickControl |
 
 ## مفاتيح localStorage
 
@@ -100,6 +102,7 @@ npm run test:platform              # الكل
 | `fpv_checklists` | object — حالة قوائم الفحص |
 | `fpv_last_opened` | string — آخر درس تم فتحه |
 | `fpv_settings` | object — إعدادات التطبيق |
+| `fpv_lesson_journey_progress` | object — موضع كل درس وإجاباته وتفاعلاته (لكل درس سجلّ) |
 
 ## ملاحظات
 

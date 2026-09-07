@@ -395,7 +395,7 @@ export const fcControlLoop: KbArticle = {
           { k: 'منحنى المعدلات', v: 'تبويب PID Tuning ← قسم Rates' },
           { k: 'حدود PID وFeedforward', v: 'تبويب PID Tuning ← قسم PID Profile Settings' },
           { k: 'المزج وترتيب المحركات', v: 'تبويب Configuration (Mixer) وتبويب Motors' },
-          { k: 'بروتوكول الإخراج', v: 'تبويب Configuration ← ESC/Motor Features' },
+          { k: 'بروتوكول الإخراج', v: 'تبويب Configuration ثم ESC/Motor Features' },
           { k: 'مرشّح الدوران', v: 'يتطلب تفعيل DShot ثنائي الاتجاه في تبويب Motors أولاً' },
         ],
       },

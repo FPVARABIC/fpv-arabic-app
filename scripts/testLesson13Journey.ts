@@ -119,19 +119,19 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const locCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyLocationMatters')!.checkpoint;
   const locCorrect = locCp.options.find(o => o.correct)!;
-  ok('location correct option names continuous airflow for heat dissipation', locCorrect.text.includes('يسمح بمرور الهواء باستمرار'));
+  ok('location correct option names continuous airflow for heat dissipation', locCorrect.text.includes('الهواء يمرّ عليه') && locCorrect.text.includes('يحتجز حرارته'));
 
   const coolCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'coolingNotRacingOnly')!.checkpoint;
   const coolCorrect = coolCp.options.find(o => o.correct)!;
-  ok('cooling correct option names long-term reliability, not just racing', coolCorrect.text.includes('المدى الطويل') && coolCorrect.text.includes('السباق'));
+  ok('cooling correct option names long-term reliability, not just racing', coolCorrect.text.includes('الطيران الهادئ') && coolCorrect.text.includes('يتراكم عبر الرحلات'));
 
   const secureCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'securePlacementPrinciple')!.checkpoint;
   const secureCorrect = secureCp.options.find(o => o.correct)!;
-  ok('secure-placement correct option names mechanical mounting and carbon separation', secureCorrect.text.includes('ميكانيكيًا') && secureCorrect.text.includes('كربوني'));
+  ok('secure-placement correct option names mechanical mounting and carbon separation', secureCorrect.text.includes('التثبيت الحقيقي') && secureCorrect.text.includes('للكربون'));
 
   const routingCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'routingAndPlacementReasoning')!.checkpoint;
   const routingCorrect = routingCp.options.find(o => o.correct)!;
-  ok('routing correct option states shortest is not always safest', routingCorrect.text.includes('ليس دائمًا الأكثر أمانًا'));
+  ok('routing correct option states shortest is not always safest', routingCorrect.text.includes('الأطول قليلًا') && routingCorrect.text.includes('حافة حادة'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');

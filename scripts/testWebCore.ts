@@ -413,13 +413,33 @@ console.log('\n[9] The phone app is untouched by the web surface');
 {
   // The web must not have reached back into the phone's UI. Shared code lives
   // in src/data and src/platform; anything else would couple the two builds.
+  //
+  // Two exceptions, admitted by the lessons rebuild and checked right below:
+  // the interactive SVG diagrams (src/components/diagrams) and the adapter
+  // that maps them onto lesson stages. They are the lessons' teaching visuals,
+  // rendered on both surfaces from one copy — the same rule as the data. They
+  // stay admissible only while they import nothing from the phone's shell,
+  // which the next assertion proves on every run.
+  const SHARED_UI = /@core\/components\/(diagrams\/|lessons\/interactiveDiagramAdapters)/;
   const reachesIntoPhoneUi = [...SOURCES.entries()]
-    .filter(([, s]) => /@core\/(components|views|contexts|lib)\//.test(s)
+    .filter(([, s]) =>
+      [...s.matchAll(/@core\/(components|views|contexts|lib)\/[^'"]+/g)].some(m => !SHARED_UI.test(m[0]))
       || /from\s+['"]\.\.\/\.\.\/src\/(components|views|contexts)/.test(s))
     .map(([f]) => f);
   if (reachesIntoPhoneUi.length) console.error('  REACHES INTO PHONE UI:', reachesIntoPhoneUi);
-  ok('no web file imports the phone app\'s components, views or contexts',
+  ok('no web file imports the phone app\'s components, views or contexts (beyond the shared diagrams)',
     reachesIntoPhoneUi.length === 0);
+
+  const diagramsDir = path.join(ROOT, 'src/components/diagrams');
+  const sharedUiFiles = [
+    ...readdirSync(diagramsDir).filter(f => f.endsWith('.tsx')).map(f => path.join(diagramsDir, f)),
+    path.join(ROOT, 'src/components/lessons/interactiveDiagramAdapters.tsx'),
+  ];
+  const shellBound = sharedUiFiles.filter(f =>
+    /from\s+['"](react-router|firebase|\.\.\/\.\.\/(contexts|views|hooks|lib)\/)/.test(readFileSync(f, 'utf8')));
+  if (shellBound.length) console.error('  SHARED UI BOUND TO THE PHONE SHELL:', shellBound);
+  ok(`the shared diagrams import nothing from the phone shell (${sharedUiFiles.length} files checked)`,
+    shellBound.length === 0);
 
   // And the phone must not have started importing the web.
   const phoneImportsWeb: string[] = [];
@@ -484,6 +504,19 @@ console.log('\n[10] The media pipeline is shared, not duplicated');
   }
   ok('the web still declares firebase-admin, which only it uses',
     'firebase-admin' in webDeps);
+
+  // The other half of the same rule. Keeping those packages out of
+  // web/package.json means the ONLY place they can resolve from is the
+  // repository root's node_modules — a bare import inside ../src looks upward
+  // from src/, and web/node_modules is not on that path. So a build rooted at
+  // web/ must install the root manifest too, or it dies at «Can't resolve
+  // 'firebase/storage'». That is exactly how the Vercel deployment failed:
+  // its project is rooted at web/, so it installed there and nowhere else.
+  const webVercel = JSON.parse(readFileSync(path.join(ROOT, 'web/vercel.json'), 'utf8')) as
+    { installCommand?: string };
+  ok('web/vercel.json installs the root manifest before its own, so a build rooted at web/ can resolve the shared packages',
+    /npm ci --prefix \.\./.test(webVercel.installCommand ?? '')
+    && /&&\s*npm ci\s*$/.test(webVercel.installCommand ?? ''));
 
   // The web must never invent its own storage path — the path IS the
   // authorization in storage.rules.

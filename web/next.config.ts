@@ -26,6 +26,22 @@ import { isStagingFromEnv } from './lib/staging';
  * identical — so only running it finds the fault. It cost an end-to-end run to
  * find once; the rule is: a runtime package imported by `../src` belongs in the
  * ROOT manifest and nowhere else. `scripts/testWebCore.ts` enforces it.
+ *
+ * WHICH MEANS THE BUILD MUST INSTALL THE ROOT MANIFEST
+ * ----------------------------------------------------
+ * The rule above has a consequence that is easy to miss and fatal when missed:
+ * a bare import inside `../src` resolves upward from `src/`, so it can only
+ * ever be satisfied by the REPOSITORY ROOT's `node_modules` — never by
+ * `web/node_modules`, which is not on that lookup path at all. Installing only
+ * inside `web/` produces a build that fails at
+ * «Module not found: Can't resolve 'firebase/storage'», and then the same for
+ * `browser-image-compression`, and then `lucide-react` from the shared
+ * diagrams: not three missing packages, one missing install.
+ *
+ * That is what happened on Vercel, whose project is rooted at `web/` and so
+ * ran `npm install` there and nowhere else. `web/vercel.json` now declares an
+ * `installCommand` that installs the root manifest first, keeping the single
+ * copy exactly where this comment requires it.
  */
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), '..'),

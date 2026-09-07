@@ -23,6 +23,7 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-tx-rx',
   readinessOrder: [
     'checkpoint-txConnectsToRxReasoning',
+    'txRxCrossDiagram',
     'checkpoint-correctMappingIdentification',
     'checkpoint-communicationFailureNotDamage',
     'checkpoint-sharedGndStillRequired',
@@ -79,7 +80,7 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'لأن TX يرسل الإشارة وRX يستمع لها؛ توصيل TX بـTX يعني طرفين يتحدثان معًا دون أن يستمع أحدهما للآخر، فلا تصل أي إشارة لأي منهما.',
+            text: 'لأن TX يرسل وRX يستمع؛ توصيل TX بـTX يترك طرفين يتحدثان ولا أحد يستمع، فلا تصل أي إشارة.',
             feedback: 'صحيح تمامًا! الاتصال يحتاج طرفًا يرسل وطرفًا يستقبل؛ توصيل مرسِل بمرسِل آخر لا يترك أي طرف يستمع فعليًا.',
           },
           {
@@ -135,6 +136,26 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
       footer:
         'الفرق بين التوصيلين ليس في المظهر (تسميات متطابقة قد تبدو "منظمة")، بل في اتجاه الإشارة الفعلي؛ التوصيل ' +
         'الصحيح يتبع اتجاه الإرسال والاستقبال، وليس تطابق الأسماء.',
+    },
+    {
+      // Added for the lessons rebuild: TxRxCross.tsx gained an explore
+      // callback, so both wirings are opened by the learner rather than only
+      // looked at.
+      id: 'txRxCrossDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح الحالتَين على المخطّط: لماذا تعمل الأولى ولا تعمل الثانية',
+      diagramType: 'tx-rx-cross',
+      instructions:
+        'اضغط «لماذا؟» على التوصيل الصحيح ثم على الخاطئ. الخطأ لا يُحرق شيئاً — وهذا بالضبط ما يجعله أول ما تفحصه حين «لا يستجيب الراديو».',
+      requiredVariants: ['correct', 'wrong'],
+      requirementLabel: 'فتح الحالتَين على المخطّط: الصحيحة والخاطئة',
+      hints: {
+        none: 'ابدأ بالتوصيل الصحيح — اقرأ لماذا تتقاطع الأسلاك.',
+        partial: {
+          correct: 'قرأتَ الصحيح. افتح الخاطئ الآن لتعرف كيف يبدو الفشل الصامت.',
+          wrong: 'قرأتَ الخاطئ. افتح الصحيح لتعرف القاعدة التي تمنعه.',
+        },
+      },
     },
     {
       id: 'correctMappingCheckpoint',
@@ -232,7 +253,7 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'على الأرجح لم يتم توصيل GND المشترك بين الجهازين؛ توصيل TX/RX الصحيح وحده لا يكفي دون GND مشترك.',
+            text: 'على الأرجح ينقص GND المشترك؛ فصحّة توصيل TX/RX وحدها لا تكفي.',
             feedback: 'صحيح تمامًا! GND هو المرجع الذي تُقاس عنده الإشارة؛ بدونه، حتى التوصيل الصحيح لـTX/RX لا يكفي لعمل الاتصال.',
           },
           {

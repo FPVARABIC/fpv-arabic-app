@@ -36,6 +36,10 @@ export const appManifest: readonly AppResource[] = [
   { id: "lesson-fc-install", title: "تركيب Flight Controller", route: "/lessons/lesson-fc-install", type: 'lesson', conceptIds: ["flight_controller_basic"], order: 14 },
   { id: "lesson-receiver-install", title: "تركيب Receiver", route: "/lessons/lesson-receiver-install", type: 'lesson', conceptIds: ["receiver_basic"], order: 15 },
   { id: "lesson-video-system", title: "تركيب نظام الفيديو", route: "/lessons/lesson-video-system", type: 'lesson', conceptIds: ["vtx_basic"], order: 16 },
+  { id: "lesson-first-power-up", title: "أول تشغيل آمن", route: "/lessons/lesson-first-power-up", type: 'lesson', conceptIds: ["wiring_basics","lipo_safety"], order: 17 },
+  { id: "lesson-betaflight-minimum", title: "الحد الأدنى من Betaflight", route: "/lessons/lesson-betaflight-minimum", type: 'lesson', conceptIds: ["flight_controller_basic","receiver_basic","motor_basic"], order: 18 },
+  { id: "lesson-propellers", title: "المراوح: التوافق والتركيب", route: "/lessons/lesson-propellers", type: 'lesson', conceptIds: ["motor_basic","drone_build_basics"], order: 19 },
+  { id: "lesson-stick-control-first-flight", title: "التحكم بالعصا والطيران الأول", route: "/lessons/lesson-stick-control-first-flight", type: 'lesson', conceptIds: [], order: 20 },
   { id: "build-soldering-basics", title: "أساسيات اللحام والتوصيل", route: "/roadmap", type: 'roadmap_step', conceptIds: ["wiring_basics"], order: 1 },
   { id: "build-parts-tools", title: "تجهيز القطع والأدوات", route: "/roadmap", type: 'roadmap_step', conceptIds: ["drone_build_basics"], order: 2 },
   { id: "build-frame", title: "تركيب الفريم", route: "/roadmap", type: 'roadmap_step', conceptIds: ["drone_build_basics"], order: 3 },
@@ -67,4 +71,4 @@ export const appManifest: readonly AppResource[] = [
   { id: "ts-6", title: "GPS لا يأخذ Fix", route: "/troubleshooting", type: 'troubleshooting_item', conceptIds: [] }
 ];
 
-export const MANIFEST_RESOURCE_COUNT = 45;
+export const MANIFEST_RESOURCE_COUNT = 49;

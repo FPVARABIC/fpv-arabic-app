@@ -118,7 +118,8 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const vCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'vbatVs5vDistinct')!.checkpoint;
   const vCorrect = vCp.options.find(o => o.correct)!;
-  ok('VBAT/5V correct option explicitly names both voltage levels and the damage risk', vCorrect.text.includes('25V') && vCorrect.text.includes('يُتلفه'));
+  ok('VBAT/5V correct option names both rails and the damage risk', vCorrect.text.includes('VBAT') && vCorrect.text.includes('5V') && vCorrect.text.includes('يُتلفه'));
+  ok('VBAT/5V feedback still carries the concrete voltage the learner should picture', vCorrect.feedback.includes('25V'));
 
   const gCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'groundIsSharedReference')!.checkpoint;
   const gCorrect = gCp.options.find(o => o.correct)!;
@@ -126,7 +127,11 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const wCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'wrongRailCausesRealDamage')!.checkpoint;
   const wCorrect = wCp.options.find(o => o.correct)!;
-  ok('wrong-rail correct option explicitly states real immediate damage, not mere non-startup', wCorrect.text.includes('تلف فوري'));
+  // P2-A: this question used to mirror Lesson 6's reverse-polarity question option for option
+  // (86% word overlap), so it could be answered by option shape alone. It now requires knowing
+  // which rail carries what, while still retrieving the damage-not-failure principle.
+  ok('wrong-rail correct option requires rail knowledge (regulated 5V vs raw VBAT)', wCorrect.text.includes('مخرج 5V') && wCorrect.text.includes('VBAT'));
+  ok('wrong-rail correct option still retrieves the damage-not-slowdown principle', wCorrect.text.includes('يُتلفها لا يبطّئها'));
 
   const cCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'fiveVSourcesNotIdentical')!.checkpoint;
   const cCorrect = cCp.options.find(o => o.correct)!;

@@ -42,6 +42,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   // ── Learn ────────────────────────────────────────────────────────────────
   {
+    id: 'lessons', labelAr: 'الدروس', href: '/lessons', group: 'learn',
+    blurbAr: 'سبعة عشر درساً من الصفر حتى أول تحليق، بأسئلة تحقّق ومخطّطات تفاعلية، وتقدّمك محفوظ في متصفّحك.',
+  },
+  {
     id: 'kb', labelAr: 'الموسوعة', href: '/kb', group: 'learn',
     blurbAr: 'سبع منظومات مشروحة من المبدأ إلى العطل، بمصادر وتواريخ مراجعة.',
   },

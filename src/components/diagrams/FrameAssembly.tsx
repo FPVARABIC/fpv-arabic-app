@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiagramFrame, DiagramInfo, useReveal, C } from './_shared';
+import { DiagramFrame, DiagramInfo, HotSpot, useReveal, C } from './_shared';
 
 const info: Record<string, string> = {
   base: 'Base Plate: القاعدة السفلية — ثبّت كل المسامير بإحكام معتدل.',
@@ -24,12 +24,14 @@ export const FrameAssembly: React.FC<FrameAssemblyProps> = ({ onPartExplore }) =
     <DiagramFrame title="تركيب الهيكل Frame" hint="اضغط أي جزء لمعرفة نصيحة التركيب">
       <svg viewBox="0 0 240 200" className="w-full">
         {/* arms — clickable */}
-        <g onClick={() => handleToggle('arms')} style={{ cursor: 'pointer' }} data-testid="frame-assembly-part-arms" stroke={sel === 'arms' ? C.cyan : 'rgba(34,211,238,0.45)'} strokeWidth={sel === 'arms' ? 8 : 6} strokeLinecap="round">
-          <line x1="120" y1="100" x2="50" y2="45" />
-          <line x1="120" y1="100" x2="190" y2="45" />
-          <line x1="120" y1="100" x2="50" y2="155" />
-          <line x1="120" y1="100" x2="190" y2="155" />
-        </g>
+        <HotSpot onActivate={() => handleToggle('arms')} active={sel === 'arms'} testId="frame-assembly-part-arms" label="أذرع الهيكل">
+          <g stroke={sel === 'arms' ? C.cyan : 'rgba(34,211,238,0.45)'} strokeWidth={sel === 'arms' ? 8 : 6} strokeLinecap="round">
+            <line x1="120" y1="100" x2="50" y2="45" />
+            <line x1="120" y1="100" x2="190" y2="45" />
+            <line x1="120" y1="100" x2="50" y2="155" />
+            <line x1="120" y1="100" x2="190" y2="155" />
+          </g>
+        </HotSpot>
         {/* motor mounting areas */}
         {[[50, 45], [190, 45], [50, 155], [190, 155]].map(([x, y], i) => (
           <g key={i}>
@@ -43,16 +45,16 @@ export const FrameAssembly: React.FC<FrameAssemblyProps> = ({ onPartExplore }) =
           fill="rgba(251,191,36,0.07)" stroke="rgba(251,191,36,0.35)" strokeWidth="1" strokeDasharray="3 2"/>
         <text x="120" y="142" textAnchor="middle" fill={C.amber} fontSize="8">بطارية</text>
         {/* center stack FC/ESC — clickable */}
-        <g onClick={() => handleToggle('base')} style={{ cursor: 'pointer' }} data-testid="frame-assembly-part-base">
+        <HotSpot onActivate={() => handleToggle('base')} active={sel === 'base'} testId="frame-assembly-part-base" label="القاعدة السفلية Base Plate">
           <rect x="95" y="75" width="50" height="50" rx="8" fill={C.frame} stroke={sel === 'base' ? C.cyan : C.stroke} strokeWidth={sel === 'base' ? 3 : 1.6} />
           {[[103, 83], [137, 83], [103, 117], [137, 117]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="2.5" fill="#64748b" />)}
           <text x="120" y="103" textAnchor="middle" fill={C.cyan} fontSize="8" fontWeight="bold" opacity="0.8">FC/ESC</text>
-        </g>
+        </HotSpot>
         {/* front direction mark — clickable */}
-        <g onClick={() => handleToggle('front')} style={{ cursor: 'pointer' }} data-testid="frame-assembly-part-front">
+        <HotSpot onActivate={() => handleToggle('front')} active={sel === 'front'} testId="frame-assembly-part-front" label="علامة الأمام">
           <path d="M120 75 l6 9 h-12 z" fill={sel === 'front' ? C.cyan : C.green} />
           <text x="120" y="68" textAnchor="middle" fill={C.green} fontSize="9">أمام</text>
-        </g>
+        </HotSpot>
       </svg>
       <DiagramInfo text={sel ? info[sel] : null} />
     </DiagramFrame>

@@ -468,7 +468,7 @@ export const edgeTxGimbalCalibration: EdgeTxPage = {
     'المعايرة تخبر الجهاز أين المنتصف وأين الطرفان لكل عصا. كل ضبط لاحق للحدود أو المركز يبني على نتيجتها، فهي تسبقه دائماً.',
   whenNeededAr:
     'عند جهاز جديد، بعد أي تغيير أو صيانة للعصي، وحين لا تعطي عصا مداها الكامل أو لا تعود إلى المنتصف.',
-  whereAr: `قوائم النظام ثم معايرة العصي (Radio ← Calibration). ${PATH_CAVEAT}`,
+  whereAr: `قوائم النظام ثم معايرة العصي (Radio ثم Calibration). ${PATH_CAVEAT}`,
   level: 'beginner',
   risk: 'warning',
   prerequisitesAr: ['المراوح منزوعة', 'الجهاز على سطح مستوٍ', 'رفع اليد عن العصي عند خطوة المنتصف'],

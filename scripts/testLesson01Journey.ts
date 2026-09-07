@@ -90,16 +90,24 @@ console.log('\n[5] All four required concept checks exist and each has exactly o
     ok(`checkpoint "${cp.id}" has exactly one correct option`, correctCount === 1);
     ok(`checkpoint "${cp.id}": every option (correct and incorrect) has feedback text`, cp.options.every(o => o.feedback && o.feedback.trim().length > 0));
   }
+  const REAR_SCENARIO_STAGE = def.stages.find(st => st.id === 'rearMotorScenario')!;
   const movementCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'movementPrediction')!.checkpoint;
   const correctMovementOption = movementCp.options.find(o => o.correct)!;
   const correctMovementText = correctMovementOption.text;
   const correctMovementFeedback = correctMovementOption.feedback;
-  ok('movement-prediction correct option text explicitly states the rear rises', correctMovementText.includes('يرتفع الجزء الخلفي'));
-  ok('movement-prediction correct option text explicitly states the front becomes relatively lower', correctMovementText.includes('الأمامي أخفض'));
-  ok('movement-prediction correct option text explicitly states the aircraft pitches forward', correctMovementText.includes('تنحني الطائرة للأمام'));
-  ok('movement-prediction feedback still conveys the rear-rises/front-lower/pitch-forward chain', correctMovementFeedback.includes('يرتفع الخلف') && correctMovementFeedback.includes('الأمام أخفض') && correctMovementFeedback.includes('تنحني الطائرة للأمام'));
-  ok('movement-prediction feedback adds the "what pushing the pitch stick means" angle instead of repeating stage 9 verbatim', correctMovementFeedback.includes('عصا') && correctMovementFeedback.includes('Pitch'));
-  ok('movement-prediction feedback is phrased differently from the option text (not a near-duplicate)', !correctMovementFeedback.includes('يرتفع الجزء الخلفي نسبيًا فيصبح الجزء الأمامي أخفض'));
+  ok('movement-prediction asks which motors to raise (the inverse of the worked example), not what happens',
+    movementCp.question.includes('أيّ المحركات') && movementCp.question.includes('تتراجع'));
+  ok('movement-prediction correct option names the front pair as the one to raise', correctMovementText.includes('المحركان الأماميان'));
+  ok('movement-prediction correct option states the resulting attitude (front up, rear down)',
+    correctMovementText.includes('يرتفع الأمام') && correctMovementText.includes('ينخفض الخلف'));
+  ok('movement-prediction correct option states the resulting movement (pitches back and retreats)',
+    correctMovementText.includes('تنحني للخلف') && correctMovementText.includes('تتراجع'));
+  ok('movement-prediction feedback still teaches the differential-thrust principle',
+    correctMovementFeedback.includes('فرق الدفع') && correctMovementFeedback.includes('الجهة المنخفضة'));
+  // Anti-leak guard: the previous stage walks the rear-motors case, so the answer to
+  // this question must not be findable by copying a sentence out of it.
+  ok('movement-prediction correct option is not a phrase lifted from the preceding worked example',
+    !JSON.stringify(REAR_SCENARIO_STAGE).includes(correctMovementText));
 }
 
 console.log('\n[6] Completion remains unavailable until every checkpoint has been engaged with (perfect answers not required)');
@@ -186,8 +194,11 @@ console.log('\n[11] Lesson 1 duration was corrected; Lessons 2-16 metadata is un
     'lesson-power-rails': '12 دقائق', 'lesson-tx-rx': '10 دقائق', 'lesson-pre-battery-safety': '12 دقائق',
     'lesson-frame-assembly': '20 دقائق', 'lesson-motor-install': '20 دقائق', 'lesson-esc-install': '15 دقائق',
     'lesson-fc-install': '15 دقائق', 'lesson-receiver-install': '12 دقائق', 'lesson-video-system': '12 دقائق',
+    'lesson-first-power-up': '18 دقيقة', 'lesson-betaflight-minimum': '25 دقيقة',
+    'lesson-propellers': '20 دقيقة',
+    'lesson-stick-control-first-flight': '20 دقائق',
   };
-  ok('Lessons 2-16 durations are byte-identical to before this correction (only Lesson 1 changed)',
+  ok('Lessons 2-20 durations are byte-identical to their authored values (only Lesson 1 was ever corrected)',
     otherLessons.every(l => expectedOtherDurations[l.id] === l.duration));
 }
 

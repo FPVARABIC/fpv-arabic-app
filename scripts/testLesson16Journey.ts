@@ -120,11 +120,11 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const rolesCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cameraVtxGogglesRoles')!.checkpoint;
   const rolesCorrect = rolesCp.options.find(o => o.correct)!;
-  ok('roles correct option names all three distinct roles', rolesCorrect.text.includes('تلتقط') && rolesCorrect.text.includes('يبثّها') && rolesCorrect.text.includes('تعرضه'));
+  ok('roles correct option names all three distinct roles', rolesCorrect.text.includes('من VTX') && rolesCorrect.text.includes('البث اللاسلكي'));
 
   const angleCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cameraAngleAndProtectionPrinciple')!.checkpoint;
   const angleCorrect = angleCp.options.find(o => o.correct)!;
-  ok('angle correct option names field-of-view and physical protection', angleCorrect.text.includes('مجال الرؤية') && angleCorrect.text.includes('حماية'));
+  ok('angle correct option names field-of-view and physical protection', angleCorrect.text.includes('مجال رؤية أقل فائدة') && angleCorrect.text.includes('عرضة للتلف'));
 
   const coolingCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'vtxCoolingAndReliabilityPrinciple')!.checkpoint;
   const coolingCorrect = coolingCp.options.find(o => o.correct)!;
@@ -132,7 +132,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const finalCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'antennaPowerAndInstallVsConfigPrinciple')!.checkpoint;
   const finalCorrect = finalCp.options.find(o => o.correct)!;
-  ok('final correct option names power matching, antenna requirement, and install-vs-config separation', finalCorrect.text.includes('مطابقة مصدر الطاقة') && finalCorrect.text.includes('هوائيه المخصص') && finalCorrect.text.includes('منفصل تمامًا'));
+  ok('final correct option names power matching, antenna requirement, and install-vs-config separation', finalCorrect.text.includes('وصّل الهوائي أولًا') && finalCorrect.text.includes('مطابقة جهد المنفذ') && finalCorrect.feedback.includes('الإعداد البرمجي'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');
@@ -231,8 +231,9 @@ console.log('\n[16] Lesson 16 is now the final lesson — its generic nextLesson
 {
   ok('lesson-motor-test no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-motor-test') === undefined);
   ok('lesson-first-flight no longer exists in lessonsData', lessonsData.find(l => l.id === 'lesson-first-flight') === undefined);
-  ok('lessonsData has exactly 16 lessons', lessonsData.length === 16);
-  ok('lesson-video-system (Lesson 16) is now the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-video-system');
+  ok('lessonsData has exactly 20 lessons (16 + the three setup/propeller lessons + the stick-control lesson)', lessonsData.length === 20);
+  ok('lesson-video-system (Lesson 16) is the sixteenth entry in lessonsData', lessonsData[15].id === 'lesson-video-system');
+  ok('lesson-stick-control-first-flight (Lesson 17) is the last entry in lessonsData', lessonsData[lessonsData.length - 1].id === 'lesson-stick-control-first-flight');
 
   // The completion stage's nextLessonBridge is a generic reusable template
   // (shared shape across every lesson's journey definition) — it is only ever

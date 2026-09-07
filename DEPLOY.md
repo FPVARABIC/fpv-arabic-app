@@ -51,6 +51,20 @@
 `vercel.json` في جذر المستودع يخبر Vercel بكل شيء، فلا تحتاج ضبط
 Root Directory ولا Build Command.
 
+### إن كان المشروع مضبوطاً على Root Directory = `web`
+
+هذا الوضع يعمل أيضاً، لكن بشرط واحد. حين يكون الجذر هو `web/`، يقرأ Vercel
+`web/vercel.json` ويتجاهل الذي في جذر المستودع، ويُثبّت الاعتماديات **داخل
+`web/` وحدها**. والنواة المشتركة في `../src` تستورد حزماً (firebase و
+browser-image-compression وlucide-react) لا تُحلّ إلا من `node_modules` جذر
+المستودع — لأن استيراداً داخل `src/` يبحث صعوداً من `src/`، ولا يمرّ بـ
+`web/node_modules` إطلاقاً. لذلك يحمل `web/vercel.json` أمر تثبيت يُثبّت مانيفست
+الجذر أولاً ثم مانيفست `web`. بدونه يفشل البناء عند
+«Module not found: Can't resolve 'firebase/storage'».
+
+لا تُضِف تلك الحزم إلى `web/package.json` لإسكات الخطأ: ذلك يخلق نسخة ثانية من
+Firebase، والسبب مشروح في رأس `web/next.config.ts`.
+
 ---
 
 ## الطريقة الثالثة: على جهازك

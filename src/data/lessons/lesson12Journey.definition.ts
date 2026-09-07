@@ -21,6 +21,7 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
   lessonId: 'lesson-motor-install',
   readinessOrder: [
     'checkpoint-whyScrewLengthMatters',
+    'motorMountDiagram',
     'checkpoint-correctScrewChoice',
     'checkpoint-tighteningPrinciple',
     'checkpoint-whyRoutingAndPinchPointsMatter',
@@ -42,6 +43,29 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
       type: 'explanation',
       title: 'تركيب المحركات: نظرة عامة',
       body: 'lesson-explanation',
+    },
+    {
+      // Curriculum expansion, phase 1: KV is RETRIEVED here. Lesson 4 defined
+      // it and Lesson 5 practised it on paper; this is the first time the
+      // learner reads it off a part in their own hand, which is what makes it
+      // stick. The arithmetic waits until now on purpose — 6S ~ 22.2V is
+      // taught in Lesson 6, so this is the earliest point it is legal to use.
+      //
+      // "بلا حِمل" rather than "بلا مروحة": propellers are deliberately out of
+      // scope for this lesson, and no-load is the more exact term anyway.
+      id: 'readTheMotorLabel',
+      type: 'explanation',
+      title: 'قبل المفكّ: اقرأ ما هو مكتوب على محركك',
+      body:
+        'قبل أن تمسك المفكّ، اقلب المحرك واقرأ ما هو مطبوع عليه. ستجد رقمين مرّا بك في الدرسين الرابع والخامس، ' +
+        'وهذه أول مرة تراهما على قطعة في يدك لا في جدول. الرقم الأول هو المقاس، مثل 2306، وهو الذي جعل هذا ' +
+        'المحرك مناسبًا للفريم الذي اخترتَه. والرقم الثاني هو KV، مثل 1700KV، وهو عدد الدورات النظرية في الدقيقة ' +
+        'لكل فولت واحد والمحرك بلا حِمل — أي دون أي شيء مركّب على محوره يقاوم دورانه. ' +
+        'وجرّب الحساب مرة واحدة الآن لتفهم لماذا نصرّ على كلمة "نظري": محرك 1700KV على بطارية 6S (نحو 22.2V كما ' +
+        'عرفتَ في الدرس السادس) يعطي رقمًا يتجاوز 37 ألف دورة في الدقيقة. محرّكك لن يقترب من هذا الرقم أبدًا وهو ' +
+        'يحمل حِملاً حقيقيًا؛ الرقم يصف المحرك وحده، لا الطائرة وهي تطير. ' +
+        'وفائدة قراءتهما الآن عملية جدًا: هذان الرقمان هما ما ستبحث به عن قطعة بديلة إن تلف هذا المحرك يومًا، ' +
+        'وهما ما يجب أن يتطابق بين المحركات الأربعة جميعًا قبل أن تبدأ التثبيت.',
     },
     {
       id: 'screwLengthExplanation',
@@ -68,7 +92,7 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'لأن مسمارًا طويلاً جدًا قد يلامس ملفات المحرك الداخلية ويتلفها، بينما مسمارًا قصيرًا جدًا قد لا يثبّت المحرك بثبات.',
+            text: 'لأن الطويل جدًا قد يلامس ملفات المحرك ويتلفها، والقصير جدًا لا يثبّته.',
             feedback: 'صحيح تمامًا! كلا الطرفين يسببان مشكلة حقيقية: التلامس مع الملفات في حالة الطول الزائد، وعدم الثبات في حالة القصر الزائد.',
           },
           {
@@ -101,6 +125,25 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
         'في المقابل، مسمار قصير جدًا لا يُمسك عددًا كافيًا من اللفات داخل الفتحة، فلا يثبّت المحرك بثبات حتى مع الشد ' +
         'الكامل. النتيجة المحتملة: محرك مهتز أو غير ثابت تمامًا في مكانه أثناء الطيران. ليس كل قِصَر آمنًا لمجرد أن ' +
         'المسمار "أمسك بضع لفات" — يجب أن يكون الإمساك كافيًا لتثبيت حقيقي.',
+    },
+    {
+      // Added for the lessons rebuild: MotorMount.tsx gained an explore
+      // callback, so the two screw cases are opened by the learner.
+      id: 'motorMountDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح حالتَي المسمار على المخطّط',
+      diagramType: 'motor-mount',
+      instructions:
+        'اضغط الحالة الصحيحة ثم الخاطئة. الفرق مليمتران — ونتيجته محرك محترق في أول طيران، لا على الطاولة.',
+      requiredVariants: ['correct', 'wrong'],
+      requirementLabel: 'فتح حالتَي المسمار على المخطّط: الصحيح والخاطئ',
+      hints: {
+        none: 'ابدأ بالحالة الصحيحة — كيف يُحسب الطول.',
+        partial: {
+          correct: 'قرأتَ الصحيح. افتح الخاطئ لتعرف لماذا لا يظهر الضرر على الطاولة.',
+          wrong: 'قرأتَ الخاطئ. افتح الصحيح لتعرف القاعدة العملية للطول.',
+        },
+      },
     },
     {
       id: 'correctChoiceCheckpoint',
@@ -238,7 +281,7 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'لا؛ يجب إعادة توجيه السلك بعيدًا عن الحافة الحادة الآن، قبل أن يتلف لاحقًا بسبب الاحتكاك أو الاهتزاز.',
+            text: 'لا؛ أعد توجيه السلك بعيدًا عن الحافة الآن قبل أن يتلف بالاحتكاك.',
             feedback: 'صحيح تمامًا! تجنّب الحواف الحادة ونقاط الانحصار من البداية أسهل بكثير من التعامل مع سلك تالف لاحقًا.',
           },
           {
@@ -261,6 +304,7 @@ export const lesson12JourneyDefinition: LessonJourneyDefinition = {
       intro: 'حاول تذكّر معنى كل مصطلح بنفسك أولاً، ثم اضغط "اعرض التعريف" للتأكد.',
       terms: [
         { term: 'طول المسمار المناسب', definition: 'طول يمسك عددًا كافيًا من اللفات لتثبيت حقيقي دون الوصول إلى ملفات المحرك الداخلية؛ يختلف حسب الفريم والمحرك.' },
+        { term: 'رقما المحرك: المقاس وKV', definition: 'رقمان مطبوعان على كل محرك: المقاس (مثل 2306) الذي يربطه بحجم الفريم، وKV (مثل 1700KV) وهو الدورات النظرية في الدقيقة لكل فولت والمحرك بلا حِمل — وبهما تبحث عن بديل مطابق.' },
         { term: 'ملفات المحرك (Windings)', definition: 'الأسلاك النحاسية الداخلية للمحرك؛ تلامسها مع مسمار طويل قد يسبب تلفًا كهربائيًا.' },
         { term: 'الشد المعتدل والمتساوي للمحرك', definition: 'شد كل مسامير المحرك بقوة متقاربة تكفي لمنع الحركة، دون شد زائد يجهد التثبيت.' },
         { term: 'موضع المحرك واتجاهه المقصود', definition: 'كل موضع من المواضع الأربعة له اتجاه دوران مقصود يتحدد حسب مكانه، يُحترَم عند التركيب الفيزيائي هنا؛ التحقق البرمجي لاحقًا.' },

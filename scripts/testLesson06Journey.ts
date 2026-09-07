@@ -123,7 +123,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const hvCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'higherVoltageNotAlwaysBetter')!.checkpoint;
   const hvCorrect = hvCp.options.find(o => o.correct)!;
-  ok('higher-voltage correct option explicitly ties to matching the rest of the components', hvCorrect.text.includes('يتطابق'));
+  ok('higher-voltage correct option explicitly ties to matching the rest of the components', hvCorrect.text.includes('يطابق') && hvCorrect.text.includes('بقية القطع'));
 
   const rpCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'reversePolarityRealDamage')!.checkpoint;
   const rpCorrect = rpCp.options.find(o => o.correct)!;

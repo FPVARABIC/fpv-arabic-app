@@ -46,7 +46,7 @@ export const troubleshootingData: TroubleshootingItem[] = [
     problem: 'GPS لا يأخذ Fix',
     symptoms: ['لا يوجد GPS indicator في OSD', 'عدد الأقمار صفر أو واحد'],
     causes: ['الطائرة في الداخل أو بجانب مبانٍ', 'GPS قريب من ESC أو أسلاك الطاقة', 'UART خاطئ أو baud rate خاطئ', 'لم تنتظر كافيًا'],
-    steps: ['اخرج إلى مكان مفتوح بعيد عن المباني', 'ابعد GPS عن ESC وأسلاك الطاقة', 'تحقق من UART و baud rate', 'انتظر 2-5 دقائق للـ Cold Start', 'تأكد من تفعيل GPS في Betaflight Configuration'],
+    steps: ['اخرج إلى مكان مفتوح بعيد عن المباني', 'ابعد GPS عن ESC وأسلاك الطاقة', 'تحقق من UART و baud rate', 'انتظر من 2 إلى 5 دقائق للـ Cold Start', 'تأكد من تفعيل GPS في Betaflight Configuration'],
     safetyNote: 'لا تعتمد على GPS وحده للـ Failsafe في المناطق المزدحمة',
   },
 ];

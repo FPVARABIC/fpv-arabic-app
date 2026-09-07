@@ -6,16 +6,11 @@
  * Uses only stage types already defined in src/types/lessonJourney.ts —
  * no engine, renderer, or stage-system change was needed for this lesson.
  *
- * Like Lesson 09, this lesson has NO interactive_diagram stage: its existing
- * diagram (SafetyBeforeBattery.tsx) is entirely passive (no useReveal, no
- * click handlers, no state, no callback extension point), and inventing new
- * interaction for it would violate the standing rule against adding
- * interactivity to a diagram that doesn't already have any. The correct
- * sequence vs. unsafe-shortcut contrast the diagram illustrates is instead
- * taught through a `comparison` stage (see `sequenceComparisonStage` below).
- * SafetyBeforeBattery.tsx is therefore left completely untouched and becomes
- * an unreferenced (retained, not deleted) dead-code candidate once this
- * lesson is journey-routed, mirroring TxRxCross.tsx's status after Lesson 09.
+ * This lesson's diagram (SafetyBeforeBattery.tsx) was passive when the lesson
+ * was written, so the definition originally had no interactive_diagram stage.
+ * The lessons rebuild gave the diagram an explore callback and this definition
+ * an interactive stage (`safetyProtocolDiagram`) — the safety lesson was the
+ * one that most deserved it.
  */
 import type { LessonJourneyDefinition } from '../../types/lessonJourney';
 
@@ -25,6 +20,7 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
     'checkpoint-propellerRemovalTiming',
     'checkpoint-smokeStopperMechanism',
     'checkpoint-continuityReadingInterpretation',
+    'safetyProtocolDiagram',
     'checkpoint-bothChecksRequired',
     'recall',
   ],
@@ -59,30 +55,30 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
     {
       id: 'propellerCheckpoint',
       type: 'checkpoint',
-      title: 'تأكد من فهمك: متى يجب نزع المراوح؟',
+      title: 'قرّر الآن: أول توصيل للبطارية على الطاولة',
       checkpoint: {
         id: 'propellerRemovalTiming',
-        question: 'متى يجب التأكد من عدم تركيب المراوح؟',
+        question: 'ستوصّل البطارية على الطاولة لأول مرة لتتأكد من صحة التوصيلات فقط، ولن تطير اليوم. ما الأنسب أن تفعله؟',
         options: [
           {
             id: 'a', correct: false,
-            text: 'فقط قبل أول رحلة طيران فعلية.',
-            feedback: 'يجب نزع المراوح قبل أي اختبار كهربائي على الطاولة أيضًا، وليس فقط قبل الطيران؛ خطر الدوران غير المتوقع موجود من أول توصيل للبطارية.',
+            text: 'وصّل مباشرة؛ فنزع المراوح شرط للطيران لا للاختبار على الطاولة.',
+            feedback: 'الخطر يبدأ من أول توصيل للبطارية لا من لحظة الإقلاع؛ محرك واحد يدور فجأة يكفي لإصابة حقيقية على الطاولة.',
           },
           {
             id: 'b', correct: true,
-            text: 'قبل أي توصيل للبطارية أثناء الاختبار على الطاولة، وليس فقط قبل الطيران.',
-            feedback: 'صحيح تمامًا! أي توصيل للبطارية قد يؤدي إلى دوران غير متوقع لمحرك بسبب خطأ توصيل أو خلل، لذا نزع المراوح إلزامي من أول اختبار.',
+            text: 'انزع المراوح أولًا؛ فأي توصيل للبطارية قد يُدير محركًا فجأة ولو بدا التوصيل سليمًا.',
+            feedback: 'صحيح تمامًا! نزع المراوح خطوة أمان مستقلة تمامًا عن مدى ثقتك بصحة التوصيل، ومكانها قبل البطارية لا بعدها.',
           },
           {
             id: 'c', correct: false,
-            text: 'لا داعي لنزعها إذا كنت متأكدًا من صحة التوصيل.',
-            feedback: 'الثقة بصحة التوصيل ليست بديلاً عن نزع المراوح؛ حتى التوصيل الذي يبدو صحيحًا قد يحتوي خطأ غير ظاهر.',
+            text: 'راجع التوصيلات بعينك مرة أخرى؛ فإن بدت سليمة فلا حاجة لنزع المراوح.',
+            feedback: 'الفحص بالعين لا يكشف كل خطأ؛ خلل في ESC أو حركة عصا غير مقصودة قد يُدير محركًا رغم أن كل شيء يبدو سليمًا.',
           },
           {
             id: 'd', correct: false,
-            text: 'فقط عند تركيب المحركات لأول مرة.',
-            feedback: 'الأمر يتعلق بكل اختبار كهربائي تجريه، وليس فقط لحظة تركيب المحركات لأول مرة.',
+            text: 'اترك المراوح وأمسك الطائرة بيدك بإحكام حتى لا تتحرك إن دار محرك.',
+            feedback: 'إمساك طائرة بمروحة دائرة خطر مباشر على يدك؛ الحل نزع المراوح، لا تثبيت الطائرة مع بقائها مركّبة.',
           },
         ],
       },
@@ -95,7 +91,11 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
         'Smoke Stopper جهاز بسيط يوصَل بين البطارية والدائرة، ويتكوّن من مقاومة تحدّ من التيار مع لمبة مؤشر. إذا كان ' +
         'هناك قصر كهربائي أو خلل كبير، فإن المقاومة تحدّ من التيار المتدفق (فتقلل احتمال الاحتراق الفوري)، وتضيء ' +
         'اللمبة بشدة كتنبيه بصري. المهم: Smoke Stopper ليس قاطعًا تلقائيًا — هو لا يفصل الكهرباء بنفسه؛ أنت من يجب ' +
-        'أن يراقب اللمبة ويفصل التوصيل يدويًا إذا أضاءت بشدة.',
+        'أن يراقب اللمبة ويفصل التوصيل يدويًا إذا أضاءت بشدة. ' +
+        'وهنا يصبح التيار ملموسًا لأول مرة بدل أن يبقى مفهومًا: في الدرس السادس كان كميةً تتدفق بحسب ما تطلبه ' +
+        'القطعة المتصلة، وفي الدرس الرابع كان رقمًا مكتوبًا على ESC يجب ألّا تتجاوزه. أما هنا فهو شيء تحدّه أنت ' +
+        'عمدًا قبل أن تعرف إن كانت دائرتك سليمة أصلاً — لأن التوصيل الأول هو اللحظة الوحيدة التي لا تملك فيها ' +
+        'أي دليل بعد.',
     },
     {
       id: 'smokeStopperWorkedExample',
@@ -121,7 +121,7 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'يحدّ من التيار عبر مقاومة، وتضيء لمبة مؤشر بشدة لتنبيهك؛ يجب عليك أنت فصل التوصيل يدويًا.',
+            text: 'يحدّ من التيار عبر مقاومة وتضيء لمبة تنبيه؛ والفصل يدويًا يبقى عليك.',
             feedback: 'صحيح تمامًا! هذا بالضبط ما يفعله: تحديد التيار كحماية مؤقتة، مع تنبيه بصري يتطلب منك التصرف يدويًا.',
           },
           {
@@ -173,7 +173,7 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'على الأرجح يوجد قصر كهربائي في التوصيل؛ يجب عدم توصيل البطارية والتحقق أولاً.',
+            text: 'على الأرجح يوجد قصر كهربائي؛ لا توصّل البطارية قبل التحقق منه.',
             feedback: 'صحيح تمامًا! هذان المساران يجب ألا يكونا متصلين مباشرة؛ القراءة القريبة من الصفر تحذير حقيقي يستدعي التوقف والتحقق.',
           },
           {
@@ -210,6 +210,28 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
       footer:
         'الترتيب هنا ليس تفصيلاً شكليًا؛ كل خطوة تكتشف نوعًا مختلفًا من المشاكل، وتخطي أي خطوة يزيد الخطر حتى لو ' +
         'بدت الخطوات السابقة طبيعية تمامًا.',
+    },
+    {
+      // Added for the lessons rebuild: SafetyBeforeBattery.tsx gained an
+      // explore callback. The protocol the previous stage compared is now
+      // opened step by step, and the learner reads what each step alone catches.
+      id: 'safetyProtocolDiagram',
+      type: 'interactive_diagram',
+      title: 'افتح خطوات البروتوكول الأربع: ماذا تكتشف كلٌّ منها وحدها',
+      diagramType: 'safety-before-battery',
+      instructions:
+        'اضغط كل خطوة بالترتيب. لكل خطوة شيء تكتشفه لا تكتشفه غيرها — وهذا هو الجواب على «لماذا لا يكفي واحد منها».',
+      requiredVariants: ['no-props', 'smoke-stopper', 'multimeter', 'battery'],
+      requirementLabel: 'استكشاف خطوات البروتوكول الأربع على المخطّط',
+      hints: {
+        none: 'ابدأ بالخطوة الأولى: لا مراوح مركبة.',
+        partial: {
+          'no-props': 'المراوح منزوعة. تابع إلى Smoke Stopper.',
+          'smoke-stopper': 'Smoke Stopper مفهوم. تابع إلى المقياس — يلتقط ما لا يلتقطه.',
+          multimeter: 'المقياس مفهوم. بقيت الخطوة الأخيرة: البطارية — وهي آخر شيء لا أوّله.',
+          battery: 'وصلتَ إلى البطارية. ارجع واقرأ أي خطوة تخطّيتها.',
+        },
+      },
     },
     {
       id: 'bothChecksCheckpoint',
@@ -296,7 +318,9 @@ export const lesson10JourneyDefinition: LessonJourneyDefinition = {
         'أصبحتَ الآن تفهم أن نزع المراوح إلزامي قبل أي اختبار كهربائي على الطاولة، وأن Smoke Stopper يحدّ من التيار ' +
         'وينبهك عبر لمبة مؤشر دون أن يفصل الكهرباء تلقائيًا. وتعرف أن قراءة المقاومة القريبة من الصفر بين VBAT وGND ' +
         'تشير عادة إلى قصر كهربائي، بينما القراءة العالية هي النتيجة الآمنة المتوقعة. وتعلّمتَ أن كلا الفحصين ' +
-        'ضروريان معًا، وأن الترتيب والثقة ليست بديلاً عن اتباع كل خطوة.',
+        'ضروريان معًا، وأن الترتيب والثقة ليست بديلاً عن اتباع كل خطوة. ' +
+        'واحفظ هذا البروتوكول كما هو ولا تتركه هنا: ستعود إليه وتنفّذه خطوة بخطوة عند أول توصيل طاقة بعد اكتمال ' +
+        'التركيب، وهو أول اختبار حقيقي لكل ما ستركّبه في الدروس القادمة.',
       nextLessonBridge: (nextLesson) =>
         `أصبحتَ الآن جاهزًا للتحقق الكهربائي الآمن قبل أي تشغيل. في الدرس التالي، "${nextLesson.title}"، ستتعرف ` +
         `على ${nextLesson.description}.`,

@@ -72,6 +72,53 @@ export const DiagramWarn: React.FC<{ children: React.ReactNode; tone?: 'danger' 
   </div>
 );
 
+/**
+ * A tappable part of a diagram — and a keyboard-operable one.
+ *
+ * WHY IT EXISTS
+ * -------------
+ * Every diagram used to hang `onClick` on a bare `<g>`, `<rect>` or `<line>`.
+ * A mouse and a finger reached them; a keyboard did not, and neither did a
+ * screen reader, because an SVG shape has no role, no name and no tab stop.
+ * Seven lessons gate their completion on exploring such a shape, so a learner
+ * who does not use a pointer could not finish them at all.
+ *
+ * Wrapping the shape in this component gives it the three things it was
+ * missing — a role, an accessible name, and Enter/Space activation — without
+ * touching how it is drawn or how it is tested: `data-testid` moves onto the
+ * wrapper, and the shapes inside it are unchanged.
+ *
+ * `aria-pressed` is here because these are toggles: tapping the selected part
+ * again clears the reveal panel (see `useReveal`).
+ */
+export const HotSpot: React.FC<{
+  onActivate: () => void;
+  /** What a screen reader announces. Say the part, not «اضغط هنا». */
+  label: string;
+  active?: boolean;
+  testId?: string;
+  children: React.ReactNode;
+}> = ({ onActivate, label, active = false, testId, children }) => (
+  <g
+    role="button"
+    tabIndex={0}
+    aria-label={label}
+    aria-pressed={active}
+    data-testid={testId}
+    className="diagram-hotspot"
+    style={{ cursor: 'pointer' }}
+    onClick={onActivate}
+    onKeyDown={e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onActivate();
+      }
+    }}
+  >
+    {children}
+  </g>
+);
+
 /** Hook for single-select interactive diagrams. */
 export function useReveal<T extends string>() {
   const [sel, setSel] = React.useState<T | null>(null);

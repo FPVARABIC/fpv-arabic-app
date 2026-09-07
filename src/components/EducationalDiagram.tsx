@@ -16,6 +16,10 @@ import { EscPlacement } from './diagrams/EscPlacement';
 import { FcOrientation } from './diagrams/FcOrientation';
 import { ReceiverUart } from './diagrams/ReceiverUart';
 import { CameraVtx } from './diagrams/CameraVtx';
+import { StickControl } from './diagrams/StickControl';
+import { PrePowerCheck } from './diagrams/PrePowerCheck';
+import { MotorTestCheck } from './diagrams/MotorTestCheck';
+import { PropDirection } from './diagrams/PropDirection';
 
 const registry: Record<DiagramType, React.FC> = {
   'quad-x-layout': QuadXLayout,
@@ -34,6 +38,10 @@ const registry: Record<DiagramType, React.FC> = {
   'fc-orientation': FcOrientation,
   'receiver-uart': ReceiverUart,
   'camera-vtx': CameraVtx,
+  'pre-power-check': PrePowerCheck,
+  'motor-test-check': MotorTestCheck,
+  'prop-direction': PropDirection,
+  'stick-control': StickControl,
 };
 
 interface Props { type: DiagramType; }

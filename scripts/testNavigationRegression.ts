@@ -11,7 +11,27 @@
  */
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { chromium, type Page, type Browser } from 'playwright';
+
+/**
+ * Where Chromium is — asked, not assumed.
+ *
+ * The sandbox this repository is developed in ships a browser at a fixed path
+ * and points PLAYWRIGHT_BROWSERS_PATH at it. A CI runner has no such path: it
+ * expects Playwright to resolve the browser Playwright itself installed.
+ * Hard-coding the sandbox path meant this suite could pass only here — on
+ * GitHub Actions it died at launch, «Failed to launch chromium because
+ * executable doesn't exist at /opt/pw-browsers/chromium», before running a
+ * single assertion.
+ */
+const SANDBOX_CHROMIUM = '/opt/pw-browsers/chromium';
+function chromiumLaunchOptions(): { executablePath?: string } {
+  const explicit = process.env.PW_CHROMIUM?.trim();
+  if (explicit) return { executablePath: explicit };
+  if (existsSync(SANDBOX_CHROMIUM)) return { executablePath: SANDBOX_CHROMIUM };
+  return {}; // let Playwright use the browser it downloaded
+}
 
 const PORT = 4382;
 const BASE = `http://localhost:${PORT}`;
@@ -69,7 +89,7 @@ const ORIGINAL_TABS: { testid: string; path: string; label: string }[] = [
 
 async function main() {
   let server: ChildProcess | null = null;
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await chromium.launch(chromiumLaunchOptions());
   const consoleErrors: string[] = [];
 
   try {
