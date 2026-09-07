@@ -4,43 +4,48 @@
  * WHY THIS IS ITS OWN FILE AND NOT PART OF `siteNav.ts`
  * -----------------------------------------------------
  * `siteNav.ts` is the site MAP: every destination, with its blurb, its auth
- * requirement and its role. This is the TAB BAR: the seven places a person
- * navigates between constantly, in the order the phone app puts them, with the
- * icon the phone app uses. They are different lists with different jobs, and
- * merging them is how the tab bar ends up with eleven entries.
+ * requirement and its role. This is the TAB BAR: the six places a person
+ * navigates between constantly, with the icon the phone app uses. They are
+ * different lists with different jobs, and merging them is how the tab bar ends
+ * up with eleven entries.
  *
- * WHAT IS COPIED AND WHAT IS NOT
- * ------------------------------
- * Order, labels and icons are copied from `src/components/BottomNavigation.tsx`
- * exactly, because that recognition is the entire point of this work: somebody
- * with the app open must not have to read the bar to use it.
+ * THE ORDER, AND WHO DECIDED IT
+ * -----------------------------
+ * Fixed by the owner, and it is the whole point of this list:
  *
- * One entry differs, and it is the one the shop's owner asked for. The phone's
- * seventh tab is «التجميع» — a step-by-step assembly flow built around a phone
- * held in one hand while the other holds a soldering iron. The web's tab is
- * «المتجر».
+ *   الرئيسية · الدروس · الموسوعة · البناء · المشاريع · المتجر
  *
- * THE ORDER, AND WHY IT IS NOT THE PHONE'S
- * ----------------------------------------
- * «المجتمع» is second, by instruction: it is one of the platform's load-bearing
- * pillars and was buried at position six. After it the order follows what a
- * person is actually doing — talking to other pilots, buying the part, setting
- * it up in software, reading why, and only then opening their own build:
+ * It reads as the arc a person actually walks: learn the path, look a thing up,
+ * build the aircraft, see what others built with it, buy what is missing. The
+ * order is identical on the header bar and the phone bar because both render
+ * from THIS array through one component — there is no second list that could
+ * drift, and `scripts/testNavOrder.ts` pins the sequence id by id.
  *
- *   الرئيسية · المجتمع · المتجر · البرامج · الموسوعة · مشروعي
+ * «البناء» IS BACK, AND WHY IT WAS GONE
+ * -------------------------------------
+ * The phone app has carried «البناء» in its bottom bar all along (`/roadmap`).
+ * The web never had a build route: the stages were rendered only inside
+ * `/project` — «مشروعي» — as one tab of a private, `noindex`, client-only
+ * workspace that shows nothing at all until the reader has created a project.
+ * So the section existed, the content existed, and there was no door. There is
+ * one now: `/build`, which renders the same component from the same data. It
+ * sits directly after «الموسوعة» and before «المشاريع», by instruction.
  *
- * The encyclopedia moves down deliberately. It is the largest section, and
- * being largest is exactly why it kept reading as the whole product — the brief
- * was «لا تجعل الموسوعة تهيمن بصرياً على بقية المنصة». Nothing was removed from
- * it; it simply stops being the first thing every surface points at.
+ * WHAT IS NOT ON THIS BAR, AND IS NOT DELETED
+ * -------------------------------------------
+ * «المجتمع» and «البرامج» are not tabs. That is a NAVIGATION decision and
+ * nothing more — `/community` and `/programming` still exist, still build,
+ * still carry every page they carried, are still in `siteNav.ts`, and are still
+ * reached from search, from the encyclopedia's links and from their own routes.
+ * Nothing about either section was removed, so putting either back is one line
+ * in this array. The bar is six entries because the owner named six.
  *
  * WHY THERE IS NO SEARCH TAB
  * --------------------------
  * There was one, and it duplicated the field in the header — two controls, one
  * destination, on a bar where every slot is contested. Search is a TOOL, not a
  * section: it is reachable from every page through the header field, which is
- * now a real field on a phone too rather than an icon. Removing the tab also
- * buys the remaining six tabs ~11% more width each at 390px.
+ * a real field on a phone too rather than an icon.
  *
  * `activeMatch` mirrors the app's `activeMatchPrefixes`: the encyclopedia tab
  * stays lit while you are in the glossary or diagnostics, because those are the
@@ -50,7 +55,7 @@
  */
 
 import {
-  House, BookOpen, Hammer, Wrench, Library, CircuitBoard, Store,
+  House, BookOpen, Hammer, Wrench, Library, Store,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -71,22 +76,24 @@ export interface NavTab {
 export const NAV_TABS: NavTab[] = [
   { id: 'home', labelAr: 'الرئيسية', href: '/', Icon: House },
   /*
-   * «الدروس», the seventh tab, right after home.
+   * «الدروس», right after home.
    *
    * Added in the lessons rebuild (docs/LESSONS-REBUILD-PLAN.md). The first
    * tester's first note was that the lessons and their quizzes had vanished
    * from the new site; they had — the phone app carried them and nothing
    * deployed the phone app. The tab uses the phone's icon so a returning
-   * learner recognises it without reading. Seven tabs is what the phone bar
-   * already holds, so the width cost is known.
+   * learner recognises it without reading.
    */
   { id: 'lessons', labelAr: 'الدروس', href: '/lessons', Icon: BookOpen },
-  { id: 'community', labelAr: 'المجتمع', href: '/community', Icon: Wrench },
-  { id: 'store', labelAr: 'المتجر', href: '/store', Icon: Store },
-  { id: 'programming', labelAr: 'البرامج', href: '/programming', Icon: CircuitBoard,
-    activeMatch: ['/programming', '/betaflight'] },
   { id: 'kb', labelAr: 'الموسوعة', href: '/kb', Icon: Library,
     activeMatch: ['/kb', '/glossary', '/diagnose'] },
+  /*
+   * «البناء» — the build guide, restored as a section of its own.
+   *
+   * `Wrench` is the phone app's own icon for this tab (`BottomNavigation.tsx`),
+   * kept so somebody with the app open recognises the bar without reading it.
+   */
+  { id: 'build', labelAr: 'البناء', href: '/build', Icon: Wrench },
   { id: 'projects', labelAr: 'المشاريع', href: '/projects', Icon: Hammer,
     // «مشروعي» — the reader's OWN build — keeps its route and is reachable from
     // the home page and the account rail. It is not deleted and not merged: one
@@ -94,6 +101,7 @@ export const NAV_TABS: NavTab[] = [
     // of builds to learn from, and a tab bar with both is a tab bar that makes
     // somebody read it.
     activeMatch: ['/projects', '/project'] },
+  { id: 'store', labelAr: 'المتجر', href: '/store', Icon: Store },
 ];
 
 /**

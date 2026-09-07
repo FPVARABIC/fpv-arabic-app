@@ -127,18 +127,23 @@ console.log('\n[2] Search: one door, not three');
 /* ── 3. The home page is not the encyclopedia ─────────────────────────────── */
 console.log('\n[3] The home page is a platform entrance, not a second encyclopedia');
 {
-  // FIVE, not four. المشاريع became a section with its own tab, and the home
-  // page carried four pillars for a while afterwards — so a visitor could read
-  // the whole page, then meet a sixth tab on the bar that the page had never
-  // mentioned. The count is pinned here so the next section to be added has to
-  // pass through this line rather than being forgotten.
+  // FIVE, and they are the tab bar minus «الرئيسية». The page carried four
+  // pillars for a while after the bar grew — so a visitor could read the whole
+  // page, then meet a tab on the bar the page had never mentioned. The count is
+  // pinned here so the next section to be added has to pass through this line
+  // rather than being forgotten. Membership and order live in
+  // `scripts/testNavOrder.ts`; this file checks the SHIPPED html.
   const pillars = [...new Set([...home.html.matchAll(/home-pillar-(\w+)/g)].map(m => m[1]))];
   ok('all five pillars are present', pillars.length === 5, pillars.join(' · '));
-  ok('…community among them', pillars.includes('community'));
-  ok('…store among them', pillars.includes('store'));
-  ok('…the software centre among them', pillars.includes('programming'));
+  ok('…the lessons among them', pillars.includes('lessons'));
   ok('…the encyclopedia among them', pillars.includes('kb'));
+  ok('…the build guide among them', pillars.includes('build'));
   ok('…the project library among them', pillars.includes('projects'));
+  ok('…store among them', pillars.includes('store'));
+  // Off the bar and off this row, by instruction — and not deleted: both
+  // sections still build and still answer on their own routes.
+  ok('no community card', !pillars.includes('community'));
+  ok('no software-centre card', !pillars.includes('programming'));
 
   // Every section on the tab bar must appear on the page. This is the rule the
   // count above is a shorthand for, and it is the one that actually matters.
@@ -170,10 +175,10 @@ console.log('\n[3] The home page is a platform entrance, not a second encycloped
 
   // The visitor's questions must each have a visible answer.
   for (const [q, needle] of [
-    ['where do I interact', 'المجتمع'],
+    ['where do I learn a path', 'الدروس'],
+    ['where do I look something up', 'الموسوعة'],
+    ['where do I build', 'البناء'],
     ['where do I buy', 'المتجر'],
-    ['where do I learn', 'الموسوعة'],
-    ['where are the programs', 'البرامج'],
     ['where do I start', 'من أين تبدأ'],
     ['what is my project', 'مشروعي'],
   ]) {

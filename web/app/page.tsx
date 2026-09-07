@@ -1,13 +1,13 @@
 import Link from 'next/link';
-import { BookOpen, Wrench, Store, CircuitBoard, Library, Hammer, type LucideIcon } from 'lucide-react';
+import { BookOpen, Wrench, Store, Library, Hammer, type LucideIcon } from 'lucide-react';
 import { allKbModules } from '@core/data/kb/registry';
 import { allDxTrees } from '@core/data/kb/diagnostics/trees';
 import { kbTerms } from '@core/data/kb/glossary/terms';
 import { STORE_PRODUCTS } from '@core/data/store/catalogue';
 import { STORE_CATEGORIES } from '@core/data/store/categories';
 import { lessonsData } from '@core/data/lessonsData';
+import { roadmapData } from '@core/data/roadmapData';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
-import { HUB_TOTALS } from '@/lib/softwareHub';
 import { href } from '@/lib/webRoutes';
 import { navItem } from '@/lib/siteNav';
 import { BRAND_NAME } from '@core/data/brand';
@@ -48,11 +48,16 @@ function sectionHref(id: string): string {
  * way «وزناً متقارباً» survives contact with later changes.
  *
  * The order follows the navigation bar, so the page and the bar teach the same
- * shape: المجتمع · المتجر · البرامج · الموسوعة · المشاريع. That correspondence
- * is now checked rather than remembered — this page carried four pillars for a
- * while after the bar grew to six tabs, and a visitor who meets a section on
- * the bar that the page never mentioned has been told, quietly, that the page
- * is not a map of the platform. That is the one job it has.
+ * shape: الدروس · الموسوعة · البناء · المشاريع · المتجر. That correspondence is
+ * checked rather than remembered — this page carried four pillars for a while
+ * after the bar grew, and a visitor who meets a section on the bar that the
+ * page never mentioned has been told, quietly, that the page is not a map of
+ * the platform. That is the one job it has.
+ *
+ * «المجتمع» and «البرامج» have no card here for the same reason they have no
+ * tab: the owner named five sections for this row and neither is among them.
+ * Neither section was touched — `/community` and `/programming` build, work and
+ * stay in `siteNav.ts`; they are simply not what this page leads with today.
  *
  * WHAT IS DELIBERATELY NOT ON THIS PAGE
  * -------------------------------------
@@ -64,8 +69,8 @@ function sectionHref(id: string): string {
  *
  * EVERY NUMBER IS COUNTED, NONE IS WRITTEN
  * ----------------------------------------
- * `STORE_PRODUCTS.length`, `allDxTrees.length`, `HUB_TOTALS` — all read from the
- * shared core at build time. This was the rule the old page followed and it is
+ * `STORE_PRODUCTS.length`, `allDxTrees.length`, `roadmapData.length` — all read
+ * from the shared core at build time. This was the rule the old page followed and it is
  * kept: a hand-written figure is a promise that rots the first time content
  * changes, and here it would rot into a lie about the size of the platform.
  *
@@ -96,10 +101,7 @@ export default function HomePage() {
   const articleCount = modules.reduce((n, m) => n + m.articles.length, 0);
   const publishedProjectCount = ALL_PROJECTS.filter(p => p.published).length;
 
-  const softwarePages =
-    HUB_TOTALS.betaflightPages + HUB_TOTALS.edgetxPages + HUB_TOTALS.videoPages;
-
-  /* The six load-bearing sections, in navigation order. One array, one
+  /* The five load-bearing sections, in navigation order. One array, one
      renderer — see the note above on why that matters more than it looks. */
   const pillars: Pillar[] = [
     /*
@@ -119,42 +121,6 @@ export default function HomePage() {
       ctaAr: 'ابدأ الدروس',
     },
     {
-      id: 'community',
-      labelAr: 'المجتمع',
-      href: sectionHref('community'),
-      Icon: Wrench,
-      blurbAr:
-        'اسأل طيّارين آخرين عن قطعة أو عطل، واعرض بناءك، واقرأ تجارب حقيقية. '
-        + 'نفس المجتمع الموجود في التطبيق — نفس الحسابات ونفس المنشورات.',
-      count: null,
-      countLabelAr: 'أسئلة · مشاريع · تجارب',
-      ctaAr: 'ادخل المجتمع',
-    },
-    {
-      id: 'store',
-      labelAr: 'المتجر',
-      href: sectionHref('store'),
-      Icon: Store,
-      blurbAr:
-        'عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها ومواصفات '
-        + 'موثّقة من الشركة الصانعة. ومع كل طلب خدمة الإعداد التي نشرحها هنا.',
-      count: STORE_PRODUCTS.length,
-      countLabelAr: `منتجاً في ${STORE_CATEGORIES.length} قسماً`,
-      ctaAr: 'تصفّح المتجر',
-    },
-    {
-      id: 'programming',
-      labelAr: 'مركز البرامج',
-      href: sectionHref('programming'),
-      Icon: CircuitBoard,
-      blurbAr:
-        'Betaflight وExpressLRS وEdgeTX وأدوات الفيديو — أين كل إعداد، وماذا '
-        + 'يفعل، وعلى أي قطعة ينطبق، وما الذي يتغيّر بعده.',
-      count: softwarePages,
-      countLabelAr: 'صفحة إعداد وشرح',
-      ctaAr: 'افتح مركز البرامج',
-    },
-    {
       id: 'kb',
       labelAr: 'الموسوعة',
       href: sectionHref('kb'),
@@ -167,6 +133,27 @@ export default function HomePage() {
       ctaAr: 'افتح الموسوعة',
     },
     /*
+     * البناء, restored to the front page with the tab.
+     *
+     * The stages were on the web already — but only inside «مشروعي», a private
+     * workspace that renders nothing until you have created a project there. So
+     * a beginner could read this whole page, open every card, and never learn
+     * that the platform tells you how to build the aircraft. `/build` is the
+     * door; this is the sign on it.
+     */
+    {
+      id: 'build',
+      labelAr: 'البناء',
+      href: sectionHref('build'),
+      Icon: Wrench,
+      blurbAr:
+        'مراحل بناء الطائرة بالترتيب الذي تُنفَّذ به: التحضير، الخطوات العملية، '
+        + 'التحذيرات، وأخطاء شائعة، ومتى تتوقف ولا تُكمل — ثم قوائم الفحص قبل أول تشغيل.',
+      count: roadmapData.length,
+      countLabelAr: 'مراحل بناء مرتّبة',
+      ctaAr: 'افتح البناء',
+    },
+    /*
      * المشاريع, added because the tab bar had six tabs and this page had four
      * pillars.
      *
@@ -177,7 +164,7 @@ export default function HomePage() {
     {
       id: 'projects',
       labelAr: 'المشاريع',
-      href: '/projects',
+      href: sectionHref('projects'),
       Icon: Hammer,
       blurbAr:
         'مشاريع كاملة ومراجَعة — ما ستتعلّمه، وما يجب أن تعرفه قبلها، والقطع '
@@ -185,6 +172,18 @@ export default function HomePage() {
       count: publishedProjectCount,
       countLabelAr: 'مشروعاً مراجَعاً',
       ctaAr: 'تصفّح المشاريع',
+    },
+    {
+      id: 'store',
+      labelAr: 'المتجر',
+      href: sectionHref('store'),
+      Icon: Store,
+      blurbAr:
+        'عدد صغير من المنتجات المختارة في كل قسم، بفارق واضح بينها ومواصفات '
+        + 'موثّقة من الشركة الصانعة. ومع كل طلب خدمة الإعداد التي نشرحها هنا.',
+      count: STORE_PRODUCTS.length,
+      countLabelAr: `منتجاً في ${STORE_CATEGORIES.length} قسماً`,
+      ctaAr: 'تصفّح المتجر',
     },
   ];
 
@@ -239,8 +238,9 @@ export default function HomePage() {
         </h1>
         <p style={{ fontSize: 16, color: 'var(--text-dim)', marginTop: 16, lineHeight: 1.95 }}>
           منصّة واحدة على الهاتف والويب: مسار تعليمي مرتّب من الأساسيات حتى أول طيران
-          آمن، ومجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات موثّقة، ومركز برامج يشرح
-          كل إعداد، وموسوعة ترجع إليها عند الحاجة.
+          آمن، وموسوعة ترجع إليها عند الحاجة، ومراحل بناء مرتّبة تمشي معك حتى أول
+          تشغيل، ومجتمع تسأل فيه وتعرض بناءك، ومتجر بمواصفات موثّقة، ومركز برامج
+          يشرح كل إعداد.
         </p>
 
         {/*
