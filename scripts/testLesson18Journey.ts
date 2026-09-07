@@ -61,7 +61,7 @@ console.log('\n[1] Registration and shape');
   ok('its diagram type is motor-test-check', LESSON.diagramType === 'motor-test-check');
   ok('definition.lessonId matches', def.lessonId === LESSON.id);
   ok('registry resolves it to this definition', getLessonJourneyDefinition(LESSON.id) === def);
-  ok('lesson 18 has 21 stages', STAGE_COUNT === 21);
+  ok('lesson 18 has 22 stages (21 authored, plus the optional diagnostic-tool callout)', STAGE_COUNT === 22);
   ok('stage ids are unique', new Set(def.stages.map(s => s.id)).size === STAGE_COUNT);
 }
 

@@ -71,6 +71,20 @@
 .lj-callout[data-tone='info'] { background: var(--accent-wash-2); border-color: var(--accent-ink-2); }
 .lj-callout[data-tone='info'] h3 { color: var(--accent-ink-2); }
 
+/* The optional tool a callout may point at. Reads as a tool, not a journey
+   control: it sits under the body, carries its own "optional" note, and wraps
+   at narrow widths instead of forcing the card wider. */
+.lj-callout-tool { margin: 12px 0 0 !important; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.lj-tool-link {
+  display: inline-block; padding: 8px 14px; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--accent-ink-2);
+  color: var(--accent-ink-2); font-weight: 800; font-size: 13.5px; line-height: 1.6;
+  text-decoration: none; max-width: 100%;
+}
+.lj-tool-link:hover { background: var(--accent-wash-2); }
+.lj-tool-link:focus-visible { outline: 2px solid var(--accent-ink-2); outline-offset: 2px; }
+.lj-tool-note { font-size: 12.5px; line-height: 1.7; color: var(--text-dim); }
+
 /* Key points */
 .lj-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .lj-points li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 14.5px; line-height: 1.9; }

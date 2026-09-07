@@ -322,6 +322,25 @@ export const lesson20JourneyDefinition: LessonJourneyDefinition = {
         '3.5 فولت للخلية أثناء الطيران؛ لا تنتظر أكثر.',
     },
     {
+      // The one failure a first flight actually produces in its first second.
+      // The tree's own root is the propeller-direction check taught in lesson 19,
+      // and its stop condition is "do not try to take off again" — which is what
+      // this lesson needs the reader to do. Optional: a callout gates nothing.
+      id: 'flipDiagnosticTool',
+      type: 'callout',
+      tone: 'info',
+      title: 'أداة مساعدة: إن انقلبت فور الإقلاع',
+      body:
+        'أكثر ما يحدث في أول ثانية من أول تحليق هو أن تنقلب الطائرة على جانبها بدل أن ترتفع. لا تُعد المحاولة — ' +
+        'فكل محاولة حادث جديد. داخل التطبيق أداة تشخيص لهذا العَرَض تحديدًا، تبدأ من اتجاه المراوح ثم محاذاة اللوحة ' +
+        'ثم ترتيب المحركات ثم اتجاه دورانها، كلها على الطاولة وبلا مراوح. افتحها إن حدث لك ذلك.',
+      tool: {
+        destination: { kind: 'dx', id: 'dx-motor-wrong-direction' },
+        label: 'افتح شجرة تشخيص: الطائرة تنقلب فور الإقلاع',
+        note: 'أداة مساعدة اختيارية — الفحص كلّه على الطاولة والمراوح منزوعة.',
+      },
+    },
+    {
       id: 'simulatorCallout',
       type: 'callout',
       tone: 'warn',

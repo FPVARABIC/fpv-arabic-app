@@ -129,6 +129,25 @@ export const lesson18JourneyDefinition: LessonJourneyDefinition = {
       },
     },
     {
+      // The checkpoint above teaches "start at the far end of the chain and
+      // change one thing at a time". This tree walks that exact symptom in that
+      // exact order, and defers re-binding — itself a change — until the cheaper
+      // observations are spent. Optional: a callout gates nothing.
+      id: 'receiverDiagnosticTool',
+      type: 'callout',
+      tone: 'info',
+      title: 'أداة مساعدة: إن بقيت الأشرطة ساكنة عندك',
+      body:
+        'المبدأ الذي طبّقتَه للتوّ — ابدأ من أبعد نقطة، وغيّر شيئًا واحدًا في كل مرة — له أداة داخل التطبيق تمشي به ' +
+        'خطوة خطوة على هذا العَرَض بالذات: لمبة الريسيفر، ثم المنفذ التسلسلي، ثم سلكا TX وRX، ثم البروتوكول، ثم ' +
+        'الربط. افتحها عند عطل حقيقي فقط؛ الدرس لا ينتظرها.',
+      tool: {
+        destination: { kind: 'dx', id: 'dx-fc-receiver-not-detected' },
+        label: 'افتح شجرة تشخيص: المستقبل لا يظهر أو القنوات لا تتحرك',
+        note: 'أداة مساعدة اختيارية — المراوح تبقى منزوعة طوال الفحص.',
+      },
+    },
+    {
       id: 'armExplanation',
       type: 'explanation',
       title: 'التسليح: مفتاح مباشر، ولا يُربط بغيره',

@@ -9,6 +9,7 @@
  * constant. Rendering lives in src/components/lessons/InteractiveLessonJourney.tsx.
  */
 import type { Lesson, DiagramType } from './index';
+import type { Destination } from '../platform/destinations';
 
 export interface JourneyCheckpointOption {
   id: string;
@@ -115,10 +116,39 @@ export interface RecallStage extends JourneyStageBase {
  * (a LiPo charged wrong, propellers on during a bench test). `warn` is for
  * the mistake that wastes an afternoon. `info` is for everything else.
  */
+/**
+ * An optional pointer from a callout to a tool that already exists elsewhere in
+ * the app — today, a diagnostic tree.
+ *
+ * WHY IT HANGS OFF A CALLOUT AND NOWHERE ELSE
+ * -------------------------------------------
+ * A callout is the one stage type that carries no requirement and can never gate
+ * completion (see above). Attaching the pointer here makes "optional" a property
+ * of the data model rather than a promise a test has to keep: there is no shape
+ * in which a lesson can demand that the learner open a tool before finishing.
+ * A learner who has no real fault to diagnose loses nothing by walking past it.
+ *
+ * WHY A DESTINATION AND NOT A URL
+ * -------------------------------
+ * `Destination` is an identity, and `resolveDestination` returns null for a
+ * target that does not exist — so a lesson pointing at a deleted tree is a
+ * testable condition, not a 404 the learner finds. Never a path, never a title,
+ * never an array index.
+ */
+export interface JourneyStageTool {
+  destination: Destination;
+  /** The button's own words. Says what the tool does, not "click here". */
+  label: string;
+  /** One line placing it: a tool for the real fault, not a stage to complete. */
+  note: string;
+}
+
 export interface CalloutStage extends JourneyStageBase {
   type: 'callout';
   tone: 'danger' | 'warn' | 'info';
   body: string;
+  /** Optional: a tool for the situation this callout describes. Never required. */
+  tool?: JourneyStageTool;
 }
 
 /**

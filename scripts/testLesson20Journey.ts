@@ -51,7 +51,7 @@ console.log('\n[1] Registration and shape');
   ok('registry lists twenty lessons', LESSON_JOURNEY_IDS.length === 20);
   ok('TOTAL_LESSONS agrees with lessonsData', TOTAL_LESSONS === 20 && lessonsData.length === 20);
   // 19 until the audit's P0 safety fix added the pre-flight checklist.
-  ok('lesson 20 has 20 stages', STAGE_COUNT === 20);
+  ok('lesson 20 has 21 stages (20 authored, plus the optional diagnostic-tool callout)', STAGE_COUNT === 21);
   ok('stage ids are unique', new Set(def.stages.map(s => s.id)).size === STAGE_COUNT);
   ok('every lesson has a journey', lessonsData.every(l => !!getLessonJourneyDefinition(l.id)));
 }
@@ -137,7 +137,9 @@ console.log('\n[7] Completion needs checkpoints + recall + all four axes');
 
 console.log('\n[8] Callouts: arming is a danger, the simulator is a warning');
 {
-  ok('exactly two authored callouts', CALLOUTS.length === 2);
+  ok('three authored callouts: arming, the simulator, and the optional diagnostic tool', CALLOUTS.length === 3);
+  ok('exactly two of them carry no tool — the tool callout is the only pointer out of the lesson',
+    CALLOUTS.filter(c => !c.tool).length === 2);
   const danger = CALLOUTS.find(c => c.tone === 'danger');
   const warn = CALLOUTS.find(c => c.tone === 'warn');
   ok('one danger callout about arming', !!danger && /تسليح/.test(danger.body));

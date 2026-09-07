@@ -233,6 +233,25 @@ export const lesson17JourneyDefinition: LessonJourneyDefinition = {
       },
     },
     {
+      // The lesson has just taught the rule (disconnect first, diagnose after).
+      // The tree is the procedure for that exact symptom, and its own first
+      // instruction restates the rule, so the two do not contradict each other.
+      // Optional by construction: a callout carries no requirement.
+      id: 'shortDiagnosticTool',
+      type: 'callout',
+      tone: 'info',
+      title: 'أداة مساعدة: إن حدث هذا في بنائك الحقيقي',
+      body:
+        'ما تعلّمتَه هنا هو القاعدة: افصل أولًا، ثم شخّص. أما إن واجهتَ العَرَض فعلًا في بنائك — واقي تيار يمنع ' +
+        'التشغيل، أو حرارة، أو رائحة — فداخل التطبيق أداة تشخيص تمشي معك في الترتيب نفسه: فحص بصري، ثم قياس، ثم عزل ' +
+        'المصدر بفصل قطعة واحدة في كل مرة. لستَ مضطرًا لفتحها الآن، ولا علاقة لها بإكمال الدرس.',
+      tool: {
+        destination: { kind: 'dx', id: 'dx-power-short' },
+        label: 'افتح شجرة تشخيص: قصر كهربائي أو حرارة عند التوصيل',
+        note: 'أداة مساعدة اختيارية — البطارية مفصولة والمراوح منزوعة قبل أي فحص.',
+      },
+    },
+    {
       id: 'fcPowerExplanation',
       type: 'explanation',
       title: 'هل وصلت الطاقة إلى لوحة التحكم؟',

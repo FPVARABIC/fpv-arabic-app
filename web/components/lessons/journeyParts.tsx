@@ -5,6 +5,8 @@ import type { JourneyCheckpoint, CalloutStage, KeyPointsStage } from '@core/type
 import type { QuizResult } from '@core/data/lessons/lessonJourneyEngine';
 import { toReadableChunks } from '@core/data/lessons/readableText';
 import { displayOptions } from '@core/data/lessons/checkpointOrder';
+import Link from 'next/link';
+import { webHref } from '@/lib/webRoutes';
 
 /**
  * The pieces a lesson stage is built from. No content lives here; every string
@@ -22,10 +24,33 @@ const TONE_LABEL: Record<CalloutStage['tone'], string> = {
   danger: 'خطر', warn: 'تنبيه', info: 'ملاحظة',
 };
 
+/**
+ * The optional tool a callout may point at.
+ *
+ * Rendered as a plain link, deliberately: it leaves the journey, so it must
+ * behave like leaving — Back returns, and the saved progress is read again on
+ * arrival. It is never a journey control, never disabled by stage state, and
+ * never counted by the readiness checklist.
+ *
+ * `webHref` returning null means the target does not exist on this surface;
+ * nothing is rendered rather than a dead link the learner spends a click on.
+ */
+const StageToolLink: React.FC<{ tool: NonNullable<CalloutStage['tool']>; stageId: string }> = ({ tool, stageId }) => {
+  const { href } = webHref(tool.destination);
+  if (!href) return null;
+  return (
+    <p className="lj-callout-tool">
+      <Link href={href} data-testid={`stage-tool-${stageId}`} className="lj-tool-link">{tool.label}</Link>
+      <span className="lj-tool-note">{tool.note}</span>
+    </p>
+  );
+};
+
 export const CalloutCard: React.FC<{ stage: CalloutStage }> = ({ stage }) => (
   <aside className="lj-callout" data-tone={stage.tone} role={stage.tone === 'danger' ? 'alert' : 'note'} data-testid={`callout-${stage.id}`}>
     <h3>{TONE_LABEL[stage.tone]} — {stage.title}</h3>
     <p>{stage.body}</p>
+    {stage.tool && <StageToolLink tool={stage.tool} stageId={stage.id} />}
   </aside>
 );
 

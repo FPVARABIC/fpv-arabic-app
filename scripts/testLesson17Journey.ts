@@ -51,7 +51,7 @@ console.log('\n[1] Registration and shape');
   ok('it carries a common mistake', lesson.commonMistake.length > 20);
   ok('definition.lessonId matches', def.lessonId === lesson.id);
   ok('registry resolves it to this definition', getLessonJourneyDefinition(lesson.id) === def);
-  ok('lesson 17 has 19 stages', STAGE_COUNT === 19);
+  ok('lesson 17 has 20 stages (19 authored, plus the optional diagnostic-tool callout)', STAGE_COUNT === 20);
   ok('stage ids are unique', new Set(def.stages.map(s => s.id)).size === STAGE_COUNT);
   ok('starts on the orientation stage', currentStage(def, createInitialSessionState(def)).id === 'orientation');
 }

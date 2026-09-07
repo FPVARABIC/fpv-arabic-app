@@ -15,7 +15,41 @@ import {
 import { interactiveDiagramAdapters } from './interactiveDiagramAdapters';
 import { enrichJourneyDefinition } from '../../data/lessons/lessonJourneyEnrich';
 import { SafetyWarning } from '../SafetyWarning';
+import { resolveDestination } from '../../platform/destinations';
+import { getDxTree } from '../../data/kb/diagnostics/trees';
+import type { JourneyStageTool } from '../../types/lessonJourney';
 import { CheckCircle2, ArrowRight, ChevronLeft, ChevronRight, Circle, Star, Clock } from 'lucide-react';
+
+/**
+ * The optional tool a callout may point at.
+ *
+ * It is a button, not a journey control: it leaves the lesson entirely, and the
+ * lesson's saved progress is what brings the reader back where they were. It is
+ * never part of the readiness checklist — a callout carries no requirement, so
+ * skipping this cannot block completion.
+ *
+ * `resolveDestination` returns null for a target that no longer exists, and
+ * nothing is rendered in that case rather than a button that goes nowhere.
+ */
+const StageTool: React.FC<{ tool: JourneyStageTool; stageId: string }> = ({ tool, stageId }) => {
+  const navigate = useNavigate();
+  const path = resolveDestination(tool.destination, { dxExists: id => !!getDxTree(id) });
+  if (!path) return null;
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => navigate(path)}
+        data-testid={`stage-tool-${stageId}`}
+        className="w-full text-right rounded-xl px-4 py-3 text-sm font-bold leading-relaxed"
+        style={{ background: CARD_BG, border: `1px solid ${ACCENT}`, color: ACCENT }}
+      >
+        {tool.label}
+      </button>
+      <p className="text-xs mt-2 leading-relaxed" style={{ color: '#94A3B8' }}>{tool.note}</p>
+    </div>
+  );
+};
 
 interface Props {
   definition: LessonJourneyDefinition;
@@ -107,6 +141,7 @@ export const InteractiveLessonJourney: React.FC<Props> = ({ definition: baseDefi
               <p className="text-sm leading-relaxed" style={{ color: '#CBD5E1' }}>{stage.body}</p>
             </div>
           )}
+          {stage.tool && <StageTool tool={stage.tool} stageId={stage.id}/>}
         </StageShell>
       )}
 
