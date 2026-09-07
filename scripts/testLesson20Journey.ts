@@ -217,4 +217,49 @@ console.log('\n[11] The pre-flight checklist — the three checks a first flight
   ok('the readiness gate is still the same six', getReadinessRequirements(def, fresh).length === 6);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[R] The renumbering left nothing behind, and the failsafe line agrees with lesson 18');
+{
+  const ALL = JSON.stringify(def);
+
+  // P1-1. This lesson was written as the seventeenth and became the twentieth.
+  // The number lives in exactly one learner-visible place — the orientation
+  // title — and it said «السابع عشر» while the page header said «20 من 20».
+  const orientation = def.stages.find(s => s.type === 'orientation')!;
+  ok('the orientation title names the twentieth lesson', orientation.title.includes('العشرين'));
+  ok('…and no longer names the seventeenth', !orientation.title.includes('السابع عشر'));
+  ok('no stage anywhere in the lesson still says «الدرس السابع عشر»', !ALL.includes('الدرس السابع عشر'));
+  // Whatever ordinal the title carries must be the lesson's real number. This
+  // catches the next renumbering too, not just this one.
+  const ORDINALS = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن',
+    'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر', 'الثالث عشر', 'الرابع عشر', 'الخامس عشر',
+    'السادس عشر', 'السابع عشر', 'الثامن عشر', 'التاسع عشر', 'العشرين'];
+  const lessonNow = lessonsData.find(l => l.id === def.lessonId)!;
+  const wrong = ORDINALS.filter((word, i) => i > 0 && i !== lessonNow.number && orientation.title.includes(word));
+  ok(`the orientation title carries no other lesson's ordinal (${wrong.join(', ') || 'none'})`, wrong.length === 0);
+
+  // P1-2. Lesson 18 teaches that the failsafe PROCEDURE is a setting with
+  // several possible behaviours. This lesson's pre-flight checklist used to
+  // assert that the motors must always stop instantly, which contradicted it.
+  const checklist = def.stages.find((s): s is KeyPointsStage => s.type === 'key_points' && s.id === 'preFlightChecklist')!;
+  const failsafePoint = checklist.points.find(p => p.includes('Failsafe'))!;
+  ok('the pre-flight checklist still tests failsafe on the ground, props off',
+    /المراوح منزوعة/.test(failsafePoint) && /أطفئ جهاز التحكم/.test(failsafePoint));
+  ok('it compares the result against the procedure the learner actually configured',
+    /الإجراء المضبوط عندك/.test(failsafePoint));
+  ok('…and names where that was configured', /الدرس الثامن عشر/.test(failsafePoint));
+  ok('immediate cut-off is stated as one CASE, not as the rule',
+    /إن كان الإيقاف الفوري/.test(failsafePoint) && /وإن كان إجراءً آخر/.test(failsafePoint));
+  ok('the unsafe outcome is «something you did not expect», not «motors kept spinning»',
+    /حدث شيء لم تتوقّعه/.test(failsafePoint));
+  // The absolute claim must not come back in any form.
+  ok('no unconditional «the motors must stop» claim survives anywhere in the lesson',
+    !/يجب أن تتوقف المحركات في اللحظة نفسها\. إن استمرّت/.test(ALL));
+  const absolute = /(?<!إن كان الإيقاف الفوري ف)يجب أن تتوقف المحركات/;
+  ok('every «motors must stop» sentence is conditioned on the configured procedure',
+    checklist.points.filter(p => /يجب أن تتوقف المحركات/.test(p))
+      .every(p => /إن كان الإيقاف الفوري/.test(p)));
+  void absolute;
+}
+
 console.log(`\nAll ${passed} assertions passed.`);

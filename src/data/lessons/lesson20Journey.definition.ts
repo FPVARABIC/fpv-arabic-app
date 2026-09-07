@@ -7,8 +7,11 @@
  * ----------------------
  * The path ended at lesson 16, «تركيب نظام الفيديو», with a fully assembled
  * quad and no word on what to do with the sticks. A tester asked, in so many
- * words, «تشرح لنا كيف التحكم في درون عن طريق عصا التحكم». README had
- * promised lessons 17 and 18 (motor test, first flight); neither was written.
+ * words, «تشرح لنا كيف التحكم في درون عن طريق عصا التحكم». So this lesson was
+ * written as the seventeenth, and the curriculum expansion later inserted the
+ * three lessons that belonged between the build and the flight — first
+ * power-up, the minimum configuration, the propellers — which moved it to
+ * twentieth. Its number is the only thing that changed.
  *
  * WHAT IT TEACHES AND WHAT IT DOES NOT
  * ------------------------------------
@@ -16,9 +19,9 @@
  * it is a switch, the three flight modes and why Angle comes first, and a
  * first hover minute by minute. It does NOT teach the Betaflight Modes or
  * Receiver tabs field by field — that is the software centre's job, and the
- * lesson points there. Motor-direction testing (the README's lesson 18) is
- * deliberately left for a later lesson; this one only insists it happens
- * with the props OFF.
+ * lesson points there. Motor-direction testing is not taught here either —
+ * lesson 18 owns it now — and this lesson only insists it happens with the
+ * props OFF.
  *
  * This is the first definition to use `callout` stages directly (not through
  * enrichment): arming safety is not a common mistake, it is a hard rule.
@@ -39,7 +42,7 @@ export const lesson20JourneyDefinition: LessonJourneyDefinition = {
     {
       id: 'orientation',
       type: 'orientation',
-      title: 'أهلًا بك في رحلة الدرس السابع عشر',
+      title: 'أهلًا بك في رحلة الدرس العشرين',
       body:
         'طائرتك مُركَّبة. في الدرس الأول عرفتَ أن كل محرك يدور في اتجاه مختلف، وفي الثاني تتبّعتَ الإشارة من العصا إلى ' +
         'المحرك، وفي العاشر تعلّمتَ ألا تلمس البطارية قبل الفحص. هذا الدرس يجمع الثلاثة في يدَيك: ماذا تفعل كل عصا، ولماذا ' +
@@ -301,7 +304,7 @@ export const lesson20JourneyDefinition: LessonJourneyDefinition = {
         'ليست نصائح عامة؛ كل نقطة منها سببها حادث متكرّر. مرّ عليها بهذا الترتيب في الميدان — المراوح آخر شيء.',
       points: [
         'المكان والقانون: مساحة مفتوحة بلا ناس ولا سيارات ولا خطوط كهرباء، وأنت بعيد عن الطائرة ثلاث خطوات. وقبل أول طيران اعرف قانون بلدك: كثير من الدول تشترط تسجيل الطائرة أو ترخيص الطيار، وتمنع الطيران قرب المطارات وفوق التجمّعات.',
-        'اختبر Failsafe والمراوح منزوعة: ضع الطائرة على الأرض، سلّح، ثم أطفئ جهاز التحكم. يجب أن تتوقف المحركات في اللحظة نفسها. إن استمرّت في الدوران فلا تطر — طائرة تفقد الإشارة بلا Failsafe مضبوط تهرب أو تسقط على أحد.',
+        'اختبر Failsafe والمراوح منزوعة: ضع الطائرة على الأرض، سلّح، ثم أطفئ جهاز التحكم. وقارن ما يحدث بالإجراء المضبوط عندك كما ضبطتَه في الدرس الثامن عشر: إن كان الإيقاف الفوري فيجب أن تتوقف المحركات في اللحظة نفسها، وإن كان إجراءً آخر فيجب أن تتصرّف الطائرة وفقه بالضبط. وإن حدث شيء لم تتوقّعه فلا تطر — طائرة تفقد الإشارة وتتصرّف بما لا تعرفه تهرب أو تسقط على أحد.',
         'البطارية: مشحونة، ومثبّتة بحزام لا تتزحلق من تحته عند أول ميلة، وسلكها وموصّلها بعيدان عن مسار المراوح.',
         'المراوح آخر شيء: كل مروحة على المحرك الذي يوافق اتجاهها — الاتجاه مطبوع عليها أو يميّزه شكل حافتها — والصامولة مشدودة والمروحة بلا شقوق. مروحة معكوسة تدفع الهواء إلى الأعلى، فتنقلب الطائرة لحظة رفع الخانق بدل أن ترتفع.',
       ],
