@@ -120,7 +120,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const ccCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cellCountDeterminesVoltage')!.checkpoint;
   const ccCorrect = ccCp.options.find(o => o.correct)!;
-  ok('cell-count correct option explicitly ties total voltage to a cell-count calculation', ccCorrect.text.includes('6 خلايا') && ccCorrect.text.includes('3.7V'));
+  ok('cell-count correct option explicitly ties total voltage to a cell-count calculation', ccCorrect.text.includes('ست خلايا') && ccCorrect.text.includes('3.7V') && ccCorrect.text.includes('عدد الخلايا'));
 
   const pbCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'puffedBatteryStillWorksMisconception')!.checkpoint;
   const pbCorrect = pbCp.options.find(o => o.correct)!;

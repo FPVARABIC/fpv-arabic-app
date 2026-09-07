@@ -253,7 +253,7 @@ export const lesson09JourneyDefinition: LessonJourneyDefinition = {
           },
           {
             id: 'b', correct: true,
-            text: 'على الأرجح لم يتم توصيل GND المشترك بين الجهازين؛ توصيل TX/RX الصحيح وحده لا يكفي دون GND مشترك.',
+            text: 'على الأرجح ينقص GND المشترك؛ فصحّة توصيل TX/RX وحدها لا تكفي.',
             feedback: 'صحيح تمامًا! GND هو المرجع الذي تُقاس عنده الإشارة؛ بدونه، حتى التوصيل الصحيح لـTX/RX لا يكفي لعمل الاتصال.',
           },
           {

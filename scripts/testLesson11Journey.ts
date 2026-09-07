@@ -131,7 +131,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const rigidCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyRigidityAndRoutingMatter')!.checkpoint;
   const rigidCorrect = rigidCp.options.find(o => o.correct)!;
-  ok('rigidity correct option explicitly states no arm movement should remain', rigidCorrect.text.includes('صلبًا تمامًا بدون أي حركة'));
+  ok('rigidity correct option explicitly states no arm movement should remain', rigidCorrect.text.includes('صلبًا بلا حركة'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');

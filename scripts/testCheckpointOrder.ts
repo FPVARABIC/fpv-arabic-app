@@ -93,8 +93,10 @@ console.log('\n[2] The correct answer is no longer parked in one place');
 console.log('\n[3] The correct answer is not the longest one by a giveaway margin');
 {
   // Both bounds are ratchets: they may be tightened, never loosened.
-  const MAX_GAP = 44;      // characters longer than the longest distractor
-  const MAX_RATIO = 1.95;  // times the length of the longest distractor
+  // Tightened in P2-A from 44/1.95 after the legacy length bias was removed:
+  // correct answers no longer carry their own justification inside the option.
+  const MAX_GAP = 30;      // characters longer than the longest distractor
+  const MAX_RATIO = 1.6;   // times the length of the longest distractor
   const worst: { id: string; gap: number; ratio: number }[] = [];
 
   for (const { checkpoint } of CHECKPOINTS) {

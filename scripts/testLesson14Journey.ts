@@ -123,19 +123,19 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const orientCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyPhysicalOrientationMatters')!.checkpoint;
   const orientCorrect = orientCp.options.find(o => o.correct)!;
-  ok('orientation correct option names the reference-frame reasoning', orientCorrect.text.includes('الإطار المرجعي'));
+  ok('orientation correct option names the reference-frame reasoning', orientCorrect.text.includes('محور غير محورها الحقيقي') && orientCorrect.feedback.includes('إطار FC'));
 
   const softCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'physicalCorrectionPreferredOverSoftwareFix')!.checkpoint;
   const softCorrect = softCp.options.find(o => o.correct)!;
-  ok('software-fix correct option names physical correctness as preferred, software as a fallback', softCorrect.text.includes('احتياطي') && softCorrect.text.includes('التركيب الفيزيائي'));
+  ok('software-fix correct option names physical correctness as preferred, software as a fallback', softCorrect.text.includes('أعد تركيبه بالاتجاه الصحيح') && softCorrect.feedback.includes('الأقل نقاط خطأ'));
 
   const grommetCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyGrommetsMatter')!.checkpoint;
   const grommetCorrect = grommetCp.options.find(o => o.correct)!;
-  ok('grommets correct option names vibration absorption and gyro accuracy', grommetCorrect.text.includes('تمتص') && grommetCorrect.text.includes('الجيروسكوب'));
+  ok('grommets correct option names vibration absorption and gyro accuracy', grommetCorrect.text.includes('تفقد قدرتها على الامتصاص') && grommetCorrect.feedback.includes('الجيروسكوب'));
 
   const serviceCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'serviceabilityAndWirePressureReasoning')!.checkpoint;
   const serviceCorrect = serviceCp.options.find(o => o.correct)!;
-  ok('serviceability correct option names USB access and wire clearance', serviceCorrect.text.includes('USB') && serviceCorrect.text.includes('الأسلاك'));
+  ok('serviceability correct option names USB access and wire clearance', serviceCorrect.text.includes('USB') && serviceCorrect.text.includes('أسلاك تضغط'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');

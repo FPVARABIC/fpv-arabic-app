@@ -121,15 +121,15 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const secureCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'securingReceiverPrinciple')!.checkpoint;
   const secureCorrect = secureCp.options.find(o => o.correct)!;
-  ok('securing correct option names real mounting and accessibility balance', secureCorrect.text.includes('وسيلة تثبيت حقيقية') && secureCorrect.text.includes('الوصول'));
+  ok('securing correct option names real mounting and accessibility balance', secureCorrect.text.includes('تثبيت حقيقي') && secureCorrect.text.includes('الوصول'));
 
   const insulCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'insulationAndCarbonPrinciple')!.checkpoint;
   const insulCorrect = insulCp.options.find(o => o.correct)!;
-  ok('insulation correct option names carbon separation and voltage matching', insulCorrect.text.includes('كربوني') && insulCorrect.text.includes('يطابق مواصفات'));
+  ok('insulation correct option names carbon separation and voltage matching', insulCorrect.text.includes('عازل يفصل نقاطه المكشوفة') && insulCorrect.text.includes('يطابق الجهد المطلوب'));
 
   const antennaCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'antennaPlacementPrinciple')!.checkpoint;
   const antennaCorrect = antennaCp.options.find(o => o.correct)!;
-  ok('antenna correct option names propeller clearance and fold/crush avoidance', antennaCorrect.text.includes('مسار دوران المراوح') && antennaCorrect.text.includes('طيّه'));
+  ok('antenna correct option names propeller clearance and fold/crush avoidance', antennaCorrect.text.includes('مسار المراوح') && antennaCorrect.text.includes('طيّ حاد'));
 
   const serviceCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'serviceabilityAndInstallVsConfigPrinciple')!.checkpoint;
   const serviceCorrect = serviceCp.options.find(o => o.correct)!;

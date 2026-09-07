@@ -105,7 +105,7 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
 {
   const screwCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyScrewLengthMatters')!.checkpoint;
   const screwCorrect = screwCp.options.find(o => o.correct)!;
-  ok('screw-length correct option names both failure modes (too long / too short)', screwCorrect.text.includes('طويلاً جدًا') && screwCorrect.text.includes('قصيرًا جدًا'));
+  ok('screw-length correct option names both failure modes (too long / too short)', screwCorrect.text.includes('الطويل جدًا') && screwCorrect.text.includes('القصير جدًا'));
 
   const choiceCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'correctScrewChoice')!.checkpoint;
   const choiceCorrect = choiceCp.options.find(o => o.correct)!;
@@ -117,7 +117,7 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
 
   const routingCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'whyRoutingAndPinchPointsMatter')!.checkpoint;
   const routingCorrect = routingCp.options.find(o => o.correct)!;
-  ok('routing correct option states the wire must be rerouted now, not later', routingCorrect.text.includes('إعادة توجيه السلك'));
+  ok('routing correct option states the wire must be rerouted now, not later', routingCorrect.text.includes('أعد توجيه السلك') && routingCorrect.text.includes('الآن'));
 }
 
 console.log('\n[8] Completion remains unavailable until every checkpoint and recall have been engaged with');

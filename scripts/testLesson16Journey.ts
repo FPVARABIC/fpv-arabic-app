@@ -120,11 +120,11 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const rolesCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cameraVtxGogglesRoles')!.checkpoint;
   const rolesCorrect = rolesCp.options.find(o => o.correct)!;
-  ok('roles correct option names all three distinct roles', rolesCorrect.text.includes('تلتقط') && rolesCorrect.text.includes('يبثّها') && rolesCorrect.text.includes('تعرضه'));
+  ok('roles correct option names all three distinct roles', rolesCorrect.text.includes('من VTX') && rolesCorrect.text.includes('البث اللاسلكي'));
 
   const angleCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'cameraAngleAndProtectionPrinciple')!.checkpoint;
   const angleCorrect = angleCp.options.find(o => o.correct)!;
-  ok('angle correct option names field-of-view and physical protection', angleCorrect.text.includes('مجال الرؤية') && angleCorrect.text.includes('حماية'));
+  ok('angle correct option names field-of-view and physical protection', angleCorrect.text.includes('مجال رؤية أقل فائدة') && angleCorrect.text.includes('عرضة للتلف'));
 
   const coolingCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'vtxCoolingAndReliabilityPrinciple')!.checkpoint;
   const coolingCorrect = coolingCp.options.find(o => o.correct)!;
@@ -132,7 +132,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 
   const finalCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'antennaPowerAndInstallVsConfigPrinciple')!.checkpoint;
   const finalCorrect = finalCp.options.find(o => o.correct)!;
-  ok('final correct option names power matching, antenna requirement, and install-vs-config separation', finalCorrect.text.includes('مطابقة مصدر الطاقة') && finalCorrect.text.includes('هوائيه المخصص') && finalCorrect.text.includes('منفصل تمامًا'));
+  ok('final correct option names power matching, antenna requirement, and install-vs-config separation', finalCorrect.text.includes('وصّل الهوائي أولًا') && finalCorrect.text.includes('مطابقة جهد المنفذ') && finalCorrect.feedback.includes('الإعداد البرمجي'));
 }
 
 console.log('\n[9] Completion remains unavailable until every checkpoint, the diagram, and recall have been engaged with');

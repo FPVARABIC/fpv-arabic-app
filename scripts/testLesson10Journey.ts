@@ -105,11 +105,12 @@ console.log('\n[7] Misconception targeting: each checkpoint explicitly names the
 {
   const propCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'propellerRemovalTiming')!.checkpoint;
   const propCorrect = propCp.options.find(o => o.correct)!;
-  ok('propeller correct option explicitly names bench testing, not just flight', propCorrect.text.includes('الاختبار على الطاولة'));
+  ok('propeller correct option puts prop removal before connecting the battery', propCorrect.text.includes('انزع المراوح أولًا') && propCorrect.text.includes('أي توصيل للبطارية'));
+  ok('propeller correct option keeps the "even if the wiring looks right" clause', propCorrect.text.includes('ولو بدا التوصيل سليمًا'));
 
   const smokeCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'smokeStopperMechanism')!.checkpoint;
   const smokeCorrect = smokeCp.options.find(o => o.correct)!;
-  ok('smoke-stopper correct option explicitly states manual disconnection is required', smokeCorrect.text.includes('فصل التوصيل يدويًا'));
+  ok('smoke-stopper correct option explicitly states manual disconnection is required', smokeCorrect.text.includes('الفصل يدويًا'));
 
   const contCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'continuityReadingInterpretation')!.checkpoint;
   const contCorrect = contCp.options.find(o => o.correct)!;

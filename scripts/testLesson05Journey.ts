@@ -116,7 +116,7 @@ console.log('\n[8] Misconception targeting: each checkpoint explicitly names the
 {
   const smallerCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'smallerNotEasier')!.checkpoint;
   const smallerCorrect = smallerCp.options.find(o => o.correct)!;
-  ok('smaller-size correct option explicitly separates "less risky" from "easier to control"', smallerCorrect.text.includes('أقل خطورة') && smallerCorrect.text.includes('حساسية'));
+  ok('smaller-size correct option explicitly separates "less risky" from "easier to control"', smallerCorrect.text.includes('أقل خطورة') && smallerCorrect.text.includes('حساسيته') && smallerCorrect.text.includes('تصعّب'));
 
   const biggerCp = CHECKPOINT_STAGES.find(s => s.checkpoint.id === 'biggerNotAlwaysBetter')!.checkpoint;
   const biggerCorrect = biggerCp.options.find(o => o.correct)!;

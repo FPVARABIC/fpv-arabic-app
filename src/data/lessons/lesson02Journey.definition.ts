@@ -79,30 +79,30 @@ export const lesson02JourneyDefinition: LessonJourneyDefinition = {
     {
       id: 'rxRoleCheckpoint',
       type: 'checkpoint',
-      title: 'تأكد من فهمك: دور Receiver',
+      title: 'حلّل السلسلة: ماذا لو غاب Receiver؟',
       checkpoint: {
         id: 'receiverRole',
-        question: 'ما هو الدور الحقيقي لـ Receiver في هذه السلسلة؟',
+        question: 'لو نزعتَ Receiver من الطائرة وأبقيتَ كل شيء آخر كما هو، ما الذي يتوقف بالضبط؟',
         options: [
           {
             id: 'a', correct: false,
-            text: 'يحسب سرعة كل محرك بنفسه.',
-            feedback: 'هذه مهمة Flight Controller، وليست Receiver. Receiver لا يحسب أي سرعات؛ فقط يستقبل الإشارة اللاسلكية ويحوّلها إلى بيانات رقمية.',
+            text: 'تتوقف المحركات عن تلقّي الطاقة، لأن Receiver هو من يمرّرها إليها.',
+            feedback: 'الطاقة تصل إلى المحركات من البطارية عبر ESC لا عبر Receiver؛ دوره في مسار الإشارة لا في مسار الطاقة.',
           },
           {
             id: 'b', correct: true,
-            text: 'يستقبل الإشارة اللاسلكية ويحوّلها بيانات رقمية إلى Flight Controller.',
-            feedback: 'صحيح تمامًا! هذا هو الدور الكامل لـ Receiver: استقبال، تحويل، ثم تمرير البيانات إلى Flight Controller — دون أي قرار أو حساب من جانبه.',
+            text: 'تنقطع أوامر العصي عن الوصول إلى Flight Controller، فلا يصل إليه ما تطلبه أنت.',
+            feedback: 'صحيح تمامًا! Receiver حلقة في مسار الأوامر وحده: يستقبل ويحوّل ويمرّر، ثم يبدأ عمل Flight Controller.',
           },
           {
             id: 'c', correct: false,
-            text: 'يزوّد المحركات بالطاقة الكهربائية مباشرة.',
-            feedback: 'تزويد المحركات بالطاقة هو دور ESC والبطارية، وليس Receiver. Receiver يتعامل مع الإشارة فقط، وليس مع طاقة المحركات.',
+            text: 'يفقد Flight Controller قدرته على حساب سرعة كل محرك، لأن Receiver هو من يحسبها له.',
+            feedback: 'حساب سرعة كل محرك مهمة Flight Controller وحده؛ Receiver لا يحسب شيئًا ولا يقرر شيئًا من نفسه.',
           },
           {
             id: 'd', correct: false,
-            text: 'يحافظ على توازن الطائرة أثناء الطيران.',
-            feedback: 'الحفاظ على التوازن هو مهمة Flight Controller بالتعاون مع الجيروسكوب، وليس Receiver. Receiver لا يعرف شيئًا عن توازن الطائرة.',
+            text: 'تفقد الطائرة اتزانها فورًا، لأن Receiver هو من يحافظ على استقرارها أثناء الطيران.',
+            feedback: 'الاتزان مهمة Flight Controller بالتعاون مع الجيروسكوب؛ Receiver لا يعرف شيئًا عن وضعية الطائرة.',
           },
         ],
       },
