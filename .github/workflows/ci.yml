@@ -73,6 +73,23 @@ jobs:
           npm run test:navigation-regression
           npm run test:nav-order
           npm run test:web-build
+          # REACHABILITY IS A CATALOGUE PROPERTY, SO IT IS CHECKED ON EVERY
+          # COMMIT, NOT ONLY WHEN THE BUILD SECTION'S CODE CHANGES.
+          #
+          # Two drone types shipped as offerable-but-impossible: one derived no
+          # size at all, the other raised a blocker on all 1008 of its valid
+          # combinations. Neither is a code bug — the code was correct and the
+          # PARTS could not finish a build — so no amount of asserting the
+          # section's structure would have caught them. This suite derives the
+          # answer from the live catalogue, and fails in both directions: an
+          # offered type that cannot be finished, and a withdrawn type that
+          # quietly can.
+          npm run test:build-reachability
+          npm run test:build-phase0
+          # A ratchet on a known P0 that Phase 1 owns: it asserts the CURRENT
+          # divergence between the part card and the final report, so the
+          # defect cannot drift — and fails loudly the moment it is fixed.
+          npm run test:compat-divergence
           npm run test:kb
           npm run test:lessons
 

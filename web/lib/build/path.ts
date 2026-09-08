@@ -208,16 +208,77 @@ export function buildStep(id: string): BuildStep {
 }
 
 /**
- * The shared-store stage index that «having completed steps up to and
- * including `stepIndex`» corresponds to. Monotonic max, because the web
- * path deliberately reorders selections (video is step 9 here, stage 3
- * there) and progress must never move backwards when mirrored.
+ * The categories the wizard genuinely refuses to advance past — derived from
+ * this path's own declarations rather than retyped, so a step that changes its
+ * mind about what is optional changes this too.
  */
-export function phoneStageIndexFor(stepIndex: number): number {
-  let max = 0;
-  for (let i = 0; i <= Math.min(stepIndex, BUILD_PATH.length - 1); i++) {
-    max = Math.max(max, BUILD_PATH[i].phoneStageIndex);
+const REQUIRED_PATH_CATEGORIES: readonly string[] = (() => {
+  const all = new Set<string>();
+  const optional = new Set<string>();
+  for (const step of BUILD_PATH) {
+    for (const c of step.categories ?? []) all.add(c);
+    for (const c of step.optionalCategories ?? []) optional.add(c);
   }
+  return [...all].filter(c => !optional.has(c));
+})();
+
+/**
+ * How far along the SHARED flow this build actually is.
+ *
+ * WHY THE OLD «MONOTONIC MAX» WAS WRONG
+ * -------------------------------------
+ * This used to take the highest `phoneStageIndex` of every step walked so far.
+ * That reads as reasonable and is badly wrong, because the web REORDERS the
+ * shared flow: propellers are web step 5 but phone stage 13, while video is web
+ * step 9 but phone stage 3. So a reader who had chosen a frame, motors and
+ * propellers — three of the seven categories the wizard requires — mirrored as
+ * `stageIndex: 12`, and their phone announced «المرحلة 13 من 18». Measured, on
+ * a real walk: 25% of the web's work reported as 72% of the phone's.
+ *
+ * A single index cannot describe a non-prefix set of finished work, so the
+ * question is which way to be wrong. Overstating tells somebody their build is
+ * nearly done when it is not; understating shows less credit than earned. Only
+ * one of those can put a half-built aircraft in the air, so this understates.
+ *
+ * THE RULE
+ * --------
+ * The answer is the smaller of two honest upper bounds:
+ *
+ *   · the CONTIGUOUS PREFIX of shared stages actually satisfied — the furthest
+ *     point up to which every required part-backed stage has its part. This is
+ *     also exactly the right resume position: the first stage it stops before
+ *     is the first thing the phone would ask for.
+ *   · the WEB CEILING — the old monotonic max, which remains a true statement
+ *     about how far the web journey itself has walked, and is what keeps the
+ *     mirror from jumping to «finished» at step 11 with nine steps left.
+ *
+ * Stages with no part, and stages whose part this path declares optional, never
+ * stop the prefix: skipping GPS is a choice, not incomplete work.
+ *
+ * The shared store's shape, its schema version and `saveAssemblyProject`'s
+ * merge behaviour are all untouched — this changes only which number is
+ * honest to write into the field that already exists.
+ */
+export function phoneStageIndexFor(
+  stepIndex: number,
+  chosenCategories: Iterable<string> = [],
+): number {
+  let webCeiling = 0;
+  for (let i = 0; i <= Math.min(stepIndex, BUILD_PATH.length - 1); i++) {
+    webCeiling = Math.max(webCeiling, BUILD_PATH[i].phoneStageIndex);
+  }
+
+  const chosen = new Set(chosenCategories);
+  let prefix = 0;
+  for (let i = 0; i < buildStages.length; i++) {
+    const category = buildStages[i].partCategory;
+    const blocks = category !== null
+      && REQUIRED_PATH_CATEGORIES.includes(category)
+      && !chosen.has(category);
+    if (blocks) break;
+    prefix = i;
+  }
+
   // Never past the shared flow's own bounds — the store validates the range.
-  return Math.min(max, buildStages.length - 1);
+  return Math.min(webCeiling, prefix, buildStages.length - 1);
 }

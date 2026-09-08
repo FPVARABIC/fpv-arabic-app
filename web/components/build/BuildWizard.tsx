@@ -15,7 +15,10 @@ import {
   BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS, phaseForStep, phoneStageIndexFor,
   type BuildStep,
 } from '@/lib/build/path';
-import { partLabel, SIZE_MEANING_AR, VOLTAGE_MEANING_AR } from '@/lib/build/labels';
+import { partLabel, partLabelAr, SIZE_MEANING_AR, VOLTAGE_MEANING_AR } from '@/lib/build/labels';
+import {
+  buildTypeAvailability, isBuildTypeAvailable, unavailableLabelAr,
+} from '@/lib/build/availability';
 import {
   loadDraft, saveDraft, seedFromProject, emptyDraft, mirrorToProject,
   draftParts, firstUnresolvedStep,
@@ -81,6 +84,17 @@ export const BuildWizard: React.FC = () => {
   const [phase, setPhase] = useState<'questions' | 'owned' | 'path'>(() =>
     draft.mode ? (needsQuestions(draft) ? 'questions' : 'path') : 'questions');
   const [anchorOpen, setAnchorOpen] = useState(false);
+  /**
+   * A foundational change that would drop already-chosen parts, held until the
+   * reader agrees to it. `next` is computed BEFORE the reader is asked, so the
+   * list they read and the state they get cannot disagree.
+   */
+  const [pendingChange, setPendingChange] = useState<{
+    titleAr: string;
+    alsoAr?: string;
+    removedCategories: string[];
+    next: BuildDraft;
+  } | null>(null);
 
   // Persist + mirror on every draft change. The draft is the truth; the
   // shared store follows it.
@@ -106,13 +120,23 @@ export const BuildWizard: React.FC = () => {
   }), [draft]);
 
   const findings = useMemo(() => {
-    const snapshot = snapshotFromContext(ctx, phoneStageIndexFor(draft.stepIndex));
+    const snapshot = snapshotFromContext(
+      ctx,
+      phoneStageIndexFor(draft.stepIndex, Object.keys(ctx.parts)),
+    );
     return snapshot.exists ? sortFindings(computeFindings(snapshot)) : [];
   }, [ctx, draft.stepIndex]);
   const blockers = findings.filter(f => f.severity === 'blocker').length;
 
   /** Selecting a part, with the same single-field invalidation the phone does. */
   const selectPart = (category: string, part: BasePart) => {
+    // While a foundational change is awaiting an answer, the draft must hold
+    // still. The confirmation names the parts it will remove by computing the
+    // result UP FRONT, which is what stops the message and the behaviour from
+    // drifting apart — but step 4 keeps a battery picker on screen beneath the
+    // sheet, so without this guard a reader could pick a battery after reading
+    // the list and have that choice quietly overwritten on confirm.
+    if (pendingChange) return;
     setDraft(d => {
       const partIds = { ...d.partIds, [category]: part.id };
       const externalParts = { ...d.externalParts };
@@ -121,51 +145,95 @@ export const BuildWizard: React.FC = () => {
     });
   };
 
+  /**
+   * A foundational change, applied only once the reader knows its cost.
+   *
+   * Changing the drone type, the size or the battery voltage can make an
+   * already-chosen part invalid, and the old code simply deleted it — the
+   * voltage path did so with no message at all, so switching 6S→4S removed a
+   * motor and a battery while the only visible trace was «بناءي» quietly
+   * counting 4/8 instead of 6/8. (Changing the type did ask, through a native
+   * `window.confirm`: unstyled, in the browser's language, LTR inside an RTL
+   * app, and inconsistent with the more destructive path beside it.)
+   *
+   * Every foundational selector now hands its ALREADY-COMPUTED next draft to
+   * this function. The removal list is derived by diffing that result against
+   * the current draft, so the parts named on screen are exactly the parts that
+   * will go — the message cannot drift from the behaviour because it is read
+   * from it. With nothing to remove, the change applies immediately: a
+   * confirmation nobody needs is a confirmation everybody learns to dismiss.
+   */
+  const applyFoundationalChange = (
+    titleAr: string,
+    compute: (d: BuildDraft) => BuildDraft,
+    alsoAr?: string,
+  ) => {
+    const next = compute(draft);
+    const removedCategories = Object.keys(draft.partIds).filter(c => !next.partIds[c]);
+    // A size the reader picked and is about to lose counts as discarded work
+    // too, even though it is not a part.
+    const dropsSize = draft.sizeInch !== undefined && next.sizeInch === undefined;
+    if (removedCategories.length === 0 && !dropsSize) {
+      setDraft(next);
+      return;
+    }
+    setPendingChange({ titleAr, alsoAr, removedCategories, next });
+  };
+
   const selectSize = (sizeInch: number) => {
-    setDraft(d => {
-      const partIds = { ...d.partIds };
-      const frame = partIds.frames
-        ? (PART_CATEGORY_MAP.frames?.find(p => p.id === partIds.frames) as Frame | undefined)
-        : undefined;
-      if (frame && !frameMatchesSize(frame, sizeInch)) delete partIds.frames;
-      return { ...d, sizeInch, partIds };
-    });
+    applyFoundationalChange(
+      `تغيير الحجم إلى ${sizeInch} إنش`,
+      d => {
+        const partIds = { ...d.partIds };
+        const frame = partIds.frames
+          ? (PART_CATEGORY_MAP.frames?.find(p => p.id === partIds.frames) as Frame | undefined)
+          : undefined;
+        if (frame && !frameMatchesSize(frame, sizeInch)) delete partIds.frames;
+        return { ...d, sizeInch, partIds };
+      },
+    );
   };
 
   const selectVoltage = (sCount: number) => {
-    setDraft(d => {
-      const partIds: Record<string, string> = {};
-      for (const [category, id] of Object.entries(d.partIds)) {
-        const part = PART_CATEGORY_MAP[category]?.find(p => p.id === id);
-        if (part && part.compatibilityTags.batteryVoltages.includes(sCount)) {
-          partIds[category] = id;
+    applyFoundationalChange(
+      `تغيير جهد البطارية إلى ${sCount}S`,
+      d => {
+        const partIds: Record<string, string> = {};
+        for (const [category, id] of Object.entries(d.partIds)) {
+          const part = PART_CATEGORY_MAP[category]?.find(p => p.id === id);
+          if (part && part.compatibilityTags.batteryVoltages.includes(sCount)) {
+            partIds[category] = id;
+          }
         }
-      }
-      return { ...d, batteryVoltage: sCount, partIds };
-    });
+        return { ...d, batteryVoltage: sCount, partIds };
+      },
+      'القطع المذكورة غير موسومة لهذا الجهد في بياناتها الموثقة، فلا يمكن إبقاؤها على بناء مصمَّم عليه.',
+    );
   };
 
   const selectDroneType = (droneTypeId: string) => {
-    setDraft(d => {
-      if (d.droneTypeId && d.droneTypeId !== droneTypeId
-        && Object.keys(d.partIds).length > 0
-        && !window.confirm('تغيير نوع الدرون سيُسقط القطع غير الموسومة للنوع الجديد. هل تريد المتابعة؟')) {
-        return d;
-      }
-      const partIds: Record<string, string> = {};
-      for (const [category, id] of Object.entries(d.partIds)) {
-        const part = PART_CATEGORY_MAP[category]?.find(p => p.id === id);
-        if (part && part.compatibilityTags.droneTypes.includes(droneTypeId)) {
-          partIds[category] = id;
+    const sizeWillReset = draft.sizeInch !== undefined
+      && !getAvailableSizeOptions(droneTypeId).some(o => o.sizeInch === draft.sizeInch);
+    const typeName = droneTypes.find(t => t.id === droneTypeId)?.primaryName ?? droneTypeId;
+    applyFoundationalChange(
+      `تغيير نوع البناء إلى ${typeName}`,
+      d => {
+        const partIds: Record<string, string> = {};
+        for (const [category, id] of Object.entries(d.partIds)) {
+          const part = PART_CATEGORY_MAP[category]?.find(p => p.id === id);
+          if (part && part.compatibilityTags.droneTypes.includes(droneTypeId)) {
+            partIds[category] = id;
+          }
         }
-      }
-      const sizeStillValid = d.sizeInch !== undefined
-        && getAvailableSizeOptions(droneTypeId).some(o => o.sizeInch === d.sizeInch);
-      return {
-        ...d, droneTypeId, partIds,
-        sizeInch: sizeStillValid ? d.sizeInch : undefined,
-      };
-    });
+        return {
+          ...d, droneTypeId, partIds,
+          sizeInch: sizeWillReset ? undefined : d.sizeInch,
+        };
+      },
+      sizeWillReset
+        ? 'وسيُعاد اختيار الحجم أيضاً، لأن الحجم الحالي غير متاح لهذا النوع.'
+        : undefined,
+    );
   };
 
   const step = BUILD_PATH[draft.stepIndex];
@@ -173,7 +241,11 @@ export const BuildWizard: React.FC = () => {
   const canAdvance = (): boolean => {
     switch (step.kind) {
       case 'choice':
-        if (step.id === 'goal') return !!draft.droneTypeId;
+        // A type the catalogue cannot finish is not a choice this step
+        // accepts — see `lib/build/availability.ts`. A draft can carry one
+        // from before it was withdrawn, or from a build started on the phone,
+        // so this is checked rather than assumed impossible.
+        if (step.id === 'goal') return isBuildTypeAvailable(draft.droneTypeId);
         if (step.id === 'size') return draft.sizeInch !== undefined;
         if (step.id === 'power') return draft.batteryVoltage !== undefined;
         return true;
@@ -192,6 +264,57 @@ export const BuildWizard: React.FC = () => {
         return true;
     }
   };
+
+  /**
+   * WHY «التالي» is closed, in words, on every step that closes it.
+   *
+   * A disabled button states that something is wrong and refuses to say what.
+   * The audit found the section shipped exactly that on six of its twenty
+   * steps — and on one of them (an unavailable drone type) the button could
+   * never open at all, under an intro promising the opposite. Styling the
+   * disabled state is half the fix; this is the other half.
+   *
+   * Returns null when the step is not blocked, so the caller renders nothing.
+   */
+  const blockedReasonAr = (): string | null => {
+    if (canAdvance()) return null;
+    switch (step.kind) {
+      case 'choice': {
+        if (step.id === 'goal') {
+          if (!draft.droneTypeId) return 'اختر نوع البناء أولاً — كل خطوة بعده تُبنى عليه.';
+          const name = droneTypes.find(t => t.id === draft.droneTypeId)?.primaryName ?? draft.droneTypeId;
+          const { reasonAr } = buildTypeAvailability(draft.droneTypeId);
+          return `«${name}» غير متاح للبناء الآن. ${reasonAr ?? ''} اختر نوعاً آخر للمتابعة.`;
+        }
+        if (step.id === 'size') {
+          return 'اختر مقاس البناء للمتابعة — المقاس يحدد الإطار والمراوح.';
+        }
+        if (step.id === 'power') {
+          return 'اختر جهد البطارية (4S أو 6S) للمتابعة — الجهد يحدد أي محرك وESC يمكن النظر فيهما.';
+        }
+        return null;
+      }
+      case 'parts': {
+        const missing = (step.categories ?? [])
+          .filter(c => !(step.optionalCategories ?? []).includes(c))
+          .filter(c => !draft.partIds[c] && !draft.externalParts[c]);
+        if (missing.length === 0) return null;
+        return `اختر ${missing.map(partLabelAr).join(' و')} للمتابعة — لا يمكن إكمال البناء بدونها.`;
+      }
+      case 'report':
+        return `يوجد ${blockers} مانع يجب حلّه قبل المتابعة. عد إلى الخطوة التي اخترت فيها القطعة المعنيّة وبدّلها — تفاصيل كل مانع أعلاه.`;
+      case 'gate': {
+        const gate = gateFor(step.id);
+        if (!gate) return null;
+        const done = draft.gateChecks[step.id]?.length ?? 0;
+        const left = gate.items.length - done;
+        return `بقي ${left} من ${gate.items.length} بنداً لم تؤكّده. هذه بوابة سلامة — «التالي» يفتح بعد تأكيد كل بند.`;
+      }
+      default:
+        return null;
+    }
+  };
+  const blockedReason = blockedReasonAr();
 
   const goNext = () => {
     setAnchorOpen(false);
@@ -244,23 +367,48 @@ export const BuildWizard: React.FC = () => {
 
         <div style={{ marginTop: 16 }}>
           {step.kind === 'choice' && step.id === 'goal' && (
+            /* A type the catalogue cannot finish stays LISTED and stays
+             * readable — withdrawing it from the page would answer «why is it
+             * gone?» with silence — but it cannot open a journey, and it says
+             * in its own words why not. See `lib/build/availability.ts`. */
             <div style={{ display: 'grid', gap: 10 }} data-testid="choice-goal">
-              {droneTypes.map(t => (
-                <button key={t.id} type="button"
-                  data-testid={`goal-${t.id}`}
-                  onClick={() => selectDroneType(t.id)}
-                  aria-pressed={draft.droneTypeId === t.id}
-                  className="card-sm"
-                  style={{
-                    textAlign: 'start', cursor: 'pointer', padding: '14px 16px',
-                    border: draft.droneTypeId === t.id ? '2px solid var(--accent-ink)' : undefined,
-                  }}>
-                  <span style={{ display: 'block', fontSize: 15, fontWeight: 900 }}>{t.primaryName}</span>
-                  <span style={{ display: 'block', marginTop: 5, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-                    {t.description}
-                  </span>
-                </button>
-              ))}
+              {droneTypes.map(t => {
+                const { available, reasonAr } = buildTypeAvailability(t.id);
+                return (
+                  <button key={t.id} type="button"
+                    data-testid={`goal-${t.id}`}
+                    onClick={() => selectDroneType(t.id)}
+                    disabled={!available}
+                    aria-pressed={draft.droneTypeId === t.id}
+                    className="card-sm"
+                    style={{
+                      textAlign: 'start', cursor: available ? 'pointer' : 'not-allowed',
+                      padding: '14px 16px',
+                      border: draft.droneTypeId === t.id ? '2px solid var(--accent-ink)' : undefined,
+                    }}>
+                    <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 15, fontWeight: 900 }}>{t.primaryName}</span>
+                      {!available && (
+                        <span className="admin-badge admin-badge-warn"
+                          data-testid={`goal-unavailable-${t.id}`} style={{ fontSize: 10.5 }}>
+                          {unavailableLabelAr()}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ display: 'block', marginTop: 5, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+                      {t.description}
+                    </span>
+                    {!available && reasonAr && (
+                      <span data-testid={`goal-reason-${t.id}`} style={{
+                        display: 'block', marginTop: 7, fontSize: 12.5,
+                        color: 'var(--sev-warning)', lineHeight: 1.9, fontWeight: 400,
+                      }}>
+                        {reasonAr}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -357,9 +505,20 @@ export const BuildWizard: React.FC = () => {
           })()}
         </div>
 
-        {!canAdvance() && step.kind === 'report' && blockers > 0 && (
-          <p style={{ margin: '14px 0 0', fontSize: 12, color: 'var(--sev-blocker)' }}>
-            «التالي» مقفل حتى تُعالج الموانع أعلاه.
+        {/* Never a dead button: whenever progression is closed, the screen says
+            why and what to do about it, and the button points at this text. */}
+        {blockedReason && (
+          <p
+            id="wizard-blocked-reason"
+            role="note"
+            data-testid="wizard-blocked-reason"
+            className="card-sm"
+            style={{
+              margin: '14px 0 0', padding: '12px 14px', fontSize: 12.5,
+              color: 'var(--sev-warning)', lineHeight: 1.95,
+            }}
+          >
+            {blockedReason}
           </p>
         )}
 
@@ -369,6 +528,53 @@ export const BuildWizard: React.FC = () => {
             panel body the desktop side column shows — upward, as a sheet
             that never covers the tab bar and never pushes content around. */}
         <div className="wizard-dock" data-testid="wizard-dock">
+          {/* The cost of a foundational change, before it is paid. Rides in the
+              dock so it appears under the thumb on a phone and cannot be
+              scrolled past on either surface. */}
+          {pendingChange && (
+            <div className="invalidation-sheet" role="alertdialog" aria-modal="false"
+              aria-labelledby="invalidation-title" data-testid="invalidation-sheet">
+              <h2 id="invalidation-title" style={{ fontSize: 15, fontWeight: 900, margin: 0 }}>
+                {pendingChange.titleAr}
+              </h2>
+              <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.95 }}>
+                سيؤدي هذا إلى إزالة{' '}
+                <b dir="ltr">{pendingChange.removedCategories.length}</b>{' '}
+                من قطعك المختارة:
+              </p>
+              <ul data-testid="invalidation-list" style={{
+                margin: '8px 0 0', paddingInlineStart: 18, fontSize: 13,
+                lineHeight: 1.95, display: 'grid', gap: 3,
+              }}>
+                {pendingChange.removedCategories.map(category => {
+                  const part = PART_CATEGORY_MAP[category]
+                    ?.find(p => p.id === draft.partIds[category]);
+                  return (
+                    <li key={category} data-testid={`invalidation-item-${category}`}>
+                      <span style={{ color: 'var(--text-dimmer)' }}>{partLabelAr(category)}: </span>
+                      <b>{part?.nameAr ?? draft.partIds[category]}</b>
+                    </li>
+                  );
+                })}
+              </ul>
+              {pendingChange.alsoAr && (
+                <p style={{ margin: '8px 0 0', fontSize: 12.5, color: 'var(--sev-warning)', lineHeight: 1.95 }}>
+                  {pendingChange.alsoAr}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <button type="button" className="btn-primary" data-testid="invalidation-confirm"
+                  onClick={() => { setDraft(pendingChange.next); setPendingChange(null); }}
+                  style={{ fontSize: 13 }}>
+                  متابعة التغيير
+                </button>
+                <button type="button" className="btn-ghost" data-testid="invalidation-cancel"
+                  onClick={() => setPendingChange(null)} style={{ fontSize: 13 }}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          )}
           {anchorOpen && (
             <div className="mybuild-sheet" data-testid="my-build-sheet">
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -390,7 +596,8 @@ export const BuildWizard: React.FC = () => {
               open={anchorOpen} onToggle={() => setAnchorOpen(o => !o)} />
             {draft.stepIndex < TOTAL_BUILD_STEPS - 1 ? (
               <button type="button" className="btn-primary" data-testid="wizard-next"
-                disabled={!canAdvance()} onClick={goNext} style={{ fontSize: 13.5 }}>
+                disabled={!canAdvance()} onClick={goNext} style={{ fontSize: 13.5 }}
+                aria-describedby={blockedReason ? 'wizard-blocked-reason' : undefined}>
                 التالي ←
               </button>
             ) : (
