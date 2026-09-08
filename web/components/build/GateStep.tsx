@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import type { SafetyGate } from '@/lib/build/gates';
+import { gateTermNoteFor, PRE_BATTERY_SAFETY } from '@/lib/build/safetyNotes';
 
 /**
  * A safety gate: the checklist that stands between two build phases.
@@ -26,6 +28,27 @@ export const GateStep: React.FC<{
         {gate.stakesAr}
       </p>
 
+      {/* The last screen before any current flows repeats the one install
+          mistake that is irreversible. The install step says it too; these can
+          be days apart, and only one of them is the point of no return. */}
+      {gate.stepId === 'prebattery' && (
+        <div role="note" className="card-sm" data-testid="safety-note-prebattery" style={{
+          padding: '12px 14px', margin: '0 0 14px', borderColor: 'var(--sev-warning)',
+        }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: 'var(--sev-warning)', lineHeight: 1.8 }}>
+            ⚠ {PRE_BATTERY_SAFETY.titleAr}
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+            {PRE_BATTERY_SAFETY.bodyAr}
+          </p>
+          <Link href={`/lessons/${PRE_BATTERY_SAFETY.lessonId}`}
+            data-testid="safety-lesson-prebattery"
+            style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: 'var(--accent-ink)', fontWeight: 700 }}>
+            الدرس الكامل: {PRE_BATTERY_SAFETY.lessonTitleAr} ←
+          </Link>
+        </div>
+      )}
+
       <h3 style={{ fontSize: 14.5, fontWeight: 900, margin: '0 0 4px' }}>{gate.headlineAr}</h3>
       <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-dimmer)' }}>
         <span dir="ltr">{done}/{gate.items.length}</span> مؤكد — لا يفتح «التالي» قبل اكتمالها
@@ -34,6 +57,11 @@ export const GateStep: React.FC<{
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
         {gate.items.map((text, i) => {
           const isDone = confirmed.includes(i);
+          /* The shared item text is not this component's to edit — the phone
+           * renders the same list. What it CAN do is explain the untranslated
+           * term standing between a beginner and an honest tick. Nothing here
+           * offers a way to pass an item that was not actually done. */
+          const term = gateTermNoteFor(text);
           return (
             <li key={i}>
               <label className="card-sm" style={{
@@ -48,7 +76,20 @@ export const GateStep: React.FC<{
                   onChange={() => onToggle(i)}
                   style={{ marginTop: 4, width: 16, height: 16, accentColor: 'var(--accent-ink)' }}
                 />
-                <span style={{ fontSize: 13.5, lineHeight: 1.9 }}>{text}</span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13.5, lineHeight: 1.9 }}>{text}</span>
+                  {term && (
+                    <span
+                      data-testid={`gate-term-${gate.stepId}-${i}`}
+                      style={{
+                        display: 'block', marginTop: 4, fontSize: 12,
+                        color: 'var(--text-dimmer)', lineHeight: 1.9,
+                      }}
+                    >
+                      {term.explanationAr}
+                    </span>
+                  )}
+                </span>
               </label>
             </li>
           );

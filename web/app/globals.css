@@ -241,6 +241,57 @@ a:hover { text-decoration: none; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -8px rgba(0, 150, 200, 0.65); }
 .btn-primary:active { transform: scale(0.98); }
 
+/* A REFUSED ACTION MUST LOOK REFUSED.
+ *
+ * There was no `:disabled` rule here at all, so a blocked «التالي» kept the
+ * full gradient, the hover lift and the press animation — pixel-identical to
+ * the working button beside it. On a phone, where `cursor` says nothing, the
+ * only feedback for a tap was silence, and the wizard has steps that block on
+ * purpose (an unconfirmed safety gate, a standing blocker) plus part cards
+ * whose «اختر هذه القطعة» is refused for a documented incompatibility.
+ *
+ * The treatment is deliberately flat rather than merely faded: the gradient
+ * and the shadow are what read as «press me», so both go, and the motion goes
+ * with them. Contrast stays legible — a disabled control still has to be
+ * READABLE, because the reason it is disabled is usually written next to it.
+ *
+ * `:disabled` covers the native attribute the wizard actually sets;
+ * `[aria-disabled='true']` covers anything styled as a button that cannot use
+ * it. Both are here so the two never drift apart. */
+.btn-primary:disabled,
+.btn-primary[aria-disabled='true'] {
+  background: var(--surface-2);
+  color: var(--text-dimmer);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.btn-primary:disabled:hover,
+.btn-primary:disabled:active,
+.btn-primary[aria-disabled='true']:hover,
+.btn-primary[aria-disabled='true']:active {
+  transform: none;
+  box-shadow: none;
+}
+
+/* The same promise for the two other pressables the build flow disables: the
+ * ghost button, and the card-shaped option buttons the goal step renders for
+ * a drone type the catalogue cannot finish. */
+.btn-ghost:disabled,
+.btn-ghost[aria-disabled='true'] {
+  color: var(--text-dimmer);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.btn-ghost:disabled:hover,
+.btn-ghost[aria-disabled='true']:hover { transform: none; box-shadow: none; }
+
+button.card-sm:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+button.card-sm:disabled:hover { transform: none; box-shadow: none; }
+
 .btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -961,6 +1012,27 @@ details.card-sm > summary:focus-visible {
  * the reader holds it open, never pushes the step around, and closes on any
  * navigation. On desktop the dock is an ordinary row and the chip and sheet
  * do not exist: the side column is already the anchor there. */
+/* The confirmation a foundational change opens before it discards anything.
+ *
+ * It lives in the dock rather than beside the control that triggered it, for
+ * the same reason the dock exists: on a phone the voltage buttons can be a
+ * screen and a half above the fold by the time somebody taps one, and a
+ * warning rendered up there is a warning nobody reads. Unlike «بناءي» this is
+ * shown at EVERY width — it is not a summary the desktop already has in its
+ * side column, it is a question, and it is the same question on both. */
+.invalidation-sheet {
+  background: var(--surface);
+  border: 1px solid var(--sev-warning);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px -12px rgba(21, 34, 50, 0.35);
+  margin-bottom: 8px;
+  padding: 14px 16px;
+  max-height: 60vh;
+  max-height: 60dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .wizard-dock { margin-top: 22px; }
 .wizard-actions {
   display: flex;

@@ -172,12 +172,21 @@ export function draftParts(draft: BuildDraft): Record<string, BasePart> {
  */
 export function mirrorToProject(draft: BuildDraft): void {
   if (!draft.droneTypeId) return;
+  const parts = draftParts(draft);
   saveAssemblyProject({
     droneTypeId: draft.droneTypeId,
-    stageIndex: phoneStageIndexFor(draft.stepIndex),
+    // The mirrored stage is a claim about somebody's real build, so it is
+    // computed from the parts actually chosen and not from the step number
+    // alone — see the note on `phoneStageIndexFor`. A category the reader
+    // supplied from outside the catalogue counts as done: the wizard accepts
+    // it as satisfying the step, so the mirror must agree.
+    stageIndex: phoneStageIndexFor(
+      draft.stepIndex,
+      [...Object.keys(parts), ...Object.keys(draft.externalParts)],
+    ),
     sizeInch: draft.sizeInch,
     batteryVoltage: draft.batteryVoltage,
-    parts: draftParts(draft),
+    parts,
   });
 }
 

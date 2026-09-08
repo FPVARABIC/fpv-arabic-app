@@ -7,6 +7,7 @@ import { roadmapStageContent, type RoadmapStageId } from '@core/data/roadmapStag
 import type { Receiver, VideoUnit, Battery, Gps } from '@core/data/assembly/types';
 import type { BuildDraft } from '@/lib/build/draft';
 import { draftParts } from '@/lib/build/draft';
+import { ASSEMBLY_STAGE_SAFETY, type SafetyNote } from '@/lib/build/safetyNotes';
 
 /**
  * The guide steps — 13 (wiring), 14 (assembly order), 16 (software),
@@ -169,6 +170,11 @@ export const AssemblyStep: React.FC = () => {
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.95 }}>
                     {stage.description}
                   </p>
+                  {/* The hazard this stage can cause, at the moment the reader
+                      is about to do it — ahead of the procedure, not after. */}
+                  {ASSEMBLY_STAGE_SAFETY[stage.id] && (
+                    <SafetyCallout note={ASSEMBLY_STAGE_SAFETY[stage.id]} where={stage.id} />
+                  )}
                   {content && (
                     <>
                       <GuideList titleAr="التحضير" items={content.preparation} />
@@ -259,6 +265,31 @@ export const FirstFlightStep: React.FC = () => (
     <p style={{ margin: 0, fontSize: 12, color: 'var(--text-dimmer)', lineHeight: 1.9 }}>
       الطيران مسؤوليتك، والتزام أنظمة بلدك واجب — نفس القاعدة المثبتة في أسفل كل صفحة.
     </p>
+  </div>
+);
+
+/**
+ * A hazard note drawn from a reviewed lesson.
+ *
+ * The body is a tight restatement of lesson content, not new safety copy, and
+ * the link goes to the lesson that teaches it properly — the platform already
+ * owns this material and the build path simply never pointed at it. Deliberately
+ * NOT collapsible: something that damages hardware is not a disclosure.
+ */
+export const SafetyCallout: React.FC<{ note: SafetyNote; where: string }> = ({ note, where }) => (
+  <div role="note" className="card-sm" data-testid={`safety-note-${where}`} style={{
+    padding: '12px 14px', borderColor: 'var(--sev-warning)',
+  }}>
+    <p style={{ margin: 0, fontSize: 13, fontWeight: 900, color: 'var(--sev-warning)', lineHeight: 1.8 }}>
+      ⚠ {note.titleAr}
+    </p>
+    <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.95 }}>
+      {note.bodyAr}
+    </p>
+    <Link href={`/lessons/${note.lessonId}`} data-testid={`safety-lesson-${where}`}
+      style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: 'var(--accent-ink)', fontWeight: 700 }}>
+      الدرس الكامل: {note.lessonTitleAr} ←
+    </Link>
   </div>
 );
 
