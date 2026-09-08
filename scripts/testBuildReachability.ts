@@ -34,7 +34,9 @@
  *      `stack-mount` and remain unreachable for something else, while its card
  *      went on blaming a missing 20×20 flight controller. So each unavailable
  *      type declares a `reasonCode`, and this suite checks that identity
- *      against derived truth.
+ *      against derived truth — and for a blocker reason it checks UNIVERSALITY,
+ *      not mere presence: the named blocker must stand in every complete
+ *      combination examined, because that is what the card claims.
  *
  * Direction 2 is the one that earns its keep over time. Without it, adding a
  * 30.5 racing frame would fix the catalogue and leave «قريبًا» sitting on a
@@ -110,14 +112,30 @@ interface Attempt {
   /** True when the whole space was searched — i.e. nothing valid was found. */
   exhaustive: boolean;
   validPath: Record<string, string> | null;
-  blockerIds: Set<string>;
+  /**
+   * blocker id → how many COMPLETE combinations raised it.
+   *
+   * A set of ids would answer «did this blocker appear anywhere», and that is
+   * the weaker question. A type whose card claims «كل تركيبة ممكنة تصطدم
+   * بمانع» is claiming the blocker is UNIVERSAL, and the two come apart the
+   * moment the catalogue grows: add a 20×20 flight controller and the
+   * combinations using it stop raising `stack-mount` while the ones using a
+   * 30.5 board still do. Membership would still say yes; the sentence on the
+   * card would already be false. Counting is what tells them apart.
+   */
+  blockerCounts: Map<string, number>;
+}
+
+/** Every blocker seen anywhere in the search — for diagnostics, not for proof. */
+function blockersSeen(r: Attempt): string[] {
+  return [...r.blockerCounts.keys()];
 }
 
 /** Exhaustive until the first clean build — that is all «reachable» claims. */
 function searchType(droneTypeId: string): Attempt & { sizes: number[] } {
   const sizes = getAvailableSizeOptions(droneTypeId).map(o => o.sizeInch);
   const result: Attempt = {
-    combinationsExplored: 0, exhaustive: false, validPath: null, blockerIds: new Set(),
+    combinationsExplored: 0, exhaustive: false, validPath: null, blockerCounts: new Map(),
   };
   if (sizes.length === 0) return { ...result, sizes };
 
@@ -161,7 +179,9 @@ function searchType(droneTypeId: string): Attempt & { sizes: number[] } {
             );
             return true;
           }
-          for (const b of blockers) result.blockerIds.add(b.id);
+          for (const id of new Set(blockers.map(b => b.id))) {
+            result.blockerCounts.set(id, (result.blockerCounts.get(id) ?? 0) + 1);
+          }
           return false;
         }
         for (const part of pools[depth]) {
@@ -196,7 +216,16 @@ for (const type of droneTypes) {
   } else if (r.sizes.length === 0) {
     console.log('      why not                  : no size option — no frame carries this type\'s tag');
   } else {
-    console.log(`      blockers seen            : ${[...r.blockerIds].join(', ') || '(no complete combination existed)'}`);
+    console.log(`      blockers seen            : ${blockersSeen(r)
+      .map(id => `${id} — ${r.blockerCounts.get(id)}/${r.combinationsExplored} combinations`)
+      .join('; ') || '(no complete combination existed)'}`);
+    const declaredCode = declared?.reasonCode;
+    if (declaredCode?.kind === 'blocker') {
+      console.log(`      declared reason blocker  : ${declaredCode.blockerId}`);
+      console.log(`      its coverage             : `
+        + `${r.blockerCounts.get(declaredCode.blockerId) ?? 0}/${r.combinationsExplored}`
+        + ` (must be ${r.combinationsExplored}/${r.combinationsExplored} to stay «كل تركيبة»)`);
+    }
   }
   console.log(`      declared availability    : ${declared ? (declared.available ? 'available' : 'قريبًا') : 'UNDECLARED'}`);
   console.log('');
@@ -221,7 +250,7 @@ for (const type of droneTypes) {
       r.validPath,
       `FAILED: «${type.primaryName}» (${type.id}) is offered as available but NO complete `
       + `blocker-free build exists — ${r.combinationsExplored} combinations explored, blockers seen: `
-      + `${[...r.blockerIds].join(', ') || 'none (no combination could even be assembled)'}. `
+      + `${blockersSeen(r).join(', ') || 'none (no combination could even be assembled)'}. `
       + 'Either add the catalogue parts that close this gap, or mark the type unavailable '
       + 'in web/lib/build/availability.ts with the reason.',
     );
@@ -277,17 +306,42 @@ for (const type of droneTypes) {
         + 'derives no size at all, so no combination is ever assembled and that blocker is not '
         + "why it fails. The reason is now «no-size» — update web/lib/build/availability.ts.",
       );
+      /*
+       * THE BLOCKER MUST BE UNIVERSAL, NOT MERELY PRESENT.
+       *
+       * Asking «did this blocker appear somewhere in the search» is the weaker
+       * question, and it passes in precisely the case this guard exists to
+       * catch. Add a 20×20 flight controller to the catalogue: combinations
+       * using it stop raising `stack-mount`, combinations using a 30.5 board
+       * still raise it, and if those new combinations fail for some OTHER
+       * reason the type stays unreachable. Membership still says yes. But the
+       * card — «فكل تركيبة ممكنة تصطدم بمانع في فحص التوافق» — is now false,
+       * because SOME combinations no longer hit it.
+       *
+       * So the claim is checked as what it says: the named blocker stood in
+       * EVERY complete combination examined.
+       */
+      const coverage = r.blockerCounts.get(code.blockerId) ?? 0;
       assert.ok(
-        r.blockerIds.has(code.blockerId),
-        `FAILED: «${type.primaryName}» (${type.id}) claims to fail on «${code.blockerId}», but `
-        + `the exhaustive search over ${r.combinationsExplored} combinations never raised it. `
-        + `Blockers actually seen: ${[...r.blockerIds].join(', ') || '(none)'}. `
-        + 'The type is still unreachable, but the card is explaining the wrong cause — '
-        + 'update reasonCode/reasonAr in web/lib/build/availability.ts.',
+        r.combinationsExplored > 0,
+        `FAILED: «${type.primaryName}» (${type.id}) claims to fail on «${code.blockerId}», but no `
+        + 'complete combination could be assembled at all, so no blocker is why it fails. '
+        + 'Update reasonCode/reasonAr in web/lib/build/availability.ts.',
       );
-      ok(`«${type.primaryName}» really does fail on «${code.blockerId}»`, true);
-      // A reason derived from a partial search would be a guess.
-      ok(`«${type.primaryName}»'s blocker set comes from an exhaustive search`, r.exhaustive);
+      assert.ok(
+        coverage === r.combinationsExplored,
+        `FAILED: «${type.primaryName}» (${type.id}) publishes «${code.blockerId}» as THE reason it `
+        + `cannot be built, but that blocker was present in only ${coverage}/${r.combinationsExplored} `
+        + 'complete combinations — so it is no longer a universal reason for unavailability. '
+        + `Blockers seen across the search: ${blockersSeen(r)
+          .map(id => `${id} (${r.blockerCounts.get(id)}/${r.combinationsExplored})`).join(', ') || '(none)'}. `
+        + 'The type is still unreachable, but the card explains a cause that no longer applies to '
+        + 'every build — update reasonCode/reasonAr in web/lib/build/availability.ts.',
+      );
+      ok(`«${type.primaryName}» fails on «${code.blockerId}» in EVERY combination `
+        + `(${coverage}/${r.combinationsExplored})`, true);
+      // A universality claim drawn from a partial search would be a guess.
+      ok(`«${type.primaryName}»'s coverage figure comes from an exhaustive search`, r.exhaustive);
     }
   }
 }

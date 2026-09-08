@@ -63,7 +63,9 @@
  * So the reason carries a machine-checkable identity beside the prose, and
  * `scripts/testBuildReachability.ts` verifies that IDENTITY against derived
  * truth: a `no-size` claim must correspond to a type with no size options, and
- * a `blocker` claim must name a blocker the exhaustive search actually raises.
+ * a `blocker` claim must name a blocker the exhaustive search raises in EVERY
+ * complete combination — because «كل تركيبة ممكنة» is what the card says, and a
+ * blocker that merely appears somewhere no longer supports that sentence.
  * When the catalogue moves and the stated reason stops being the real one, CI
  * fails even though the type is still unavailable — and somebody has to look
  * at the sentence on the card.
@@ -74,7 +76,15 @@
 export type UnavailableReasonCode =
   /** No size can be derived, so the path cannot even start. */
   | { kind: 'no-size' }
-  /** Every complete combination raises this blocker id from the verdict engine. */
+  /**
+   * EVERY complete combination raises this blocker id from the verdict engine.
+   *
+   * «Every», not «some» — and the reachability suite checks it that way, by
+   * counting the combinations each blocker appears in rather than asking
+   * whether it appeared at all. The two only diverge once the catalogue grows,
+   * which is exactly when the card's «كل تركيبة ممكنة» would quietly stop
+   * being true.
+   */
   | { kind: 'blocker'; blockerId: string };
 
 /** One drone type's answer to «can this be built with what we stock?». */
