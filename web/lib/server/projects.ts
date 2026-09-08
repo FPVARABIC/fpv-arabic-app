@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { adminDb, isAdminConfigured } from './firebaseAdmin';
+import { uploadedProjectCover } from './projectImages';
 import { ALL_PROJECTS } from '@core/data/projects/registry';
 import type { Project } from '@core/data/projects/types';
 
@@ -28,6 +29,23 @@ import type { Project } from '@core/data/projects/types';
  * Same posture as the store catalogue: a section that 500s because Firestore is
  * unreachable is a section that is down. One that shows its reviewed seeds is
  * degraded and still useful. The one thing it must never do is invent.
+ *
+ * WHERE THE COVER PHOTOGRAPH COMES FROM
+ * -------------------------------------
+ * Two places, and the precedence between them is the point. The admin panel
+ * uploads to Storage and writes `imageUrl`; the owner also drops files straight
+ * into `web/public/assets/projects/<id>/` under the naming convention
+ * `imageSlots.ts` publishes. The database wins when it has an answer —
+ * INCLUDING the answer «cleared», which is why the test below is `undefined`
+ * and not falsy: clearing an image writes an explicit null, and reviving a
+ * repository file over somebody's deliberate removal would make the panel's
+ * delete button look broken.
+ *
+ * Absent an override, the uploaded file IS the image, with no data edit — which
+ * is what the project image manifest has been promising all along. A project
+ * with neither keeps the typed placeholder that says so: «لا تستخدم صوراً
+ * مؤقتة» — borrowing another project's photograph would make the library look
+ * complete while showing a reader the wrong aircraft.
  */
 
 const COLLECTION = 'projects';
@@ -50,7 +68,8 @@ export const resolvedProjects = cache(async (): Promise<Project[]> => {
 
   const merged = ALL_PROJECTS.map(seed => {
     const o = overrides[seed.id];
-    return o ? ({ ...seed, ...o, id: seed.id } as Project) : seed;
+    const project = o ? ({ ...seed, ...o, id: seed.id } as Project) : seed;
+    return withUploadedCover(project, o);
   });
 
   // Documents with no seed are projects created entirely from the admin panel.
@@ -60,11 +79,25 @@ export const resolvedProjects = cache(async (): Promise<Project[]> => {
   for (const [id, o] of Object.entries(overrides)) {
     if (seedIds.has(id)) continue;
     if (!o.titleAr || !o.summaryAr) continue;
-    merged.push({ ...(o as Project), id });
+    merged.push(withUploadedCover({ ...(o as Project), id }, o));
   }
 
   return merged;
 });
+
+/**
+ * Fill `imageUrl` from an uploaded repository file, unless the database spoke.
+ *
+ * `override?.imageUrl !== undefined` is the whole rule: a present value wins,
+ * and so does an explicit `null`. Only silence — no override at all, or an
+ * override that never mentions the image — lets the uploaded file answer.
+ */
+function withUploadedCover(project: Project, override?: Partial<Project>): Project {
+  if (override && 'imageUrl' in override && override.imageUrl !== undefined) return project;
+  if (project.imageUrl) return project;
+  const cover = uploadedProjectCover(project);
+  return cover ? { ...project, imageUrl: cover.url } : project;
+}
 
 /** Only what a reader may see. */
 export async function visibleProjects(): Promise<Project[]> {
