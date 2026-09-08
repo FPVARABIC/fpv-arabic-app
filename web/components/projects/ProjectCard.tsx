@@ -1,16 +1,26 @@
 import Link from 'next/link';
 import type { Project } from '@core/data/projects/types';
 import { DIFFICULTY_LABEL_AR, projectCategory } from '@core/data/projects/types';
+import { coverFocus } from '@/lib/projectCoverFocus';
 
 /**
  * One project, as a card.
  *
  * WHY THE PLACEHOLDER IS TYPED AND NOT A GREY BOX
  * -----------------------------------------------
- * No project has a photograph yet — the owner supplies those. A grey rectangle
- * reads as a broken image and makes a finished section look unfinished; a panel
- * carrying the project's own initial and category reads as a deliberate state.
- * The same reasoning the store's image placeholder already uses.
+ * A project whose photograph has not been supplied yet gets no grey rectangle:
+ * that reads as a broken image and makes a finished section look unfinished. A
+ * panel carrying the project's own initial and category reads as a deliberate
+ * state. The same reasoning the store's image placeholder already uses.
+ *
+ * WHY THE IMAGE CARRIES AN object-position
+ * ----------------------------------------
+ * The box is 16:9 and the covers are 3:2, so `cover` crops 15.6% of the height.
+ * Nine of the ten covers are scenes and want that taken evenly off both edges,
+ * which is the browser's default and what `coverFocus` returns for them. The
+ * tenth is an infographic whose title sits in the top band. `projectCoverFocus`
+ * holds that one measured exception and explains it; nothing else about the
+ * card changes.
  *
  * WHY DIFFICULTY IS A BADGE AND CATEGORY IS TEXT
  * ----------------------------------------------
@@ -40,6 +50,7 @@ export const ProjectCard: React.FC<{ project: Project }> = ({ project: p }) => {
           src={p.imageUrl}
           alt={p.titleAr}
           className="project-card-media"
+          style={{ objectPosition: coverFocus(p.id) }}
           loading="lazy"
         />
       ) : (

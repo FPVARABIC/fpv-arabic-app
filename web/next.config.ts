@@ -1,6 +1,41 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
 import { isStagingFromEnv } from './lib/staging';
+
+/**
+ * WHICH PROJECT PHOTOGRAPHS EXIST — DECIDED HERE, AT BUILD TIME
+ * -------------------------------------------------------------
+ * The owner drops covers into `public/assets/projects/<id>/` and pushes;
+ * `lib/server/projectImages.ts` answers «which are uploaded?». The obvious
+ * implementation asks `existsSync` at REQUEST time, and it is correct exactly
+ * as long as the serving runtime carries the repository files — true of a
+ * local `next start`, conditionally true of a lambda, and false on a
+ * filesystem-less runtime. The failure mode is the quiet one: files on the
+ * CDN, placeholders on the cards, nothing red anywhere.
+ *
+ * This config file is the one place guaranteed to run under Node with the
+ * real repository present — on every host, because it IS the build. So the
+ * directory is read once here and the answer ships as an inlined constant:
+ * Next substitutes `env` entries at build time, so the resolver does string
+ * lookups and never touches a filesystem. Adding a photograph still takes no
+ * data edit — drop the file, push, and the next build sees it. (In `next dev`
+ * the list is read when the dev server starts; a file dropped mid-session
+ * appears on restart.)
+ */
+function uploadedProjectImages(): Record<string, string[]> {
+  const root = path.join(process.cwd(), 'public/assets/projects');
+  if (!existsSync(root)) return {};
+  const out: Record<string, string[]> = {};
+  for (const dir of readdirSync(root, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    const files = readdirSync(path.join(root, dir.name))
+      .filter(f => f.endsWith('.webp'))
+      .sort();
+    if (files.length > 0) out[dir.name] = files;
+  }
+  return out;
+}
 
 /**
  * The web surface of FPVARABIC.
@@ -45,6 +80,12 @@ import { isStagingFromEnv } from './lib/staging';
  */
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), '..'),
+
+  // Read once above, inlined here, so the cover resolver works identically on
+  // any runtime. See the note on `uploadedProjectImages`.
+  env: {
+    UPLOADED_PROJECT_IMAGES: JSON.stringify(uploadedProjectImages()),
+  },
 
   // The core is plain TypeScript compiled from source, not a published
   // package, so it must go through the same transpile pipeline as the app's
