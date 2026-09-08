@@ -208,6 +208,40 @@ ok('the Smoke Stopper note explains the tool without offering a way to skip it',
   GATE_TERM_NOTES.some(n => n.token === 'Smoke Stopper'
     && /تُحدّ التيار|حماية/.test(n.explanationAr)
     && !/يمكنك تخطي|بدون|اختياري|لا بأس/.test(n.explanationAr)));
+
+/*
+ * NO FALSE ABSOLUTES, NO INVENTED PRECISION.
+ *
+ * These notes are the only NEW safety copy in this change — everything else
+ * points at a reviewed lesson — so they are the text most able to teach
+ * something wrong. Three of the six had to be corrected in review, and each
+ * correction is pinned here against the SHIPPED VALUE rather than against the
+ * file text, so the doc-comment above may quote the old wording as an example
+ * without satisfying its own guard.
+ */
+const noteText = GATE_TERM_NOTES.map(n => n.explanationAr).join(' ¶ ');
+
+ok('no note claims any meter response means a short',
+  !/يجب ألا يصفر|الصفير يعني/.test(noteText));
+ok('the continuity note distinguishes a momentary response from a persistent one',
+  GATE_TERM_NOTES.some(n => n.token === 'continuity'
+    && /لحظية/.test(n.explanationAr)
+    && /مستمرة|دائم/.test(n.explanationAr)));
+ok('the continuity note still tells the reader not to connect the battery unresolved',
+  GATE_TERM_NOTES.some(n => n.token === 'continuity' && /لا توصّل البطارية/.test(n.explanationAr)));
+ok('no note invents a resistance threshold or a meter-specific reading',
+  !/أوم|ohm|Ω|ملي\s?فولت|\d+\s*(kΩ|MΩ)/i.test(noteText));
+
+ok('no note describes what a Smoke Stopper\'s indicator does',
+  !/ضوء خافت|ضوء ساطع|لمبة تضيء|LED (يضيء|أحمر|أخضر)/.test(noteText));
+ok('the Smoke Stopper note defers indication to the device\'s own instructions',
+  GATE_TERM_NOTES.some(n => n.token === 'Smoke Stopper' && /تعليمات جهازك/.test(n.explanationAr)));
+
+ok('the motor-direction note does not claim the physical route is impossible',
+  !/لا بإعادة اللحام|لا يمكن بإعادة/.test(noteText));
+ok('the motor-direction note scopes the software route to ESC support',
+  GATE_TERM_NOTES.some(n => n.token === 'Motor direction'
+    && /حين يدعم|عندما يدعم/.test(n.explanationAr)));
 ok('gate completion still requires every item — no term note changes the count',
   /confirmed\?\.length \?\? 0\) >= gate\.items\.length/.test(read('web/components/build/GateStep.tsx')));
 

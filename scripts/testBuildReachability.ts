@@ -27,7 +27,14 @@
  *   1. every type declared AVAILABLE has at least one complete combination
  *      that reaches the compatibility report with zero blockers;
  *   2. every type declared UNAVAILABLE genuinely has none;
- *   3. every type in `droneTypes` is declared at all.
+ *   3. every type in `droneTypes` is declared at all;
+ *   4. and — the correction that closes the drift hole — the REASON an
+ *      unavailable type publishes is still the reason it actually fails. It is
+ *      not enough to prove a type is unreachable: Racing could stop failing on
+ *      `stack-mount` and remain unreachable for something else, while its card
+ *      went on blaming a missing 20×20 flight controller. So each unavailable
+ *      type declares a `reasonCode`, and this suite checks that identity
+ *      against derived truth.
  *
  * Direction 2 is the one that earns its keep over time. Without it, adding a
  * 30.5 racing frame would fix the catalogue and leave «قريبًا» sitting on a
@@ -91,7 +98,17 @@ function candidatePool(category: string, droneTypeId: string, sCount: number, si
 }
 
 interface Attempt {
+  /**
+   * How many complete combinations were run through the verdict engine.
+   *
+   * This is «explored until proof», NOT «how many exist». For a reachable type
+   * the search stops at the first clean build, so a 1 here means the first
+   * combination tried was already valid — it does not mean the type has only
+   * one possible build. Read it together with `exhaustive`.
+   */
   combinationsExplored: number;
+  /** True when the whole space was searched — i.e. nothing valid was found. */
+  exhaustive: boolean;
   validPath: Record<string, string> | null;
   blockerIds: Set<string>;
 }
@@ -99,7 +116,9 @@ interface Attempt {
 /** Exhaustive until the first clean build — that is all «reachable» claims. */
 function searchType(droneTypeId: string): Attempt & { sizes: number[] } {
   const sizes = getAvailableSizeOptions(droneTypeId).map(o => o.sizeInch);
-  const result: Attempt = { combinationsExplored: 0, validPath: null, blockerIds: new Set() };
+  const result: Attempt = {
+    combinationsExplored: 0, exhaustive: false, validPath: null, blockerIds: new Set(),
+  };
   if (sizes.length === 0) return { ...result, sizes };
 
   for (const sizeInch of sizes) {
@@ -155,6 +174,8 @@ function searchType(droneTypeId: string): Attempt & { sizes: number[] } {
       if (result.validPath) return { ...result, sizes };
     }
   }
+  // Nothing valid anywhere: every combination was run.
+  result.exhaustive = true;
   return { ...result, sizes };
 }
 
@@ -167,7 +188,8 @@ for (const type of droneTypes) {
   const declared = BUILD_TYPE_AVAILABILITY[type.id];
   console.log(`  ${type.id} — «${type.primaryName}»`);
   console.log(`      sizes offered            : ${r.sizes.length ? r.sizes.join(', ') + '"' : 'NONE'}`);
-  console.log(`      combinations explored    : ${r.combinationsExplored}`);
+  console.log(`      combinations explored    : ${r.combinationsExplored}`
+    + `   (${r.exhaustive ? 'EXHAUSTIVE — the whole space was searched' : 'stopped at the first clean build; more may exist'})`);
   console.log(`      complete blocker-free    : ${r.validPath ? 'YES' : 'NO'}`);
   if (r.validPath) {
     console.log(`      representative path      : ${Object.values(r.validPath).join('  +  ')}`);
@@ -218,6 +240,55 @@ for (const type of droneTypes) {
       !!declared.reasonAr && declared.reasonAr.length > 30);
     ok(`«${type.primaryName}» records the catalogue fact behind the reason`,
       !!declared.evidenceAr);
+
+    /*
+     * AND THE STATED REASON MUST STILL BE THE TRUE ONE.
+     *
+     * Proving only that the type is unreachable leaves the published sentence
+     * free to rot: Racing could stop failing on `stack-mount` — someone adds a
+     * 20×20 flight controller — and remain unreachable for a different reason,
+     * while the card kept telling readers there is no 20×20 flight controller.
+     * Unavailable is still correct; the explanation is a lie. So the reason
+     * carries a checkable identity and it is checked here.
+     */
+    const code = declared.reasonCode;
+    assert.ok(
+      code,
+      `FAILED: «${type.primaryName}» (${type.id}) is «قريبًا» with no reasonCode. `
+      + 'An unavailable type must declare a machine-checkable reason identity '
+      + "({ kind: 'no-size' } or { kind: 'blocker', blockerId }) in "
+      + 'web/lib/build/availability.ts, so the sentence on the card cannot outlive its cause.',
+    );
+    ok(`«${type.primaryName}» declares a checkable reason identity`, !!code);
+
+    if (code.kind === 'no-size') {
+      assert.ok(
+        r.sizes.length === 0,
+        `FAILED: «${type.primaryName}» (${type.id}) claims reason «no-size», but the catalogue `
+        + `now derives ${r.sizes.length} size option(s): ${r.sizes.join(', ')}". `
+        + 'The type is still unreachable, but NOT for the reason the card gives. '
+        + 'Update reasonCode/reasonAr in web/lib/build/availability.ts to the real cause.',
+      );
+      ok(`«${type.primaryName}»'s «no-size» reason is still the true one`, true);
+    } else {
+      assert.ok(
+        r.sizes.length > 0,
+        `FAILED: «${type.primaryName}» (${type.id}) claims a blocker reason, but the type now `
+        + 'derives no size at all, so no combination is ever assembled and that blocker is not '
+        + "why it fails. The reason is now «no-size» — update web/lib/build/availability.ts.",
+      );
+      assert.ok(
+        r.blockerIds.has(code.blockerId),
+        `FAILED: «${type.primaryName}» (${type.id}) claims to fail on «${code.blockerId}», but `
+        + `the exhaustive search over ${r.combinationsExplored} combinations never raised it. `
+        + `Blockers actually seen: ${[...r.blockerIds].join(', ') || '(none)'}. `
+        + 'The type is still unreachable, but the card is explaining the wrong cause — '
+        + 'update reasonCode/reasonAr in web/lib/build/availability.ts.',
+      );
+      ok(`«${type.primaryName}» really does fail on «${code.blockerId}»`, true);
+      // A reason derived from a partial search would be a guess.
+      ok(`«${type.primaryName}»'s blocker set comes from an exhaustive search`, r.exhaustive);
+    }
   }
 }
 

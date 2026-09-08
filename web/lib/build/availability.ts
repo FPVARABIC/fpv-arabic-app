@@ -46,15 +46,50 @@
  * says exactly why it cannot start.
  */
 
+/**
+ * WHY a type cannot be finished, in a form a test can check.
+ *
+ * The prose reason is written for a reader and cannot be verified mechanically
+ * — so on its own it rots. The first version of this file proved only that
+ * SOME reason string existed, while its own comment claimed the evidence
+ * «cannot drift into folklore». It could, and in the way that matters most:
+ *
+ *   Racing fails today on `stack-mount`. Add a 20×20 flight controller and
+ *   that blocker is gone — but if some OTHER blocker still stands, the type
+ *   remains unreachable, the availability check still passes, and the card
+ *   goes on telling readers there is no 20×20 flight controller. Green CI,
+ *   false sentence on screen.
+ *
+ * So the reason carries a machine-checkable identity beside the prose, and
+ * `scripts/testBuildReachability.ts` verifies that IDENTITY against derived
+ * truth: a `no-size` claim must correspond to a type with no size options, and
+ * a `blocker` claim must name a blocker the exhaustive search actually raises.
+ * When the catalogue moves and the stated reason stops being the real one, CI
+ * fails even though the type is still unavailable — and somebody has to look
+ * at the sentence on the card.
+ *
+ * Deliberately two small shapes, not a rule engine. It answers one question:
+ * «is the published reason still the true reason?»
+ */
+export type UnavailableReasonCode =
+  /** No size can be derived, so the path cannot even start. */
+  | { kind: 'no-size' }
+  /** Every complete combination raises this blocker id from the verdict engine. */
+  | { kind: 'blocker'; blockerId: string };
+
 /** One drone type's answer to «can this be built with what we stock?». */
 export interface BuildTypeAvailability {
   available: boolean;
   /** Shown to the reader on the card. One plain sentence, no jargon. */
   reasonAr?: string;
   /**
-   * The catalogue fact the reason rests on — the sentence a maintainer needs
-   * in order to fix it. Asserted against live data by the reachability suite,
-   * so it cannot drift into folklore.
+   * The checkable identity of that reason. Required whenever `available` is
+   * false — the reachability suite asserts both its presence and its truth.
+   */
+  reasonCode?: UnavailableReasonCode;
+  /**
+   * The catalogue fact the reason rests on, for a maintainer reading the file.
+   * Human prose; `reasonCode` is what the suite actually verifies.
    */
   evidenceAr?: string;
 }
@@ -72,6 +107,7 @@ export const BUILD_TYPE_AVAILABILITY: Record<string, BuildTypeAvailability> = {
 
   cinewhoop: {
     available: false,
+    reasonCode: { kind: 'no-size' },
     reasonAr:
       'القطع المتوفرة حاليًا لا تكفي لبناء كامل من هذا النوع — لا يوجد إطار '
       + 'موسوم لـCinewhoop في الكتالوج، فلا حجم يمكن اشتقاقه ولا مسار يمكن بدؤه.',
@@ -80,6 +116,7 @@ export const BUILD_TYPE_AVAILABILITY: Record<string, BuildTypeAvailability> = {
 
   racing: {
     available: false,
+    reasonCode: { kind: 'blocker', blockerId: 'stack-mount' },
     reasonAr:
       'القطع المتوفرة حاليًا لا تكفي لبناء كامل من هذا النوع — إطار السباق '
       + 'الوحيد لدينا بمقاس تثبيت 20×20، ولا يوجد متحكّم طيران بهذا المقاس في '
