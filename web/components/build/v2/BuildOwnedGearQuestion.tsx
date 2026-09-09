@@ -8,11 +8,40 @@ import { ChoiceCard, ChoiceList, QuestionShell } from './QuestionShell';
 
 export type OwnedGearAnswer = 'none' | 'radio' | 'goggles' | 'both';
 
+/**
+ * WHAT THE READER SAID ABOUT ONE ECOSYSTEM — INCLUDING «I DON'T KNOW».
+ *
+ * Three states, and the difference between two of them is the whole point:
+ *
+ *   undefined            they have not answered yet
+ *   { kind: 'unsure' }   they answered, and the answer is «I don't know»
+ *   { kind: 'known' }    they answered with a system
+ *
+ * An earlier draft used `rcSystem?: string` alone and read `undefined` as
+ * «لست متأكدًا». That collapsed the first two states into one, so the screen
+ * opened with «لست متأكدًا» pre-selected and a reader who pressed «التالي»
+ * without touching anything was recorded as having chosen it. Silence is not
+ * an answer, and a summary that reports it as one is not a summary the reader
+ * can check.
+ *
+ * A union rather than a `string` + `answered: boolean` pair because the pair
+ * can hold states that mean nothing — answered-false with a system name, or
+ * answered-true with none — and every reader of it would have to decide which
+ * field wins. Here there is nothing to decide.
+ */
+export type EcosystemAnswer =
+  | { kind: 'known'; value: string }
+  | { kind: 'unsure' };
+
 export interface OwnedGear {
   answer?: OwnedGearAnswer;
-  rcSystem?: string;
-  videoSystem?: string;
+  rc?: EcosystemAnswer;
+  video?: EcosystemAnswer;
 }
+
+/** The system to constrain the build by — nothing at all when unsure. */
+export const ecosystemValue = (a: EcosystemAnswer | undefined): string | undefined =>
+  a?.kind === 'known' ? a.value : undefined;
 
 /**
  * WHAT IS ALREADY ON YOUR DESK — IN TWO QUESTIONS, NOT TWELVE.
@@ -75,10 +104,11 @@ export const BuildOwnedGearQuestion: React.FC<{
               onSelect={() => onChange(
                 // Switching away from owning something clears what it set, so
                 // a stale ecosystem cannot keep constraining the build after
-                // the reader says they own nothing.
+                // the reader says they own nothing — and so the question is
+                // genuinely open again if they switch back.
                 o.value === 'none' ? { answer: 'none' }
-                  : o.value === 'radio' ? { answer: 'radio', rcSystem: value.rcSystem }
-                  : o.value === 'goggles' ? { answer: 'goggles', videoSystem: value.videoSystem }
+                  : o.value === 'radio' ? { answer: 'radio', rc: value.rc }
+                  : o.value === 'goggles' ? { answer: 'goggles', video: value.video }
                   : { ...value, answer: 'both' },
               )}
             />
@@ -88,51 +118,41 @@ export const BuildOwnedGearQuestion: React.FC<{
     );
   }
 
-  if (mode === 'rc') {
-    return (
-        <QuestionShell question={OWNED.radioQuestion} help={OWNED.radioHelp}>
-          <ChoiceList label={OWNED.radioQuestion}>
-            {rcSystemsInCatalogue().map(sys => (
-              <ChoiceCard
-                key={sys}
-                testId={`v2-owned-rc-${sys}`}
-                label={sys}
-                selected={value.rcSystem === sys}
-                onSelect={() => onChange({ ...value, rcSystem: sys })}
-              />
-            ))}
-            <ChoiceCard
-              testId="v2-owned-rc-unsure"
-              label={OWNED.unsure}
-              note={OWNED.unsureNote}
-              selected={value.rcSystem === undefined}
-              onSelect={() => onChange({ ...value, rcSystem: undefined })}
-            />
-          </ChoiceList>
-        </QuestionShell>
-    );
-  }
+  /*
+   * Both ecosystem screens are the same screen with a different list, and the
+   * selection test is `answer.kind`, never «is the value empty». That is what
+   * keeps «لست متأكدًا» a card the reader clicks rather than the state the
+   * screen happens to open in.
+   */
+  const answer = mode === 'rc' ? value.rc : value.video;
+  const systems = mode === 'rc' ? rcSystemsInCatalogue() : videoSystemOptions();
+  const set = (next: EcosystemAnswer) =>
+    onChange(mode === 'rc' ? { ...value, rc: next } : { ...value, video: next });
+
+  const question = mode === 'rc' ? OWNED.radioQuestion : OWNED.gogglesQuestion;
+  const help = mode === 'rc' ? OWNED.radioHelp : OWNED.gogglesHelp;
+  const prefix = mode === 'rc' ? 'v2-owned-rc' : 'v2-owned-video';
 
   return (
-        <QuestionShell question={OWNED.gogglesQuestion} help={OWNED.gogglesHelp}>
-          <ChoiceList label={OWNED.gogglesQuestion}>
-            {videoSystemOptions().map(sys => (
-              <ChoiceCard
-                key={sys}
-                testId={`v2-owned-video-${sys}`}
-                label={sys}
-                selected={value.videoSystem === sys}
-                onSelect={() => onChange({ ...value, videoSystem: sys })}
-              />
-            ))}
-            <ChoiceCard
-              testId="v2-owned-video-unsure"
-              label={OWNED.unsure}
-              note={OWNED.unsureNote}
-              selected={value.videoSystem === undefined}
-              onSelect={() => onChange({ ...value, videoSystem: undefined })}
-            />
-          </ChoiceList>
-        </QuestionShell>
+    <QuestionShell question={question} help={help}>
+      <ChoiceList label={question}>
+        {systems.map(sys => (
+          <ChoiceCard
+            key={sys}
+            testId={`${prefix}-${sys}`}
+            label={sys}
+            selected={answer?.kind === 'known' && answer.value === sys}
+            onSelect={() => set({ kind: 'known', value: sys })}
+          />
+        ))}
+        <ChoiceCard
+          testId={`${prefix}-unsure`}
+          label={OWNED.unsure}
+          note={OWNED.unsureNote}
+          selected={answer?.kind === 'unsure'}
+          onSelect={() => set({ kind: 'unsure' })}
+        />
+      </ChoiceList>
+    </QuestionShell>
   );
 };

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { proposeBuild } from '@core/data/assembly/recommendation/proposeBuild';
 import type { RecommendationInput } from '@core/data/assembly/recommendation/types';
 import { isBuildTypeAvailable } from '@/lib/build/availability';
@@ -10,7 +9,8 @@ import { BuildGoalQuestion } from './BuildGoalQuestion';
 import { BuildRequiredInputQuestion } from './BuildRequiredInputQuestion';
 import { BuildPreferenceQuestion, type BudgetAnswer } from './BuildPreferenceQuestion';
 import {
-  BuildOwnedGearQuestion, ownedWantsGoggles, ownedWantsRadio, type OwnedGear,
+  BuildOwnedGearQuestion, ecosystemValue, ownedWantsGoggles, ownedWantsRadio,
+  type OwnedGear,
 } from './BuildOwnedGearQuestion';
 import { BuildInputSummary, summaryValue, type SummaryRow } from './BuildInputSummary';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
@@ -58,6 +58,12 @@ type Question =
 
 const qKey = (q: Question) => (q.id === 'input' ? `input:${q.key}` : q.id);
 
+/** One id, written once, so the button and the message cannot drift apart. */
+const BLOCKED_ID = 'v2-blocked';
+
+/** Both ecosystem screens block for the same reason, in the same words. */
+const OWNED_BLOCKED = 'اختر النظام، أو اختر «لست متأكدًا».';
+
 const emptyAnswers = (): Answers => ({ owned: {} });
 
 /** What the reader's answers mean to the domain. One translation, one place. */
@@ -69,8 +75,11 @@ function toEngineInput(a: Answers): RecommendationInput {
     // «لا تفضيل» is an answer that sends nothing — not a hidden default.
     budgetTier: a.budget && a.budget !== 'none' ? a.budget : undefined,
     owned: {
-      rcSystem: a.owned.rcSystem,
-      videoSystem: a.owned.videoSystem,
+      // «لست متأكدًا» is an ANSWER that constrains nothing. It reaches the
+      // engine exactly as «I have no radio» does — as absence — because the
+      // engine can only narrow by a system it was given a name for.
+      rcSystem: ecosystemValue(a.owned.rc),
+      videoSystem: ecosystemValue(a.owned.video),
     },
   };
 }
@@ -80,15 +89,6 @@ export const BuildV2Preview: React.FC = () => {
   const [trail, setTrail] = useState<Question[]>([{ id: 'goal' }]);
   const [idx, setIdx] = useState(0);
   const [screen, setScreen] = useState<'entry' | 'questions' | 'summary'>('entry');
-  /*
-   * Which questions the reader has already been PAST — by key, not by count.
-   *
-   * A prerequisite disappears from `requiredInputs` once answered, so the
-   * engine itself says when to stop asking it. Budget and owned gear have no
-   * such signal: «لا تفضيل» and «سأبدأ من الصفر» are real answers that leave
-   * the engine input empty, and without this set they would be asked forever.
-   */
-  const [asked, setAsked] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   /*
    * The engine runs on every ANSWER, not on every render.
@@ -114,37 +114,43 @@ export const BuildV2Preview: React.FC = () => {
    * been settled, and the reader is asked before they reach a summary built on
    * a stale assumption.
    *
-   * The asked set is passed in rather than read from state, because the click
-   * that advances past a question also adds it: React has not re-rendered yet,
-   * and reading the stale value would ask twice.
+   * EVERY LINE BELOW IS «IS THIS ANSWERED?», NEVER «HAVE I ASKED?»
+   * --------------------------------------------------------------
+   * An earlier version tracked a set of questions already put to the reader.
+   * That set could disagree with the answers: go back, switch «لدي نظارة» to
+   * «لدي الاثنان», and the radio question counted as asked while its answer
+   * had been cleared — so the journey walked past an open question to a
+   * summary that reported nothing about it.
+   *
+   * Reading the answers instead makes the state machine self-healing: a
+   * question is open exactly while it has no answer, and every question here
+   * blocks «التالي» until it has one. «لا تفضيل», «سأبدأ من الصفر» and «لست
+   * متأكدًا» are answers, so they close their question the same as any other.
    *
    * The two ecosystem screens are conditional on the owned answer, so «سأبدأ
    * من الصفر» ends the journey immediately while «لدي الاثنان» opens both —
    * each on its own screen, never the two together.
    */
-  const nextQuestion = (seen: ReadonlySet<string>): Question | null => {
+  const nextQuestion = (): Question | null => {
     if (!answers.droneTypeId) return { id: 'goal' };
     const pending = build?.requiredInputs ?? [];
     if (pending.length > 0) {
       const p = pending[0];
       return { id: 'input', key: p.key as 'sizeInch' | 'cellCount', options: p.options };
     }
-    if (!seen.has('budget')) return { id: 'budget' };
-    if (!seen.has('owned')) return { id: 'owned' };
-    if (ownedWantsRadio(answers.owned) && !seen.has('owned-rc')) return { id: 'owned-rc' };
-    if (ownedWantsGoggles(answers.owned) && !seen.has('owned-video')) {
+    if (answers.budget === undefined) return { id: 'budget' };
+    if (answers.owned.answer === undefined) return { id: 'owned' };
+    if (ownedWantsRadio(answers.owned) && answers.owned.rc === undefined) {
+      return { id: 'owned-rc' };
+    }
+    if (ownedWantsGoggles(answers.owned) && answers.owned.video === undefined) {
       return { id: 'owned-video' };
     }
     return null;
   };
 
   const goNext = () => {
-    const q = current;
-    // The question this very click is leaving counts as asked.
-    const seen = q ? new Set([...asked, qKey(q)]) : asked;
-    if (q) setAsked(seen);
-
-    const next = nextQuestion(seen);
+    const next = nextQuestion();
     if (next === null) { setScreen('summary'); return; }
     // Anything after the current position is recomputed, never reused: an
     // answer changed on the way back may have made it the wrong question.
@@ -195,12 +201,20 @@ export const BuildV2Preview: React.FC = () => {
       return 'أخبرنا إن كان لديك معدات، أو اختر «سأبدأ من الصفر».';
     }
     /*
-     * `owned-rc` and `owned-video` are deliberately never blocked. «لست
-     * متأكدًا» is a true answer there, not a missing one — a reader who cannot
-     * name their radio's protocol still deserves to reach the summary, and it
-     * is the state those screens open in. Demanding a system they may not know
-     * would be inventing a requirement the domain does not have.
+     * The ecosystem screens block until the reader answers — and «لست
+     * متأكدًا» IS an answer, which is why the message names it.
+     *
+     * A reader who cannot name their radio's protocol still reaches the
+     * summary; they just have to say so. The alternative, which this replaced,
+     * was treating an untouched screen as «لست متأكدًا» and reporting a choice
+     * they never made.
      */
+    if (current?.id === 'owned-rc' && answers.owned.rc === undefined) {
+      return OWNED_BLOCKED;
+    }
+    if (current?.id === 'owned-video' && answers.owned.video === undefined) {
+      return OWNED_BLOCKED;
+    }
     return null;
   };
 
@@ -234,16 +248,29 @@ export const BuildV2Preview: React.FC = () => {
       provenance: 'chosen',
     });
   }
-  if (answers.owned.rcSystem) {
+  /*
+   * «هذا ما فهمناه» is the trust screen, so a question the reader ANSWERED
+   * cannot be missing from it. Rendering only truthy system names meant «لدي
+   * جهاز تحكم، ولست متأكدًا من نظامه» vanished entirely — the reader saw a
+   * summary implying they were never asked.
+   *
+   * The row is driven by what they said they own, and its value by what they
+   * said about it. «سأبدأ من الصفر» produces no rows at all: there is no
+   * equipment to report, and inventing one would be the opposite failure.
+   */
+  if (ownedWantsRadio(answers.owned) && answers.owned.rc) {
     rows.push({
       key: 'rcSystem', label: SUMMARY.fields.rcSystem,
-      value: answers.owned.rcSystem, provenance: 'chosen',
+      value: answers.owned.rc.kind === 'known' ? answers.owned.rc.value : SUMMARY.unsureValue,
+      provenance: 'chosen',
     });
   }
-  if (answers.owned.videoSystem) {
+  if (ownedWantsGoggles(answers.owned) && answers.owned.video) {
     rows.push({
       key: 'videoSystem', label: SUMMARY.fields.videoSystem,
-      value: answers.owned.videoSystem, provenance: 'chosen',
+      value: answers.owned.video.kind === 'known'
+        ? answers.owned.video.value : SUMMARY.unsureValue,
+      provenance: 'chosen',
     });
   }
 
@@ -255,10 +282,25 @@ export const BuildV2Preview: React.FC = () => {
         <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
           {PREVIEW_NOTICE.body}
         </span>
-        <Link href="/build" data-testid="v2-back-to-v1"
+        {/*
+          * A PLAIN ANCHOR, NOT `next/link` — DELIBERATELY.
+          *
+          * The gate reads the flag from `location.search` and subscribes to
+          * `popstate`. A client-side `<Link>` navigation calls
+          * `history.pushState`, which fires NO `popstate`, so the URL became
+          * `/build` while the preview stayed on screen. A browser test caught
+          * exactly that.
+          *
+          * The alternatives were monkey-patching `history.pushState` globally
+          * from a temporary preview, or going back to `useSearchParams` and
+          * with it the blank-V1 hydration flash. A full navigation to a
+          * statically prerendered page is the cheapest correct answer, and it
+          * leaves nothing behind at cutover.
+          */}
+        <a href="/build" data-testid="v2-back-to-v1"
           style={{ fontSize: 12.5, marginInlineStart: 'auto' }}>
           {PREVIEW_NOTICE.backToV1}
-        </Link>
+        </a>
       </aside>
 
       <BuildPhaseHeader activeId="parts" />
@@ -315,8 +357,14 @@ export const BuildV2Preview: React.FC = () => {
 
       {screen !== 'entry' && (
         <footer style={{ display: 'grid', gap: 9 }}>
+          {/*
+            * The id is what `aria-describedby` on «التالي» points at. It was
+            * missing once, so the button named a description that did not
+            * exist and a screen-reader user got a disabled button with no
+            * stated reason — the one thing the visible text was there to say.
+            */}
           {blocked && (
-            <p role="status" data-testid="v2-blocked-reason"
+            <p role="status" id={BLOCKED_ID} data-testid="v2-blocked-reason"
               style={{ margin: 0, fontSize: 12.5, color: 'var(--sev-warning)', lineHeight: 1.85 }}>
               {blocked}
             </p>
@@ -329,7 +377,7 @@ export const BuildV2Preview: React.FC = () => {
             {screen === 'questions' && (
               <button type="button" className="btn-primary" data-testid="v2-next"
                 disabled={!!blocked}
-                aria-describedby={blocked ? 'v2-blocked' : undefined}
+                aria-describedby={blocked ? BLOCKED_ID : undefined}
                 onClick={goNext}
                 style={{ fontSize: 14, padding: '11px 22px', opacity: blocked ? 0.5 : 1 }}>
                 {NAV.next}

@@ -48,9 +48,19 @@ const code = (src: string) =>
   src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const v2Files = readdirSync(V2_DIR).filter(f => /\.tsx?$/.test(f));
-const v2Source = Object.fromEntries(v2Files.map(f => [f, read(join(V2_DIR, f))]));
 const v2Code = Object.fromEntries(v2Files.map(f => [f, code(read(join(V2_DIR, f)))]));
 const allV2 = Object.values(v2Code).join('\n') + code(read('web/lib/build/v2/previewFlag.ts'));
+
+/*
+ * The copy file twice: raw, and with comments stripped.
+ *
+ * Negative claims read the STRINGS. `copy.ts` documents in comments which
+ * phrasings were rejected and why — «السعر ليس الأولوية», «دون ترتيب بالسعر» —
+ * and those notes are the reason the rules hold. A grep that failed on them
+ * would delete the explanation to satisfy the test.
+ */
+const copy = read(join(V2_DIR, 'copy.ts'));
+const copyStrings = code(copy);
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('1 — THE PREVIEW FLAG IS EXACT');
@@ -91,30 +101,22 @@ ok('no route directory mentions v2 at all',
   !routes.some(r => /v2/i.test(r)));
 
 /*
- * The route inventory and the V1 diff are compared against the BRANCH POINT,
- * so a new page cannot slip in unnoticed under a name nobody thought to grep
- * for, and no V1 file can be edited «while I was in there».
+ * THE BUILD SURFACE'S ROUTES, PINNED — NOT DIFFED AGAINST A MOVING BASE.
  *
- * Both need history. A shallow CI checkout has none, and rather than pretend
- * otherwise the suite says so and runs the assertions that do not need it —
- * `.github/workflows/ci.yml` fetches full history precisely so this does run.
+ * An earlier version compared the whole route inventory to
+ * `merge-base(HEAD, canonical)`. That is a branch-time check: on canonical the
+ * merge-base IS head, the comparison is against itself, and it passes whatever
+ * the tree contains. It also failed on any unrelated future route anywhere in
+ * the app, which is not this phase's business.
+ *
+ * Pinned to the build surface instead. Unrelated routes elsewhere are free to
+ * come and go; a new one HERE is a deliberate decision that should have to
+ * edit this list. Retire it with the flag at cutover.
  */
-const git = (args: string[]) => execFileSync('git', args, { encoding: 'utf8' });
-const base = (() => {
-  for (const ref of ['origin/claude/wizardly-noether-xdxg2x', 'claude/wizardly-noether-xdxg2x']) {
-    try { return git(['merge-base', 'HEAD', ref]).trim(); } catch { /* not fetched */ }
-  }
-  return null;
-})();
-if (!base) {
-  console.log('  ·· NO BASE COMMIT REACHABLE (shallow checkout) — '
-    + '3 history-dependent assertions did not run');
-} else {
-  const baseRoutes = git(['ls-tree', '-r', '--name-only', base, 'web/app/'])
-    .split('\n').filter(f => /\/(page|route)\.tsx?$/.test(f)).sort();
-  ok(`the route inventory is unchanged since ${base.slice(0, 7)} (${baseRoutes.length} routes)`,
-    JSON.stringify(routes.slice().sort()) === JSON.stringify(baseRoutes));
-}
+const V1_BUILD_ROUTES = ['web/app/build/page.tsx', 'web/app/build/wizard/page.tsx'];
+const buildRoutes = routes.filter(r => r.startsWith('web/app/build')).sort();
+ok(`the build surface still has exactly its two V1 routes (${buildRoutes.join(', ')})`,
+  JSON.stringify(buildRoutes) === JSON.stringify(V1_BUILD_ROUTES.slice().sort()));
 
 // Nothing links to the flag: not the nav, not the home page, not a sitemap.
 const linkers = execFileSync('bash', ['-c',
@@ -242,6 +244,139 @@ ok('the owned-gear screen never types the list itself',
   && !/'ExpressLRS'|"ExpressLRS"/.test(v2Code['BuildOwnedGearQuestion.tsx']));
 
 // ═══════════════════════════════════════════════════════════════════════════
+section('6b — «لست متأكدًا» IS AN ANSWER, NOT AN EMPTY FIELD');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The correction this section exists for.
+ *
+ * The screen used to read `rcSystem === undefined` as «لست متأكدًا», which
+ * collapsed «has not answered» into «answered, and the answer is unsure». It
+ * opened pre-selected, and a reader who pressed «التالي» without touching
+ * anything was recorded as having chosen it. Three states, three
+ * representations, or the summary reports a decision nobody made.
+ */
+const ownedSrc = v2Code['BuildOwnedGearQuestion.tsx'];
+ok('the ecosystem answer has an explicit «unsure» state',
+  /kind:\s*'unsure'/.test(ownedSrc));
+ok('the ecosystem answer has an explicit «known» state carrying the system',
+  /kind:\s*'known';\s*value:\s*string/.test(ownedSrc));
+ok('selection is decided by the answer\'s kind, never by an empty value',
+  !/selected=\{[^}]*(rcSystem|videoSystem|value)\s*===\s*undefined/.test(ownedSrc)
+  && /selected=\{answer\?\.kind === 'unsure'\}/.test(ownedSrc));
+ok('«لست متأكدًا» is something the reader clicks, not a default',
+  /onSelect=\{\(\) => set\(\{ kind: 'unsure' \}\)\}/.test(ownedSrc));
+
+/*
+ * And the state machine's half: a question is open exactly while unanswered,
+ * so both ecosystem screens block until the reader says something.
+ */
+ok('the journey opens the radio screen while its answer is missing',
+  /ownedWantsRadio\(answers\.owned\) && answers\.owned\.rc === undefined/.test(preview));
+ok('the journey opens the goggle screen while its answer is missing',
+  /ownedWantsGoggles\(answers\.owned\) && answers\.owned\.video === undefined/.test(preview));
+ok('an unanswered radio screen blocks «التالي», naming «لست متأكدًا»',
+  /current\?\.id === 'owned-rc' && answers\.owned\.rc === undefined/.test(preview)
+  && /اختر النظام، أو اختر «لست متأكدًا»/.test(preview));
+ok('an unanswered goggle screen blocks «التالي» the same way',
+  /current\?\.id === 'owned-video' && answers\.owned\.video === undefined/.test(preview));
+ok('no question is tracked by «have I asked» rather than «is it answered»',
+  !/askedBudget|askedOwned|\basked\b/.test(preview));
+
+/*
+ * THE SUMMARY CANNOT LOSE THE ANSWER.
+ *
+ * «لدي جهاز تحكم، ولست متأكدًا من نظامه» used to disappear from «هذا ما
+ * فهمناه» entirely, because the row was rendered only for a truthy system
+ * name. The row is now driven by what the reader said they OWN, and «سأبدأ من
+ * الصفر» still produces no equipment rows at all.
+ */
+/*
+ * Scoped to the SUMMARY BLOCK, not the whole file.
+ *
+ * The first version of this assertion searched the component for
+ * `ownedWantsRadio(answers.owned) && answers.owned.rc` — which also appears,
+ * as a prefix, in the state machine's `… === undefined` test. A probe that
+ * broke only the summary row passed it. An assertion that can be satisfied by
+ * a line it is not about is not an assertion.
+ */
+const summaryBlock = preview.slice(
+  preview.indexOf('const rows: SummaryRow[] = [];'), preview.indexOf('return ('));
+ok('the summary rows region was found', summaryBlock.length > 200);
+ok('the radio row follows what the reader OWNS, not a truthy system string',
+  /ownedWantsRadio\(answers\.owned\) && answers\.owned\.rc\b(?!\s*===)/.test(summaryBlock));
+ok('the goggle row does the same',
+  /ownedWantsGoggles\(answers\.owned\) && answers\.owned\.video\b(?!\s*===)/.test(summaryBlock));
+ok('neither row is gated on the answer being «known»',
+  !/kind === 'known'\s*\)\s*\{/.test(summaryBlock));
+ok('the summary has a word for an explicitly unsure answer',
+  /SUMMARY\.unsureValue/.test(preview) && /unsureValue:\s*'لست متأكدًا'/.test(copy));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6c — WHAT «UNSURE» SENDS TO THE ENGINE: NOTHING');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The whole point of separating the states is that they must reach the domain
+ * differently at the UI boundary and IDENTICALLY at the engine's: an unsure
+ * reader has given the engine no system to narrow by, so the proposal must be
+ * the same as if they had never been asked. Anything else would be the engine
+ * inventing a constraint out of «I don't know».
+ */
+const freestyle6S = { droneTypeId: 'freestyle', cellCount: 6 };
+const noConstraint = proposeBuild({ ...freestyle6S, owned: {} });
+const unsureRc = proposeBuild({ ...freestyle6S, owned: { rcSystem: undefined } });
+const knownRc = proposeBuild({ ...freestyle6S, owned: { rcSystem: 'ExpressLRS' } });
+const knownVideo = proposeBuild({ ...freestyle6S, owned: { videoSystem: 'DJI' } });
+const rxOf = (b: ProposedBuild) => b.decisions.find(d => d.category === 'receivers');
+const vtxOf = (b: ProposedBuild) => b.decisions.find(d => d.category === 'videoUnits');
+
+const crossfireRc = proposeBuild({ ...freestyle6S, owned: { rcSystem: 'Crossfire' } });
+
+ok('«unsure» about the radio proposes exactly what no answer proposes',
+  JSON.stringify(rxOf(unsureRc)) === JSON.stringify(rxOf(noConstraint)));
+/*
+ * A KNOWN system is a REAL constraint — shown with Crossfire, not ExpressLRS.
+ *
+ * Every receiver this build can use happens to be ExpressLRS, so answering
+ * «ExpressLRS» narrows the list by nothing and would prove nothing either.
+ * Crossfire is the case where the constraint has to bite: the catalogue has
+ * no Crossfire receiver for this build, and the decision must say so rather
+ * than quietly propose an ExpressLRS one.
+ */
+ok('a KNOWN radio system the catalogue cannot satisfy is reported, not ignored',
+  rxOf(crossfireRc)!.status === 'unavailable'
+  && rxOf(noConstraint)!.status !== 'unavailable');
+ok('«unsure» does NOT behave like that constraint',
+  rxOf(unsureRc)!.status !== 'unavailable');
+ok('a KNOWN radio system the catalogue CAN satisfy still resolves',
+  rxOf(knownRc)!.status === rxOf(noConstraint)!.status
+  && rxOf(knownRc)!.candidateIds.every(id => rxOf(noConstraint)!.candidateIds.includes(id)));
+ok('a KNOWN goggle system still narrows the video unit',
+  vtxOf(knownVideo)!.candidateIds.length < vtxOf(noConstraint)!.candidateIds.length);
+ok('the UI hands the engine a system only when the answer is «known»',
+  /rcSystem: ecosystemValue\(a\.owned\.rc\)/.test(preview)
+  && /kind === 'known' \? a\.value : undefined/.test(ownedSrc));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6d — THE BLOCKED REASON IS REACHABLE BY ASSISTIVE TECH');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `aria-describedby` named `v2-blocked` while the message carried only a
+ * `data-testid`. A screen-reader user got a disabled button describing itself
+ * by an element that did not exist — the reason was on screen and nowhere in
+ * the accessibility tree.
+ *
+ * The DOM proof is in the browser suite; this is the source half: one
+ * constant, so the two cannot drift again.
+ */
+ok('the id is a single shared constant', /const BLOCKED_ID = 'v2-blocked';/.test(preview));
+ok('the button describes itself by that constant',
+  /aria-describedby=\{blocked \? BLOCKED_ID : undefined\}/.test(preview));
+ok('the visible message carries that same constant as its id',
+  /id=\{BLOCKED_ID\}/.test(preview));
+ok('no hard-coded id string is left to drift',
+  !/'v2-blocked'/.test(preview.replace(/const BLOCKED_ID = 'v2-blocked';/, '')));
+
+// ═══════════════════════════════════════════════════════════════════════════
 section('7 — OWNED DJI NARROWS THE BUILD AT THE DOMAIN BOUNDARY');
 // ═══════════════════════════════════════════════════════════════════════════
 /*
@@ -303,14 +438,22 @@ for (const t of ['freestyle', 'cinematic', 'long-range']) {
 // ═══════════════════════════════════════════════════════════════════════════
 section('9 — THE ARABIC SAYS ONLY WHAT THE CATALOGUE SUPPORTS');
 // ═══════════════════════════════════════════════════════════════════════════
-const copy = read(join(V2_DIR, 'copy.ts'));
-// The negative claims read the STRINGS, not the file: `copy.ts` documents in a
-// comment which phrasing was rejected and why, and that note is the reason the
-// rule holds — failing on it would delete the explanation to satisfy the test.
-const copyStrings = code(copy);
 ok('«الفئة الأعلى» does not claim price is no object',
   !/السعر ليس الأولوية/.test(copyStrings));
-ok('«لا تفضيل» is a real budget answer', /لا تفضيل/.test(copy));
+ok('«لا تفضيل» is a real budget answer', /لا تفضيل/.test(copyStrings));
+/*
+ * TIER IS NOT PRICE.
+ *
+ * The engine ranks by the catalogue's `tier`, and only when the reader names
+ * one. It has never read `priceRangeUSD`. «دون ترتيب بالسعر» promised a
+ * feature that does not exist and implied the other three answers DO sort by
+ * price — two false claims in six words.
+ */
+ok('no budget copy claims a price sort', !/بالسعر|حسب السعر|ترتيب السعر/.test(copyStrings));
+ok('«لا تفضيل» is described as a tier preference, not a price one',
+  /لن نفضّل فئة ميزانية على أخرى/.test(copyStrings));
+ok('the engine really has no price ranking to describe',
+  !/priceRangeUSD/.test(read('src/data/assembly/recommendation/proposeBuild.ts')));
 ok('no step counting anywhere in the copy', !/الخطوة\s*\d+\s*من\s*\d+/.test(copyStrings));
 ok('the preview names itself a preview', /معاينة/.test(copy));
 ok('no V2 screen promises a feature Phase 2B did not build',
@@ -335,7 +478,7 @@ for (const [, group, opener] of copyKeys) {
   if (allV2.includes(`${group}[`)) continue;
   const body = copy.slice(copy.indexOf(`export const ${group} = {`));
   const end = body.indexOf('\n} as const;');
-  for (const [, key] of body.slice(0, end).matchAll(/^  ([a-zA-Z][\w]*):/gm)) {
+  for (const [, key] of body.slice(0, end).matchAll(/^ {2}([a-zA-Z]\w*):/gm)) {
     if (!allV2.includes(`${group}.${key}`)) dead.push(`${group}.${key}`);
   }
 }
@@ -354,31 +497,66 @@ section('10 — V1 IS BYTE-IDENTICAL EXCEPT FOR THE GATE');
  * The whole deployment promise. `/build` gained exactly one wrapper; if the
  * diff ever touches anything else, this fails before a reader notices.
  */
-if (base) {
-  const changed = git(['diff', '--name-only', base, '--']).split('\n').filter(Boolean);
-  // Everything the phase is allowed to touch: its own directories, its tests,
-  // the scripts that register them, and build hygiene. NOT product code.
-  const outsideV2 = changed.filter(f =>
-    !f.startsWith('web/components/build/v2/') && !f.startsWith('web/lib/build/v2/')
-    && !f.startsWith('scripts/') && !f.startsWith('.github/')
-    && f !== 'package.json' && f !== '.gitignore');
-  ok(`the only V1 file touched is /build/page.tsx (touched: ${outsideV2.join(', ') || 'none'})`,
-    outsideV2.every(f => f === 'web/app/build/page.tsx'));
+/*
+ * THE BASELINE IS PINNED, NOT DERIVED — SO THIS SURVIVES THE MERGE.
+ *
+ * `scripts/fixtures/buildPageV1.f72571a.txt` is the page exactly as it stood
+ * at the branch point, before the preview existed. Every line of it must
+ * still appear, in order, inside the live page.
+ *
+ * That is strictly stronger than the git diff it replaces AND it keeps
+ * working where the diff cannot: on canonical after this merges, on a shallow
+ * checkout with no history, in a fresh clone. The diff version would have gone
+ * green by arithmetic the moment `merge-base(HEAD, canonical) === HEAD`.
+ *
+ * Subsequence rather than equality, because the gate legitimately ADDS lines:
+ * an import, a comment, an opening tag and a closing tag. Anything V1 had that
+ * is now missing or reworded breaks the order and fails.
+ */
+const V1_BASELINE_FILE = 'scripts/fixtures/buildPageV1.f72571a.txt';
+const baselineRaw = read(V1_BASELINE_FILE);
+const baseline = baselineRaw
+  .slice(baselineRaw.indexOf('--- BEGIN BASELINE ---') + '--- BEGIN BASELINE ---'.length,
+    baselineRaw.indexOf('--- END BASELINE ---'))
+  .split('\n').map(l => l.trim()).filter(Boolean);
+const livePage = read('web/app/build/page.tsx').split('\n').map(l => l.trim());
 
-  /*
-   * The strongest form of «V1 is unchanged»: the page's existing lines were
-   * not even RE-INDENTED. The gate is opened above the old root and closed
-   * below it, so every line V1 had, V1 still has, byte for byte — and the diff
-   * is additions only. Anything removed here means V1 lost something, which is
-   * the one thing this phase promised not to do.
-   */
-  const removed = git(['diff', base, '--', 'web/app/build/page.tsx'])
-    .split('\n').filter(l => l.startsWith('-') && !l.startsWith('---'));
-  ok(`the V1 page lost NOTHING — the diff is additions only (${removed.length} removals)`,
-    removed.length === 0);
+/*
+ * NON-VACUITY, GUARDED IN THE SUITE ITSELF.
+ *
+ * The one way to hollow this out is to regenerate the fixture from the
+ * current page — then «the baseline is a subsequence of the page» is a
+ * tautology. A baseline that mentions the gate is a baseline that came from
+ * after the gate existed, and is not a baseline.
+ */
+ok('the pinned V1 baseline predates the preview (it names no gate)',
+  !/BuildV2PreviewGate|buildV2/.test(baselineRaw.slice(baselineRaw.indexOf('--- BEGIN BASELINE ---'))));
+ok(`the pinned V1 baseline is a real page, not a stub (${baseline.length} lines)`,
+  baseline.length > 150);
+
+let cursor = 0;
+const missing: string[] = [];
+for (const line of baseline) {
+  const at = livePage.indexOf(line, cursor);
+  if (at === -1) missing.push(line);
+  else cursor = at + 1;
 }
+ok(`every line of the V1 page survives inside the gate `
+  + `(missing: ${missing.length ? missing.slice(0, 2).join(' | ') : 'none'})`,
+  missing.length === 0);
 ok('the /build page still renders its V1 content as the gate\'s children',
   /<BuildV2PreviewGate>/.test(read('web/app/build/page.tsx')));
+
+/*
+ * And the other half of «V1 untouched»: nothing outside the preview's own
+ * directories imports it. Intrinsic, so it too keeps working after the merge.
+ */
+const importers = execFileSync('bash', ['-c',
+  `grep -rln "build/v2" web/app web/components web/lib src 2>/dev/null || true`],
+  { encoding: 'utf8' }).split('\n').filter(Boolean)
+  .filter(f => !f.startsWith('web/components/build/v2/') && !f.startsWith('web/lib/build/v2/'));
+ok(`only /build/page.tsx reaches into the preview (${importers.join(', ') || 'none'})`,
+  JSON.stringify(importers) === JSON.stringify(['web/app/build/page.tsx']));
 
 /*
  * The regression that a browser found once already: `useSearchParams` in a

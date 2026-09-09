@@ -344,13 +344,58 @@ async function main() {
         !rcOptions.some(t => /\bCRSF\b/.test(t)));
       ok(`${name}: «Diversity» is NOT a radio system option`,
         !rcOptions.some(t => t.includes('Diversity')));
-      ok(`${name}: «لست متأكدًا» is a real answer, so the screen is never blocked`,
-        await page.locator('[data-testid="v2-owned-rc-unsure"]').getAttribute('data-selected') === 'true'
-        && await page.locator('[data-testid="v2-next"]').isEnabled());
+
+      /*
+       * SILENCE IS NOT AN ANSWER.
+       *
+       * This screen used to open with «لست متأكدًا» already selected, because
+       * selection was «the system field is empty». A reader who pressed
+       * «التالي» without touching anything was recorded as having chosen it.
+       */
+      const rcSelected = await page.locator(
+        '[data-testid^="v2-owned-rc-"][data-selected="true"]').count();
+      ok(`${name}: the radio screen opens with NOTHING selected`, rcSelected === 0);
+      ok(`${name}: …and «التالي» is blocked until the reader answers`,
+        await page.locator('[data-testid="v2-next"]').isDisabled());
+      ok(`${name}: …with a reason that names «لست متأكدًا» as a way out`,
+        ((await page.locator('[data-testid="v2-blocked-reason"]').textContent()) ?? '')
+          .includes('لست متأكدًا'));
       await measure(page, 'owned gear — radio');
       if (name === '390px') await page.screenshot({ path: `${SHOTS}/06-owned-rc-390.png`, fullPage: true });
 
-      await page.click('[data-testid="v2-owned-rc-ExpressLRS"]');
+      // The accessibility relationship, proven in the DOM rather than grepped:
+      // the id the button points at must exist and hold the visible sentence.
+      const described = await page.evaluate(() => {
+        const btn = document.querySelector('[data-testid="v2-next"]')!;
+        const id = btn.getAttribute('aria-describedby');
+        const target = id ? document.getElementById(id) : null;
+        return {
+          id,
+          targetExists: !!target,
+          targetText: target?.textContent ?? '',
+          visibleText: document.querySelector(
+            '[data-testid="v2-blocked-reason"]')?.textContent ?? '',
+        };
+      });
+      ok(`${name}: the blocked «التالي» names a describedby id`, !!described.id);
+      ok(`${name}: …that id resolves to a real element`, described.targetExists);
+      ok(`${name}: …holding the same sentence the reader can see`,
+        described.targetText.length > 0 && described.targetText === described.visibleText);
+
+      // An explicit «لست متأكدًا» IS an answer: it selects, and it unblocks.
+      await page.click('[data-testid="v2-owned-rc-unsure"]');
+      await page.waitForTimeout(120);
+      ok(`${name}: clicking «لست متأكدًا» selects it`,
+        await page.locator('[data-testid="v2-owned-rc-unsure"]')
+          .getAttribute('data-selected') === 'true');
+      ok(`${name}: …and «التالي» is now enabled`,
+        await page.locator('[data-testid="v2-next"]').isEnabled());
+      ok(`${name}: …and no blocker reason is shown any more`,
+        await page.locator('[data-testid="v2-blocked-reason"]').count() === 0);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/07-owned-rc-unsure-390.png`, fullPage: true });
+      }
+
       await page.click('[data-testid="v2-next"]');
       await page.waitForTimeout(150);
 
@@ -360,18 +405,85 @@ async function main() {
         await page.locator('[data-testid^="v2-owned-rc-"]').count() === 0);
       const videoOptions = await page.locator('[data-testid^="v2-owned-video-"]').allTextContents();
       ok(`${name}: DJI is offered as a goggle system`, videoOptions.some(t => t.includes('DJI')));
+      ok(`${name}: the goggle screen also opens with NOTHING selected`,
+        await page.locator('[data-testid^="v2-owned-video-"][data-selected="true"]').count() === 0);
+      ok(`${name}: …and blocks «التالي» the same way`,
+        await page.locator('[data-testid="v2-next"]').isDisabled());
       await measure(page, 'owned gear — goggles');
       if (name === '390px') await page.screenshot({ path: `${SHOTS}/06-owned-video-390.png`, fullPage: true });
+
+      // Back must return the explicit unsure answer, not reset it.
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(150);
+      ok(`${name}: going back finds the explicit «لست متأكدًا» still selected`,
+        await page.locator('[data-testid="v2-owned-rc-unsure"]')
+          .getAttribute('data-selected') === 'true');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
 
       await page.click('[data-testid="v2-owned-video-DJI"]');
       await page.click('[data-testid="v2-next"]');
       await page.waitForTimeout(200);
-      ok(`${name}: the summary records the owned radio`,
+
+      /*
+       * THE SUMMARY MUST NOT LOSE A QUESTION IT PUT.
+       *
+       * «I own a radio, but I'm not sure which system» used to vanish from
+       * «هذا ما فهمناه» entirely — the row rendered only for a truthy system
+       * name — so the trust screen implied the reader was never asked.
+       */
+      ok(`${name}: the explicit «لست متأكدًا» reaches the summary`,
         ((await page.locator('[data-testid="v2-summary-rcSystem"]').textContent()) ?? '')
-          .includes('ExpressLRS'));
+          .includes('لست متأكدًا'));
+      ok(`${name}: …and is badged as the reader's own answer`,
+        await page.locator('[data-testid="v2-summary-rcSystem"]')
+          .getAttribute('data-provenance') === 'chosen');
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/08-summary-unsure-390.png`, fullPage: true });
+      }
       ok(`${name}: the summary records the owned goggles`,
         ((await page.locator('[data-testid="v2-summary-videoSystem"]').textContent()) ?? '')
           .includes('DJI'));
+
+      /*
+       * And the other direction: a KNOWN system must still be recorded, and
+       * «سأبدأ من الصفر» must invent no equipment rows at all.
+       */
+      await startJourney(page);
+      await page.click('[data-testid="v2-goal-freestyle"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-input-cellCount-6"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-budget-mid"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-radio"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-rc-ExpressLRS"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      ok(`${name}: a known radio system reaches the summary by name`,
+        ((await page.locator('[data-testid="v2-summary-rcSystem"]').textContent()) ?? '')
+          .includes('ExpressLRS'));
+      ok(`${name}: owning only a radio invents no goggle row`,
+        await page.locator('[data-testid="v2-summary-videoSystem"]').count() === 0);
+
+      await startJourney(page);
+      await page.click('[data-testid="v2-goal-long-range"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-budget-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      ok(`${name}: «سأبدأ من الصفر» invents no equipment rows`,
+        await page.locator('[data-testid="v2-summary-rcSystem"]').count() === 0
+        && await page.locator('[data-testid="v2-summary-videoSystem"]').count() === 0);
 
       // ── Changing the goal re-evaluates honestly ───────────────────────────
       console.log(`\n[F] ${name} — changing the goal re-asks what depends on it`);
@@ -389,6 +501,32 @@ async function main() {
         await page.locator('[data-testid^="v2-input-cellCount"]').count() === 0);
       ok(`${name}: …and the journey moved on to the budget`,
         (await questionTitle(page))?.includes('الميزانية') === true);
+
+      // ── H. THE PREVIEW'S OWN WAY OUT ──────────────────────────────────────
+      /*
+       * «العودة إلى مسار البناء الحالي» must actually return to V1.
+       *
+       * This is not a formality. The gate reads `location.search` and
+       * subscribes to `popstate`; a `next/link` navigation calls
+       * `history.pushState`, which fires NO `popstate`. The URL changed to
+       * `/build` and the preview stayed on screen — a link that lied. Caught
+       * here, fixed by making it a real navigation.
+       */
+      console.log(`\n[H] ${name} — the way back to V1 actually goes there`);
+      await openPreview(page);
+      ok(`${name}: the preview is on screen before the click`,
+        await page.locator('[data-testid="build-v2-preview"]').count() === 1);
+      await Promise.all([
+        page.waitForURL(u => new URL(u).search === '', { timeout: 15000 }),
+        page.click('[data-testid="v2-back-to-v1"]'),
+      ]);
+      await page.waitForSelector('a[href^="/build/wizard"]', { timeout: 15000 });
+      ok(`${name}: the URL is now plain /build`,
+        new URL(page.url()).pathname === '/build' && new URL(page.url()).search === '');
+      ok(`${name}: the preview is gone`,
+        await page.locator('[data-testid="build-v2-preview"]').count() === 0);
+      ok(`${name}: V1's three doors are back — with no manual reload`,
+        await page.locator('a[href^="/build/wizard"]').count() >= 3);
 
       // ── No persistence ────────────────────────────────────────────────────
       const stored = await page.evaluate(() => {

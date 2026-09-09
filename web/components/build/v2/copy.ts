@@ -68,7 +68,14 @@ export const BUDGET = {
     { value: 'premium', label: 'الفئة الأعلى' },
     { value: 'none', label: 'لا تفضيل' },
   ],
-  noneNote: 'سنعرض كل الخيارات المتوافقة دون ترتيب بالسعر.',
+  /*
+   * NOT «دون ترتيب بالسعر». The engine has never sorted by `priceRangeUSD`;
+   * it ranks by the catalogue's `tier` and only when the reader names one. A
+   * note promising «no price ordering» describes a feature that does not
+   * exist, and quietly tells the reader that the other three answers DO sort
+   * by price. Both halves are false.
+   */
+  noneNote: 'لن نفضّل فئة ميزانية على أخرى.',
 } as const;
 
 /** Equipment already on the reader's desk. */
@@ -94,6 +101,13 @@ export const SUMMARY = {
   title: 'هذا ما فهمناه',
   lead: 'راجع ما اخترته وما استنتجه النظام قبل أن ننتقل إلى القطع.',
   chosenBadge: 'اخترته أنت',
+  /*
+   * The reader ANSWERED this question — the answer was «I don't know». The
+   * row exists so «هذا ما فهمناه» cannot silently drop a question they were
+   * put through, and the badge stays «اخترته أنت» because choosing this was
+   * their decision, not the system's inference.
+   */
+  unsureValue: 'لست متأكدًا',
   derivedBadge: 'استنتجه النظام',
   derivedNote: 'من القطع المتوفرة لهذا النوع',
   fields: {
