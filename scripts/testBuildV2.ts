@@ -315,6 +315,33 @@ ok('no step counting anywhere in the copy', !/الخطوة\s*\d+\s*من\s*\d+/.t
 ok('the preview names itself a preview', /معاينة/.test(copy));
 ok('no V2 screen promises a feature Phase 2B did not build',
   !/قريبًا جدًا|في الأسبوع|الإصدار القادم/.test(copyStrings));
+/*
+ * NO DEAD SENTENCES.
+ *
+ * `copy.ts` is meant to be read top to bottom as the product's Arabic voice
+ * and judged as prose. A key nothing renders makes that reading a lie: it
+ * describes a screen the reader will never see. `NAV.restart` was exactly
+ * that — a «ابدأ من جديد» button Phase 2B never built — and it was found by
+ * this check, not by reading.
+ */
+const copyKeys = [...copy.matchAll(/^export const ([A-Z_]+) = ([[{])/gm)];
+const dead: string[] = [];
+for (const [, group, opener] of copyKeys) {
+  if (opener === '[') continue;                 // PHASES is mapped whole
+  // A group the UI indexes dynamically — `REQUIRED_INPUT[input.key]`, the
+  // whole point of letting the engine name the question — cannot be checked
+  // key by key, and should not be: its keys are reached by a value, not a
+  // literal.
+  if (allV2.includes(`${group}[`)) continue;
+  const body = copy.slice(copy.indexOf(`export const ${group} = {`));
+  const end = body.indexOf('\n} as const;');
+  for (const [, key] of body.slice(0, end).matchAll(/^  ([a-zA-Z][\w]*):/gm)) {
+    if (!allV2.includes(`${group}.${key}`)) dead.push(`${group}.${key}`);
+  }
+}
+ok(`every sentence in copy.ts is rendered somewhere (dead: ${dead.join(', ') || 'none'})`,
+  dead.length === 0);
+
 ok('the copy lives in one file, not scattered across components',
   !Object.entries(v2Code)
     .filter(([f]) => f !== 'copy.ts')

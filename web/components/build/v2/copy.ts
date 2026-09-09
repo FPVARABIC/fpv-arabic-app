@@ -113,7 +113,6 @@ export const SUMMARY = {
 export const NAV = {
   back: 'رجوع',
   next: 'التالي',
-  restart: 'ابدأ من جديد',
 } as const;
 
 /** The preview banner — this is not the product yet, and says so. */
