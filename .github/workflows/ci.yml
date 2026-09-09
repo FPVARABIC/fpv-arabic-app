@@ -98,6 +98,25 @@ jobs:
           npm run test:compat-characterization
           npm run test:compat-equivalence
           npm run test:compat-completeness
+          # THE RECOMMENDATION FOUNDATION. It decides compatibility too, so it is
+          # a third consumer of the one shared truth above — and the guard that
+          # keeps it honest runs on every commit, not only when it changes. Its
+          # own suite exists because a recommender fails in ways that look like
+          # success: «first one wins» and «the only option is the best option»
+          # both read as recommendations until you check what backs them.
+          npm run test:recommendation
+          # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
+          #
+          # It asserts the phone's build surface and — the part that matters
+          # here — that no second compatibility engine exists. That assertion
+          # had been FAILING on the default branch since BUILD Phase 1 merged,
+          # and nothing reported it, because this suite was in package.json and
+          # in nobody's pipeline. A guard that runs nowhere is not a guard.
+          #
+          # Its one working-tree scope check reads `git status`, which is empty
+          # after a CI checkout, so it is inert here and the other 207
+          # assertions are not.
+          npm run test:assembly
           npm run test:kb
           npm run test:lessons
 

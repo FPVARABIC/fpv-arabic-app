@@ -62,10 +62,25 @@ const RULE_FUNCTION: Record<CompatRuleId, string> = {
   'design-voltage': 'designVoltageRule',
 };
 
-/** The two composers that must consume every shared rule. */
+/**
+ * Every consumer that must reach the shared rules through the shared module.
+ *
+ * The first two are the Phase 1 composers — the part card and the final
+ * report, the pair whose disagreement this file exists to prevent. The third
+ * arrived with the recommendation engine, and the reason it is listed here is
+ * the same reason the other two are: it decides compatibility. A recommender
+ * with its own copy of «does this frame match the declared size» would be a
+ * third answer to a question that is only allowed one, and it would be the
+ * answer a beginner sees FIRST — before either of the surfaces that were
+ * carefully made to agree.
+ *
+ * The order matters below: index 0 is the report and index 1 the card, and two
+ * assertions read them by position. Append, never insert.
+ */
 const CONSUMERS = [
   { name: 'the final report', file: 'src/data/project/verdicts.ts' },
   { name: 'the part card', file: 'web/lib/build/checks.ts' },
+  { name: 'the recommendation engine', file: 'src/data/assembly/recommendation/proposeBuild.ts' },
 ] as const;
 
 const rulesSrc = strip(read('src/data/assembly/compatibility/rules.ts'));
@@ -83,7 +98,7 @@ ok('the function map declares nothing that is not a registered rule',
 ok('every registered rule appears in the function map',
   SHARED_COMPAT_RULES.every(r => RULE_FUNCTION[r.id] !== undefined));
 
-console.log('\n[2] BOTH composers consume EVERY shared rule\n');
+console.log('\n[2] EVERY consumer consumes EVERY shared rule\n');
 for (const rule of SHARED_COMPAT_RULES) {
   const fn = RULE_FUNCTION[rule.id];
   for (const consumer of sources) {
@@ -100,7 +115,7 @@ for (const rule of SHARED_COMPAT_RULES) {
   }
 }
 
-console.log('\n[3] Neither composer keeps a private copy of a shared truth\n');
+console.log('\n[3] No consumer keeps a private copy of a shared truth\n');
 /*
  * The rules module owns the comparisons. A composer that reached past it to the
  * underlying validator would be back to two copies of one truth — passing the
@@ -111,7 +126,22 @@ const PRIVATE_COPIES = [
   { call: 'validateFrameMotor(', belongsTo: 'frame-motor-class' },
   { call: 'validateFramePropeller(', belongsTo: 'prop-clearance' },
 ];
-for (const consumer of sources) {
+/*
+ * The «no private copy» rule reaches WIDER than the consumer list above.
+ *
+ * A consumer must call every shared rule. A file that merely helps one — a
+ * search's eligibility filter, say — need not call all four, but it must not
+ * reach past the rules module to the validator underneath either. That is
+ * exactly how `recommendation/eligibility.ts` first shipped: it called
+ * `frameMatchesSize` directly, produced the right answer, and quietly gave the
+ * recommender its own path to a truth Phase 1 had just finished giving one
+ * owner. Right answers from a second source are the dangerous kind.
+ */
+const NO_PRIVATE_COPY_FILES = [
+  ...CONSUMERS,
+  { name: 'the recommendation eligibility filter', file: 'src/data/assembly/recommendation/eligibility.ts' },
+] as const;
+for (const consumer of NO_PRIVATE_COPY_FILES.map(c => ({ ...c, src: strip(read(c.file)) }))) {
   for (const p of PRIVATE_COPIES) {
     ok(`${consumer.name} does not call ${p.call.slice(0, -1)} directly (owned by «${p.belongsTo}»)`,
       !consumer.src.includes(p.call));

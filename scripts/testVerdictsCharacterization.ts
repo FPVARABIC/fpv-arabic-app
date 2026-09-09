@@ -148,11 +148,9 @@ add('voltage-motor blocker', badMotorBattery
   ? snap({ motor: badMotorBattery.m, battery: badMotorBattery.b })
   : null);
 
-const badEscBattery = (() => {
-  for (const e of escs) for (const b of batteries)
-    if (!e.specs.compatibleVoltages.includes(b.specs.sCount)) return { e, b };
-  return null;
-})();
+// No stocked ESC is incompatible with any stocked battery, so the catalogue
+// cannot reach the `voltage-esc` blocker branch at all — the synthetic 4S-only
+// ESC below is what covers it. This fixture therefore pins the PASSING side.
 add('voltage-esc on a real (compatible) pair', snap({ esc: escs[0], battery: batteries[0] }));
 
 /*

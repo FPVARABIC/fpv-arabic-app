@@ -64,17 +64,18 @@
  */
 
 import assert from 'node:assert/strict';
-import type { BasePart, Frame } from '../src/data/assembly/types';
+import type { BasePart } from '../src/data/assembly/types';
 import type { ProjectSnapshot } from '../src/data/project/types';
 
 const { droneTypes } = await import('../src/data/assembly/droneTypes');
-const { getAvailableSizeOptions, frameMatchesSize } =
-  await import('../src/data/assembly/frameSizeMatch');
+const { getAvailableSizeOptions } = await import('../src/data/assembly/frameSizeMatch');
 const { batteryVoltageOptions } = await import('../src/data/assembly/batteryVoltageOptions');
 const { buildStages } = await import('../src/data/assembly/buildStages');
 const { PART_CATEGORY_MAP } = await import('../src/data/project/store');
 const { computeFindings } = await import('../src/data/project/verdicts');
 const { BUILD_TYPE_AVAILABILITY } = await import('../web/lib/build/availability');
+const { eligibleCandidates, REQUIRED_BUILD_CATEGORIES } =
+  await import('../src/data/assembly/recommendation/eligibility');
 
 let passed = 0;
 function ok(label: string, cond: boolean) {
@@ -83,20 +84,21 @@ function ok(label: string, cond: boolean) {
   passed++;
 }
 
-/** The eight categories a build must fill before the report can be reached. */
-const REQUIRED = [
-  'frames', 'motors', 'propellers', 'escs',
-  'flightControllers', 'receivers', 'videoUnits', 'batteries',
-] as const;
+/**
+ * The eight categories a build must fill, and the rule for which parts are
+ * eligible in each — both from the shared core rather than retyped here.
+ *
+ * They used to be a private copy in this file. The recommendation engine needs
+ * exactly the same pool, and two copies of «which parts may be considered»
+ * would let a recommender propose a build out of parts this proof never
+ * searched — the one disagreement that would make both useless.
+ */
+const REQUIRED = REQUIRED_BUILD_CATEGORIES;
 
-/** The wizard's own rule: tagged for this type, or the whole category if none is. */
 function candidatePool(category: string, droneTypeId: string, sCount: number, sizeInch: number) {
-  const all = PART_CATEGORY_MAP[category] ?? [];
-  const tagged = all.filter(p => p.compatibilityTags.droneTypes.includes(droneTypeId));
-  let pool = tagged.length > 0 ? tagged : all;
-  pool = pool.filter(p => p.compatibilityTags.batteryVoltages.includes(sCount));
-  if (category === 'frames') pool = pool.filter(f => frameMatchesSize(f as Frame, sizeInch));
-  return pool;
+  return eligibleCandidates(category, PART_CATEGORY_MAP[category] ?? [], {
+    droneTypeId, cellCount: sCount, sizeInch,
+  });
 }
 
 interface Attempt {

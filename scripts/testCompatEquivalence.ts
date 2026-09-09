@@ -57,10 +57,10 @@ const { computeFindings } = await import('../src/data/project/verdicts');
 const { buildStages } = await import('../src/data/assembly/buildStages');
 const { frameMatchesSize } = await import('../src/data/assembly/frameSizeMatch');
 const { checkCandidate } = await import('../web/lib/build/checks');
-const {
-  SHARED_COMPAT_RULES, frameSizeRule, frameMotorClassRule,
-  propClearanceRule, designVoltageRule,
-} = await import('../src/data/assembly/compatibility/rules');
+// Only the two rules this suite calls directly are bound here; the other two
+// are exercised THROUGH the composers, which is the whole point of the file.
+const { SHARED_COMPAT_RULES, frameMotorClassRule, propClearanceRule } =
+  await import('../src/data/assembly/compatibility/rules');
 
 let passed = 0;
 const failures: string[] = [];
