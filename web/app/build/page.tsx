@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BUILD_PATH, BUILD_PHASES, TOTAL_BUILD_STEPS } from '@/lib/build/path';
 import { BuildResume } from '@/components/build/BuildResume';
+import { BuildV2PreviewGate } from '@/components/build/v2/BuildV2PreviewGate';
 
 export const metadata: Metadata = {
   title: 'البناء — ابنِ درونك خطوة بخطوة',
@@ -66,6 +67,20 @@ export default function BuildPage() {
   }));
 
   return (
+    /*
+     * TEMPORARY — the V2 preview gate. Everything inside is V1 and is exactly
+     * what a visitor gets; the gate swaps it only for `?buildV2=1`, which
+     * nothing on the site links to.
+     *
+     * This page stays STATICALLY PRERENDERED: reading `searchParams` here
+     * would make `/build` dynamic for every visitor to serve a hidden
+     * preview, so the flag is read on the client instead — and in an effect
+     * rather than through `useSearchParams`, which would bail this subtree
+     * out to client rendering and blank V1 until hydration.
+     *
+     * Delete the wrapper and `lib/build/v2/previewFlag.ts` at cutover.
+     */
+    <BuildV2PreviewGate>
     <div className="shell" style={{ paddingTop: 36, paddingBottom: 44 }}>
       {/* Content first: title, one line, resume, and the three doors inside
           the first phone viewport. The full explanation and the counted
@@ -191,5 +206,6 @@ export default function BuildPage() {
         </div>
       </section>
     </div>
+    </BuildV2PreviewGate>
   );
 }

@@ -22,7 +22,12 @@ jobs:
     timeout-minutes: 25
 
     steps:
+      # Full history: `test:build-v2` compares the route inventory and the
+      # `/build` diff against the branch point, which a depth-1 checkout cannot
+      # reach. 91 commits — the clone cost is negligible.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -105,6 +110,22 @@ jobs:
           # success: «first one wins» and «the only option is the best option»
           # both read as recommendations until you check what backs them.
           npm run test:recommendation
+          # THE V2 JOURNEY'S DOMAIN-TO-UI CONTRACT.
+          #
+          # The preview's whole promise is a set of ABSENCES: no second route,
+          # no navigation entry, no persistence, no question sequence typed
+          # into React, no Array[0] default reaching the reader, and `/build`
+          # itself unchanged. Absences do not fail loudly — they get added back
+          # by a helpful patch — so they are asserted on every commit.
+          #
+          # Its history-dependent assertions (the route inventory and the V1
+          # diff) are why this job now checks out full history; without it they
+          # announce themselves as not run rather than passing quietly.
+          #
+          # The browser walkthrough is `test:build-v2-e2e`, kept out of CI like
+          # every other E2E suite here: it runs a production build and drives
+          # Chromium.
+          npm run test:build-v2
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters
