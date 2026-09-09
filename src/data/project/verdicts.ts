@@ -33,11 +33,24 @@
  */
 
 import {
-  validateFrameMotor,
   validateMotorBattery,
   validateEscBattery,
-  validateFramePropeller,
 } from '../assembly/compatibility/validators';
+/*
+ * THE RULES THIS ENGINE SHARES WITH THE PART CARD.
+ *
+ * Four truths are asked by both the candidate check and this report, and used
+ * to be evaluated separately in each — which is how `frame-size` came to be
+ * enforced on the card and absent here. They now come from one place; this
+ * file keeps its own severities, its own prose and its own scope, and gives up
+ * only its private copy of the comparison. See `compatibility/rules.ts`.
+ */
+import {
+  frameSizeRule,
+  frameMotorClassRule,
+  propClearanceRule,
+  designVoltageRule,
+} from '../assembly/compatibility/rules';
 import { computeRcFindings } from './rcVerdicts';
 import { computeVideoFindings } from './videoVerdicts';
 import { VIDEO_ECOSYSTEM_CLASS } from '../video/types';
@@ -138,7 +151,12 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
   }
 
   // ── 3. The design voltage chosen at the size stage vs the battery bought ──
-  if (p.cellCount && p.battery && p.cellCount !== p.battery.specs.sCount) {
+  //
+  // The comparison itself is `designVoltageRule` — the same one the part card
+  // applies before a battery is chosen. This finding keeps its own id, prose
+  // and severity; what it no longer keeps is its own copy of the test.
+  const designVoltage = designVoltageRule(p.battery, p.cellCount);
+  if (p.battery && designVoltage?.status === 'violated') {
     f.push({
       id: 'voltage-design-mismatch',
       severity: 'warning',
@@ -267,6 +285,54 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
     }
   }
 
+  // ── 6b. The frame against the size this build was DECLARED to be ──────────
+  //
+  // THE ONE INTENTIONAL BEHAVIOUR CHANGE OF PHASE 1.
+  //
+  // The part card has always refused a frame whose size contradicts the size
+  // chosen at step 2 — and this engine never looked at `sizeInch` at all, so
+  // in the advanced mode (where a documented objection may be overridden on
+  // purpose) the reader was shown «غير متوافق» on the card, allowed to accept
+  // it, and then handed a compatibility report that never mentioned it. The
+  // rule did not disagree between the two surfaces; it was simply absent from
+  // one of them, which is worse.
+  //
+  // Severity is `blocker` because that is what the card's own verdict means:
+  // `incompatible` there is a documented hard refusal, not a caution, and the
+  // report's blockers are the findings that hold «التالي» shut. A rule that
+  // stops a selection on one screen and permits the build on the next is the
+  // defect, not the fix.
+  //
+  // It fires only when a size was actually declared. A project with no
+  // declared size — every phone project built before the size stage, and any
+  // snapshot that never recorded one — has nothing to contradict, and the rule
+  // returns null rather than inventing a default.
+  const frameSize = frameSizeRule(p.frame, p.sizeInch);
+  if (frameSize) {
+    const ok = frameSize.status === 'pass';
+    f.push({
+      id: 'frame-size',
+      severity: ok ? 'ok' : 'blocker',
+      confidence: 'typed-spec',
+      claimAr: ok
+        ? 'مقاس هيكلك يطابق حجم البناء الذي اخترته.'
+        : 'مقاس هيكلك لا يطابق حجم البناء الذي اخترته.',
+      whyAr: ok
+        ? 'الحجم الذي اخترته في بداية المشروع هو الأساس الذي رُشِّحت عليه المراوح وفئة المحرك، وهيكلك ضمنه.'
+        : 'الحجم الذي اخترته في بداية المشروع هو الأساس الذي رُشِّحت عليه المراوح وفئة المحرك وبقية القطع. هيكل بمقاس آخر يعني أن تلك الترشيحات بُنيت على رقم لم يعد قائماً — والمراوح التي تناسب أحدهما قد لا تدخل في الآخر أصلاً.',
+      evidenceAr: [
+        `حجم البناء المختار: ${p.sizeInch} إنش`,
+        `الهيكل «${p.frame?.nameAr}»: ${p.frame?.specs.sizeInch} بوصة`,
+      ],
+      actionsAr: ok ? [] : [
+        'إما أن تختار هيكلاً بحجم البناء الذي اخترته، أو ترجع إلى خطوة الحجم وتغيّره ليطابق هيكلك',
+        'إن غيّرت الحجم فراجع المروحة وفئة المحرك بعده — كلاهما اختير على الحجم القديم',
+      ],
+      missingAr: [],
+      links: [{ kind: 'article', targetId: 'prop-sizing', label: 'مقال: قراءة ترميز المروحة' }],
+    });
+  }
+
   // ── 7. UART budget — a real constraint nobody checks until it is too late ──
   if (p.flightController) {
     const consumers: UartConsumer[] = [
@@ -323,7 +389,8 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
   // ── 8. Propeller clearance in the frame ───────────────────────────────────
   if (p.frame && p.propeller) {
     const maxSize = p.frame.specs.maxPropSizeInch ?? p.frame.specs.sizeInch;
-    const fits = validateFramePropeller(p.frame, p.propeller).isCompatible;
+    // Shared with the part card — see `compatibility/rules.ts`.
+    const fits = propClearanceRule(p.frame, p.propeller)?.status === 'pass';
     f.push({
       id: 'prop-clearance',
       severity: fits ? 'ok' : 'blocker',
@@ -354,9 +421,11 @@ export function computeFindings(p: ProjectSnapshot): Finding[] {
     // A motor with no declared class gives us nothing to compare against, and
     // `validateFrameMotor` answers "compatible" in that case only because it
     // has no grounds to refuse. Reporting that as a verified pass would be a
-    // fabricated approval, so the rule simply does not run.
-    if (nominal !== undefined) {
-      const ok = validateFrameMotor(p.frame, p.motor).isCompatible;
+    // fabricated approval, so the rule simply does not run — a decision that
+    // now lives inside `frameMotorClassRule`, shared with the part card.
+    const frameMotor = frameMotorClassRule(p.frame, p.motor);
+    if (nominal !== undefined && frameMotor) {
+      const ok = frameMotor.status === 'pass';
       f.push({
         id: 'frame-motor-class',
         severity: ok ? 'ok' : 'warning',

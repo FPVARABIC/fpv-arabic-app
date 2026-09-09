@@ -86,10 +86,18 @@ jobs:
           # quietly can.
           npm run test:build-reachability
           npm run test:build-phase0
-          # A ratchet on a known P0 that Phase 1 owns: it asserts the CURRENT
-          # divergence between the part card and the final report, so the
-          # defect cannot drift — and fails loudly the moment it is fixed.
-          npm run test:compat-divergence
+          # ONE COMPATIBILITY TRUTH. The part card and the final report used to
+          # evaluate the same physical rules separately, and `frame-size` was
+          # enforced on the card while the report never read the declared size
+          # at all. These three suites replace the ratchet that pinned that
+          # defect: the characterization freezes the engine's existing output
+          # so a refactor cannot change a severity in passing, the equivalence
+          # suite proves both surfaces agree rule by rule, and the completeness
+          # guard fails the build if a shared rule ever reaches only one of
+          # them again.
+          npm run test:compat-characterization
+          npm run test:compat-equivalence
+          npm run test:compat-completeness
           npm run test:kb
           npm run test:lessons
 

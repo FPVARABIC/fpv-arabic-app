@@ -220,8 +220,15 @@ console.log('\n[3] The wizard: three modes, hard stops, no silent skips');
 console.log('\n[4] The engine: documented specs in, honest verdicts out');
 {
   const checks = stripComments(read('web/lib/build/checks.ts'));
-  ok('the candidate checks import the shared core\'s own validators',
-    checks.includes("from '@core/data/assembly/compatibility/validators'"));
+  // Phase 1 moved the four rules both surfaces share down into
+  // `compatibility/rules.ts`, so the validators are called there now rather
+  // than here. What this line has always defended is unchanged, and is stated
+  // more strictly than before: the card may hold no physics of its own. It
+  // must ask the shared core, and perform no comparison itself.
+  ok('the candidate checks reach physics through the shared core, never their own',
+    checks.includes("from '@core/data/assembly/compatibility/rules'")
+    && !/\bvalidate[A-Z]\w*\(/.test(checks)
+    && !/\bframeMatchesSize\(/.test(checks));
   ok('…and the shared tolerance, never a local copy',
     checks.includes('FRAME_SIZE_TOLERANCE_INCH')
     && !/const\s+\w*TOLERANCE/.test(checks));
