@@ -167,6 +167,39 @@ async function freestyle6S(page: Page) {
   await page.waitForTimeout(200);
 }
 
+/**
+ * Open the proposal from a READY summary and report what a reader meets.
+ *
+ * The measurement that matters here is not the full height — it is whether
+ * the headline and the decision burden are in the FIRST viewport. A proposal
+ * whose «حسمنا ٦ اختيارات» is below the fold is V1's step 10 again.
+ */
+async function openProposal(page: Page, label: string) {
+  await page.click('[data-testid="v2-open-proposal"]');
+  await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 15000 });
+  const m = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="v2-proposal"]')!;
+    const burden = document.querySelector('[data-testid="v2-proposal-burden"]')!;
+    const box = el.getBoundingClientRect();
+    const bBox = burden.getBoundingClientRect();
+    return {
+      fullPx: Math.round(box.height),
+      viewport: window.innerHeight,
+      burdenBottom: Math.round(bBox.bottom + window.scrollY),
+      controls: el.querySelectorAll('button, a[href], input, select').length,
+      cards: el.querySelectorAll('[data-testid^="v2-cat-"]').length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      burdenText: burden.textContent ?? '',
+      title: document.querySelector('[data-testid="v2-proposal-title"]')?.textContent ?? '',
+    };
+  });
+  console.log(`      proposal (${label}): ${(m.fullPx / m.viewport).toFixed(2)} screens full `
+    + `· ${m.cards} categories · ${m.controls} controls · burden ends at ${m.burdenBottom}px `
+    + `(viewport ${m.viewport}) · overflow ${m.overflow}px`);
+  console.log(`         «${m.title}» — ${m.burdenText}`);
+  return m;
+}
+
 /** The question currently on screen, by its heading. */
 const questionTitle = (page: Page) =>
   page.locator('[data-testid="v2-question-title"]').first().textContent();
@@ -631,6 +664,215 @@ async function main() {
         await page.locator('[data-testid^="v2-input-cellCount"]').count() === 0);
       ok(`${name}: …and the journey moved on to the budget`,
         (await questionTitle(page))?.includes('الميزانية') === true);
+
+      // ══ PHASE 2C — THE PROPOSAL ═══════════════════════════════════════════
+      console.log(`\n[P-A] ${name} — Freestyle 6S · متوازن · لا معدات → proposal`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      ok(`${name}: a ready summary offers the proposal`,
+        await page.locator('[data-testid="v2-open-proposal"]').count() === 1);
+      const pa = await openProposal(page, 'freestyle mid');
+
+      ok(`${name}: the headline claims a proposal`,
+        pa.title.includes('هذا البناء المقترح لك'));
+      ok(`${name}: the burden is stated in real Arabic counts`,
+        /حسمنا .+ اختيار/.test(pa.burdenText) && /نحتاج رأيك/.test(pa.burdenText));
+      ok(`${name}: …and no Western digits leaked into it`, !/[0-9]/.test(pa.burdenText));
+      ok(`${name}: the burden line is inside the first viewport`,
+        pa.burdenBottom <= pa.viewport);
+      ok(`${name}: every required category has a card`, pa.cards === 8);
+      ok(`${name}: no horizontal overflow`, pa.overflow <= 0);
+
+      // The decisions that need the reader come first and are already open.
+      const groups = await page.locator('[data-testid^="v2-group-"]')
+        .evaluateAll(ns => ns.map(n => n.getAttribute('data-testid')));
+      ok(`${name}: «نحتاج اختيارك» is the first group`, groups[0] === 'v2-group-needs-you');
+      ok(`${name}: the settled group follows it`, groups[1] === 'v2-group-system-decided');
+      ok(`${name}: no «قطعك» group — Phase 2B enters no owned parts`,
+        !groups.includes('v2-group-yours'));
+      ok(`${name}: no «تعذّر» group in a proven build`, !groups.includes('v2-group-problem'));
+
+      const recCards = page.locator('[data-testid^="v2-cat-"][data-status="recommended"]');
+      ok(`${name}: recommended cards exist`, await recCards.count() > 0);
+      const recText = (await recCards.first().textContent()) ?? '';
+      ok(`${name}: a recommended card says «اقترحناه لك»`, recText.includes('اقترحناه لك'));
+      ok(`${name}: …and never «الأفضل»`, !recText.includes('الأفضل'));
+
+      const choiceCards = page.locator('[data-testid^="v2-cat-"][data-status="choice-required"]');
+      ok(`${name}: the tied categories are there`, await choiceCards.count() === 2);
+      const anySelected = await page.locator('[data-testid^="v2-candidate-"][data-selected="true"]')
+        .count();
+      ok(`${name}: NO candidate is preselected — a tie is shown as a tie`, anySelected === 0);
+      const candCount = await page.locator('[data-testid^="v2-candidate-"]').count();
+      ok(`${name}: candidates are listed for the reader to see`, candCount >= 2);
+      /*
+       * A SHORT list under a light load opens by itself; a long one waits to
+       * be asked. Freestyle-mid has two open decisions — propellers (4) and
+       * video units (7) — so exactly one of them should be open on arrival.
+       */
+      ok(`${name}: the long candidate list is collapsed behind a named button`,
+        await page.locator('[data-testid="v2-show-candidates-videoUnits"]').count() === 1);
+      ok(`${name}: …whose label carries the count in Arabic digits`,
+        /[٠-٩]/.test((await page.locator('[data-testid="v2-show-candidates-videoUnits"]')
+          .textContent()) ?? ''));
+      ok(`${name}: the short list is open without being asked`,
+        await page.locator('[data-testid="v2-show-candidates-propellers"]').count() === 0
+        && await page.locator('[data-testid="v2-candidates-propellers"]').count() === 1);
+      ok(`${name}: …and the list says it is read-only for now`,
+        ((await choiceCards.first().textContent()) ?? '').includes('الاختيار بينها يأتي لاحقًا'));
+
+      ok(`${name}: the manual check is announced`,
+        await page.locator('[data-testid="v2-proposal-manual"]').count() === 1);
+      ok(`${name}: …and nothing claims full compatibility`,
+        !((await page.locator('[data-testid="v2-proposal"]').textContent()) ?? '')
+          .includes('متوافق بالكامل'));
+      ok(`${name}: no raw part id is on screen`,
+        !/[a-z]+-[a-z0-9]+-(budget|mid|premium)\b/.test(
+          (await page.locator('[data-testid="v2-proposal"]').textContent()) ?? ''));
+
+      // Progressive disclosure: settled categories are collapsed until asked.
+      const firstMore = page.locator('[data-testid^="v2-more-"]').first();
+      ok(`${name}: a settled category starts collapsed`,
+        await firstMore.getAttribute('aria-expanded') === 'false');
+      await firstMore.click();
+      await page.waitForTimeout(120);
+      ok(`${name}: …and opens on a real button`,
+        await firstMore.getAttribute('aria-expanded') === 'true');
+      const expanded = await page.evaluate(() => Math.round(
+        document.querySelector('[data-testid="v2-proposal"]')!.getBoundingClientRect().height));
+      console.log(`      proposal expanded by one card: ${expanded}px (was ${pa.fullPx}px)`);
+      ok(`${name}: expanding actually reveals content`, expanded > pa.fullPx);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/12-proposal-390.png`, fullPage: true });
+      }
+
+      // ── P-B. NO BUDGET PREFERENCE → NOTHING RANKED ───────────────────────
+      console.log(`\n[P-B] ${name} — Freestyle 6S · لا تفضيل → everything open`);
+      await startJourney(page);
+      await page.click('[data-testid="v2-goal-freestyle"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      await page.click('[data-testid="v2-input-cellCount-6"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      await page.click('[data-testid="v2-budget-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      await page.click('[data-testid="v2-owned-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      const pb = await openProposal(page, 'freestyle no preference');
+      ok(`${name}: with nothing to rank by, the headline does NOT claim a proposal`,
+        await page.locator('[data-testid="v2-proposal"]').getAttribute('data-quality') === 'all-open'
+        && !pb.title.includes('المقترح لك'));
+      ok(`${name}: …and it says what would let the system rank`,
+        ((await page.locator('[data-testid="v2-proposal"]').textContent()) ?? '')
+          .includes('فئة ميزانية'));
+      ok(`${name}: every category is open`,
+        await page.locator('[data-testid^="v2-cat-"][data-status="choice-required"]').count() === 8);
+      ok(`${name}: still nothing preselected`,
+        await page.locator('[data-testid^="v2-candidate-"][data-selected="true"]').count() === 0);
+      /*
+       * EIGHT open decisions is the heavy case. Every list collapses, so the
+       * screen stays a scannable set of cards instead of the 31-row wall the
+       * first version measured at 5.12 viewports.
+       */
+      /*
+       * VISIBLE, not present. A collapsed panel keeps its rows in the DOM
+       * behind `hidden` — counting nodes would pass while the wall was still
+       * on screen, which is the opposite of what this asserts.
+       */
+      ok(`${name}: under a heavy load every list collapses`,
+        await page.locator('[data-testid^="v2-show-candidates-"]').count() === 8
+        && (await page.locator('[data-testid^="v2-show-candidates-"]')
+          .evaluateAll(ns => ns.every(n => n.getAttribute('aria-expanded') === 'false')))
+        && await page.locator('[data-testid^="v2-candidate-"]:visible').count() === 0);
+      ok(`${name}: …and the screen is no longer a wall`, pb.fullPx / pb.viewport < 3.2);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/13-proposal-all-open-390.png`, fullPage: true });
+      }
+
+      // ── P-C. OWNED DJI GOGGLES → THE CONSTRAINT REACHES THE PROPOSAL ─────
+      console.log(`\n[P-C] ${name} — Freestyle 6S · متوازن · DJI → constrained proposal`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-goggles"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-video-DJI"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      const pc = await openProposal(page, 'freestyle DJI');
+      ok(`${name}: owning goggles left FEWER open decisions than not owning them`,
+        await page.locator('[data-testid^="v2-cat-"][data-status="choice-required"]').count()
+          < 2 + 1);
+      const vtxText = (await page.locator('[data-testid="v2-cat-videoUnits"]').textContent()) ?? '';
+      ok(`${name}: the video decision respects DJI`, vtxText.includes('DJI'));
+      ok(`${name}: …and the burden line reflects the lighter load`,
+        /نحتاج رأيك في اختيار واحد/.test(pc.burdenText));
+
+      // ── P-D. AN UNIDENTIFIED RADIO STOPS BEFORE THE PROPOSAL ─────────────
+      console.log(`\n[P-D] ${name} — «لست متأكدًا» cannot reach the parts proposal`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-radio"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-rc-unsure"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      ok(`${name}: the summary is «needs identification»`,
+        await page.locator('[data-testid="v2-summary-next"]').getAttribute('data-state')
+          === 'needs-equipment-identification');
+      ok(`${name}: there is NO door to the proposal`,
+        await page.locator('[data-testid="v2-open-proposal"]').count() === 0);
+      ok(`${name}: …and no part is rendered anywhere`,
+        await page.locator('[data-testid^="v2-cat-"]').count() === 0
+        && await page.locator('[data-testid="v2-proposal"]').count() === 0);
+
+      // ── P-E. A BLOCKED BUILD CANNOT REACH THE PROPOSAL ───────────────────
+      console.log(`\n[P-E] ${name} — Crossfire: blocked before any part`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-radio"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-rc-Crossfire"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(300);
+      ok(`${name}: the summary is blocked`,
+        await page.locator('[data-testid="v2-summary-next"]').getAttribute('data-state')
+          === 'no-viable-build');
+      ok(`${name}: there is NO door to the proposal`,
+        await page.locator('[data-testid="v2-open-proposal"]').count() === 0);
+      ok(`${name}: …and no part is rendered`,
+        await page.locator('[data-testid^="v2-cat-"]').count() === 0);
+
+      // ── P-F. LONG-RANGE — DERIVED PREREQUISITES, THEN A PROPOSAL ─────────
+      console.log(`\n[P-F] ${name} — Long-range: asked neither, still proposes`);
+      await startJourney(page);
+      await page.click('[data-testid="v2-goal-long-range"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      ok(`${name}: still no size or voltage question`,
+        await page.locator('[data-testid^="v2-input-"]').count() === 0);
+      await page.click('[data-testid="v2-budget-mid"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(200);
+      await page.click('[data-testid="v2-owned-none"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      const pf = await openProposal(page, 'long-range mid');
+      ok(`${name}: long-range reaches a proposal`, pf.title.includes('هذا البناء المقترح لك'));
+      ok(`${name}: …with «الخيار الوحيد المتوافق في الكتالوج» categories`,
+        await page.locator('[data-testid^="v2-cat-"][data-status="only-compatible"]').count() > 0);
+      const onlyText = (await page.locator('[data-testid^="v2-cat-"][data-status="only-compatible"]')
+        .first().textContent()) ?? '';
+      ok(`${name}: …which never claims to be the best`, !onlyText.includes('أفضل'));
+      ok(`${name}: the burden line is still in the first viewport`,
+        pf.burdenBottom <= pf.viewport);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/14-proposal-longrange-390.png`, fullPage: true });
+      }
 
       // ── H. THE PREVIEW'S OWN WAY OUT ──────────────────────────────────────
       /*

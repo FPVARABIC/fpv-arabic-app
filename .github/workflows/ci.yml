@@ -123,6 +123,16 @@ jobs:
           # every other E2E suite here: it runs a production build and drives
           # Chromium.
           npm run test:build-v2
+          # THE PROPOSAL, AND WHAT IT IS ALLOWED TO CLAIM.
+          #
+          # Phase 2C is the first screen that shows a part, so almost every
+          # assertion in it is about restraint: «اقترحناه لك» not «الأفضل», a
+          # tie shown as a tie with no candidate preferred, no reader selection
+          # (the domain cannot say «chose but does not own»), and no «متوافق
+          # بالكامل» while a manual check is open. It also PRINTS the decision
+          # burden per build type, because «did V2 reduce the decisions or just
+          # move them» is a measurement.
+          npm run test:build-v2-proposal
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters

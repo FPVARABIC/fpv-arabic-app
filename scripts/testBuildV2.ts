@@ -536,12 +536,32 @@ section('7c — THE PHASE 2C TRIPWIRE');
  * prevent. So: no V2 COMPONENT may render the engine's decisions or parts, and
  * the warning that explains why cannot be quietly deleted.
  */
-const componentCode = Object.entries(v2Code)
-  .filter(([f]) => f.endsWith('.tsx')).map(([, c]) => c).join('\n');
-ok('no V2 component renders the engine\'s decisions',
-  !/build\.decisions|\.candidateIds|\.selectionSource/.test(componentCode));
-ok('no V2 component renders the engine\'s chosen parts',
-  !/build\.parts|\.provenPath\b/.test(componentCode));
+/*
+ * ── THE TRIPWIRE FIRED, AND THIS IS WHAT REPLACED IT ──────────────────────
+ *
+ * Phase 2B asserted that NO component renders `build.decisions` or
+ * `build.parts`. Phase 2C renders both — that is the phase. The guard did its
+ * job: crossing the line was impossible without failing a test that points
+ * straight at the reasoning, which is what a tripwire is for.
+ *
+ * It is replaced, not deleted, and by something narrower and stronger. The
+ * danger was never «a component reads decisions»; it was «a reader who owns an
+ * unidentified radio gets a receiver recommended as though they owned none».
+ * So the guard moved to the door:
+ *
+ *   · the proposal opens on `readiness.state === 'ready'` and nothing else,
+ *   · which by construction excludes `needs-equipment-identification`,
+ *   · and the browser suite walks that path to prove it.
+ *
+ * `scripts/testBuildV2Proposal.ts` carries the rest.
+ */
+const preview2c = v2Code['BuildV2Preview.tsx'];
+ok('the proposal door is gated on the readiness state itself',
+  /readiness\.state === 'ready' && \(/.test(preview2c));
+ok('…and on nothing else — no second, driftable condition',
+  (preview2c.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+ok('the reader can always get back out of the proposal',
+  /screen === 'proposal'\) \{ setScreen\('summary'\); return; \}/.test(preview2c));
 /*
  * Matched against the comment with its line-wrapping collapsed — a warning
  * that fails a test the moment someone reflows a paragraph teaches people to
