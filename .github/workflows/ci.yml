@@ -105,6 +105,24 @@ jobs:
           # success: «first one wins» and «the only option is the best option»
           # both read as recommendations until you check what backs them.
           npm run test:recommendation
+          # THE V2 JOURNEY'S DOMAIN-TO-UI CONTRACT.
+          #
+          # The preview's whole promise is a set of ABSENCES: no second route,
+          # no navigation entry, no persistence, no question sequence typed
+          # into React, no Array[0] default reaching the reader, and `/build`
+          # itself unchanged. Absences do not fail loudly — they get added back
+          # by a helpful patch — so they are asserted on every commit.
+          #
+          # It needs NO git history. The V1 baseline is pinned as a fixture
+          # (scripts/fixtures/buildPageV1.f72571a.txt) rather than derived from
+          # `merge-base(HEAD, canonical)` — which would prove the V1 page
+          # unchanged on a branch and prove nothing at all once merged, when
+          # the merge-base is HEAD and the diff is empty by definition.
+          #
+          # The browser walkthrough is `test:build-v2-e2e`, kept out of CI like
+          # every other E2E suite here: it runs a production build and drives
+          # Chromium.
+          npm run test:build-v2
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters

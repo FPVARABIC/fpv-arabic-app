@@ -54,3 +54,9 @@ dist-video-uitest
 
 # The gate self-check writes a throwaway publish directory here.
 .netlify-gate-check/
+
+# Browser-QA evidence from scripts/testBuildV2E2E.ts. Screenshots are produced
+# to be LOOKED AT during a review and then discarded, like the shot
+# directories above — the measurements they support live in the suite's own
+# output, which is text.
+artifacts/
