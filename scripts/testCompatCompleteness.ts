@@ -126,7 +126,22 @@ const PRIVATE_COPIES = [
   { call: 'validateFrameMotor(', belongsTo: 'frame-motor-class' },
   { call: 'validateFramePropeller(', belongsTo: 'prop-clearance' },
 ];
-for (const consumer of sources) {
+/*
+ * The «no private copy» rule reaches WIDER than the consumer list above.
+ *
+ * A consumer must call every shared rule. A file that merely helps one — a
+ * search's eligibility filter, say — need not call all four, but it must not
+ * reach past the rules module to the validator underneath either. That is
+ * exactly how `recommendation/eligibility.ts` first shipped: it called
+ * `frameMatchesSize` directly, produced the right answer, and quietly gave the
+ * recommender its own path to a truth Phase 1 had just finished giving one
+ * owner. Right answers from a second source are the dangerous kind.
+ */
+const NO_PRIVATE_COPY_FILES = [
+  ...CONSUMERS,
+  { name: 'the recommendation eligibility filter', file: 'src/data/assembly/recommendation/eligibility.ts' },
+] as const;
+for (const consumer of NO_PRIVATE_COPY_FILES.map(c => ({ ...c, src: strip(read(c.file)) }))) {
   for (const p of PRIVATE_COPIES) {
     ok(`${consumer.name} does not call ${p.call.slice(0, -1)} directly (owned by «${p.belongsTo}»)`,
       !consumer.src.includes(p.call));

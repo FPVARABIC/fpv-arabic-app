@@ -11,6 +11,13 @@
  * So this rule lives here, below both, and `scripts/testBuildReachability.ts`
  * imports it rather than keeping its own copy.
  *
+ * THE FRAME-SIZE COMPARISON IS NOT MADE HERE
+ * ------------------------------------------
+ * This file used to call `frameMatchesSize` directly, which quietly gave the
+ * recommendation side its own path to a physical truth that Phase 1 had just
+ * finished giving exactly one owner. It reached the same answer — that is what
+ * made it dangerous. `frameSizeRule` is the owner; this asks it.
+ *
  * WHY THIS IS NOT THE WIZARD'S RULE
  * ---------------------------------
  * `BuildWizard.candidatesFor` looks similar and is deliberately different: it
@@ -33,7 +40,7 @@
  */
 
 import type { BasePart, Frame } from '../types';
-import { frameMatchesSize } from '../frameSizeMatch';
+import { frameSizeRule } from '../compatibility/rules';
 
 /** The eight categories a build must fill before the report can be reached. */
 export const REQUIRED_BUILD_CATEGORIES = [
@@ -59,7 +66,7 @@ export function eligibleCandidates(
   let pool = tagged.length > 0 ? tagged : all;
   pool = pool.filter(p => p.compatibilityTags.batteryVoltages.includes(opts.cellCount));
   if (category === 'frames') {
-    pool = pool.filter(f => frameMatchesSize(f as Frame, opts.sizeInch));
+    pool = pool.filter(f => frameSizeRule(f as Frame, opts.sizeInch)?.status !== 'violated');
   }
   return pool;
 }

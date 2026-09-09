@@ -7,34 +7,46 @@
  * المقترح لك» — but a proposal is only worth reading if the system is honest
  * about WHICH KIND of answer each line is, and the honest kinds are not one.
  *
- * Five outcomes, and the distinctions between them are the whole point:
+ * WHO CHOSE IT, AND WHAT KIND OF ANSWER IT IS
+ * -------------------------------------------
+ * Two separate questions, so two separate fields. Collapsing them is how a
+ * model starts lying: an earlier draft of this file marked a part the READER
+ * already owned as `recommended`, which claimed the system had weighed it
+ * against alternatives and preferred it. It had done nothing of the kind — the
+ * reader owned it, so it was kept. `selectionSource` now carries who chose,
+ * and `status` carries what kind of answer it is.
  *
- *   RECOMMENDED       documented evidence, relative to what the reader said
- *                     they wanted, supports this part over the others that
- *                     survived. There has to be a REASON, and the reason has
- *                     to come from the catalogue.
+ * THE OUTCOMES
+ * ------------
+ *   recommended      the system chose it, and documented evidence relative to
+ *                    what the reader asked for ranked it above the others that
+ *                    survived. There is a REASON, and it comes from the
+ *                    catalogue.
  *
- *   ONLY_COMPATIBLE   exactly one candidate survived the filters. This is not
- *                     a recommendation and must never be shown as «أفضل خيار»
- *                     — the catalogue simply has nothing else to offer. An
- *                     owner decision, locked: «الخيار الوحيد المتوافق في
- *                     الكتالوج».
+ *   only-compatible  the system chose it because exactly one candidate
+ *                    survived. Never «أفضل خيار» — there is nothing for it to
+ *                    be best against. An owner decision, locked.
  *
- *   CHOICE_REQUIRED   several candidates survived and NOTHING in the data
- *                     separates them. The system does not get to pick. This
- *                     is the outcome that keeps the engine honest: it is
- *                     always available, so there is never a reason to invent
- *                     a tiebreak.
+ *   choice-required  several survived and NOTHING in the data separates them.
+ *                    The system does not get to pick. This is the outcome that
+ *                    keeps the rest honest: it is always available, so there is
+ *                    never a reason to invent a tiebreak.
  *
- *   MANUAL_CHECK      compatibility cannot be confirmed from documented data.
- *                     `current-headroom` is the standing example — motor draw
- *                     with a given propeller at a given voltage is not in this
- *                     catalogue and is not derivable from KV or stator size,
- *                     so the report already refuses to judge it. The
- *                     recommender refuses too, rather than ranking on a number
- *                     it would have to invent.
+ *   user-locked      the reader already owns it and it is compatible and
+ *                    viable. Kept, not chosen.
  *
- *   UNAVAILABLE       no valid candidate exists at all.
+ *   unavailable      nothing viable — including the case where the part the
+ *                    reader owns is the thing ruling the build out.
+ *
+ * WHY THERE IS NO `manual-check` STATUS
+ * -------------------------------------
+ * There used to be, and the engine never emitted it — which made the enum a
+ * claim about the model rather than a description of it. The uncertainty it
+ * was meant to name is real, but it is not a property of ONE category's
+ * selection: `current-headroom` is a relationship between a motor, a
+ * propeller, a voltage and an ESC, and it stays unresolved no matter which
+ * motor is chosen. Relational uncertainty is carried at the build level, on
+ * `ProposedBuild.manualChecks`, where it actually lives.
  *
  * WHAT IS DELIBERATELY ABSENT
  * ---------------------------
@@ -44,16 +56,19 @@
  * instead, and each kind says where the claim came from.
  */
 
-import type { BasePart } from '../types';
-import type { CompatRuleId } from '../compatibility/rules';
+import type { BasePart, PartTier } from '../types';
+import type { CompatRuleId, CompatRuleStatus } from '../compatibility/rules';
 
-/** The five things the engine may conclude about one category. */
+/** What kind of answer this is. See the header for each. */
 export type RecommendationStatus =
   | 'recommended'
   | 'only-compatible'
   | 'choice-required'
-  | 'manual-check'
+  | 'user-locked'
   | 'unavailable';
+
+/** WHO decided. `none` means nobody has — the reader still must. */
+export type SelectionSource = 'system' | 'user-owned' | 'none';
 
 /**
  * WHERE A CLAIM CAME FROM — the honest replacement for a confidence score.
@@ -78,9 +93,9 @@ export type RecommendationInputKey =
   | 'sizeInch'
   | 'cellCount'
   | 'budgetTier'
-  | 'videoSystem'
-  | 'rcProtocol'
-  | 'existingParts';
+  | 'ownedVideoSystem'
+  | 'ownedRcSystem'
+  | 'ownedParts';
 
 /** One sentence of why, plus what produced it. */
 export interface DecisionReason {
@@ -102,23 +117,62 @@ export interface DecisionReason {
   ruleId?: CompatRuleId;
 }
 
+/**
+ * A shared compatibility rule this part was actually measured against.
+ *
+ * ONLY rules that genuinely applied appear here. A rule that returns null for
+ * this part — because the input it compares was absent — is OMITTED rather
+ * than recorded as a pass. A fabricated «✓ frame-size» on a build with no
+ * declared size would be exactly the kind of unearned reassurance the whole
+ * verdict engine exists to avoid.
+ */
+export interface CompatibilityEvidence {
+  ruleId: CompatRuleId;
+  status: CompatRuleStatus;
+}
+
 /** What the engine concluded about one category. */
 export interface CategoryDecision {
   category: string;
   status: RecommendationStatus;
+  /** Who decided. `none` iff `partId` is undefined. */
+  selectionSource: SelectionSource;
   /**
-   * Set ONLY for `recommended` and `only-compatible` — the two statuses that
-   * mean «the system has a part for you». Every other status leaves this
-   * undefined, so a caller cannot render a selection the engine did not make.
+   * The part this decision is ABOUT, when there is one.
+   *
+   * Set when the system selected a part (`recommended`, `only-compatible`) AND
+   * when the reader owns one (`user-locked`, or `unavailable` where their own
+   * part is the reason). `selectionSource` is what tells those apart — a
+   * caller must never read `partId` as «the system chose this».
    */
   partId?: string;
   /**
-   * Everything that survived the hard filters, in the catalogue's own order.
-   * Present for every status: a `choice-required` line is useless without the
-   * choices, and an `only-compatible` line is only checkable against its own.
+   * Everything that survived the hard filters AND is globally viable, in the
+   * catalogue's own order. Present for every status: a `choice-required` line
+   * is useless without the choices, and an `only-compatible` line is only
+   * checkable against its own.
    */
   candidateIds: readonly string[];
+  /** Shared rules this decision's part was actually measured against. */
+  compatibility: readonly CompatibilityEvidence[];
   reasons: readonly DecisionReason[];
+}
+
+/**
+ * An answer the engine needs before it can compute anything at all.
+ *
+ * Size and voltage are prerequisites, not outputs. When the catalogue derives
+ * exactly one value the engine resolves it silently; when several are equally
+ * valid it must ASK, because picking one would be a tiebreak with nothing
+ * behind it. `droneTypes.recommendedBatteryVoltages` is `[4, 6]` for freestyle
+ * and says nothing about 4S being preferable to 6S — so the engine does not
+ * pretend it does.
+ */
+export interface RequiredInput {
+  key: RecommendationInputKey;
+  /** The equally-valid values, in the catalogue's own order. */
+  options: readonly (string | number)[];
+  ar: string;
 }
 
 /**
@@ -134,15 +188,26 @@ export interface CategoryDecision {
  */
 export interface ProposedBuild {
   droneTypeId: string;
+  /** Resolved only when the catalogue derived exactly one, or the reader said. */
   sizeInch?: number;
   cellCount?: number;
+  /**
+   * Prerequisites the engine could not resolve on its own. While this is
+   * non-empty no decisions have been computed — there is nothing to compute
+   * against yet, and guessing would be the tiebreak this engine refuses.
+   */
+  requiredInputs: readonly RequiredInput[];
   /** One per category the engine considered, in build order. */
   decisions: readonly CategoryDecision[];
-  /** The parts the engine actually selected, keyed by category. */
+  /** The parts actually fixed — system-selected and user-owned alike. */
   parts: Readonly<Record<string, BasePart>>;
   /** Required categories still waiting on the reader. */
   unresolved: readonly string[];
-  /** Finding ids the data cannot settle — carried, never silently dropped. */
+  /**
+   * Findings the DATA cannot settle, at the level they actually live: a
+   * relationship between parts, not a property of one category's selection.
+   * `current-headroom` is the standing example.
+   */
   manualChecks: readonly string[];
   /** Every required category resolved by the engine — nothing left to ask. */
   complete: boolean;
@@ -155,8 +220,6 @@ export interface ProposedBuild {
    * globally fatal: the racing type's every combination raises `stack-mount`,
    * though each part passes its own card. Without this field a proposal would
    * be a set of independently-filtered lists that may not add up to a drone.
-   * With it, «here is what I propose» always comes with «and here is a whole
-   * build it completes into».
    */
   provenPath: Readonly<Record<string, string>> | null;
   /**
@@ -167,21 +230,45 @@ export interface ProposedBuild {
   blockerFindingIds: readonly string[];
 }
 
-/** What the reader told us. Everything except the goal is optional. */
+/**
+ * WHAT THE READER TOLD US.
+ *
+ * Two different kinds of answer, kept apart because they behave differently:
+ *
+ *   `budgetTier` is a PREFERENCE. It ranks; it never excludes. A reader who
+ *   says «اقتصادي» has not said they refuse to see anything else.
+ *
+ *   everything under `owned` is a CONSTRAINT. It is hardware already in the
+ *   reader's hands. A DJI goggle owner cannot use a Walksnail air unit, and no
+ *   amount of budget agreement changes that — so ecosystem ownership FILTERS
+ *   rather than ranking. An earlier draft scored ownership as «+1 preference»,
+ *   which let a cheaper incompatible unit outrank a compatible one. That is
+ *   the bug this split exists to prevent.
+ *
+ * A reader who owns no goggles and no radio leaves `owned` empty, and then
+ * nothing is constrained: they are free to buy into any ecosystem.
+ */
 export interface RecommendationInput {
   droneTypeId: string;
   sizeInch?: number;
   cellCount?: number;
-  /** Lightweight preference; only used where the catalogue justifies it. */
-  budgetTier?: 'budget' | 'mid' | 'premium';
-  /** Goggle ecosystem, matched against `protocolOrSystem` on video units. */
-  videoSystem?: string;
-  /** Radio protocol, matched against receivers. */
-  rcProtocol?: string;
-  /**
-   * Parts the reader already owns, by category. A locked input: an existing
-   * part is never silently replaced. If it is compatible it stays; if it is
-   * not, the build says so and stays incomplete.
-   */
-  existingParts?: Readonly<Record<string, BasePart>>;
+  /** Soft: ranks among viable candidates, never excludes any. */
+  budgetTier?: PartTier;
+  owned?: {
+    /** Goggle ecosystem already owned — matched against `protocolOrSystem`. */
+    videoSystem?: string;
+    /**
+     * Radio system already owned. The CANONICAL value from
+     * `receivers[].specs.protocol` — «ExpressLRS» or «Crossfire» — never a
+     * display string and never «CRSF», which is the serial protocol between
+     * receiver and flight controller and is shared by both ecosystems.
+     */
+    rcSystem?: string;
+    /**
+     * Parts already in hand, by category. Hard locks: an owned part is never
+     * silently replaced. If it is compatible and viable it stays; if it is
+     * not, the build says so and stays incomplete.
+     */
+    parts?: Readonly<Record<string, BasePart>>;
+  };
 }
