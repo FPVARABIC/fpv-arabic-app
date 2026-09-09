@@ -491,6 +491,33 @@ ok('the copy lives in one file, not scattered across components',
     .some(([, f]) => /'[^']*[؀-ۿ]{12,}/.test(f)));
 
 // ═══════════════════════════════════════════════════════════════════════════
+section('9b — EVERY DESIGN TOKEN THE LAYER NAMES ACTUALLY EXISTS');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * A token that does not exist fails SILENTLY and destructively.
+ *
+ * `border: 1px solid var(--line)` — and this stylesheet has no `--line`. An
+ * undefined custom property inside a shorthand is invalid at computed-value
+ * time, so the declaration resolves to `unset`: `border-style` falls back to
+ * `none` and the element loses the border it was overriding its class to set.
+ * Every unselected choice card rendered with no border at all, and nothing
+ * anywhere said so — not the browser, not tsc, not eslint. It took reading
+ * `getComputedStyle` in a real browser to see `border-top-width: 0px`.
+ *
+ * Cheap to check, so it is checked.
+ */
+const GLOBALS = read('web/app/globals.css');
+const tokensUsed = [...new Set(
+  Object.values(v2Code).join('\n').match(/var\(--[a-zA-Z0-9-]+/g) ?? [],
+)].map(t => t.replace('var(', ''));
+const undefinedTokens = tokensUsed.filter(t => !GLOBALS.includes(`${t}:`));
+ok(`the layer names ${tokensUsed.length} design tokens and they all exist `
+  + `(undefined: ${undefinedTokens.join(', ') || 'none'})`,
+  undefinedTokens.length === 0);
+ok('the token scan is not vacuous — it found real tokens to check',
+  tokensUsed.length >= 5 && tokensUsed.includes('--accent-ink'));
+
+// ═══════════════════════════════════════════════════════════════════════════
 section('10 — V1 IS BYTE-IDENTICAL EXCEPT FOR THE GATE');
 // ═══════════════════════════════════════════════════════════════════════════
 /*

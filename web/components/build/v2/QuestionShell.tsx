@@ -55,7 +55,18 @@ export const QuestionShell: React.FC<{
  *
  * `aria-pressed` carries the selected state, and the visual selection is a
  * BORDER plus a check glyph — never colour alone, which a reader with low
- * colour vision cannot see. The disabled state is a real `disabled` attribute
+ * colour vision cannot see.
+ *
+ * The border token has to be one that EXISTS. This read `var(--line)`, which
+ * this stylesheet does not define, and an undefined custom property inside a
+ * shorthand makes the whole declaration invalid at computed-value time: the
+ * property resolves to `unset`, `border-style` falls back to `none`, and the
+ * card silently lost the border it was overriding `.card-sm` to set. Nothing
+ * warns — not the browser, not the typechecker, not the linter. Only a
+ * computed-style read in a real browser showed `border-top-width: 0px`.
+ * `scripts/testBuildV2.ts` now checks every token the layer names.
+ *
+ * The disabled state is a real `disabled` attribute
  * so the keyboard and the screen reader both learn about it, not an `onClick`
  * that quietly does nothing.
  */
@@ -87,7 +98,7 @@ export const ChoiceCard: React.FC<{
       display: 'grid',
       gap: 5,
       cursor: disabled ? 'not-allowed' : 'pointer',
-      border: selected ? '2px solid var(--accent-ink)' : '1px solid var(--line)',
+      border: selected ? '2px solid var(--accent-ink)' : '1px solid var(--border-soft)',
       opacity: disabled ? 0.62 : 1,
       background: 'var(--surface)',
       font: 'inherit',

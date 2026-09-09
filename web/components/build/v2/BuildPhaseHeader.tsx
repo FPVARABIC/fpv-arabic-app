@@ -34,7 +34,7 @@ export const BuildPhaseHeader: React.FC<{ activeId: string }> = ({ activeId }) =
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '7px 11px',
               borderRadius: 999,
-              border: active ? '1.5px solid var(--accent-ink)' : '1px solid var(--line)',
+              border: active ? '1.5px solid var(--accent-ink)' : '1px solid var(--border-soft)',
               background: active ? 'var(--accent-wash, transparent)' : 'transparent',
               color: active ? 'var(--text)' : 'var(--text-dimmer)',
               fontSize: 12.5,

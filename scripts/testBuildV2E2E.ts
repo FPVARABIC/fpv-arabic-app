@@ -527,6 +527,9 @@ async function main() {
         await page.locator('[data-testid="build-v2-preview"]').count() === 0);
       ok(`${name}: V1's three doors are back — with no manual reload`,
         await page.locator('a[href^="/build/wizard"]').count() >= 3);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/09-back-to-v1-390.png`, fullPage: true });
+      }
 
       // ── No persistence ────────────────────────────────────────────────────
       const stored = await page.evaluate(() => {
