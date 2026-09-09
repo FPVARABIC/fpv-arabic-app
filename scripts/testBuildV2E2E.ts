@@ -147,6 +147,26 @@ async function startJourney(page: Page) {
   await page.waitForSelector('[data-testid="v2-question"]', { timeout: 10000 });
 }
 
+/**
+ * Freestyle at 6S, mid budget, stopped ON the owned-gear question.
+ *
+ * Four of the readiness journeys below differ only in what is answered from
+ * here, and re-typing the first four clicks each time is how a walkthrough
+ * quietly starts testing a different build than it claims to.
+ */
+async function freestyle6S(page: Page) {
+  await startJourney(page);
+  await page.click('[data-testid="v2-goal-freestyle"]');
+  await page.click('[data-testid="v2-next"]');
+  await page.waitForTimeout(200);
+  await page.click('[data-testid="v2-input-cellCount-6"]');
+  await page.click('[data-testid="v2-next"]');
+  await page.waitForTimeout(200);
+  await page.click('[data-testid="v2-budget-mid"]');
+  await page.click('[data-testid="v2-next"]');
+  await page.waitForTimeout(200);
+}
+
 /** The question currently on screen, by its heading. */
 const questionTitle = (page: Page) =>
   page.locator('[data-testid="v2-question-title"]').first().textContent();
@@ -273,6 +293,11 @@ async function main() {
         await page.locator('[data-testid^="part-card-"]').count() === 0);
       ok(`${name}: the next phase is named, not shown`,
         await page.locator('[data-testid="v2-summary-next"]').count() === 1);
+      ok(`${name}: a viable build with nothing owned reports READY`,
+        await page.locator('[data-testid="v2-summary-next"]').getAttribute('data-state') === 'ready');
+      ok(`${name}: …and says so in Arabic`,
+        ((await page.locator('[data-testid="v2-summary-next"]').textContent()) ?? '')
+          .includes('جاهزون لبناء اقتراح القطع'));
       await measure(page, 'summary');
       if (name === '390px') await page.screenshot({ path: `${SHOTS}/04-summary-390.png`, fullPage: true });
 
@@ -438,6 +463,29 @@ async function main() {
       ok(`${name}: …and is badged as the reader's own answer`,
         await page.locator('[data-testid="v2-summary-rcSystem"]')
           .getAttribute('data-provenance') === 'chosen');
+
+      /*
+       * AN UNIDENTIFIED RADIO IS NOT READINESS.
+       *
+       * This journey answered «لست متأكدًا» for the radio and «DJI» for the
+       * goggles, so exactly one item is outstanding — and the screen must not
+       * tell the reader we are ready to propose every part as though their
+       * radio were irrelevant.
+       */
+      const statusC = page.locator('[data-testid="v2-summary-next"]');
+      ok(`${name}: an unsure radio reports «needs identification», not ready`,
+        await statusC.getAttribute('data-state') === 'needs-equipment-identification');
+      ok(`${name}: …the ready claim is ABSENT`,
+        !((await statusC.textContent()) ?? '').includes('جاهزون لبناء اقتراح القطع'));
+      ok(`${name}: …the radio is named as what must be identified`,
+        await page.locator('[data-testid="v2-summary-unresolved-rc"]').count() === 1
+        && ((await page.locator('[data-testid="v2-summary-unresolved-rc"]').textContent()) ?? '')
+          .includes('المستقبل'));
+      ok(`${name}: …and the identified goggles are NOT listed as unresolved`,
+        await page.locator('[data-testid="v2-summary-unresolved-video"]').count() === 0);
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/10-summary-needs-rc-390.png`, fullPage: true });
+      }
       if (name === '390px') {
         await page.screenshot({ path: `${SHOTS}/08-summary-unsure-390.png`, fullPage: true });
       }
@@ -484,6 +532,88 @@ async function main() {
       ok(`${name}: «سأبدأ من الصفر» invents no equipment rows`,
         await page.locator('[data-testid="v2-summary-rcSystem"]').count() === 0
         && await page.locator('[data-testid="v2-summary-videoSystem"]').count() === 0);
+      ok(`${name}: …and «سأبدأ من الصفر» is READY, nothing outstanding`,
+        await page.locator('[data-testid="v2-summary-next"]').getAttribute('data-state') === 'ready');
+
+      // ── D. BOTH ECOSYSTEMS UNSURE ─────────────────────────────────────────
+      console.log(`\n[D2] ${name} — both owned systems explicitly unidentified`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-both"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-rc-unsure"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-video-unsure"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      const statusD = page.locator('[data-testid="v2-summary-next"]');
+      ok(`${name}: two unsure systems still report «needs identification»`,
+        await statusD.getAttribute('data-state') === 'needs-equipment-identification');
+      ok(`${name}: …and BOTH unresolved items are shown`,
+        await page.locator('[data-testid="v2-summary-unresolved-rc"]').count() === 1
+        && await page.locator('[data-testid="v2-summary-unresolved-video"]').count() === 1);
+      ok(`${name}: …with no full-ready claim anywhere`,
+        !((await statusD.textContent()) ?? '').includes('جاهزون لبناء اقتراح القطع'));
+      ok(`${name}: …and both rows survive in the summary as «لست متأكدًا»`,
+        ((await page.locator('[data-testid="v2-summary-rcSystem"]').textContent()) ?? '')
+          .includes('لست متأكدًا')
+        && ((await page.locator('[data-testid="v2-summary-videoSystem"]').textContent()) ?? '')
+          .includes('لست متأكدًا'));
+      await measure(page, 'summary — needs identification');
+
+      // ── E. A KNOWN SYSTEM THE CATALOGUE CANNOT SATISFY ────────────────────
+      /*
+       * Crossfire on a Freestyle 6S build: the engine finds NO blocker-free
+       * complete assignment, so `provenPath` is null. The summary must say so
+       * rather than promise a proposal it cannot make — and the «why» has to
+       * be the engine's sentence, framed as the current catalogue rather than
+       * as the technology being impossible.
+       */
+      console.log(`\n[E2] ${name} — a known system with no viable build`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-radio"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-rc-Crossfire"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(300);
+      const statusE = page.locator('[data-testid="v2-summary-next"]');
+      const blockedText = (await statusE.textContent()) ?? '';
+      ok(`${name}: no proven path reports BLOCKED`,
+        await statusE.getAttribute('data-state') === 'no-viable-build');
+      ok(`${name}: …the ready claim is ABSENT`,
+        !blockedText.includes('جاهزون لبناء اقتراح القطع'));
+      ok(`${name}: …the reader is told plainly what happened`,
+        blockedText.includes('لا نستطيع تكوين اقتراح كامل ومتوافق'));
+      ok(`${name}: …a domain-derived reason is visible`,
+        await page.locator('[data-testid="v2-summary-blocked-reasons"] li').count() >= 1);
+      ok(`${name}: …framed as the CURRENT catalogue, not an impossibility`,
+        blockedText.includes('الكتالوج الحالي'));
+      ok(`${name}: …and their own answer is still on the screen to change`,
+        ((await page.locator('[data-testid="v2-summary-rcSystem"]').textContent()) ?? '')
+          .includes('Crossfire'));
+      ok(`${name}: …still no part is rendered`,
+        await page.locator('[data-testid^="part-card-"]').count() === 0);
+      await measure(page, 'summary — blocked');
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/11-summary-blocked-390.png`, fullPage: true });
+      }
+
+      // ── F. A KNOWN SYSTEM THE CATALOGUE CAN SATISFY ───────────────────────
+      console.log(`\n[F2] ${name} — a known, supported system is still READY`);
+      await freestyle6S(page);
+      await page.click('[data-testid="v2-owned-goggles"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-owned-video-DJI"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      ok(`${name}: a known supported system reaches READY`,
+        await page.locator('[data-testid="v2-summary-next"]').getAttribute('data-state') === 'ready');
+      ok(`${name}: …and says so`,
+        ((await page.locator('[data-testid="v2-summary-next"]').textContent()) ?? '')
+          .includes('جاهزون لبناء اقتراح القطع'));
 
       // ── Changing the goal re-evaluates honestly ───────────────────────────
       console.log(`\n[F] ${name} — changing the goal re-asks what depends on it`);

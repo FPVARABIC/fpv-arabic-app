@@ -23,6 +23,7 @@ import { proposeBuild, rcSystemsInCatalogue } from '../src/data/assembly/recomme
 import type { ProposedBuild } from '../src/data/assembly/recommendation/types';
 import { BUILD_TYPE_AVAILABILITY } from '../web/lib/build/availability';
 import { isBuildV2Preview, BUILD_V2_PREVIEW_PARAM } from '../web/lib/build/v2/previewFlag';
+import { readinessOf } from '../web/components/build/v2/readiness';
 
 let passed = 0;
 const failures: string[] = [];
@@ -412,6 +413,148 @@ ok('an owned video system leaves the build still provable',
   dji.provenPath !== null && walksnail.provenPath !== null);
 ok('the owned system is not silently ignored when it decides the category',
   at(walksnail, 'videoUnits')!.status !== 'unavailable');
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('7b — THE SUMMARY ONLY CLAIMS A READINESS IT CAN BACK');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * «جاهزون لبناء اقتراح القطع» used to be unconditional — said to a reader
+ * whose answers the catalogue cannot satisfy at all, and to one who has just
+ * said they do not know what radio they own. A review screen that always
+ * reports success is not a review screen.
+ */
+const noGear = {} as const;
+const unsureRadio = { answer: 'radio', rc: { kind: 'unsure' } } as const;
+const knownRadio = { answer: 'radio', rc: { kind: 'known', value: 'ExpressLRS' } } as const;
+const unsureGoggles = { answer: 'goggles', video: { kind: 'unsure' } } as const;
+const bothUnsure = {
+  answer: 'both', rc: { kind: 'unsure' }, video: { kind: 'unsure' },
+} as const;
+
+const viable = proposeBuild({ droneTypeId: 'freestyle', cellCount: 6, owned: {} });
+const crossfire = proposeBuild({
+  droneTypeId: 'freestyle', cellCount: 6, owned: { rcSystem: 'Crossfire' },
+});
+
+// A — the ordinary success state.
+ok('a viable build with nothing owned is READY',
+  readinessOf(viable, noGear).state === 'ready');
+ok('…and the engine really did prove a path for it', viable.provenPath !== null);
+
+// B/C/D — explicitly unidentified equipment is not readiness.
+ok('an unsure RADIO is not «ready»',
+  readinessOf(viable, unsureRadio).state === 'needs-equipment-identification');
+ok('…and the radio is named as the unresolved item', (() => {
+  const r = readinessOf(viable, unsureRadio);
+  return r.state === 'needs-equipment-identification'
+    && JSON.stringify(r.unresolved) === JSON.stringify(['rc']);
+})());
+ok('an unsure GOGGLE system is not «ready»', (() => {
+  const r = readinessOf(viable, unsureGoggles);
+  return r.state === 'needs-equipment-identification'
+    && JSON.stringify(r.unresolved) === JSON.stringify(['video']);
+})());
+ok('both unsure lists BOTH unresolved items', (() => {
+  const r = readinessOf(viable, bothUnsure);
+  return r.state === 'needs-equipment-identification'
+    && JSON.stringify(r.unresolved) === JSON.stringify(['rc', 'video']);
+})());
+
+// F — a known, supported ecosystem is still ready.
+ok('a KNOWN supported system stays READY',
+  readinessOf(viable, knownRadio).state === 'ready');
+/*
+ * And the case that proves the unsure rule is about the ANSWER, not about
+ * owning gear at all: «سأبدأ من الصفر» is ready, because nothing is
+ * outstanding.
+ */
+ok('«سأبدأ من الصفر» is READY, not «needs identification»',
+  readinessOf(viable, { answer: 'none' }).state === 'ready');
+
+// E — no proven path outranks everything.
+ok('a Crossfire freestyle build really has no proven path', crossfire.provenPath === null);
+ok('no proven path is reported as BLOCKED',
+  readinessOf(crossfire, knownRadio).state === 'no-viable-build');
+ok('…and the reasons shown are the ENGINE\'s own sentences', (() => {
+  const r = readinessOf(crossfire, knownRadio);
+  if (r.state !== 'no-viable-build') return false;
+  const fromEngine = new Set(crossfire.decisions.flatMap(d => d.reasons.map(x => x.ar)));
+  return r.reasonsAr.length > 0 && r.reasonsAr.every(x => fromEngine.has(x));
+})());
+ok('…deduplicated, because the search fails globally, not eight times', (() => {
+  const r = readinessOf(crossfire, knownRadio);
+  return r.state === 'no-viable-build' && r.reasonsAr.length === 1;
+})());
+ok('…and the reason frames it as the CURRENT catalogue, not an impossibility',
+  (readinessOf(crossfire, knownRadio) as { reasonsAr: string[] }).reasonsAr
+    .some(x => /الكتالوج الحالي/.test(x)));
+
+// PRECEDENCE — a hard blocker outranks softer missing information.
+ok('no-viable-build outranks an unsure ecosystem',
+  readinessOf(crossfire, unsureRadio).state === 'no-viable-build');
+
+/*
+ * `complete` IS NOT THE RECEIPT — and this is not a hypothetical.
+ *
+ * A healthy Freestyle 6S build with nothing owned reports `complete: false`,
+ * because all eight categories are `choice-required`: several parts tie and
+ * the engine refuses to break the tie. Those are exactly the choices Phase 2C
+ * will present. Gating readiness on `complete` would declare every build in
+ * the catalogue impossible.
+ */
+ok('the healthy build is genuinely NOT «complete»', viable.complete === false);
+ok('…yet it is READY, because a path was proven',
+  readinessOf(viable, noGear).state === 'ready');
+ok('the readiness module never consults `complete`',
+  !/\bcomplete\b/.test(code(read('web/components/build/v2/readiness.ts'))));
+ok('readiness rests on `provenPath`',
+  /provenPath === null/.test(code(read('web/components/build/v2/readiness.ts'))));
+
+/*
+ * NO COMPATIBILITY LOGIC IN REACT. The UI does not know why a build fails and
+ * must not guess — «no Crossfire receiver fits this frame» is a compatibility
+ * claim, and compatibility claims belong to the shared rules.
+ */
+const readinessCode = code(read('web/components/build/v2/readiness.ts'));
+ok('the readiness module invents no Arabic explanation of its own',
+  !/[؀-ۿ]{10,}/.test(readinessCode));
+ok('the readiness module names no ecosystem or part',
+  !/Crossfire|ExpressLRS|DJI|Walksnail|receiver-|frame-/.test(readinessCode));
+ok('the blocked copy defers to the engine for the «why»',
+  /reasonsLabel/.test(copy) && !/لا يوجد.*مستقبل متوافق/.test(copyStrings));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('7c — THE PHASE 2C TRIPWIRE');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `ecosystemValue()` sends an explicit «لست متأكدًا» to the engine as ABSENCE,
+ * identical to owning no radio. That is safe ONLY while no parts are shown.
+ *
+ * The moment Phase 2C renders a recommendation, «owns an unknown radio» must
+ * stop being «owns no radio» — proposing an ExpressLRS receiver to someone
+ * holding a Crossfire transmitter is the exact failure this journey exists to
+ * prevent. So: no V2 COMPONENT may render the engine's decisions or parts, and
+ * the warning that explains why cannot be quietly deleted.
+ */
+const componentCode = Object.entries(v2Code)
+  .filter(([f]) => f.endsWith('.tsx')).map(([, c]) => c).join('\n');
+ok('no V2 component renders the engine\'s decisions',
+  !/build\.decisions|\.candidateIds|\.selectionSource/.test(componentCode));
+ok('no V2 component renders the engine\'s chosen parts',
+  !/build\.parts|\.provenPath\b/.test(componentCode));
+/*
+ * Matched against the comment with its line-wrapping collapsed — a warning
+ * that fails a test the moment someone reflows a paragraph teaches people to
+ * delete the warning.
+ */
+const readinessProse = read('web/components/build/v2/readiness.ts')
+  .replace(/\n\s*\*\s?/g, ' ');
+ok('the Phase 2C contract warning is still in the readiness module',
+  /PHASE 2C CONTRACT/.test(readinessProse)
+  && /«owns an unknown radio» is NOT «owns no radio»/.test(readinessProse));
+ok('…and it still names what must be settled before 2C recommends parts',
+  /receiver for an owned-but- unidentified radio|receiver for an owned-but-unidentified radio/
+    .test(readinessProse));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('8 — AVAILABILITY IS READ, NEVER RE-DERIVED');

@@ -13,6 +13,7 @@ import {
   type OwnedGear,
 } from './BuildOwnedGearQuestion';
 import { BuildInputSummary, summaryValue, type SummaryRow } from './BuildInputSummary';
+import { readinessOf } from './readiness';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
 
 /**
@@ -353,7 +354,9 @@ export const BuildV2Preview: React.FC = () => {
         </>
       )}
 
-      {screen === 'summary' && <BuildInputSummary rows={rows} />}
+      {screen === 'summary' && (
+        <BuildInputSummary rows={rows} readiness={readinessOf(build, answers.owned)} />
+      )}
 
       {screen !== 'entry' && (
         <footer style={{ display: 'grid', gap: 9 }}>

@@ -118,9 +118,41 @@ export const SUMMARY = {
     rcSystem: 'نظام التحكم لديك',
     videoSystem: 'منظومة النظارة لديك',
   },
-  // Phase 2B stops here on purpose: the parts themselves are 2C.
-  nextTitle: 'جاهزون لبناء اقتراح القطع',
-  nextBody: 'الخطوة التالية ستعرض القطع المقترحة وسبب كل اختيار.',
+  /*
+   * HOW THE SUMMARY ENDS — AND IT DOES NOT ALWAYS END WELL.
+   *
+   * This used to be one unconditional «جاهزون لبناء اقتراح القطع», shown to
+   * every reader including those whose answers the catalogue cannot satisfy.
+   * A review screen that always reports success is not a review screen.
+   */
+  status: {
+    ready: {
+      title: 'جاهزون لبناء اقتراح القطع',
+      body: 'الخطوة التالية ستعرض القطع المقترحة وسبب كل اختيار.',
+    },
+    /*
+     * Not a lecture and not a wizard. One line per unidentified item, saying
+     * what it blocks and nothing more. Identifying it is Phase 2C's problem;
+     * pretending it does not matter was this screen's.
+     */
+    needsEquipment: {
+      title: 'نحتاج تحديد معدّاتك أولًا',
+      rc: 'نحتاج معرفة نظام جهاز التحكم قبل اختيار المستقبل.',
+      video: 'نحتاج معرفة منظومة النظارة قبل اختيار وحدة الفيديو.',
+      body: 'بقية الاختيارات جاهزة، ولن نقترح قطعة تعتمد على معلومة لا نملكها.',
+    },
+    /*
+     * «حاليًا» is doing real work. The catalogue not stocking a combination is
+     * not the same as the combination being impossible, and a reader who owns
+     * the gear in question deserves to know which of the two they are hearing.
+     * The sentences underneath are the ENGINE's, never this file's.
+     */
+    blocked: {
+      title: 'لا نستطيع تكوين اقتراح كامل ومتوافق بهذه الاختيارات حاليًا.',
+      body: 'يمكنك تغيير أحد اختياراتك أعلاه والمحاولة مرة أخرى.',
+      reasonsLabel: 'ما وجدناه:',
+    },
+  },
 } as const;
 
 /** Navigation. */

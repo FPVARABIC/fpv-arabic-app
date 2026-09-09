@@ -4,6 +4,7 @@ import React from 'react';
 import { droneTypes } from '@core/data/assembly/droneTypes';
 import { batteryVoltageOptions } from '@core/data/assembly/batteryVoltageOptions';
 import { SUMMARY } from './copy';
+import type { Readiness } from './readiness';
 
 /** Who put this value here. The whole point of the screen. */
 export type Provenance = 'chosen' | 'derived';
@@ -27,7 +28,10 @@ export interface SummaryRow {
  * So provenance is a visible badge on every row, not a footnote, and the
  * derived rows say where the value came from.
  */
-export const BuildInputSummary: React.FC<{ rows: readonly SummaryRow[] }> = ({ rows }) => (
+export const BuildInputSummary: React.FC<{
+  rows: readonly SummaryRow[];
+  readiness: Readiness;
+}> = ({ rows, readiness }) => (
   <section data-testid="v2-summary" style={{ display: 'grid', gap: 16 }}>
     <header style={{ display: 'grid', gap: 6 }}>
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, lineHeight: 1.6 }}>
@@ -72,16 +76,68 @@ export const BuildInputSummary: React.FC<{ rows: readonly SummaryRow[] }> = ({ r
     </dl>
 
     {/*
-      Phase 2B stops here ON PURPOSE. `proposeBuild()` can already return the
-      decisions, and rendering them is Phase 2C — showing them now would blur
-      the boundary this review is meant to test.
+      HOW THIS SCREEN ENDS.
+
+      Phase 2B still renders no parts — `proposeBuild()` can already return the
+      decisions and showing them is 2C. But it must not claim a readiness it
+      cannot back: the state comes from `readinessOf()`, and the reasons under
+      a blocked build are the ENGINE's sentences, not this component's.
+
+      `data-state` carries the state name for tests. The reader never sees it —
+      they see Arabic.
     */}
-    <div className="card-sm" data-testid="v2-summary-next"
-      style={{ padding: '14px 16px', display: 'grid', gap: 4 }}>
-      <strong style={{ fontSize: 14.5 }}>{SUMMARY.nextTitle}</strong>
-      <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
-        {SUMMARY.nextBody}
-      </span>
+    <div className="card-sm" data-testid="v2-summary-next" data-state={readiness.state}
+      style={{ padding: '14px 16px', display: 'grid', gap: 6 }}>
+      {readiness.state === 'ready' && (
+        <>
+          <strong style={{ fontSize: 14.5 }}>{SUMMARY.status.ready.title}</strong>
+          <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
+            {SUMMARY.status.ready.body}
+          </span>
+        </>
+      )}
+
+      {readiness.state === 'needs-equipment-identification' && (
+        <>
+          <strong style={{ fontSize: 14.5 }}>{SUMMARY.status.needsEquipment.title}</strong>
+          <ul style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
+            {readiness.unresolved.map(u => (
+              <li key={u} data-testid={`v2-summary-unresolved-${u}`}
+                style={{ fontSize: 12.5, lineHeight: 1.85 }}>
+                {u === 'rc' ? SUMMARY.status.needsEquipment.rc
+                  : SUMMARY.status.needsEquipment.video}
+              </li>
+            ))}
+          </ul>
+          <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
+            {SUMMARY.status.needsEquipment.body}
+          </span>
+        </>
+      )}
+
+      {readiness.state === 'no-viable-build' && (
+        <>
+          <strong style={{ fontSize: 14.5, color: 'var(--sev-warning)' }}>
+            {SUMMARY.status.blocked.title}
+          </strong>
+          {readiness.reasonsAr.length > 0 && (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--text-dimmer)', fontWeight: 700 }}>
+                {SUMMARY.status.blocked.reasonsLabel}
+              </span>
+              <ul data-testid="v2-summary-blocked-reasons"
+                style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
+                {readiness.reasonsAr.map(r => (
+                  <li key={r} style={{ fontSize: 12.5, lineHeight: 1.85 }}>{r}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
+            {SUMMARY.status.blocked.body}
+          </span>
+        </>
+      )}
     </div>
   </section>
 );
