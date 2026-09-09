@@ -62,10 +62,25 @@ const RULE_FUNCTION: Record<CompatRuleId, string> = {
   'design-voltage': 'designVoltageRule',
 };
 
-/** The two composers that must consume every shared rule. */
+/**
+ * Every consumer that must reach the shared rules through the shared module.
+ *
+ * The first two are the Phase 1 composers — the part card and the final
+ * report, the pair whose disagreement this file exists to prevent. The third
+ * arrived with the recommendation engine, and the reason it is listed here is
+ * the same reason the other two are: it decides compatibility. A recommender
+ * with its own copy of «does this frame match the declared size» would be a
+ * third answer to a question that is only allowed one, and it would be the
+ * answer a beginner sees FIRST — before either of the surfaces that were
+ * carefully made to agree.
+ *
+ * The order matters below: index 0 is the report and index 1 the card, and two
+ * assertions read them by position. Append, never insert.
+ */
 const CONSUMERS = [
   { name: 'the final report', file: 'src/data/project/verdicts.ts' },
   { name: 'the part card', file: 'web/lib/build/checks.ts' },
+  { name: 'the recommendation engine', file: 'src/data/assembly/recommendation/proposeBuild.ts' },
 ] as const;
 
 const rulesSrc = strip(read('src/data/assembly/compatibility/rules.ts'));
@@ -83,7 +98,7 @@ ok('the function map declares nothing that is not a registered rule',
 ok('every registered rule appears in the function map',
   SHARED_COMPAT_RULES.every(r => RULE_FUNCTION[r.id] !== undefined));
 
-console.log('\n[2] BOTH composers consume EVERY shared rule\n');
+console.log('\n[2] EVERY consumer consumes EVERY shared rule\n');
 for (const rule of SHARED_COMPAT_RULES) {
   const fn = RULE_FUNCTION[rule.id];
   for (const consumer of sources) {
@@ -100,7 +115,7 @@ for (const rule of SHARED_COMPAT_RULES) {
   }
 }
 
-console.log('\n[3] Neither composer keeps a private copy of a shared truth\n');
+console.log('\n[3] No consumer keeps a private copy of a shared truth\n');
 /*
  * The rules module owns the comparisons. A composer that reached past it to the
  * underlying validator would be back to two copies of one truth — passing the

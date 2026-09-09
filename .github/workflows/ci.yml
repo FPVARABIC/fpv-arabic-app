@@ -98,6 +98,13 @@ jobs:
           npm run test:compat-characterization
           npm run test:compat-equivalence
           npm run test:compat-completeness
+          # THE RECOMMENDATION FOUNDATION. It decides compatibility too, so it is
+          # a third consumer of the one shared truth above — and the guard that
+          # keeps it honest runs on every commit, not only when it changes. Its
+          # own suite exists because a recommender fails in ways that look like
+          # success: «first one wins» and «the only option is the best option»
+          # both read as recommendations until you check what backs them.
+          npm run test:recommendation
           npm run test:kb
           npm run test:lessons
 

@@ -255,7 +255,34 @@ console.log('\n[6] Final summary accepts 4S — no hardcoded 6S-only assumption'
 
 console.log('\n[7] No duplicate compatibility engine — validators.ts is the sole source, dead rules.ts removed (Phase 4)');
 {
-  ok('compatibility/rules.ts no longer exists (Phase 4 cleanup — it had zero runtime consumers, purely duplicating the 4 live validators in prose)', !existsSync(join(ROOT, 'src/data/assembly/compatibility/rules.ts')));
+  /*
+   * WHAT THE PHASE 4 LINE WAS ACTUALLY DEFENDING.
+   *
+   * It used to read «compatibility/rules.ts no longer exists», because the
+   * file Phase 4 deleted was dead prose: zero runtime consumers, restating the
+   * four live validators in comments. A second engine in all but execution.
+   *
+   * The BUILD Phase 1 work then created a file at the same path that is its
+   * exact opposite — the ONE place the part card, the final report and the
+   * recommendation engine all get their shared comparisons from, and which
+   * calls the validators rather than restating them. The filename check could
+   * not tell those two files apart, so it failed on the fix.
+   *
+   * The rule was never about the filename. It was «no second compatibility
+   * engine», and that is what is asserted now — a file at this path must have
+   * real consumers and must not re-implement a validator.
+   */
+  const rulesPath = join(ROOT, 'src/data/assembly/compatibility/rules.ts');
+  if (existsSync(rulesPath)) {
+    const rulesTs = readFileSync(rulesPath, 'utf8');
+    ok('compatibility/rules.ts calls the validators rather than restating them',
+      !['validateFrameMotor', 'validateMotorBattery', 'validateEscBattery', 'validateFramePropeller']
+        .some(fn => rulesTs.includes(`export function ${fn}`)));
+    ok('…and it has real runtime consumers, so it is a shared module and not dead prose',
+      ['src/data/project/verdicts.ts', 'web/lib/build/checks.ts',
+       'src/data/assembly/recommendation/proposeBuild.ts']
+        .every(f => readFileSync(join(ROOT, f), 'utf8').includes('compatibility/rules')));
+  }
   ok('compatibility/validators.ts still exports exactly the 4 pre-existing validators (no new/duplicate validator function was added)', ['validateFrameMotor', 'validateMotorBattery', 'validateEscBattery', 'validateFramePropeller'].every(fn => validatorsTs.includes(`export function ${fn}`)) && (validatorsTs.match(/export function/g) || []).length === 4);
   ok('no second "compatibility" directory or engine file was created', !readFileSync(join(ROOT, 'src/components/Assembly/BuildFlow.tsx'), 'utf8').includes('compatibilityV2'));
 }
