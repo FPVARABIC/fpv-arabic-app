@@ -33,10 +33,21 @@
  * contains no numeric spec literals of its own beyond the shared tolerance.
  */
 
+/*
+ * THE RULES THIS CARD SHARES WITH THE FINAL REPORT.
+ *
+ * `frame-size`, `frame-motor-class`, `prop-clearance` and `design-voltage` are
+ * the same physical truths `computeFindings` asks about, and each used to be
+ * evaluated separately here — which is how the size rule came to be enforced on
+ * this card and absent from the report. The verdict now comes from one place;
+ * this file keeps its own three-value vocabulary and maps into it explicitly
+ * below. See `assembly/compatibility/rules.ts`.
+ */
 import {
-  validateFrameMotor, validateFramePropeller,
-} from '@core/data/assembly/compatibility/validators';
-import { frameMatchesSize, FRAME_SIZE_TOLERANCE_INCH } from '@core/data/assembly/frameSizeMatch';
+  frameSizeRule, frameMotorClassRule, propClearanceRule, designVoltageRule,
+  type CompatRuleOutcome,
+} from '@core/data/assembly/compatibility/rules';
+import { FRAME_SIZE_TOLERANCE_INCH } from '@core/data/assembly/frameSizeMatch';
 import type {
   BasePart, Frame, Motor, Propeller, Esc, Battery, Receiver, VideoUnit,
 } from '@core/data/assembly/types';
@@ -124,26 +135,43 @@ export function checkCandidate(
 
   const frame = ctx.parts.frames as Frame | undefined;
 
+  /*
+   * HOW A SHARED RULE BECOMES A CARD VERDICT.
+   *
+   * The two surfaces do NOT share an enum, and mapping one onto the other
+   * mechanically would be wrong: `unknown` in the report means «we have the
+   * parts but not the data», which on a card is «يحتاج مراجعة», while a
+   * documented refusal is `incompatible` here and a blocker there. So the
+   * mapping is stated per rule, in one place, rather than implied.
+   *
+   * All four shared rules currently map a documented violation to
+   * `incompatible` — the same severity the card already gave them before the
+   * extraction, so nothing a reader sees changes.
+   */
+  const applyRule = (outcome: CompatRuleOutcome | null, fallbackAr: string) => {
+    if (!outcome) return;
+    if (outcome.status === 'violated') flag('incompatible', outcome.reasonAr ?? fallbackAr);
+    else if (outcome.status === 'unknown') flag('review', outcome.reasonAr ?? MANUAL_CHECK_AR);
+  };
+
   switch (category) {
     case 'frames': {
-      if (ctx.sizeInch !== undefined && !frameMatchesSize(part as Frame, ctx.sizeInch)) {
-        flag('incompatible', `مقاس هذا الإطار لا يطابق حجم ${ctx.sizeInch} إنش الذي اخترته.`);
-      }
+      applyRule(
+        frameSizeRule(part as Frame, ctx.sizeInch),
+        'مقاس هذا الإطار لا يطابق حجم البناء الذي اخترته.',
+      );
       break;
     }
     case 'motors': {
-      if (frame) {
-        const r = validateFrameMotor(frame, part as Motor);
-        if (!r.isCompatible) flag('incompatible', r.reasonAr ?? 'المحرك غير مناسب لهذا الإطار.');
-      }
+      applyRule(
+        frameMotorClassRule(frame, part as Motor),
+        'المحرك غير مناسب لهذا الإطار.',
+      );
       break;
     }
     case 'propellers': {
       const prop = part as Propeller;
-      if (frame) {
-        const r = validateFramePropeller(frame, prop);
-        if (!r.isCompatible) flag('incompatible', r.reasonAr ?? 'المروحة أكبر من مساحة الإطار.');
-      }
+      applyRule(propClearanceRule(frame, prop), 'المروحة أكبر من مساحة الإطار.');
       const motor = ctx.parts.motors as Motor | undefined;
       if (motor) {
         // Derived, and said so: there is no documented motor↔prop table in the
@@ -178,11 +206,10 @@ export function checkCandidate(
       break;
     }
     case 'batteries': {
-      const battery = part as Battery;
-      if (ctx.batteryVoltage !== undefined && battery.specs.sCount !== ctx.batteryVoltage) {
-        flag('incompatible',
-          `بطارية ${battery.specs.sCount}S بينما بناؤك مصمم على ${ctx.batteryVoltage}S.`);
-      }
+      applyRule(
+        designVoltageRule(part as Battery, ctx.batteryVoltage),
+        'جهد هذه البطارية يخالف جهد التصميم الذي اخترته.',
+      );
       break;
     }
     default:
