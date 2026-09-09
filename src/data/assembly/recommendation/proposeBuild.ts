@@ -177,6 +177,42 @@ function compatibilityEvidenceFor(
 }
 
 /**
+ * DOES THIS PART BELONG TO THE ECOSYSTEM THE READER ALREADY OWNS?
+ *
+ * One owner for the question, because it has to be asked in two places that
+ * are easy to think of as one. Candidates are filtered by it — and so are the
+ * reader's OWN parts, which is the half that was missing: an owned part goes
+ * straight into `locks`, and a locked category is never walked by the pool
+ * search, so a Crossfire receiver sat happily under «I own an ExpressLRS
+ * radio» and the build was declared sound. `computeFindings` cannot catch it
+ * either — it judges parts against parts, and knows nothing about what is
+ * already on the reader's desk.
+ *
+ * Returns null when there is no constraint to apply.
+ */
+function ecosystemConflict(
+  category: string,
+  part: BasePart,
+  owned: RecommendationInput['owned'],
+): { inputKey: 'ownedRcSystem' | 'ownedVideoSystem'; ar: string } | null {
+  if (category === 'receivers' && owned?.rcSystem) {
+    if (rcSystemOf(part) === owned.rcSystem) return null;
+    return {
+      inputKey: 'ownedRcSystem',
+      ar: `هذا المستقبل يعمل بـ${rcSystemOf(part)} بينما جهاز التحكم الذي تملكه يبثّ ${owned.rcSystem} — لا يتفاهمان.`,
+    };
+  }
+  if (category === 'videoUnits' && owned?.videoSystem) {
+    if (videoSystemOf(part) === owned.videoSystem) return null;
+    return {
+      inputKey: 'ownedVideoSystem',
+      ar: `وحدة الفيديو هذه من منظومة ${videoSystemOf(part) ?? 'غير معروفة'} بينما نظارتك من ${owned.videoSystem} — المنظومتان لا تتخاطبان.`,
+    };
+  }
+  return null;
+}
+
+/**
  * The parts still worth considering for one category, given what is fixed.
  *
  * Ecosystem ownership filters here rather than ranking: it is hardware the
@@ -189,18 +225,39 @@ function poolFor(
   opts: { sizeInch: number; cellCount: number },
 ): readonly BasePart[] {
   const all = PART_CATEGORY_MAP[category] ?? [];
-  let pool = eligibleCandidates(category, all, {
+  return eligibleCandidates(category, all, {
     droneTypeId: input.droneTypeId, cellCount: opts.cellCount, sizeInch: opts.sizeInch,
-  }).filter(p => passesSharedRules(category, p, fixed, opts));
+  })
+    .filter(p => passesSharedRules(category, p, fixed, opts))
+    .filter(p => ecosystemConflict(category, p, input.owned) === null);
+}
 
-  const owned = input.owned;
-  if (category === 'videoUnits' && owned?.videoSystem) {
-    pool = pool.filter(p => videoSystemOf(p) === owned.videoSystem);
-  }
+/**
+ * Why an automatic choice was narrowed by hardware the reader already owns.
+ *
+ * The filter above is silent by construction, and a decision that cannot say
+ * «this receiver is here because your radio speaks ExpressLRS» is a decision a
+ * future screen cannot explain. This is a CONSTRAINT reason, never a ranking
+ * one: the reader's radio did not make this part better, it made the others
+ * impossible.
+ */
+function ecosystemReasons(
+  category: string,
+  owned: RecommendationInput['owned'],
+): DecisionReason[] {
   if (category === 'receivers' && owned?.rcSystem) {
-    pool = pool.filter(p => rcSystemOf(p) === owned.rcSystem);
+    return [{
+      kind: 'filter', evidence: 'documented', inputKey: 'ownedRcSystem',
+      ar: `يعمل بـ${owned.rcSystem} — وهو بروتوكول جهاز التحكم الذي تملكه.`,
+    }];
   }
-  return pool;
+  if (category === 'videoUnits' && owned?.videoSystem) {
+    return [{
+      kind: 'filter', evidence: 'documented', inputKey: 'ownedVideoSystem',
+      ar: `من منظومة ${owned.videoSystem} — وهي منظومة النظارة التي تملكها.`,
+    }];
+  }
+  return [];
 }
 
 /**
@@ -341,6 +398,52 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const ownedLocks: Record<string, BasePart> = { ...ownedParts };
 
   /*
+   * A part the reader owns must satisfy the ECOSYSTEM they also own, before it
+   * is trusted as a lock. Nothing downstream can catch this: the pool filter
+   * never walks a locked category, and `computeFindings` judges parts against
+   * parts — it has no idea which radio is on the reader's desk. So «I own an
+   * ExpressLRS radio» plus «I own a Crossfire receiver» produced a build the
+   * engine called sound.
+   *
+   * The contradiction is the reader's to resolve, so their part is never
+   * deleted or swapped: it keeps its identity, and the reason names the
+   * mismatch.
+   */
+  const ecoConflicts = Object.entries(ownedParts)
+    .map(([cat, part]) => ({ cat, conflict: ecosystemConflict(cat, part, input.owned) }))
+    .filter((e): e is { cat: string; conflict: NonNullable<ReturnType<typeof ecosystemConflict>> } =>
+      e.conflict !== null);
+
+  if (ecoConflicts.length > 0) {
+    const byCat = new Map(ecoConflicts.map(e => [e.cat, e.conflict]));
+    return {
+      ...base,
+      parts: { ...ownedParts },
+      decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
+        const conflict = byCat.get(category);
+        const owned = ownedParts[category];
+        return {
+          category,
+          status: 'unavailable' as const,
+          selectionSource: owned ? ('user-owned' as const) : ('none' as const),
+          partId: owned?.id,
+          candidateIds: owned ? [owned.id] : [],
+          compatibility: [],
+          reasons: [conflict
+            ? {
+              kind: 'no-candidate' as const, evidence: 'documented' as const,
+              inputKey: conflict.inputKey, ar: conflict.ar,
+            }
+            : {
+              kind: 'no-candidate' as const, evidence: 'documented' as const,
+              ar: 'قطعة تملكها تخالف المنظومة التي تملكها، فلا يمكن إتمام هذا البناء قبل حسم ذلك.',
+            }],
+        };
+      }),
+    };
+  }
+
+  /*
    * A PREREQUISITE IS ONLY A QUESTION IF MORE THAN ONE ANSWER WORKS.
    *
    * Counting the catalogue's options is not enough. Racing declares
@@ -388,10 +491,23 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
       ar: 'أكثر من جهد يؤدي إلى بناء سليم، والكتالوج لا يقول إن أحدها أفضل — اختر الجهد.',
     });
   }
-  // Nothing below can be computed against an unknown size or voltage.
-  // Returning the question IS the answer; guessing would make every decision
-  // rest on a number nobody chose.
-  if (requiredInputs.length > 0) return { ...base, requiredInputs };
+  /*
+   * Nothing below can be computed against an unknown size or voltage, so the
+   * question IS the answer here. But an answer the engine ALREADY has is not
+   * withdrawn along with it: if exactly one size is viable and two voltages
+   * are, the size is resolved and only the voltage is asked. Returning both as
+   * unknown would contradict this type's own contract — «resolved only when
+   * the catalogue derived exactly one, or the reader said» — and would make a
+   * caller re-ask a question that has one answer.
+   */
+  if (requiredInputs.length > 0) {
+    return {
+      ...base,
+      sizeInch: viableSizes.length === 1 ? viableSizes[0] : input.sizeInch,
+      cellCount: viableVolts.length === 1 ? viableVolts[0] : input.cellCount,
+      requiredInputs,
+    };
+  }
 
   const sizeInch = viableSizes[0];
   const cellCount = viableVolts[0];
@@ -427,7 +543,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         partId: owned.id,
         candidateIds: [owned.id],
         compatibility: compatibilityEvidenceFor(category, owned, locks, opts),
-        reasons: [viable
+        reasons: [...ecosystemReasons(category, input.owned), viable
           ? {
             kind: 'filter', evidence: 'documented', inputKey: 'ownedParts',
             ar: 'قطعة تملكها بالفعل، ويمكن إتمام بناء كامل خالٍ من الموانع بها — أُبقيت كما هي.',
@@ -441,6 +557,11 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     }
 
     const pool = poolFor(category, locks, input, opts);
+    // Why this category's field was narrowed at all. Carried on EVERY outcome
+    // in a constrained category — including a tie — because «these are the
+    // ExpressLRS ones, and nothing separates them» is a different sentence
+    // from «nothing separates them».
+    const ecoReasons = ecosystemReasons(category, input.owned);
 
     // GLOBAL VIABILITY BEFORE PREFERENCE. A candidate that cannot appear in
     // any clean complete build is removed here — before ranking ever sees it —
@@ -472,7 +593,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         category, status: 'only-compatible', selectionSource: 'system',
         partId: viable[0].id, candidateIds,
         compatibility: compatibilityEvidenceFor(category, viable[0], locks, opts),
-        reasons: [{
+        reasons: [...ecoReasons, {
           kind: 'filter', evidence: 'documented',
           ar: 'الخيار الوحيد المتوافق في الكتالوج بعد تطبيق شروط بنائك — وليس ترشيحًا بين بدائل.',
         }],
@@ -487,7 +608,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         category, status: 'recommended', selectionSource: 'system',
         partId: top[0].id, candidateIds,
         compatibility: compatibilityEvidenceFor(category, top[0], locks, opts),
-        reasons,
+        reasons: [...ecoReasons, ...reasons],
       });
       continue;
     }
@@ -495,7 +616,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     decisions.push({
       category, status: 'choice-required', selectionSource: 'none',
       candidateIds, compatibility: [],
-      reasons: [{
+      reasons: [...ecoReasons, {
         kind: 'tie', evidence: 'catalogue-tag',
         ar: `بقيت ${top.length} قطع متساوية في كل ما نعرفه عنها — الاختيار لك.`,
       }],
@@ -519,7 +640,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         ...d, status: 'only-compatible' as const, selectionSource: 'system' as const,
         partId: pool[0].id, candidateIds: pool.map(p => p.id),
         compatibility: compatibilityEvidenceFor(d.category, pool[0], locks, opts),
-        reasons: [{
+        reasons: [...ecosystemReasons(d.category, input.owned), {
           kind: 'filter' as const, evidence: 'documented' as const,
           ar: 'الخيار الوحيد المتوافق في الكتالوج بعد تطبيق شروط بنائك — وليس ترشيحًا بين بدائل.',
         }],

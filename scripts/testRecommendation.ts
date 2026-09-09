@@ -692,4 +692,202 @@ console.log('\n[20] No ranking criterion the catalogue does not state');
     /p\.tier === input\.budgetTier/.test(ENGINE_SRC));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[21] A prerequisite the engine already resolved is not withdrawn with the question');
+{
+  /*
+   * Asking for one prerequisite used to discard the other. The early return
+   * carried only the reader's OWN inputs, so a size the catalogue had derived
+   * uniquely came back `undefined` alongside the voltage question — and a
+   * caller would re-ask a question with exactly one answer.
+   */
+
+  // A — one viable size, two viable voltages. The real catalogue's freestyle.
+  const a = proposeBuild({ droneTypeId: 'freestyle' });
+  ok('A: the uniquely-derived size is returned', a.sizeInch === 5);
+  ok('A: the ambiguous voltage is not invented', a.cellCount === undefined);
+  ok('A: and only the voltage is asked for',
+    a.requiredInputs.length === 1 && a.requiredInputs[0].key === 'cellCount');
+
+  // B — two viable sizes, one viable voltage. Long-range stocks 7" parts only,
+  // so a second size needs the three size-sensitive categories cloned: frame,
+  // motor and propeller. Nothing else in a build reads size.
+  const frames = PART_CATEGORY_MAP.frames as BasePart[];
+  const motors = PART_CATEGORY_MAP.motors as BasePart[];
+  const props = PART_CATEGORY_MAP.propellers as BasePart[];
+  const lrF = frames.find(f => f.compatibilityTags.droneTypes.includes('long-range'))! as Frame;
+  const lrM = motors.find(m => m.compatibilityTags.droneTypes.includes('long-range'))!;
+  const lrP = props.find(x => x.compatibilityTags.droneTypes.includes('long-range'))!;
+  const f5 = { ...lrF, id: 's-f5', specs: { ...lrF.specs, sizeInch: 5, maxPropSizeInch: 5 } };
+  const m5 = {
+    ...lrM, id: 's-m5',
+    compatibilityTags: { ...lrM.compatibilityTags, frameSizeInch: 5 },
+    specs: { ...(lrM as unknown as { specs: object }).specs, maxFrameSizeInch: 5 },
+  };
+  const p5 = {
+    ...lrP, id: 's-p5',
+    compatibilityTags: { ...lrP.compatibilityTags, frameSizeInch: 5 },
+    specs: { ...(lrP as unknown as { specs: object }).specs, sizeInch: 5 },
+  };
+  const cleanup = () => {
+    for (const [arr, id] of [[frames, 's-f5'], [motors, 's-m5'], [props, 's-p5']] as const) {
+      const i = arr.findIndex(x => x.id === id);
+      if (i >= 0) arr.splice(i, 1);
+    }
+  };
+  frames.push(f5 as BasePart); motors.push(m5 as BasePart); props.push(p5 as BasePart);
+  try {
+    const b = proposeBuild({ droneTypeId: 'long-range' });
+    ok('B: two sizes really are viable now',
+      b.requiredInputs.some(r => r.key === 'sizeInch' && r.options.length === 2));
+    ok('B: the uniquely-derived voltage is returned', b.cellCount === 6);
+    ok('B: the ambiguous size is not invented', b.sizeInch === undefined);
+    ok('B: and only the size is asked for', b.requiredInputs.length === 1);
+
+    // E — the same fixture, with the voltage list reversed. Declaration order
+    // must not move a semantic answer.
+    const lr = droneTypes.find(t => t.id === 'long-range')!;
+    const originalV = [...lr.recommendedBatteryVoltages];
+    (lr as { recommendedBatteryVoltages: number[] }).recommendedBatteryVoltages = [...originalV].reverse();
+    const flipped = proposeBuild({ droneTypeId: 'long-range' });
+    (lr as { recommendedBatteryVoltages: number[] }).recommendedBatteryVoltages = originalV;
+    ok('E: reversing the voltage list changes no resolution',
+      flipped.cellCount === b.cellCount && flipped.sizeInch === b.sizeInch);
+
+    // C — two and two. The same two-size fixture, with long-range's voltage
+    // list widened so BOTH dimensions are genuinely ambiguous at once.
+    (lr as { recommendedBatteryVoltages: number[] }).recommendedBatteryVoltages = [4, 6];
+    const c = proposeBuild({ droneTypeId: 'long-range' });
+    (lr as { recommendedBatteryVoltages: number[] }).recommendedBatteryVoltages = originalV;
+    ok('C: both dimensions really are ambiguous in this fixture',
+      c.requiredInputs.length === 2);
+    ok('C: neither is invented', c.sizeInch === undefined && c.cellCount === undefined);
+    ok('C: and both are asked for',
+      c.requiredInputs.map(r => r.key).sort().join() === 'cellCount,sizeInch');
+    ok('the long-range voltages were restored',
+      lr.recommendedBatteryVoltages.join() === originalV.join());
+  } finally {
+    cleanup();
+  }
+  ok('the synthetic parts were removed',
+    !frames.some(f => f.id === 's-f5') && !motors.some(m => m.id === 's-m5')
+    && !props.some(x => x.id === 's-p5'));
+
+  // D — one and one: nothing is asked, and the build proceeds.
+  const d = proposeBuild({ droneTypeId: 'long-range' });
+  ok('D: a single viable answer on both is no question at all',
+    d.requiredInputs.length === 0 && d.sizeInch === 7 && d.cellCount === 6);
+  ok('D: …and the proposal is computed', d.provenPath !== null);
+
+  ok('a resolved prerequisite is never carried from the reader\'s input alone',
+    /viableSizes\.length === 1 \? viableSizes\[0\] : input\.sizeInch/.test(ENGINE_SRC)
+    && /viableVolts\.length === 1 \? viableVolts\[0\] : input\.cellCount/.test(ENGINE_SRC));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[22] An owned part must satisfy the ecosystem the reader also owns');
+{
+  const rx = PART_CATEGORY_MAP.receivers ?? [];
+  const video = PART_CATEGORY_MAP.videoUnits ?? [];
+  const crossfire = rx.find(r => rcSystemOf(r) === 'Crossfire')!;
+  const elrs = rx.find(r => rcSystemOf(r) === 'ExpressLRS')!;
+  const elrsDiversity = rx.find(r =>
+    rcSystemOf(r) === 'ExpressLRS' && (r.protocolOrSystem ?? '').includes('Diversity'));
+  const dji = video.find(v => v.protocolOrSystem === 'DJI')!;
+  const walksnail = video.find(v => v.protocolOrSystem === 'Walksnail')!;
+  ok('the catalogue has both radio systems and both goggle systems to test with',
+    !!crossfire && !!elrs && !!dji && !!walksnail);
+
+  // 1 — owned ExpressLRS radio + owned Crossfire receiver.
+  const bad1 = proposeBuild({
+    droneTypeId: 'long-range',
+    owned: { rcSystem: 'ExpressLRS', parts: { receivers: crossfire } },
+  });
+  const d1 = decisionFor(bad1, 'receivers');
+  ok('1: the contradicting owned receiver keeps its identity', d1.partId === crossfire.id);
+  ok('1: …stays the reader\'s, not the system\'s', d1.selectionSource === 'user-owned');
+  ok('1: …is reported unavailable', d1.status === 'unavailable');
+  ok('1: …names the ecosystem mismatch',
+    d1.reasons.some(r => r.inputKey === 'ownedRcSystem'));
+  ok('1: …and NO proposal claims it viable',
+    bad1.provenPath === null && !bad1.complete);
+
+  // 2 — diversity is a feature, not a different language.
+  if (elrsDiversity) {
+    const good = proposeBuild({
+      droneTypeId: 'freestyle', cellCount: 6,
+      owned: { rcSystem: 'ExpressLRS', parts: { receivers: elrsDiversity } },
+    });
+    const gd = decisionFor(good, 'receivers');
+    ok('2: an owned ELRS diversity receiver matches an ExpressLRS radio',
+      gd.status === 'user-locked' && good.provenPath !== null);
+  }
+
+  // 3 — the mirror direction.
+  const bad3 = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { rcSystem: 'Crossfire', parts: { receivers: elrs } },
+  });
+  ok('3: an owned ELRS receiver under a Crossfire radio is unavailable',
+    decisionFor(bad3, 'receivers').status === 'unavailable' && bad3.provenPath === null);
+
+  // 4 / 5 — the same rule for goggles.
+  const bad4 = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { videoSystem: 'DJI', parts: { videoUnits: walksnail } },
+  });
+  const d4 = decisionFor(bad4, 'videoUnits');
+  ok('4: an owned Walksnail unit under DJI goggles is unavailable',
+    d4.status === 'unavailable' && bad4.provenPath === null);
+  ok('4: …with its identity kept and the mismatch named',
+    d4.partId === walksnail.id && d4.reasons.some(r => r.inputKey === 'ownedVideoSystem'));
+
+  const good5 = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { videoSystem: 'DJI', parts: { videoUnits: dji } },
+  });
+  ok('5: an owned DJI unit under DJI goggles is kept',
+    decisionFor(good5, 'videoUnits').status === 'user-locked' && good5.provenPath !== null);
+
+  // 6 / 7 — the constraint must be explainable, not silent.
+  const r6 = decisionFor(proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6, owned: { rcSystem: 'ExpressLRS' },
+  }), 'receivers');
+  ok('6: a receiver decision under an owned radio cites that radio',
+    r6.reasons.some(r => r.inputKey === 'ownedRcSystem' && r.kind === 'filter'));
+  ok('6: …as a constraint, never as a ranking',
+    !r6.reasons.some(r => r.inputKey === 'ownedRcSystem' && r.kind === 'ranking'));
+
+  const v7 = decisionFor(proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6, owned: { videoSystem: 'DJI' },
+  }), 'videoUnits');
+  ok('7: a video decision under owned goggles cites those goggles',
+    v7.reasons.some(r => r.inputKey === 'ownedVideoSystem' && r.kind === 'filter'));
+
+  // 8 — budget cannot buy its way past either constraint.
+  for (const tier of ['budget', 'mid', 'premium'] as const) {
+    const b8 = proposeBuild({
+      droneTypeId: 'freestyle', cellCount: 6, budgetTier: tier,
+      owned: { videoSystem: 'DJI', rcSystem: 'ExpressLRS' },
+    });
+    ok(`8: «${tier}» cannot introduce a non-DJI unit`,
+      decisionFor(b8, 'videoUnits').candidateIds
+        .every(id => video.find(v => v.id === id)?.protocolOrSystem === 'DJI'));
+    ok(`8: «${tier}» cannot introduce a non-ExpressLRS receiver`,
+      decisionFor(b8, 'receivers').candidateIds
+        .every(id => rcSystemOf(rx.find(r => r.id === id)!) === 'ExpressLRS'));
+  }
+
+  // 9 — CRSF is still not an ecosystem, including for an owned part.
+  const crsf = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { rcSystem: 'CRSF', parts: { receivers: elrs } },
+  });
+  ok('9: an owned receiver cannot satisfy «CRSF» as an ecosystem',
+    decisionFor(crsf, 'receivers').status === 'unavailable');
+
+  ok('owned parts really are validated against the owned ecosystem',
+    /ecosystemConflict\(cat, part, input\.owned\)/.test(ENGINE_SRC));
+}
+
 console.log(`\n${passed} assertions passed.\n`);
