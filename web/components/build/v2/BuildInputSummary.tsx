@@ -142,9 +142,22 @@ export const BuildInputSummary: React.FC<{
   </section>
 );
 
-/** The display value for each field, so the shell stays about flow. */
+/**
+ * The display value for each field, so the shell stays about flow.
+ *
+ * `droneType` returns UNDEFINED for an id it cannot resolve rather than
+ * falling back to the id itself. It used to read `?? id`, which would have put
+ * `long-range` — a database key — in the summary as the name of the build the
+ * reader had just chosen. The goal screen offers nothing but real
+ * `droneTypes`, so this cannot happen; the point is that if it ever did, the
+ * row is absent instead of wrong, and the caller decides.
+ *
+ * The same fallback shape was live in three places in the proposal and is
+ * gone from all of them. A key is never a name.
+ */
 export const summaryValue = {
-  droneType: (id: string) => droneTypes.find(t => t.id === id)?.primaryName ?? id,
+  droneType: (id: string): string | undefined =>
+    droneTypes.find(t => t.id === id)?.primaryName,
   sizeInch: (n: number) => `${n} إنش`,
   cellCount: (n: number) =>
     batteryVoltageOptions.find(o => o.sCount === n)?.labelAr ?? `${n}S`,

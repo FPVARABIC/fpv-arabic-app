@@ -14,6 +14,8 @@ import {
 } from './BuildOwnedGearQuestion';
 import { BuildInputSummary, summaryValue, type SummaryRow } from './BuildInputSummary';
 import { readinessOf } from './readiness';
+import { ProposalScreen } from './ProposalScreen';
+import { PROPOSAL } from './copy';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
 
 /**
@@ -89,7 +91,7 @@ export const BuildV2Preview: React.FC = () => {
   const [answers, setAnswers] = useState<Answers>(emptyAnswers);
   const [trail, setTrail] = useState<Question[]>([{ id: 'goal' }]);
   const [idx, setIdx] = useState(0);
-  const [screen, setScreen] = useState<'entry' | 'questions' | 'summary'>('entry');
+  const [screen, setScreen] = useState<'entry' | 'questions' | 'summary' | 'proposal'>('entry');
 
   /*
    * The engine runs on every ANSWER, not on every render.
@@ -162,6 +164,7 @@ export const BuildV2Preview: React.FC = () => {
   };
 
   const goBack = () => {
+    if (screen === 'proposal') { setScreen('summary'); return; }
     if (screen === 'summary') { setScreen('questions'); return; }
     if (idx > 0) { setIdx(idx - 1); return; }
     setScreen('entry');
@@ -220,12 +223,16 @@ export const BuildV2Preview: React.FC = () => {
   };
 
   const blocked = blockedReason();
+  const readiness = readinessOf(build, answers.owned);
 
   const rows: SummaryRow[] = [];
-  if (answers.droneTypeId) {
+  // No row rather than a row naming the id — see `summaryValue.droneType`.
+  const droneTypeName = answers.droneTypeId
+    ? summaryValue.droneType(answers.droneTypeId) : undefined;
+  if (droneTypeName) {
     rows.push({
       key: 'droneType', label: SUMMARY.fields.droneType,
-      value: summaryValue.droneType(answers.droneTypeId), provenance: 'chosen',
+      value: droneTypeName, provenance: 'chosen',
     });
   }
   if (build?.sizeInch !== undefined) {
@@ -355,8 +362,30 @@ export const BuildV2Preview: React.FC = () => {
       )}
 
       {screen === 'summary' && (
-        <BuildInputSummary rows={rows} readiness={readinessOf(build, answers.owned)} />
+        <>
+          <BuildInputSummary rows={rows} readiness={readiness} />
+          {/*
+            THE ONLY DOOR TO THE PROPOSAL, AND IT IS LOCKED BY THE READINESS
+            STATE — not by a separate check that could drift from it.
+
+            `needs-equipment-identification` does not open it: the reader has
+            said they own a radio and cannot name its system, and `owned.rc`
+            reaches the engine as absence. Proposing a receiver on that basis
+            would be recommending parts as though they owned no radio at all —
+            the exact failure `readiness.ts` documents. `no-viable-build` does
+            not open it either: there is nothing to propose.
+          */}
+          {readiness.state === 'ready' && (
+            <button type="button" className="btn-primary" data-testid="v2-open-proposal"
+              onClick={() => setScreen('proposal')}
+              style={{ justifySelf: 'start', fontSize: 14.5, padding: '12px 22px' }}>
+              {PROPOSAL.open}
+            </button>
+          )}
+        </>
       )}
+
+      {screen === 'proposal' && build && <ProposalScreen build={build} />}
 
       {screen !== 'entry' && (
         <footer style={{ display: 'grid', gap: 9 }}>

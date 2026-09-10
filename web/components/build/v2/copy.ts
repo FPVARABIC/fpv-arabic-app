@@ -155,6 +155,169 @@ export const SUMMARY = {
   },
 } as const;
 
+/**
+ * THE PROPOSAL SCREEN — PHASE 2C.
+ *
+ * Every number on this screen is derived from the engine's decisions. None of
+ * these sentences contains one, which is why they are all fragments joined by
+ * `proposalBurdenAr()` below rather than templates with «6» typed into them.
+ */
+export const PROPOSAL = {
+  /*
+   * TWO HEADLINES, BECAUSE ONE OF THEM IS SOMETIMES FALSE.
+   *
+   * «هذا البناء المقترح لك» claims the system proposed a build. Answer
+   * Freestyle 6S with «لا تفضيل» and it recommended nothing at all — the
+   * budget tier is its only tiebreaker — so all eight categories come back
+   * open and the honest headline is the second one.
+   */
+  titleProposed: 'هذا البناء المقترح لك',
+  titleAllOpen: 'الخيارات كلها أمامك',
+  leadProposed: 'ما حسمه النظام، وما ما زال يحتاج رأيك — وسبب كل اختيار.',
+  leadAllOpen:
+    'كل القطع المتوافقة صالحة لهذا البناء، ولم يجد النظام ما يرجّح واحدة على '
+    + 'أخرى. اختيار فئة ميزانية يعطيه أساسًا للترجيح.',
+
+  /** Assembled from the counts; see `proposalBurdenAr`. */
+  burden: {
+    settledPrefix: 'حسمنا',
+    needYouPrefix: 'ونحتاج رأيك في',
+    nothingSettled: 'لم نحسم أي اختيار',
+    nothingLeft: 'ولا نحتاج منك اختيارًا إضافيًا',
+  },
+
+  groups: {
+    'needs-you': {
+      title: 'نحتاج اختيارك',
+      note: 'خيارات متعادلة في نظرنا — لا نملك ما يرجّح بينها، والقرار لك.',
+    },
+    'system-decided': { title: 'حسمها النظام', note: '' },
+    yours: { title: 'قطعك', note: '' },
+    problem: { title: 'تعذّر', note: '' },
+  },
+
+  /*
+   * «اقترحناه لك» — not «الأفضل». The engine ranks by the catalogue's tier
+   * against the reader's own answer; nothing in the data establishes a best
+   * product, and saying so would be inventing a claim the domain refuses to
+   * make.
+   */
+  recommendedBadge: 'اقترحناه لك',
+  /*
+   * A statement about THIS CATALOGUE, deliberately worded so it cannot be read
+   * as «no other product exists». We stock one that fits; the market is not
+   * ours to describe.
+   */
+  onlyCompatibleBadge: 'الخيار الوحيد المتوافق في الكتالوج',
+  onlyCompatibleNote: 'لا يعني أنه الوحيد في السوق — بل الوحيد المتوافق ممّا لدينا.',
+  ownedBadge: 'قطعة لديك',
+  unavailableBadge: 'غير متاح',
+
+  /*
+   * The engine's reasons already say «التي اخترتها» where a decision rests on
+   * the reader's answer, so a separate «بناءً على إجابتك:» label was written
+   * here and never rendered. The dead-copy guard caught it.
+   */
+  whyTitle: 'لماذا هذه القطعة؟',
+  /*
+   * A tied category has no «هذه القطعة» to ask about — nothing was chosen.
+   * Its reasons explain why the system declined to choose, so they need their
+   * own heading; reusing the other one asks the reader about a part that is
+   * not there.
+   */
+  whyTieTitle: 'لماذا لم نرجّح واحدة؟',
+
+  /*
+   * ONE LINE, NOT A FOREST OF TICKS. A beginner does not need four green rows;
+   * they need to know the checks ran and passed. The detail is one click away
+   * for whoever wants it — and it lists only rules the engine ACTUALLY
+   * evaluated for this decision, never the full registry.
+   */
+  compat: {
+    allPass: 'فحوص التوافق المطبَّقة: سليمة',
+    someUnknown: 'فحوص التوافق المطبَّقة: بعضها يحتاج تأكيدًا',
+    someViolated: 'فحوص التوافق المطبَّقة: هناك مخالفة',
+    none: 'لا توجد قاعدة توافق مشتركة تنطبق على هذا الاختيار.',
+    disclose: 'عرض التفاصيل',
+    status: { pass: 'سليم', violated: 'مخالف', unknown: 'غير مؤكد' },
+  },
+
+  candidates: {
+    title: 'الخيارات المتوافقة',
+    /*
+     * The sentence that keeps a read-only list honest. The reader will want to
+     * pick one; the domain cannot yet record «chose but does not own», and a
+     * React-only lock would be a lie the engine never sees.
+     */
+    readOnly: 'هذه القائمة للعرض في هذه المرحلة — الاختيار بينها يأتي لاحقًا.',
+    /*
+     * Long lists, and screens with many open decisions, collapse.
+     *
+     * Measured: Freestyle with «لا تفضيل» leaves all eight categories open,
+     * and expanding every list put 31 candidate rows on one screen — 5.12
+     * phone viewports, which is the V1 wizard step this journey replaced. A
+     * short list under a light load still opens straight away, because that
+     * is the decision the reader came for.
+     */
+    show: 'عرض الخيارات',
+  },
+
+  /*
+   * A manual check is a finding the DATA cannot settle. While one is open the
+   * build is not «متوافق بالكامل», and this screen never says it is.
+   */
+  manual: {
+    title: 'هناك فحص يدوي قبل اعتماد البناء',
+    lead: 'شيء لا تحسمه البيانات وحدها — يحتاج تأكيدًا منك قبل الطيران.',
+    labels: {
+      'current-headroom':
+        'هامش التيار بين المحرك والمنظّم: راجع الرقمين على القطعتين وتأكد أن '
+        + 'المنظّم يحتمل ذروة سحب المحرك.',
+    } as Record<string, string>,
+  },
+
+  /*
+   * WHEN THE SCREEN REFUSES.
+   *
+   * Each of these was once a fallback that printed a database key — an
+   * unresolvable part rendered its own id as a product name, a manual check
+   * with no copy rendered its finding id. A missing mapping is a developer
+   * defect, and showing the reader the key is not graceful degradation.
+   *
+   * So the proposal is withheld and the reason is named IN KIND, never by id.
+   * The ids stay in `data-*` hooks and machine state for whoever is debugging.
+   */
+  consistency: {
+    title: 'لا نستطيع عرض هذا الاقتراح',
+    lead: 'وجدنا تعارضًا داخليًا في بيانات الاقتراح، ولا نعرض اقتراحًا ناقصًا أو '
+      + 'غير متسق.',
+    kinds: {
+      'unavailable-required': 'فئة أساسية متعذّرة داخل بناء يُفترض أنه مُثبَت.',
+      /*
+       * The shelf itself. A decision can name a category the catalogue does
+       * not have, and nothing in it would necessarily notice — a decision
+       * with no part and no candidates trips none of the id checks, and the
+       * card heading would print the key.
+       */
+      'unknown-category': 'فئة قطع لا وجود لها في الكتالوج الحالي.',
+      'unlabelled-category': 'فئة قطع لا تملك الواجهة اسمًا عربيًا لها.',
+      'unresolved-part': 'قطعة مختارة غير موجودة في الكتالوج الحالي.',
+      'part-mismatch': 'القطعة المعروضة لا تطابق القطعة التي حسمها النظام.',
+      'unresolved-candidate': 'أحد الخيارات المتوافقة غير موجود في الكتالوج الحالي.',
+      /*
+       * «موجودة لكن في فئة أخرى» is a different failure from «غير موجودة»,
+       * and the more dangerous one: it resolves, it renders, and it looks like
+       * an answer. A frame under «المحركات» is not a missing part.
+       */
+      'foreign-category': 'قطعة من فئة أخرى وُضعت في غير موضعها.',
+      'unlabelled-manual-check': 'هناك فحص يدوي لا تملك الواجهة وصفًا له.',
+    },
+  },
+
+  /* «رجوع» comes from NAV — the journey's footer is the same on every screen. */
+  open: 'اعرض البناء المقترح',
+} as const;
+
 /** Navigation. */
 export const NAV = {
   back: 'رجوع',

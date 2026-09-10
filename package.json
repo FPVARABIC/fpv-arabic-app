@@ -40,6 +40,7 @@
     "test:compat-equivalence-e2e": "npx tsx --tsconfig web/tsconfig.json scripts/testCompatEquivalenceE2E.ts",
     "test:recommendation": "npx tsx --tsconfig web/tsconfig.json scripts/testRecommendation.ts",
     "test:build-v2": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2.ts",
+    "test:build-v2-proposal": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2Proposal.ts",
     "test:build-v2-e2e": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2E2E.ts",
     "test:project": "npx tsx scripts/testProject.ts",
     "test:platform-core": "npx tsx scripts/testPlatformCore.ts",
