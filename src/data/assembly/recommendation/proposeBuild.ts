@@ -44,6 +44,21 @@
  * use a Walksnail air unit, and a cheaper incompatible unit must never outrank
  * a compatible one — which is what happens if ownership is scored as «+1
  * preference» alongside price, as it briefly was.
+ *
+ * AND A READER'S CHOICE IS A THIRD THING AGAIN
+ * --------------------------------------------
+ * `selectedParts` says «I want this part in this build». It is not ownership —
+ * nobody is claiming the hardware is on their desk — and it is not a
+ * recommendation, because the system did not weigh it against anything. What
+ * it IS, is a hard lock for this proposal: budget is a preference, and a
+ * preference does not outrank a choice.
+ *
+ * A selection earns that lock rather than being granted it. It must exist in
+ * the category it was filed under, be eligible for this type and voltage, pass
+ * the shared rules against everything else fixed, respect an owned ecosystem,
+ * and appear in at least one complete zero-blocker build ALONGSIDE every other
+ * lock. Individually fine and jointly impossible is a real outcome, and it is
+ * reported as one — with neither identity replaced.
  */
 
 import type {
@@ -62,7 +77,7 @@ import {
 import { eligibleCandidates, REQUIRED_BUILD_CATEGORIES } from './eligibility';
 import type {
   CategoryDecision, CompatibilityEvidence, DecisionReason, ProposedBuild,
-  RecommendationInput, RequiredInput,
+  RecommendationInput, RequiredInput, SelectionIssue,
 } from './types';
 
 const TIER_AR: Record<string, string> = { budget: 'اقتصادي', mid: 'متوازن', premium: 'Premium' };
@@ -351,6 +366,7 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     complete: false,
     provenPath: null,
     blockerFindingIds: [] as string[],
+    selectionIssues: [] as SelectionIssue[],
   };
 
   /*
@@ -376,6 +392,80 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     };
   };
 
+  /*
+   * ── 0. THE READER'S SELECTIONS, VALIDATED AS INPUT BEFORE ANYTHING ELSE ──
+   *
+   * This runs before the catalogue is even asked for sizes, because a
+   * malformed selection is a fact about the INPUT, not about the build. If a
+   * type with no frames returned its dead end first, a bad selection would be
+   * silently swallowed by an unrelated failure — and «silently» is the whole
+   * thing this channel exists to prevent.
+   *
+   * Only shape is decided here: does this shelf exist, is it a shelf a build
+   * must fill, and does this id resolve ON that shelf. Whether the part is any
+   * GOOD is a question about the build, and it is asked later, where a category
+   * decision can carry the answer.
+   */
+  const selectedInput = input.selectedParts ?? {};
+  const selectionIssues: SelectionIssue[] = [];
+  const selectedParts: Record<string, BasePart> = {};
+
+  /*
+   * A CANONICAL ORDER, so that `{frames, motors}` and `{motors, frames}` are
+   * the same input. `Object.entries` follows insertion order, and an output
+   * array built from it would otherwise carry the reader's typing order into
+   * the engine's answer.
+   */
+  const selectedCategories = Object.keys(selectedInput).sort((a, b) => {
+    const ia = (REQUIRED_BUILD_CATEGORIES as readonly string[]).indexOf(a);
+    const ib = (REQUIRED_BUILD_CATEGORIES as readonly string[]).indexOf(b);
+    if (ia !== ib) return (ia < 0 ? Infinity : ia) - (ib < 0 ? Infinity : ib);
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+
+  for (const category of selectedCategories) {
+    const id = selectedInput[category];
+    const issue = (kind: SelectionIssue['kind'], ar: string) =>
+      selectionIssues.push({ category, partId: id, kind, ar });
+
+    if (!(category in PART_CATEGORY_MAP)) {
+      issue('unknown-category', 'اخترت قطعة لفئة لا وجود لها في الكتالوج الحالي.');
+      continue;
+    }
+    if (!(REQUIRED_BUILD_CATEGORIES as readonly string[]).includes(category)) {
+      issue('not-a-build-category', 'اخترت قطعة لفئة ليست من فئات البناء الأساسية.');
+      continue;
+    }
+    const onShelf = (PART_CATEGORY_MAP[category] ?? []).find(p => p.id === id);
+    if (onShelf) { selectedParts[category] = onShelf; continue; }
+    /*
+     * «EXISTS, WRONG SHELF» IS NOT «DOES NOT EXIST».
+     *
+     * The dangerous one is the first: a frame's id filed under motors resolves
+     * against a flat catalogue and renders a frame under «المحركات» with no
+     * spec rows — Phase 2C spent a round removing exactly that. The category
+     * is the truth here, and it is never inferred from the id string.
+     */
+    const elsewhere = Object.entries(PART_CATEGORY_MAP)
+      .find(([c, list]) => c !== category && list.some(pp => pp.id === id));
+    if (elsewhere) {
+      issue('foreign-category', 'القطعة التي اخترتها موجودة في الكتالوج لكنها من فئة أخرى.');
+    } else {
+      issue('unknown-part', 'القطعة التي اخترتها غير موجودة في الكتالوج الحالي.');
+    }
+  }
+
+  /*
+   * FAIL CLOSED. Honouring the rest while dropping the bad entry would leave
+   * the reader reading a recommendation for a category they believe they chose.
+   */
+  if (selectionIssues.length > 0) {
+    return {
+      ...deadEnd('اختيارٌ من اختياراتك لا يمكن قراءته على هذا الكتالوج، فلا يمكن حساب اقتراح صادق قبل تصحيحه.'),
+      selectionIssues,
+    };
+  }
+
   // ── 1. Prerequisites: derive only what the catalogue derives UNIQUELY ─────
   //
   // Where several values are equally valid the engine ASKS. `[4, 6]` says both
@@ -398,6 +488,72 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const ownedLocks: Record<string, BasePart> = { ...ownedParts };
 
   /*
+   * ── OWNED AND SELECTED IN THE SAME CATEGORY ──────────────────────────────
+   *
+   * Two hard locks on one shelf. The engine does not get to decide which of
+   * them is true.
+   *
+   * SAME PART — ownership wins, deliberately. «I have it» and «I want it» are
+   * both true, and the first is a fact about the world while the second is an
+   * intention about a proposal; reporting the weaker one would lose
+   * information. The decision comes back `user-owned`, exactly as it would
+   * have without the selection.
+   *
+   * DIFFERENT PARTS — a contradiction that is the reader's to resolve. Picking
+   * ownership would discard their choice; picking the choice would tell them
+   * hardware they own is not in the build. Neither is silently dropped: both
+   * ids ride on `candidateIds`, `partId` stays undefined because nothing has
+   * been decided, and `selectionSource` is `none` because that is precisely
+   * what it means — nobody has decided, and the reader still must.
+   */
+  const ownedSelectedConflicts = Object.keys(selectedParts)
+    .filter(c => ownedParts[c] !== undefined && ownedParts[c].id !== selectedParts[c].id);
+
+  for (const c of Object.keys(selectedParts)) {
+    if (ownedParts[c] !== undefined && ownedParts[c].id === selectedParts[c].id) {
+      delete selectedParts[c];
+    }
+  }
+
+  if (ownedSelectedConflicts.length > 0) {
+    const conflicted = new Set(ownedSelectedConflicts);
+    return {
+      ...base,
+      parts: { ...ownedParts },
+      decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
+        const owned = ownedParts[category];
+        const chosen = selectedParts[category];
+        if (conflicted.has(category)) {
+          return {
+            category,
+            status: 'unavailable' as const,
+            selectionSource: 'none' as const,
+            candidateIds: [owned.id, chosen.id],
+            compatibility: [],
+            reasons: [{
+              kind: 'no-candidate' as const, evidence: 'user-input' as const,
+              inputKey: 'selectedParts' as const,
+              ar: `قلت إنك تملك «${owned.nameAr}» واخترت «${chosen.nameAr}» لنفس الفئة — لا نُسقط أيًّا منهما، والحسم لك.`,
+            }],
+          };
+        }
+        return {
+          category,
+          status: 'unavailable' as const,
+          selectionSource: owned ? ('user-owned' as const) : ('none' as const),
+          partId: owned?.id,
+          candidateIds: owned ? [owned.id] : [],
+          compatibility: [],
+          reasons: [{
+            kind: 'no-candidate' as const, evidence: 'documented' as const,
+            ar: 'قطعة تملكها وأخرى اخترتها تتنازعان الفئة نفسها، فلا يمكن إتمام هذا البناء قبل حسم ذلك.',
+          }],
+        };
+      }),
+    };
+  }
+
+  /*
    * A part the reader owns must satisfy the ECOSYSTEM they also own, before it
    * is trusted as a lock. Nothing downstream can catch this: the pool filter
    * never walks a locked category, and `computeFindings` judges parts against
@@ -409,34 +565,52 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
    * deleted or swapped: it keeps its identity, and the reason names the
    * mismatch.
    */
-  const ecoConflicts = Object.entries(ownedParts)
-    .map(([cat, part]) => ({ cat, conflict: ecosystemConflict(cat, part, input.owned) }))
-    .filter((e): e is { cat: string; conflict: NonNullable<ReturnType<typeof ecosystemConflict>> } =>
+  const ecoConflicts = [
+    ...Object.entries(ownedParts).map(([cat, part]) => ({ cat, part, from: 'owned' as const })),
+    ...Object.entries(selectedParts).map(([cat, part]) => ({ cat, part, from: 'selected' as const })),
+  ]
+    .map(e => ({ ...e, conflict: ecosystemConflict(e.cat, e.part, input.owned) }))
+    .filter((e): e is typeof e & { conflict: NonNullable<ReturnType<typeof ecosystemConflict>> } =>
       e.conflict !== null);
 
   if (ecoConflicts.length > 0) {
-    const byCat = new Map(ecoConflicts.map(e => [e.cat, e.conflict]));
+    const byCat = new Map(ecoConflicts.map(e => [e.cat, e]));
+    const anySelected = ecoConflicts.some(e => e.from === 'selected');
     return {
       ...base,
-      parts: { ...ownedParts },
+      /*
+       * A SELECTED part that lost is still named. `parts` in a dead end exists
+       * so the reader can see which of THEIR pieces is involved, and a piece
+       * they chose is theirs in every sense that matters here.
+       */
+      parts: { ...ownedParts, ...selectedParts },
       decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
-        const conflict = byCat.get(category);
+        const hit = byCat.get(category);
         const owned = ownedParts[category];
+        const chosen = selectedParts[category];
+        const mine = owned ?? chosen;
         return {
           category,
           status: 'unavailable' as const,
-          selectionSource: owned ? ('user-owned' as const) : ('none' as const),
-          partId: owned?.id,
-          candidateIds: owned ? [owned.id] : [],
+          // The reader's part is never re-attributed on its way out: a
+          // selection that conflicts stays `user-selected`, so nothing
+          // downstream can read it as hardware they own.
+          selectionSource: owned ? ('user-owned' as const)
+            : chosen ? ('user-selected' as const) : ('none' as const),
+          partId: mine?.id,
+          candidateIds: mine ? [mine.id] : [],
           compatibility: [],
-          reasons: [conflict
+          reasons: [hit
             ? {
-              kind: 'no-candidate' as const, evidence: 'documented' as const,
-              inputKey: conflict.inputKey, ar: conflict.ar,
+              kind: 'no-candidate' as const,
+              evidence: hit.from === 'selected' ? ('user-input' as const) : ('documented' as const),
+              inputKey: hit.conflict.inputKey, ar: hit.conflict.ar,
             }
             : {
               kind: 'no-candidate' as const, evidence: 'documented' as const,
-              ar: 'قطعة تملكها تخالف المنظومة التي تملكها، فلا يمكن إتمام هذا البناء قبل حسم ذلك.',
+              ar: anySelected
+                ? 'قطعة اخترتها تخالف المنظومة التي تملكها، فلا يمكن إتمام هذا البناء قبل حسم ذلك.'
+                : 'قطعة تملكها تخالف المنظومة التي تملكها، فلا يمكن إتمام هذا البناء قبل حسم ذلك.',
             }],
         };
       }),
@@ -459,15 +633,112 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const prereqBlockers = new Set<string>();
   const sizeCandidates = input.sizeInch !== undefined ? [input.sizeInch] : sizes;
   const voltCandidates = input.cellCount !== undefined ? [input.cellCount] : voltages;
-  const viableCombos: { sizeInch: number; cellCount: number }[] = [];
-  for (const s of sizeCandidates) {
-    for (const v of voltCandidates) {
-      const probe = findCleanCompletion(ownedLocks, input, { sizeInch: s, cellCount: v }, prereqBlockers);
-      if (probe) viableCombos.push({ sizeInch: s, cellCount: v });
+  const allLocks: Record<string, BasePart> = { ...ownedLocks, ...selectedParts };
+  const selectedCats = Object.keys(selectedParts);
+
+  /*
+   * A LOCK IS NEVER TRUSTED BY BEING A LOCK.
+   *
+   * `findCleanCompletion` walks the UNFIXED categories and filters those
+   * through eligibility, the shared rules and the ecosystem. It applies none of
+   * that to what is already fixed — it assembles the build and asks
+   * `computeFindings`, which judges parts against parts. So a 5-inch frame
+   * selected for a 7-inch build, or a 6S battery selected for a 4S one, could
+   * sit in `fixed` and be declared sound. That is the same hole the owned path
+   * plugs with `ownedVerdict`; a selection needs it too, and needs it HERE,
+   * because size and voltage are what eligibility is asked about and they are
+   * only settled per candidate combination.
+   */
+  const selectionsHoldAt = (o: { sizeInch: number; cellCount: number }): boolean =>
+    selectedCats.every(cat => {
+      const part = selectedParts[cat];
+      const others = Object.fromEntries(
+        Object.entries(allLocks).filter(([c]) => c !== cat),
+      );
+      return eligibleCandidates(cat, PART_CATEGORY_MAP[cat] ?? [], {
+        droneTypeId, cellCount: o.cellCount, sizeInch: o.sizeInch,
+      }).some(p => p.id === part.id)
+        && passesSharedRules(cat, part, others, o);
+    });
+
+  const combosFor = (fixed: Record<string, BasePart>, hold: (o: { sizeInch: number; cellCount: number }) => boolean,
+    seen?: Set<string>) => {
+    const out: { sizeInch: number; cellCount: number }[] = [];
+    for (const s of sizeCandidates) {
+      for (const v of voltCandidates) {
+        const o = { sizeInch: s, cellCount: v };
+        if (hold(o) && findCleanCompletion(fixed, input, o, seen)) out.push(o);
+      }
     }
-  }
+    return out;
+  };
+
+  const viableCombos = combosFor(allLocks, selectionsHoldAt, prereqBlockers);
 
   if (viableCombos.length === 0) {
+    /*
+     * WHOSE FAULT IS THIS? A build can be impossible on its own, or impossible
+     * only because of what the reader chose, and telling a reader «no build
+     * exists» when their own pick is the reason would send them looking in the
+     * wrong place. So the question is asked again without the selections.
+     */
+    const withoutSelections = selectedCats.length > 0
+      ? combosFor(ownedLocks, () => true) : [];
+
+    if (withoutSelections.length > 0) {
+      /*
+       * INDIVIDUALLY FINE, JOINTLY IMPOSSIBLE is a different sentence from
+       * «this one does not work», and the reader needs the right one: the first
+       * says «change one of these», the second names the piece.
+       */
+      const soloOk = new Set(selectedCats.filter(cat =>
+        combosFor({ ...ownedLocks, [cat]: selectedParts[cat] }, o => {
+          const others = Object.fromEntries(
+            Object.entries(ownedLocks).filter(([c]) => c !== cat),
+          );
+          return eligibleCandidates(cat, PART_CATEGORY_MAP[cat] ?? [], {
+            droneTypeId, cellCount: o.cellCount, sizeInch: o.sizeInch,
+          }).some(p => p.id === selectedParts[cat].id)
+            && passesSharedRules(cat, selectedParts[cat], others, o);
+        }).length > 0));
+      const jointly = soloOk.size === selectedCats.length;
+
+      return {
+        ...base,
+        sizeInch: input.sizeInch,
+        cellCount: input.cellCount,
+        parts: { ...ownedParts, ...selectedParts },
+        decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
+          const chosen = selectedParts[category];
+          const owned = ownedParts[category];
+          const mine = chosen ?? owned;
+          return {
+            category,
+            status: 'unavailable' as const,
+            // The identity survives the refusal. Nothing here is replaced,
+            // and a selection that failed is still reported as a selection.
+            selectionSource: chosen ? ('user-selected' as const)
+              : owned ? ('user-owned' as const) : ('none' as const),
+            partId: mine?.id,
+            candidateIds: mine ? [mine.id] : [],
+            compatibility: [],
+            reasons: [{
+              kind: 'no-candidate' as const, evidence: 'user-input' as const,
+              inputKey: 'selectedParts' as const,
+              ar: chosen
+                ? (jointly
+                  ? 'القطع التي اخترتها سليمة كلٌّ على حدة، لكنها معًا لا تسمح بإتمام بناء خالٍ من الموانع — لم يُستبدل أيٌّ منها.'
+                  : soloOk.has(category)
+                    ? 'هذه القطعة التي اخترتها تصلح وحدها، لكن اختيارًا آخر من اختياراتك يمنع إتمام البناء — لم يُستبدل أيٌّ منها.'
+                    : 'القطعة التي اخترتها لا تسمح بإتمام بناء كامل خالٍ من الموانع — لم تُستبدل، والقرار لك.')
+                : 'لا يمكن إتمام هذا البناء مع القطع التي اخترتها — ولم نستبدل أيًّا منها.',
+            }],
+          };
+        }),
+        blockerFindingIds: [...prereqBlockers],
+      };
+    }
+
     return {
       ...deadEnd('لا توجد تركيبة كاملة خالية من الموانع لهذا النوع في الكتالوج الحالي.'),
       sizeInch: input.sizeInch,
@@ -513,8 +784,12 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const cellCount = viableVolts[0];
   const opts = { sizeInch, cellCount };
 
-  // ── 2. Owned parts are hard locks, before anything else is considered ─────
-  const locks: Record<string, BasePart> = { ...ownedLocks };
+  // ── 2. Owned AND selected parts are hard locks, before anything else ──────
+  //
+  // Both are the reader's. `budgetTier` never sees a locked category, which is
+  // the whole of «choice outranks preference»: there is no ranking step to
+  // override, because ranking only ever runs on an open one.
+  const locks: Record<string, BasePart> = { ...allLocks };
   const ownedVerdict = new Map<string, boolean>();
   for (const [cat, part] of Object.entries(ownedParts)) {
     const others = Object.fromEntries(
@@ -551,6 +826,41 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
           : {
             kind: 'no-candidate', evidence: 'documented', inputKey: 'ownedParts',
             ar: 'قطعة تملكها بالفعل لكنها لا تسمح بإتمام بناء خالٍ من الموانع — لم تُستبدل، والقرار لك.',
+          }],
+      });
+      continue;
+    }
+
+    /*
+     * A PART THE READER CHOSE.
+     *
+     * Everything unusable was already refused above — shape, ecosystem,
+     * eligibility, the shared rules and global viability alongside every other
+     * lock — so by the time this runs the selection is known to work, and
+     * `viable` is a guard rather than a question. It is computed anyway: if
+     * some later change ever breaks that invariant, the reader gets an honest
+     * «unavailable» instead of a `user-selected` that is not true.
+     */
+    const chosen = selectedParts[category];
+    if (chosen) {
+      const viable = findCleanCompletion(locks, input, opts, searchBlockers) !== null;
+      decisions.push({
+        category,
+        status: viable ? 'user-selected' : 'unavailable',
+        // Never `user-owned`: they chose it, they did not say they have it.
+        // Never `system`: nothing was weighed against anything.
+        selectionSource: 'user-selected',
+        partId: chosen.id,
+        candidateIds: [chosen.id],
+        compatibility: compatibilityEvidenceFor(category, chosen, locks, opts),
+        reasons: [...ecosystemReasons(category, input.owned), viable
+          ? {
+            kind: 'selection', evidence: 'user-input', inputKey: 'selectedParts',
+            ar: 'اخترت هذه القطعة لهذا البناء.',
+          }
+          : {
+            kind: 'no-candidate', evidence: 'user-input', inputKey: 'selectedParts',
+            ar: 'القطعة التي اخترتها لا تسمح بإتمام بناء خالٍ من الموانع — لم تُستبدل، والقرار لك.',
           }],
       });
       continue;
@@ -652,7 +962,9 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const parts: Record<string, BasePart> = {};
   for (const d of refined) {
     if (d.partId && d.status !== 'unavailable') {
-      const p = ownedParts[d.category]
+      // Owned first, then chosen, then the catalogue — and the catalogue
+      // lookup stays scoped to THIS category, never flattened.
+      const p = ownedParts[d.category] ?? selectedParts[d.category]
         ?? (PART_CATEGORY_MAP[d.category] ?? []).find(x => x.id === d.partId);
       if (p) parts[d.category] = p;
     }
@@ -663,7 +975,8 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   const manualChecks = path
     ? computeFindings(snapshotFromParts(
       Object.fromEntries(REQUIRED_BUILD_CATEGORIES.map(c => [
-        c, ownedParts[c] ?? (PART_CATEGORY_MAP[c] ?? []).find(p => p.id === path[c])!,
+        c, ownedParts[c] ?? selectedParts[c]
+          ?? (PART_CATEGORY_MAP[c] ?? []).find(p => p.id === path[c])!,
       ])) as Record<string, BasePart>,
       { droneTypeId, ...opts },
     )).filter(f => f.severity === 'unknown').map(f => f.id)
@@ -675,13 +988,18 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     cellCount,
     requiredInputs: [],
     decisions: refined,
+    // Without a receipt, only what the READER put in survives — theirs to see,
+    // whether they own it or chose it. Nothing the system picked is presented
+    // as fixed when nothing was proven.
     parts: path ? parts : Object.fromEntries(
-      Object.entries(parts).filter(([c]) => ownedParts[c]),
+      Object.entries(parts).filter(([c]) => ownedParts[c] || selectedParts[c]),
     ),
     unresolved: path ? unresolved : [...REQUIRED_BUILD_CATEGORIES],
     manualChecks,
     complete: !!path && unresolved.length === 0,
     provenPath: path,
     blockerFindingIds: path ? [] : [...searchBlockers],
+    // Empty by construction: a malformed selection returned long before here.
+    selectionIssues: [],
   };
 }

@@ -193,6 +193,12 @@ export const PROPOSAL = {
     },
     'system-decided': { title: 'حسمها النظام', note: '' },
     yours: { title: 'قطعك', note: '' },
+    /*
+     * «اخترتها» — not «قطعك». Owning a part and choosing one for a build are
+     * different sentences, and the domain keeps them apart precisely so this
+     * heading does not tell someone they have hardware they have not bought.
+     */
+    chosen: { title: 'اخترتها', note: '' },
     problem: { title: 'تعذّر', note: '' },
   },
 
@@ -203,6 +209,11 @@ export const PROPOSAL = {
    * make.
    */
   recommendedBadge: 'اقترحناه لك',
+  /*
+   * The reader's own choice, said back to them. Never «اقترحناه لك» — we did
+   * not — and never «تملكها», which is the other thing this is not.
+   */
+  selectedBadge: 'اخترتها',
   /*
    * A statement about THIS CATALOGUE, deliberately worded so it cannot be read
    * as «no other product exists». We stock one that fits; the market is not

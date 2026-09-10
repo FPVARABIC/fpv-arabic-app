@@ -19,20 +19,39 @@ import type {
  *   recommended, only-compatible  →  read it, or don't. The system decided.
  *   choice-required               →  YOU decide. This is the actual work.
  *   user-locked                   →  it's yours; nothing to do.
+ *   user-selected                 →  you already decided. Also nothing to do,
+ *                                    and NOT the same as owning it.
  *   unavailable                   →  something is wrong.
  *
  * An eight-card wall where all eight shout equally is the V1 wizard again. The
  * group that needs the reader gets the room; the group that does not gets a
  * compact row.
+ *
+ * WHY THIS IS A RECORD AND NOT A CHAIN
+ * ------------------------------------
+ * It was a chain, and it ended in `: 'system-decided'` — so «anything I have
+ * not named is a system decision». Phase 2D added `user-selected`, and that
+ * default would have silently filed a READER'S OWN CHOICE under «حسمها
+ * النظام»: the system claiming credit for a decision it explicitly refused to
+ * make, which is the precise failure this whole module exists to prevent.
+ *
+ * A `Record` over the union cannot be under-populated. A sixth status will not
+ * compile until someone decides, in writing, what a reader is supposed to do
+ * about it — the same guarantee `COMPAT_RULE_LABEL_AR` gives for rules.
  */
 
-export type DecisionGroup = 'needs-you' | 'system-decided' | 'yours' | 'problem';
+export type DecisionGroup = 'needs-you' | 'system-decided' | 'yours' | 'chosen' | 'problem';
 
-export const groupOf = (status: RecommendationStatus): DecisionGroup =>
-  status === 'choice-required' ? 'needs-you'
-    : status === 'user-locked' ? 'yours'
-      : status === 'unavailable' ? 'problem'
-        : 'system-decided';
+const GROUP_BY_STATUS: Record<RecommendationStatus, DecisionGroup> = {
+  'choice-required': 'needs-you',
+  recommended: 'system-decided',
+  'only-compatible': 'system-decided',
+  'user-locked': 'yours',
+  'user-selected': 'chosen',
+  unavailable: 'problem',
+};
+
+export const groupOf = (status: RecommendationStatus): DecisionGroup => GROUP_BY_STATUS[status];
 
 export interface DecisionCounts {
   required: number;
@@ -40,8 +59,17 @@ export interface DecisionCounts {
   onlyCompatible: number;
   choiceRequired: number;
   userLocked: number;
+  /** Chosen by the READER. Never counted as settled by the system. */
+  userSelected: number;
   unavailable: number;
-  /** What the system settled on the reader's behalf, by any route. */
+  /**
+   * What the system settled on the reader's behalf, by any route.
+   *
+   * `user-locked` and `user-selected` are both excluded on purpose: the
+   * headline built from this number says «حسمنا N اختيارات», and neither a
+   * part someone already owns nor one they picked themselves was settled by
+   * us.
+   */
   systemDecided: number;
   manualChecks: number;
 }
@@ -253,13 +281,14 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
     onlyCompatible: by('only-compatible').length,
     choiceRequired: by('choice-required').length,
     userLocked: by('user-locked').length,
+    userSelected: by('user-selected').length,
     unavailable: by('unavailable').length,
     systemDecided: by('recommended').length + by('only-compatible').length,
     manualChecks: build.manualChecks.length,
   };
 
   const groups: Record<DecisionGroup, CategoryDecision[]> = {
-    'needs-you': [], 'system-decided': [], yours: [], problem: [],
+    'needs-you': [], 'system-decided': [], yours: [], chosen: [], problem: [],
   };
   for (const d of build.decisions) groups[groupOf(d.status)].push(d);
 

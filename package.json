@@ -42,6 +42,8 @@
     "test:build-v2": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2.ts",
     "test:build-v2-proposal": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2Proposal.ts",
     "test:build-v2-e2e": "npx tsx --tsconfig web/tsconfig.json scripts/testBuildV2E2E.ts",
+    "test:reader-selection": "npx tsx --tsconfig web/tsconfig.json scripts/testReaderSelection.ts",
+    "snapshot:recommendation": "npx tsx scripts/snapshotRecommendation.ts",
     "test:project": "npx tsx scripts/testProject.ts",
     "test:platform-core": "npx tsx scripts/testPlatformCore.ts",
     "test:project-ui": "npx tsx scripts/testProjectUI.ts",

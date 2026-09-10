@@ -2,7 +2,9 @@
 
 import React, { useId, useState } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
-import type { CategoryDecision } from '@core/data/assembly/recommendation/types';
+import type {
+  CategoryDecision, RecommendationStatus,
+} from '@core/data/assembly/recommendation/types';
 import { PROPOSAL } from './copy';
 import { arabicNumber } from './arabicCount';
 import { compatRuleLabelAr } from './compatLabels';
@@ -47,13 +49,26 @@ const Disclose: React.FC<{
   );
 };
 
-/** The badge says what kind of answer this is — in words, never in colour. */
+/**
+ * The badge says what kind of answer this is — in words, never in colour.
+ *
+ * A `Record` over the union, not a chain ending in `null`: the chain would
+ * have given a new status no badge at all, and a card whose heading says
+ * «الإطار» with nothing beside it reads as an ordinary recommendation. Silence
+ * is a claim here. `choice-required` is the one deliberate empty — its whole
+ * card is the badge.
+ */
+const STATUS_BADGE: Record<RecommendationStatus, string | null> = {
+  recommended: PROPOSAL.recommendedBadge,
+  'only-compatible': PROPOSAL.onlyCompatibleBadge,
+  'user-locked': PROPOSAL.ownedBadge,
+  'user-selected': PROPOSAL.selectedBadge,
+  unavailable: PROPOSAL.unavailableBadge,
+  'choice-required': null,
+};
+
 const StatusBadge: React.FC<{ decision: CategoryDecision }> = ({ decision }) => {
-  const text = decision.status === 'recommended' ? PROPOSAL.recommendedBadge
-    : decision.status === 'only-compatible' ? PROPOSAL.onlyCompatibleBadge
-      : decision.status === 'user-locked' ? PROPOSAL.ownedBadge
-        : decision.status === 'unavailable' ? PROPOSAL.unavailableBadge
-          : null;
+  const text = STATUS_BADGE[decision.status];
   if (!text) return null;
   return (
     <span className="admin-badge" data-testid={`v2-badge-${decision.category}`}

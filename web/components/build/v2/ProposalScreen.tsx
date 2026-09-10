@@ -57,7 +57,13 @@ function useCatalogue(): Catalogue {
   }, []);
 }
 
-const GROUP_ORDER: readonly DecisionGroup[] = ['needs-you', 'system-decided', 'yours', 'problem'];
+/*
+ * Reading order: what still needs you, then what was settled for you, then
+ * what is already yours — owned first, then chosen — then what went wrong.
+ */
+const GROUP_ORDER: readonly DecisionGroup[] = [
+  'needs-you', 'system-decided', 'yours', 'chosen', 'problem',
+];
 
 /** Typed against the defect union, so a new kind cannot ship without wording. */
 const CONSISTENCY_KINDS: Record<ProposalDefectKind, string> = PROPOSAL.consistency.kinds;
@@ -218,7 +224,7 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
                   categoryLabelAr={PART_VOCAB[d.category]!.ar}
                   // Settled categories collapse. The ones needing the reader do
                   // not — that decision is why they opened this screen.
-                  compact={g === 'system-decided' || g === 'yours'}
+                  compact={g === 'system-decided' || g === 'yours' || g === 'chosen'}
                   expandCandidates={expandsByDefault(
                     d.candidateIds.length, view.counts.choiceRequired,
                   )}
