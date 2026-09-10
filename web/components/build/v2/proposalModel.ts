@@ -80,6 +80,15 @@ export type ProposalQuality =
 export type ProposalDefect =
   /** A proven build cannot contain a required category with nothing to offer. */
   | { kind: 'unavailable-required'; category: string }
+  /**
+   * `CategoryDecision.category` is a `string`, and the catalogue has no such
+   * shelf. Nothing downstream would necessarily notice: a decision with no
+   * `partId` and no candidates trips none of the id checks, and the card's
+   * heading falls back to printing the key.
+   */
+  | { kind: 'unknown-category'; category: string; id: null }
+  /** A real category the reader-facing vocabulary has no Arabic name for. */
+  | { kind: 'unlabelled-category'; category: string; id: null }
   /** `decision.partId` names a part the catalogue does not have. */
   | { kind: 'unresolved-part'; category: string; id: string }
   /** `build.parts[category]` is not the part the decision says was selected. */
@@ -141,6 +150,17 @@ export interface ProposalContext {
   resolvePart: (category: string, id: string) => BasePart | undefined;
   /** Does this id exist ANYWHERE? Only used to tell «missing» from «foreign». */
   existsInAnyCategory: (id: string) => boolean;
+  /** Is this a real catalogue category — a shelf that exists? */
+  hasCategory: (category: string) => boolean;
+  /**
+   * The reader-facing Arabic name of a category, or undefined.
+   *
+   * STRICT. `partLabelAr()` answers the same question with a fallback to the
+   * key itself, which is the graceful degradation this whole class of fix
+   * exists to remove — it may keep that shape for older surfaces, but the
+   * proposal must never reach it.
+   */
+  categoryLabel: (category: string) => string | undefined;
   hasManualLabel: (id: string) => boolean;
 }
 
@@ -167,6 +187,28 @@ export function proposalDefects(
   for (const d of build.decisions) {
     if (d.status === 'unavailable') {
       defects.push({ kind: 'unavailable-required', category: d.category });
+    }
+
+    /*
+     * THE CATEGORY ITSELF, BEFORE ANYTHING IN IT.
+     *
+     * Every check below asks a question OF a category — «is this part on this
+     * shelf», «is this candidate on this shelf». None of them can answer
+     * anything useful when the shelf does not exist, and asking anyway
+     * produces a misleading diagnosis: `resolvePart('probe-category', id)`
+     * returns undefined for a perfectly good id, and it gets reported as
+     * `foreign-category` when the id was never the problem.
+     *
+     * So a bad category is recorded and the decision is skipped. One defect,
+     * naming the actual fault.
+     */
+    if (!ctx.hasCategory(d.category)) {
+      defects.push({ kind: 'unknown-category', category: d.category, id: null });
+      continue;
+    }
+    if (ctx.categoryLabel(d.category) === undefined) {
+      defects.push({ kind: 'unlabelled-category', category: d.category, id: null });
+      continue;
     }
 
     if (d.partId !== undefined) {

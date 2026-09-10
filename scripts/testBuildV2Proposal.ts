@@ -23,6 +23,7 @@
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
 import type { ProposedBuild } from '../src/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '../src/data/project/store';
@@ -35,6 +36,8 @@ import { COMPAT_RULE_LABEL_AR, compatRuleLabelAr } from '../web/components/build
 import { arabicCount, CHOICE_NOUN, arabicNumber } from '../web/components/build/v2/arabicCount';
 import { partFacts } from '../web/components/build/v2/partFacts';
 import { PROPOSAL, SUMMARY } from '../web/components/build/v2/copy';
+import { PART_VOCAB, partLabelAr } from '../web/lib/build/labels';
+import { ProposalCategoryCard } from '../web/components/build/v2/ProposalCategoryCard';
 import { readinessOf } from '../web/components/build/v2/readiness';
 
 let passed = 0;
@@ -69,6 +72,9 @@ for (const [category, list] of Object.entries(PART_CATEGORY_MAP)) {
 const CTX: ProposalContext = {
   resolvePart: (category, id) => BY_CATEGORY[category]?.[id],
   existsInAnyCategory: id => id in CATALOGUE,
+  hasCategory: category => category in PART_CATEGORY_MAP,
+  /* STRICT — `partLabelAr` would answer this with the key itself. */
+  categoryLabel: category => PART_VOCAB[category]?.ar,
   hasManualLabel: id => id in PROPOSAL.manual.labels,
 };
 
@@ -562,7 +568,8 @@ ok('…and «current-headroom» is one of them, with its honest wording kept',
  * and the ids ride on `data-*` hooks only.
  */
 const DEFECT_KINDS: readonly ProposalDefectKind[] = [
-  'unavailable-required', 'unresolved-part', 'part-mismatch',
+  'unavailable-required', 'unknown-category', 'unlabelled-category',
+  'unresolved-part', 'part-mismatch',
   'unresolved-candidate', 'foreign-category', 'unlabelled-manual-check',
 ];
 ok('every defect kind has reader-facing Arabic',
@@ -698,6 +705,253 @@ ok('…and the card resolves only within it',
 ok('«foreign-category» has reader-facing Arabic with no id in it',
   /فئة أخرى/.test(PROPOSAL.consistency.kinds['foreign-category'])
   && !/[a-zA-Z]{4,}/.test(PROPOSAL.consistency.kinds['foreign-category']));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('11e — THE SHELF ITSELF: AN UNKNOWN CATEGORY IS A DEFECT');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * 11d made every id question category-aware. It never asked whether the
+ * CATEGORY was real.
+ *
+ * A decision naming `probe-category` with no part and no candidates trips
+ * nothing: there is no partId to resolve, no candidate to place, no manual
+ * check to label. The integrity pass returned `[]`, the proposal rendered as
+ * healthy, and the card asked `partLabelAr('probe-category')` — whose contract
+ * is `PART_VOCAB[c]?.ar ?? c`. So the heading of a card, in a product written
+ * in Arabic for beginners, read «probe-category».
+ *
+ * Two questions now precede every id question: does the catalogue have this
+ * shelf, and does this surface have an Arabic name for it. Either «no» refuses
+ * the proposal, and the card is no longer capable of expressing the fallback.
+ */
+const UNKNOWN_CATEGORY = 'probe-category';
+
+/* Exactly the decision the brief describes: nothing in it but the category. */
+const unknownCategoryDecision = {
+  category: UNKNOWN_CATEGORY,
+  status: 'choice-required' as const,
+  selectionSource: 'engine' as const,
+  partId: undefined,
+  candidateIds: [] as string[],
+  compatibility: [],
+  reasons: [],
+};
+const withUnknownCategory = {
+  ...healthy,
+  decisions: [...healthy.decisions, unknownCategoryDecision],
+} as unknown as ProposedBuild;
+
+ok('the fixture category really is absent from the catalogue AND the vocabulary',
+  !(UNKNOWN_CATEGORY in PART_CATEGORY_MAP) && PART_VOCAB[UNKNOWN_CATEGORY] === undefined);
+ok('an unknown category is a defect',
+  kindsOf(proposalDefects(withUnknownCategory, CTX)).includes('unknown-category'));
+ok('…so the proposal is refused', proposalView(withUnknownCategory, CTX).consistencyError);
+
+/*
+ * WHY ONLY THIS CHECK COULD HAVE CAUGHT IT — asserted, not asserted-about.
+ *
+ * Run the SAME build through a context whose only difference is that it
+ * believes every category exists and is named. Every id check still runs.
+ * Zero defects. That is the bug, preserved: this decision is invisible to
+ * everything except a check on the category itself.
+ */
+const CATEGORY_BLIND: ProposalContext = { ...CTX, hasCategory: () => true, categoryLabel: () => 'س' };
+ok('a context that does not question the category finds NOTHING wrong with it',
+  proposalDefects(withUnknownCategory, CATEGORY_BLIND).length === 0);
+
+/* And the diagnosis is the category, not a slandered id. */
+ok('…and the real check reports the CATEGORY, not a missing or foreign part',
+  kindsOf(proposalDefects(withUnknownCategory, CTX))
+    .every(k => k === 'unknown-category'));
+ok('the defect carries no id, because no id was at fault',
+  proposalDefects(withUnknownCategory, CTX)
+    .filter(d => d.kind === 'unknown-category')
+    .every(d => d.id === null && d.category === UNKNOWN_CATEGORY));
+
+/*
+ * A SHELF THAT EXISTS BUT HAS NO ARABIC NAME is the second half, and a
+ * likelier one: someone adds a category to the catalogue and the vocabulary
+ * lags a commit behind. The catalogue answers yes, the label answers nothing.
+ */
+const NAMELESS = 'frames';
+const NAMELESS_CTX: ProposalContext = {
+  ...CTX,
+  categoryLabel: category => (category === NAMELESS ? undefined : PART_VOCAB[category]?.ar),
+};
+ok('a real category with no Arabic name is a defect too',
+  kindsOf(proposalDefects(healthy, NAMELESS_CTX)).includes('unlabelled-category'));
+ok('…and it is NOT reported as unknown — the catalogue does have it',
+  !kindsOf(proposalDefects(healthy, NAMELESS_CTX)).includes('unknown-category'));
+ok('…so the proposal is refused', proposalView(healthy, NAMELESS_CTX).consistencyError);
+
+/*
+ * THE REFUSAL MUST NOT PRINT WHAT IT REFUSED. The screen renders the title,
+ * the lead, and one sentence per KIND — the category string reaches `data-*`
+ * and the console, never a sentence.
+ */
+const refusalText = [
+  PROPOSAL.consistency.title,
+  PROPOSAL.consistency.lead,
+  ...[...new Set(kindsOf(proposalDefects(withUnknownCategory, CTX)))]
+    .map(k => PROPOSAL.consistency.kinds[k]),
+].join(' ');
+ok('the visible refusal text does not contain «probe-category»',
+  !refusalText.includes(UNKNOWN_CATEGORY));
+ok('…nor any kebab-cased Latin identifier at all',
+  !/[a-z]+-[a-z]+/i.test(refusalText));
+ok('…and it does say, in Arabic, that a part CATEGORY is the problem',
+  /فئة قطع/.test(PROPOSAL.consistency.kinds['unknown-category'])
+  && /فئة قطع/.test(PROPOSAL.consistency.kinds['unlabelled-category']));
+ok('the two new kinds are distinguishable to a reader',
+  PROPOSAL.consistency.kinds['unknown-category']
+    !== PROPOSAL.consistency.kinds['unlabelled-category']);
+
+// ── The raw key must be unable to render ──────────────────────────────────
+/*
+ * `partLabelAr` still ends in `?? c` — deliberately, for the older surfaces
+ * built on it. What changed is that the V2 card can no longer call it: the
+ * heading arrives as a required `string` prop, resolved by the screen through
+ * the strict map, for a category the pass above has already accepted.
+ */
+ok('the loose helper really would have printed the raw key',
+  partLabelAr(UNKNOWN_CATEGORY) === UNKNOWN_CATEGORY);
+ok('…while the strict lookup the screen uses answers «no name»',
+  PART_VOCAB[UNKNOWN_CATEGORY]?.ar === undefined);
+ok('the helper is left intact for the surfaces that still use it',
+  partLabelAr('frames') === 'الإطار' && partLabelAr('motors') === 'المحركات');
+
+ok('the CARD cannot reach the fallback helper at all',
+  !/partLabelAr/.test(src['ProposalCategoryCard.tsx']));
+ok('…it takes the heading as a required, non-optional prop',
+  /categoryLabelAr: string;/.test(src['ProposalCategoryCard.tsx'])
+  && !/categoryLabelAr\?:/.test(src['ProposalCategoryCard.tsx']));
+ok('…and renders that prop as the heading',
+  /<h4[^>]*>\s*\{categoryLabelAr\}\s*<\/h4>/.test(src['ProposalCategoryCard.tsx']));
+ok('the SCREEN resolves the heading strictly, from the vocabulary',
+  /categoryLabelAr=\{PART_VOCAB\[d\.category\]!\.ar\}/.test(src['ProposalScreen.tsx']));
+
+/*
+ * READ THE WHOLE EXPRESSION — the lesson 11d cost. A prefix match on the
+ * strict lookup passes just as happily with `?? category` appended to it.
+ */
+const labelLine = (src['ProposalScreen.tsx'].split('\n')
+  .find(l => l.includes('categoryLabel:')) ?? '');
+ok('the integrity context asks the strict map',
+  /PART_VOCAB\[category\]\?\.ar/.test(labelLine));
+ok('…with NO fallback of any kind on that line',
+  labelLine !== '' && !labelLine.includes('??') && !labelLine.includes('partLabelAr'));
+
+// ── Positive controls: the real shelves still pass ────────────────────────
+/*
+ * A check that refuses everything is not integrity, it is an outage. Both of
+ * the categories the reader meets first must pass BOTH halves and keep their
+ * real Arabic names.
+ */
+for (const category of ['frames', 'motors'] as const) {
+  const d = healthy.decisions.find(x => x.category === category);
+  ok(`${category}: the real build has this decision`, d !== undefined);
+  ok(`${category}: the catalogue has the shelf`, category in PART_CATEGORY_MAP);
+  ok(`${category}: the vocabulary names it in Arabic`,
+    (PART_VOCAB[category]?.ar ?? '').trim() !== ''
+    && !/[a-zA-Z]/.test(PART_VOCAB[category].ar));
+  ok(`${category}: it produces no defect of any kind`,
+    proposalDefects(
+      { ...healthy, decisions: [d!], manualChecks: [] } as ProposedBuild, CTX,
+    ).length === 0);
+  ok(`${category}: the heading the screen would pass is the Arabic name`,
+    PART_VOCAB[category]!.ar === (category === 'frames' ? 'الإطار' : 'المحركات'));
+}
+
+/* And no real build, on any burden case, trips either new check. */
+for (const [label, input] of BURDEN_CASES) {
+  const ds = proposalDefects(b(input), CTX);
+  ok(`${label}: every category is real and named`,
+    !kindsOf(ds).includes('unknown-category') && !kindsOf(ds).includes('unlabelled-category'));
+}
+
+/*
+ * COMPLETENESS, BOTH WAYS. Every shelf the catalogue has must be nameable, and
+ * the vocabulary must not name shelves that do not exist — a stale entry is
+ * how a category check starts passing for something the catalogue dropped.
+ */
+ok('every catalogue category has an Arabic name',
+  Object.keys(PART_CATEGORY_MAP).every(c => (PART_VOCAB[c]?.ar ?? '').trim() !== ''));
+ok('and the vocabulary names nothing the catalogue does not have',
+  Object.keys(PART_VOCAB).every(c => c in PART_CATEGORY_MAP));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('11f — THE CARD, ACTUALLY RENDERED');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * Everything above proves the MODEL refuses a bad category. This proves the
+ * COMPONENT cannot print one even if it were handed one — by rendering it and
+ * reading the heading, not by grepping for a function name.
+ *
+ * The grep («no `partLabelAr` in the card») catches the obvious restoration.
+ * It does not catch a heading rebuilt from `decision.category` some other way,
+ * and a source pattern is not a rendered string. So: render it.
+ *
+ * React comes from `web/`'s own copy, resolved the way `web/` resolves it. A
+ * component using one React instance and a renderer using another share no
+ * hook dispatcher, and the render throws — so this indirection is the test
+ * working, not the test cheating.
+ */
+const webRequire = createRequire(join(process.cwd(), 'web/package.json'));
+type Renderer = (el: unknown) => string;
+const ReactRT = webRequire('react') as {
+  createElement: (t: unknown, p: Record<string, unknown>) => unknown;
+};
+const renderToStaticMarkup = (webRequire('react-dom/server') as {
+  renderToStaticMarkup: Renderer;
+}).renderToStaticMarkup;
+
+const renderCard = (category: string, categoryLabelAr: string) => {
+  const html = renderToStaticMarkup(ReactRT.createElement(ProposalCategoryCard, {
+    decision: {
+      category,
+      status: 'choice-required',
+      selectionSource: 'engine',
+      partId: undefined,
+      candidateIds: [],
+      compatibility: [],
+      reasons: [],
+    },
+    parts: {},
+    categoryParts: {},
+    categoryLabelAr,
+    compact: false,
+    expandCandidates: false,
+  }));
+  return {
+    heading: (/<h4[^>]*>([\s\S]*?)<\/h4>/.exec(html)?.[1] ?? '').trim(),
+    /* Visible text only — ids are allowed to live in `data-*`, and do. */
+    text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+    html,
+  };
+};
+
+const realCard = renderCard('frames', PART_VOCAB.frames.ar);
+ok('a real category renders its Arabic name as the heading',
+  realCard.heading === 'الإطار');
+
+/*
+ * THE ONE THAT MATTERS. The category is the unknown key; the label handed in
+ * is a perfectly good Arabic name. If the heading came from the CATEGORY, it
+ * would read «probe-category». It reads the label.
+ */
+const probeCard = renderCard(UNKNOWN_CATEGORY, PART_VOCAB.frames.ar);
+ok('a card handed an unknown category still renders the LABEL it was given',
+  probeCard.heading === 'الإطار');
+ok('…and «probe-category» appears in no visible text on that card',
+  !probeCard.text.includes(UNKNOWN_CATEGORY));
+ok('…though it is still present as a machine hook, which is where it belongs',
+  probeCard.html.includes(`data-testid="v2-cat-${UNKNOWN_CATEGORY}"`));
+ok('…and no kebab-cased Latin identifier is visible on it either',
+  !/[a-z]+-[a-z0-9]+/i.test(probeCard.text));
+
+/* The heading follows the PROP, not the decision — shown by moving the prop. */
+ok('the heading tracks the prop, not the category',
+  renderCard('frames', 'المحركات').heading === 'المحركات');
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('12 — SCOPE: NOTHING PHASE 2C WAS NOT ASKED FOR');

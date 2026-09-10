@@ -293,6 +293,14 @@ export const PROPOSAL = {
       + 'غير متسق.',
     kinds: {
       'unavailable-required': 'فئة أساسية متعذّرة داخل بناء يُفترض أنه مُثبَت.',
+      /*
+       * The shelf itself. A decision can name a category the catalogue does
+       * not have, and nothing in it would necessarily notice — a decision
+       * with no part and no candidates trips none of the id checks, and the
+       * card heading would print the key.
+       */
+      'unknown-category': 'فئة قطع لا وجود لها في الكتالوج الحالي.',
+      'unlabelled-category': 'فئة قطع لا تملك الواجهة اسمًا عربيًا لها.',
       'unresolved-part': 'قطعة مختارة غير موجودة في الكتالوج الحالي.',
       'part-mismatch': 'القطعة المعروضة لا تطابق القطعة التي حسمها النظام.',
       'unresolved-candidate': 'أحد الخيارات المتوافقة غير موجود في الكتالوج الحالي.',

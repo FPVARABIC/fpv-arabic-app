@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
 import type { ProposedBuild } from '@core/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '@core/data/project/store';
+import { PART_VOCAB } from '@/lib/build/labels';
 import { PROPOSAL } from './copy';
 import { arabicCount, CHOICE_NOUN } from './arabicCount';
 import {
@@ -90,6 +91,9 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
   const view = useMemo(() => proposalView(build, {
     resolvePart: (category, id) => catalogue.byCategory[category]?.[id],
     existsInAnyCategory: id => catalogue.allIds.has(id),
+    hasCategory: category => category in PART_CATEGORY_MAP,
+    // STRICT — `partLabelAr()` would answer this with the key itself.
+    categoryLabel: category => PART_VOCAB[category]?.ar,
     hasManualLabel: id => id in PROPOSAL.manual.labels,
   }), [build, catalogue]);
 
@@ -206,6 +210,12 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
                   decision={d}
                   parts={build.parts}
                   categoryParts={catalogue.byCategory[d.category] ?? {}}
+                  /*
+                    The heading, resolved HERE and guaranteed by the integrity
+                    pass above. The card cannot look a category up for itself,
+                    so it cannot reach `partLabelAr`'s fallback to the key.
+                  */
+                  categoryLabelAr={PART_VOCAB[d.category]!.ar}
                   // Settled categories collapse. The ones needing the reader do
                   // not — that decision is why they opened this screen.
                   compact={g === 'system-decided' || g === 'yours'}

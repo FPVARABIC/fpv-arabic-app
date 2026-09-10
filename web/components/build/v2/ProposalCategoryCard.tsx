@@ -3,7 +3,6 @@
 import React, { useId, useState } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
 import type { CategoryDecision } from '@core/data/assembly/recommendation/types';
-import { partLabelAr } from '@/lib/build/labels';
 import { PROPOSAL } from './copy';
 import { arabicNumber } from './arabicCount';
 import { compatRuleLabelAr } from './compatLabels';
@@ -203,6 +202,18 @@ export const ProposalCategoryCard: React.FC<{
    * under «المستقبل». Handing it one shelf makes that impossible to express.
    */
   categoryParts: Readonly<Record<string, BasePart>>;
+  /**
+   * The category's Arabic heading, ALREADY RESOLVED AND ALREADY PROVEN.
+   *
+   * The card used to call `partLabelAr(decision.category)`, whose contract is
+   * `PART_VOCAB[c]?.ar ?? c` — so an unknown category printed its own raw key,
+   * `probe-category`, as the heading of a card in a product written in Arabic.
+   * The screen now looks the label up strictly and only reaches this component
+   * for a category the integrity pass has already accepted, which is why this
+   * is a plain `string` with no fallback: there is nothing left to fall back
+   * from, and no way to express one from in here.
+   */
+  categoryLabelAr: string;
   /** Settled categories collapse; the ones needing the reader do not. */
   compact: boolean;
   /**
@@ -213,9 +224,8 @@ export const ProposalCategoryCard: React.FC<{
    * is noise when it is one of eight.
    */
   expandCandidates: boolean;
-}> = ({ decision, parts, categoryParts, compact, expandCandidates }) => {
+}> = ({ decision, parts, categoryParts, categoryLabelAr, compact, expandCandidates }) => {
   const part = decision.partId ? parts[decision.category] : undefined;
-  const label = partLabelAr(decision.category);
 
   const details = (
     <div style={{ display: 'grid', gap: 10, paddingTop: 4 }}>
@@ -236,7 +246,7 @@ export const ProposalCategoryCard: React.FC<{
       style={{ padding: '13px 15px', display: 'grid', gap: 8, listStyle: 'none' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <h4 style={{ margin: 0, fontSize: 13, color: 'var(--text-dimmer)', fontWeight: 700 }}>
-          {label}
+          {categoryLabelAr}
         </h4>
         <StatusBadge decision={decision} />
       </div>

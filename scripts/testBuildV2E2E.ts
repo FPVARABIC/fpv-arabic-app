@@ -23,6 +23,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { chromium, type Browser, type Page } from 'playwright';
 import { chromiumLaunchOptions } from './lib/browser';
+import { PART_VOCAB } from '../web/lib/build/labels';
 
 const PORT = 3181;
 const BASE = `http://localhost:${PORT}`;
@@ -797,6 +798,27 @@ async function main() {
       const latinKeys = proposalText.match(/\b[a-z]+(?:-[a-z0-9]+){1,}\b/g) ?? [];
       ok(`${name}: no internal identifier is visible anywhere in the proposal `
         + `(${latinKeys.slice(0, 3).join(', ') || 'none'})`, latinKeys.length === 0);
+
+      /*
+       * THE HEADINGS, AGAINST THE VOCABULARY — because the kebab-case sweep
+       * above would not catch a category key that happens to be one word, or
+       * camelCase like `videoUnits`. Every card's heading must be the Arabic
+       * name this surface holds for that category, character for character.
+       * A raw key in a heading fails here even when it looks innocent.
+       */
+      const headings = await page.locator('[data-testid^="v2-cat-"]').evaluateAll(
+        els => els.map(el => ({
+          category: (el.getAttribute('data-testid') ?? '').replace('v2-cat-', ''),
+          heading: (el.querySelector('h4')?.textContent ?? '').trim(),
+        })));
+      ok(`${name}: every card has a heading (${headings.length} cards)`,
+        headings.length > 0 && headings.every(h => h.heading !== ''));
+      const wrongHeading = headings.filter(h => h.heading !== PART_VOCAB[h.category]?.ar);
+      ok(`${name}: every heading is the Arabic category name, never the key `
+        + `(${wrongHeading.map(h => `${h.category}→${h.heading}`).join(', ') || 'all correct'})`,
+        wrongHeading.length === 0);
+      ok(`${name}: …and no heading is its own category key`,
+        headings.every(h => h.heading !== h.category));
       await compatBtn.click();
       await page.waitForTimeout(100);
 
