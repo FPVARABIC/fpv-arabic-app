@@ -195,7 +195,14 @@ const PartBody: React.FC<{ category: string; part: BasePart }> = ({ category, pa
 export const ProposalCategoryCard: React.FC<{
   decision: CategoryDecision;
   parts: Readonly<Record<string, BasePart>>;
-  partsById: Readonly<Record<string, BasePart>>;
+  /**
+   * Only THIS category's parts.
+   *
+   * The card used to receive the whole catalogue keyed by id, so a candidate
+   * id belonging to another category resolved and rendered — a frame's name
+   * under «المستقبل». Handing it one shelf makes that impossible to express.
+   */
+  categoryParts: Readonly<Record<string, BasePart>>;
   /** Settled categories collapse; the ones needing the reader do not. */
   compact: boolean;
   /**
@@ -206,7 +213,7 @@ export const ProposalCategoryCard: React.FC<{
    * is noise when it is one of eight.
    */
   expandCandidates: boolean;
-}> = ({ decision, parts, partsById, compact, expandCandidates }) => {
+}> = ({ decision, parts, categoryParts, compact, expandCandidates }) => {
   const part = decision.partId ? parts[decision.category] : undefined;
   const label = partLabelAr(decision.category);
 
@@ -259,7 +266,7 @@ export const ProposalCategoryCard: React.FC<{
       {decision.status === 'choice-required' && (
         <Candidates
           decision={decision}
-          partsById={partsById}
+          categoryParts={categoryParts}
           defaultOpen={expandCandidates}
         />
       )}
@@ -275,22 +282,24 @@ export const ProposalCategoryCard: React.FC<{
  */
 const Candidates: React.FC<{
   decision: CategoryDecision;
-  partsById: Readonly<Record<string, BasePart>>;
+  categoryParts: Readonly<Record<string, BasePart>>;
   defaultOpen: boolean;
-}> = ({ decision, partsById, defaultOpen }) => {
+}> = ({ decision, categoryParts, defaultOpen }) => {
   const list = (
         <div style={{ display: 'grid', gap: 7 }}>
           <ul data-testid={`v2-candidates-${decision.category}`}
             style={{ margin: 0, padding: 0, display: 'grid', gap: 6, listStyle: 'none' }}>
             {/*
-              NO `?? id` FALLBACK. A candidate the catalogue cannot resolve is
+              NO `?? id` FALLBACK. A candidate this CATEGORY cannot resolve —
+              missing entirely, or real but belonging to another category — is
               an integrity defect that refuses the whole proposal upstream, so
-              every id here is known to resolve. The non-null assertion is that
-              guarantee written down — if it ever breaks, the reader gets a
-              refusal, not a database key wearing a product's clothes.
+              every id here is known to resolve on this shelf. The non-null
+              assertion is that guarantee written down: if it ever breaks, the
+              reader gets a refusal, not a database key wearing a product's
+              clothes, and not a frame wearing a receiver's.
             */}
             {decision.candidateIds.map(id => {
-              const c = partsById[id]!;
+              const c = categoryParts[id]!;
               return (
                 <li key={id} data-testid={`v2-candidate-${id}`} data-selected="false"
                   style={{

@@ -86,6 +86,15 @@ export type ProposalDefect =
   | { kind: 'part-mismatch'; category: string; id: string }
   /** A surviving candidate the catalogue cannot resolve. */
   | { kind: 'unresolved-candidate'; category: string; id: string }
+  /**
+   * A part that EXISTS — in a different category.
+   *
+   * Its own kind, because the diagnosis is not the same as «missing». A
+   * missing id is a stale catalogue; a foreign one is a decision pointing at
+   * the wrong shelf, and it is the more dangerous of the two: it resolves, it
+   * renders, and it looks like a real answer.
+   */
+  | { kind: 'foreign-category'; category: string; id: string }
   /** A manual check the UI has no reader-facing description for. */
   | { kind: 'unlabelled-manual-check'; category: null; id: string };
 
@@ -116,7 +125,22 @@ export interface ProposalView {
  * function a deliberately broken world without touching either.
  */
 export interface ProposalContext {
-  resolvePart: (id: string) => BasePart | undefined;
+  /**
+   * Resolve an id WITHIN a category — never across the catalogue.
+   *
+   * The first version took the id alone and looked it up in one flat map. It
+   * confirmed the part exists and stopped there, which is a weaker guarantee
+   * than it reads as: a frame's id in the receivers' candidate list resolved
+   * cleanly, and a `motors` decision selecting a frame passed every check and
+   * rendered «إطار 5.1 إنش» under «المحركات» — with no spec rows at all,
+   * because `partFacts('motors', frame)` finds no motor keys in a frame.
+   *
+   * Nothing failed. It just quietly showed the wrong product under the right
+   * heading, with the right decision's reasons attached to it.
+   */
+  resolvePart: (category: string, id: string) => BasePart | undefined;
+  /** Does this id exist ANYWHERE? Only used to tell «missing» from «foreign». */
+  existsInAnyCategory: (id: string) => boolean;
   hasManualLabel: (id: string) => boolean;
 }
 
@@ -146,8 +170,12 @@ export function proposalDefects(
     }
 
     if (d.partId !== undefined) {
-      if (ctx.resolvePart(d.partId) === undefined) {
-        defects.push({ kind: 'unresolved-part', category: d.category, id: d.partId });
+      if (ctx.resolvePart(d.category, d.partId) === undefined) {
+        defects.push({
+          kind: ctx.existsInAnyCategory(d.partId) ? 'foreign-category' : 'unresolved-part',
+          category: d.category,
+          id: d.partId,
+        });
       }
       const shown = build.parts[d.category];
       if (shown === undefined || shown.id !== d.partId) {
@@ -156,8 +184,12 @@ export function proposalDefects(
     }
 
     for (const id of d.candidateIds) {
-      if (ctx.resolvePart(id) === undefined) {
-        defects.push({ kind: 'unresolved-candidate', category: d.category, id });
+      if (ctx.resolvePart(d.category, id) === undefined) {
+        defects.push({
+          kind: ctx.existsInAnyCategory(id) ? 'foreign-category' : 'unresolved-candidate',
+          category: d.category,
+          id,
+        });
       }
     }
   }

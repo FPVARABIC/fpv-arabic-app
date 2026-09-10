@@ -296,6 +296,12 @@ export const PROPOSAL = {
       'unresolved-part': 'قطعة مختارة غير موجودة في الكتالوج الحالي.',
       'part-mismatch': 'القطعة المعروضة لا تطابق القطعة التي حسمها النظام.',
       'unresolved-candidate': 'أحد الخيارات المتوافقة غير موجود في الكتالوج الحالي.',
+      /*
+       * «موجودة لكن في فئة أخرى» is a different failure from «غير موجودة»,
+       * and the more dangerous one: it resolves, it renders, and it looks like
+       * an answer. A frame under «المحركات» is not a missing part.
+       */
+      'foreign-category': 'قطعة من فئة أخرى وُضعت في غير موضعها.',
       'unlabelled-manual-check': 'هناك فحص يدوي لا تملك الواجهة وصفًا له.',
     },
   },

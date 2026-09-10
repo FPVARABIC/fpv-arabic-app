@@ -6,7 +6,9 @@ import type { ProposedBuild } from '@core/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import { PROPOSAL } from './copy';
 import { arabicCount, CHOICE_NOUN } from './arabicCount';
-import { proposalBurdenAr, proposalView, type DecisionGroup } from './proposalModel';
+import {
+  proposalBurdenAr, proposalView, type DecisionGroup, type ProposalDefectKind,
+} from './proposalModel';
 import { ProposalCategoryCard } from './ProposalCategoryCard';
 
 /**
@@ -26,18 +28,38 @@ import { ProposalCategoryCard } from './ProposalCategoryCard';
  * omission.
  */
 
-/** Candidate ids resolve against the same catalogue the engine ranked. */
-function useCatalogue(): Readonly<Record<string, BasePart>> {
+/**
+ * The catalogue, INDEXED BY CATEGORY — not flattened into one id map.
+ *
+ * The flat version answered «does this id exist», which is not the question
+ * the screen needs answered. A `receivers` decision naming a frame's id got a
+ * part back and rendered it. Keeping the shelves apart makes the wrong shelf
+ * an error instead of a lookup that happens to succeed.
+ */
+interface Catalogue {
+  byCategory: Readonly<Record<string, Readonly<Record<string, BasePart>>>>;
+  allIds: ReadonlySet<string>;
+}
+
+function useCatalogue(): Catalogue {
   return useMemo(() => {
-    const byId: Record<string, BasePart> = {};
-    for (const list of Object.values(PART_CATEGORY_MAP)) {
-      for (const p of list) byId[p.id] = p;
+    const byCategory: Record<string, Record<string, BasePart>> = {};
+    const allIds = new Set<string>();
+    for (const [category, list] of Object.entries(PART_CATEGORY_MAP)) {
+      byCategory[category] = {};
+      for (const p of list) {
+        byCategory[category][p.id] = p;
+        allIds.add(p.id);
+      }
     }
-    return byId;
+    return { byCategory, allIds };
   }, []);
 }
 
 const GROUP_ORDER: readonly DecisionGroup[] = ['needs-you', 'system-decided', 'yours', 'problem'];
+
+/** Typed against the defect union, so a new kind cannot ship without wording. */
+const CONSISTENCY_KINDS: Record<ProposalDefectKind, string> = PROPOSAL.consistency.kinds;
 
 /**
  * WHEN AN OPEN DECISION SHOWS ITS OPTIONS WITHOUT BEING ASKED.
@@ -58,16 +80,18 @@ const expandsByDefault = (candidateCount: number, openDecisions: number) =>
   candidateCount <= SHORT_LIST && openDecisions <= LIGHT_LOAD;
 
 export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) => {
-  const partsById = useCatalogue();
+  const catalogue = useCatalogue();
   /*
    * The integrity context: what the model needs to check that everything the
-   * screen is about to name actually exists. Passed in rather than imported by
-   * the model, so a test can hand it a deliberately broken catalogue.
+   * screen is about to name exists IN THE CATEGORY IT IS SHOWN UNDER. Passed
+   * in rather than imported by the model, so a test can hand it a deliberately
+   * broken catalogue.
    */
   const view = useMemo(() => proposalView(build, {
-    resolvePart: id => partsById[id],
+    resolvePart: (category, id) => catalogue.byCategory[category]?.[id],
+    existsInAnyCategory: id => catalogue.allIds.has(id),
     hasManualLabel: id => id in PROPOSAL.manual.labels,
-  }), [build, partsById]);
+  }), [build, catalogue]);
 
   /*
    * ANYTHING THE SCREEN CANNOT HONESTLY RENDER STOPS IT.
@@ -97,7 +121,7 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
           {kinds.map(k => (
             <li key={k} data-testid={`v2-defect-${k}`}
               style={{ fontSize: 12.5, lineHeight: 1.85 }}>
-              {PROPOSAL.consistency.kinds[k]}
+              {CONSISTENCY_KINDS[k]}
             </li>
           ))}
         </ul>
@@ -181,7 +205,7 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
                   key={d.category}
                   decision={d}
                   parts={build.parts}
-                  partsById={partsById}
+                  categoryParts={catalogue.byCategory[d.category] ?? {}}
                   // Settled categories collapse. The ones needing the reader do
                   // not — that decision is why they opened this screen.
                   compact={g === 'system-decided' || g === 'yours'}

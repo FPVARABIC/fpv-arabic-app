@@ -57,9 +57,18 @@ const CATALOGUE: Record<string, ReturnType<typeof Object.values> extends never ?
   : (typeof PART_CATEGORY_MAP)[string][number]> = {};
 for (const list of Object.values(PART_CATEGORY_MAP)) for (const p of list) CATALOGUE[p.id] = p;
 
-/** The real world: the live catalogue and the copy file's manual labels. */
+/**
+ * The real world, indexed the way the screen indexes it: one shelf per
+ * category, plus a flat set used ONLY to tell «missing» from «foreign».
+ */
+const BY_CATEGORY: Record<string, Record<string, typeof CATALOGUE[string]>> = {};
+for (const [category, list] of Object.entries(PART_CATEGORY_MAP)) {
+  BY_CATEGORY[category] = {};
+  for (const p of list) BY_CATEGORY[category][p.id] = p;
+}
 const CTX: ProposalContext = {
-  resolvePart: id => CATALOGUE[id],
+  resolvePart: (category, id) => BY_CATEGORY[category]?.[id],
+  existsInAnyCategory: id => id in CATALOGUE,
   hasManualLabel: id => id in PROPOSAL.manual.labels,
 };
 
@@ -554,15 +563,141 @@ ok('…and «current-headroom» is one of them, with its honest wording kept',
  */
 const DEFECT_KINDS: readonly ProposalDefectKind[] = [
   'unavailable-required', 'unresolved-part', 'part-mismatch',
-  'unresolved-candidate', 'unlabelled-manual-check',
+  'unresolved-candidate', 'foreign-category', 'unlabelled-manual-check',
 ];
 ok('every defect kind has reader-facing Arabic',
   DEFECT_KINDS.every(k => (PROPOSAL.consistency.kinds[k] ?? '').trim() !== ''));
 ok('no defect wording contains a Latin identifier',
   DEFECT_KINDS.every(k => !/[a-zA-Z]{4,}/.test(PROPOSAL.consistency.kinds[k])));
 ok('the screen prints kinds, never the defect ids',
-  /PROPOSAL\.consistency\.kinds\[k\]/.test(src['ProposalScreen.tsx'])
+  /CONSISTENCY_KINDS\[k\]/.test(src['ProposalScreen.tsx'])
   && !/defects\.map\(d => d\.id/.test(src['ProposalScreen.tsx']));
+/*
+ * And the wording table is typed against the defect union, so a new kind
+ * cannot ship without a sentence — the same guarantee `COMPAT_RULE_LABEL_AR`
+ * gives for rules, one layer up.
+ */
+ok('the kind→Arabic table is typed by the defect union',
+  /Record<ProposalDefectKind, string> = PROPOSAL\.consistency\.kinds/
+    .test(src['ProposalScreen.tsx']));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('11d — A PART BELONGS TO A CATEGORY, NOT JUST TO THE CATALOGUE');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The integrity check asked «does this id exist» and stopped there. That is a
+ * weaker guarantee than it reads as, and both halves of it were exploitable:
+ *
+ *   · a frame's id in the receivers' candidate list resolved and rendered;
+ *   · a `motors` decision selecting a frame passed every check and drew
+ *     «إطار 5.1 إنش» under «المحركات» — with NO spec rows, because
+ *     `partFacts('motors', frame)` finds no motor keys in a frame.
+ *
+ * Nothing failed. It showed the wrong product under the right heading, with
+ * the right decision's reasons attached to it. Resolution is per-category now,
+ * and a foreign part is its own diagnosis: «exists, wrong shelf» is not the
+ * same bug as «does not exist».
+ */
+const FRAME_ID = PART_CATEGORY_MAP.frames[0].id;
+const motorsDecision = healthy.decisions.find(d => d.category === 'motors')!;
+
+ok('the fixture really is a frame from another category',
+  BY_CATEGORY.frames[FRAME_ID] !== undefined
+  && BY_CATEGORY.motors[FRAME_ID] === undefined
+  && FRAME_ID in CATALOGUE);
+
+// A foreign CANDIDATE.
+const foreignCandidate = {
+  ...healthy,
+  decisions: healthy.decisions.map(d => (d.category === 'receivers'
+    ? { ...d, candidateIds: [...d.candidateIds, FRAME_ID] } : d)),
+} as ProposedBuild;
+ok('a frame offered as a receiver candidate is a defect',
+  kindsOf(proposalDefects(foreignCandidate, CTX)).includes('foreign-category'));
+ok('…so the proposal is refused', proposalView(foreignCandidate, CTX).consistencyError);
+ok('…and it is NOT reported as «missing» — it exists, on the wrong shelf',
+  !kindsOf(proposalDefects(foreignCandidate, CTX)).includes('unresolved-candidate'));
+
+// A foreign SELECTION.
+const foreignSelection = {
+  ...healthy,
+  decisions: healthy.decisions.map(d => (d.category === 'motors'
+    ? { ...d, partId: FRAME_ID } : d)),
+  parts: { ...healthy.parts, motors: CATALOGUE[FRAME_ID] },
+} as ProposedBuild;
+ok('a frame selected as the motors decision is a defect',
+  kindsOf(proposalDefects(foreignSelection, CTX)).includes('foreign-category'));
+ok('…so the proposal is refused', proposalView(foreignSelection, CTX).consistencyError);
+ok('…and the part/decision pair is otherwise self-consistent, so ONLY the '
+  + 'category check could have caught it',
+  !kindsOf(proposalDefects(foreignSelection, CTX)).includes('part-mismatch'));
+
+/*
+ * The silent half: a foreign part renders no facts at all, because the spec
+ * keys of one category mean nothing in another. That is what «looked
+ * plausible» meant — a card with a name and nothing under it.
+ */
+ok('a frame under «motors» would have produced an empty, plausible-looking card',
+  partFacts('motors', CATALOGUE[FRAME_ID]).length === 0
+  && partFacts('frames', CATALOGUE[FRAME_ID]).length > 0);
+
+// And a genuinely absent id is still «missing», not «foreign».
+const absent = {
+  ...healthy,
+  decisions: healthy.decisions.map((d, i) => (i === 0
+    ? { ...d, candidateIds: [...d.candidateIds, 'probe-nowhere-at-all'] } : d)),
+} as ProposedBuild;
+ok('an id in no category at all is still reported as missing',
+  kindsOf(proposalDefects(absent, CTX)).includes('unresolved-candidate')
+  && !kindsOf(proposalDefects(absent, CTX)).includes('foreign-category'));
+
+// Every real build still resolves cleanly, per category.
+for (const [label, input] of BURDEN_CASES) {
+  const build = b(input);
+  ok(`${label}: every id resolves inside its own category`,
+    build.decisions.every(d =>
+      (d.partId === undefined || BY_CATEGORY[d.category]?.[d.partId] !== undefined)
+      && d.candidateIds.every(id => BY_CATEGORY[d.category]?.[id] !== undefined)));
+}
+
+// The wiring: neither component may hold a flat, category-blind index again.
+ok('the screen indexes the catalogue BY CATEGORY',
+  /byCategory\[category\]\[p\.id\] = p/.test(src['ProposalScreen.tsx']));
+
+/*
+ * READ THE WHOLE EXPRESSION, NOT ITS FIRST CLAUSE.
+ *
+ * The first version of this assertion matched the category lookup as a prefix
+ * — and a probe that appended `?? flatMap[id]` to the very same line sailed
+ * through it, because the prefix was still there. A resolver with a fallback
+ * is a category-blind resolver wearing a category-aware opening.
+ */
+const resolveLine = (src['ProposalScreen.tsx'].split('\n')
+  .find(l => l.includes('resolvePart:')) ?? '');
+ok('the resolver goes through the category',
+  /catalogue\.byCategory\[category\]\?\.\[id\]/.test(resolveLine));
+ok('…with NO fallback of any kind on that line', resolveLine !== '' && !resolveLine.includes('??'));
+
+/*
+ * And there is no flat part map to fall back TO. The catalogue's only
+ * cross-category member is a Set of ids, used solely to tell «missing» from
+ * «foreign» — a Set cannot hand anyone a part.
+ */
+ok('the catalogue exposes ids across categories, never parts',
+  /allIds: ReadonlySet<string>/.test(src['ProposalScreen.tsx'])
+  && !/Record<string, BasePart>;\n\s*allIds/.test(src['ProposalScreen.tsx']));
+ok('no component builds a flat id→part index',
+  !/byId\[p\.id\] = p/.test(allCode) && !/__flat/.test(allCode));
+
+ok('the card receives exactly one shelf',
+  /categoryParts=\{catalogue\.byCategory\[d\.category\] \?\? \{\}\}/
+    .test(src['ProposalScreen.tsx']));
+ok('…and the card resolves only within it',
+  /categoryParts\[id\]/.test(src['ProposalCategoryCard.tsx'])
+  && !/partsById/.test(src['ProposalCategoryCard.tsx']));
+ok('«foreign-category» has reader-facing Arabic with no id in it',
+  /فئة أخرى/.test(PROPOSAL.consistency.kinds['foreign-category'])
+  && !/[a-zA-Z]{4,}/.test(PROPOSAL.consistency.kinds['foreign-category']));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('12 — SCOPE: NOTHING PHASE 2C WAS NOT ASKED FOR');
