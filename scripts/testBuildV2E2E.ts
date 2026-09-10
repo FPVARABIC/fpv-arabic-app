@@ -771,6 +771,22 @@ async function main() {
         ruleId !== '' && !ruleText.includes(ruleId));
       ok(`${name}: …the id is still on the element for machines`,
         /^[a-z-]+$/.test(ruleId));
+      if (name === '390px') {
+        /*
+         * The CARD, not the page. A full-page shot puts the site's sticky nav
+         * over exactly the rows this is evidence of — the assertions above
+         * read them either way, but a screenshot nobody can read is not
+         * evidence.
+         */
+        const panel = page.locator(
+          `[data-testid="v2-cat-${compatCategory}"] ul:has(li[data-rule])`);
+        // Centre it first: the site's sticky nav paints over the bottom of the
+        // viewport, and an element screenshot captures whatever is on top.
+        await panel.scrollIntoViewIfNeeded();
+        await page.evaluate(() => window.scrollBy(0, -200));
+        await page.waitForTimeout(150);
+        await panel.screenshot({ path: `${SHOTS}/15-compat-detail-390.png` });
+      }
 
       /*
        * And the whole proposal, read as one string: no kebab-cased Latin
