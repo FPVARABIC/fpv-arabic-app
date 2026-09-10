@@ -226,10 +226,13 @@ export const BuildV2Preview: React.FC = () => {
   const readiness = readinessOf(build, answers.owned);
 
   const rows: SummaryRow[] = [];
-  if (answers.droneTypeId) {
+  // No row rather than a row naming the id — see `summaryValue.droneType`.
+  const droneTypeName = answers.droneTypeId
+    ? summaryValue.droneType(answers.droneTypeId) : undefined;
+  if (droneTypeName) {
     rows.push({
       key: 'droneType', label: SUMMARY.fields.droneType,
-      value: summaryValue.droneType(answers.droneTypeId), provenance: 'chosen',
+      value: droneTypeName, provenance: 'chosen',
     });
   }
   if (build?.sizeInch !== undefined) {

@@ -744,6 +744,46 @@ async function main() {
         document.querySelector('[data-testid="v2-proposal"]')!.getBoundingClientRect().height));
       console.log(`      proposal expanded by one card: ${expanded}px (was ${pa.fullPx}px)`);
       ok(`${name}: expanding actually reveals content`, expanded > pa.fullPx);
+
+      /*
+       * COMPATIBILITY DETAIL: THE RULE'S NAME, NOT ITS KEY.
+       *
+       * This disclosure rendered `frame-size` — English, kebab-cased, a
+       * database identifier — to a reader who has never built a drone. The
+       * check opens a real recommended card's detail and reads what is on the
+       * screen: the Arabic description present, the identifier absent from the
+       * text but still on the element as a machine hook.
+       */
+      const compatCategory = (await firstMore.getAttribute('data-testid'))!
+        .replace('v2-more-', '');
+      const compatBtn = page.locator(`[data-testid="v2-compat-more-${compatCategory}"]`);
+      await compatBtn.click();
+      await page.waitForTimeout(150);
+      const ruleRows = page.locator(`[data-testid="v2-cat-${compatCategory}"] li[data-rule]`);
+      ok(`${name}: the compatibility detail lists the rules that ran`,
+        await ruleRows.count() >= 1);
+      const ruleText = (await ruleRows.first().textContent()) ?? '';
+      const ruleId = (await ruleRows.first().getAttribute('data-rule')) ?? '';
+      ok(`${name}: …the row is Arabic prose`,
+        (ruleText.match(/[\u0621-\u064A]+/g) ?? []).length >= 3);
+      ok(`${name}: …and carries the verdict`, /سليم|مخالف|غير مؤكد/.test(ruleText));
+      ok(`${name}: …the raw rule id is NOT in the visible text (${ruleId})`,
+        ruleId !== '' && !ruleText.includes(ruleId));
+      ok(`${name}: …the id is still on the element for machines`,
+        /^[a-z-]+$/.test(ruleId));
+
+      /*
+       * And the whole proposal, read as one string: no kebab-cased Latin
+       * identifier anywhere. That covers part ids, rule ids and finding ids in
+       * one assertion, on the text a reader actually sees.
+       */
+      const proposalText = (await page.locator('[data-testid="v2-proposal"]').innerText()) ?? '';
+      const latinKeys = proposalText.match(/\b[a-z]+(?:-[a-z0-9]+){1,}\b/g) ?? [];
+      ok(`${name}: no internal identifier is visible anywhere in the proposal `
+        + `(${latinKeys.slice(0, 3).join(', ') || 'none'})`, latinKeys.length === 0);
+      await compatBtn.click();
+      await page.waitForTimeout(100);
+
       if (name === '390px') {
         await page.screenshot({ path: `${SHOTS}/12-proposal-390.png`, fullPage: true });
       }

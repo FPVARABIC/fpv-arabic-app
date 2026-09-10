@@ -58,23 +58,49 @@ const expandsByDefault = (candidateCount: number, openDecisions: number) =>
   candidateCount <= SHORT_LIST && openDecisions <= LIGHT_LOAD;
 
 export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) => {
-  const view = useMemo(() => proposalView(build), [build]);
   const partsById = useCatalogue();
+  /*
+   * The integrity context: what the model needs to check that everything the
+   * screen is about to name actually exists. Passed in rather than imported by
+   * the model, so a test can hand it a deliberately broken catalogue.
+   */
+  const view = useMemo(() => proposalView(build, {
+    resolvePart: id => partsById[id],
+    hasManualLabel: id => id in PROPOSAL.manual.labels,
+  }), [build, partsById]);
 
   /*
-   * A proven build with an unavailable REQUIRED category is a contradiction.
-   * Rather than draw a normal card over it, the screen refuses — an
-   * inconsistency the reader can see is recoverable; one hidden inside a
-   * plausible-looking proposal is not.
+   * ANYTHING THE SCREEN CANNOT HONESTLY RENDER STOPS IT.
+   *
+   * A proven build with an unavailable required category is a contradiction; so
+   * is a decision naming a part the catalogue does not have, or a card about to
+   * show a different part from the one the decision selected. Each of those
+   * once had a fallback that printed the id.
+   *
+   * The reasons are listed IN KIND. `data-defects` carries the kinds for tests;
+   * the ids reach no visible string.
    */
   if (view.consistencyError) {
+    const kinds = [...new Set(view.defects.map(d => d.kind))];
     return (
       <section data-testid="v2-proposal" data-quality="inconsistent"
-        style={{ display: 'grid', gap: 12 }}>
-        <p role="alert" data-testid="v2-proposal-inconsistent"
-          style={{ margin: 0, fontSize: 13.5, color: 'var(--sev-warning)', lineHeight: 1.9 }}>
-          {PROPOSAL.consistencyError}
+        data-defects={kinds.join(' ')} style={{ display: 'grid', gap: 10 }}>
+        <h2 role="alert" data-testid="v2-proposal-inconsistent"
+          style={{ margin: 0, fontSize: 17, fontWeight: 900,
+            color: 'var(--sev-warning)', lineHeight: 1.7 }}>
+          {PROPOSAL.consistency.title}
+        </h2>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.9 }}>
+          {PROPOSAL.consistency.lead}
         </p>
+        <ul style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
+          {kinds.map(k => (
+            <li key={k} data-testid={`v2-defect-${k}`}
+              style={{ fontSize: 12.5, lineHeight: 1.85 }}>
+              {PROPOSAL.consistency.kinds[k]}
+            </li>
+          ))}
+        </ul>
       </section>
     );
   }
@@ -121,9 +147,16 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
           </span>
           <ul style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
             {view.manualChecks.map(id => (
+              /*
+                No `?? id` fallback. An unlabelled manual check is a defect
+                that refuses the whole proposal above, so by the time this
+                renders the label is guaranteed to exist — and if that
+                guarantee ever breaks, the reader gets a refusal rather than a
+                finding id presented as a safety instruction.
+              */
               <li key={id} data-testid={`v2-manual-${id}`}
                 style={{ fontSize: 12.5, lineHeight: 1.85 }}>
-                {PROPOSAL.manual.labels[id] ?? id}
+                {PROPOSAL.manual.labels[id]}
               </li>
             ))}
           </ul>

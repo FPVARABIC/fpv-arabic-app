@@ -6,6 +6,7 @@ import type { CategoryDecision } from '@core/data/assembly/recommendation/types'
 import { partLabelAr } from '@/lib/build/labels';
 import { PROPOSAL } from './copy';
 import { arabicNumber } from './arabicCount';
+import { compatRuleLabelAr } from './compatLabels';
 import { partFacts, partNoteTag, partWhyTag } from './partFacts';
 
 /** A product name is Latin text inside an Arabic sentence. Isolate it. */
@@ -122,10 +123,20 @@ const Compat: React.FC<{ decision: CategoryDecision }> = ({ decision }) => {
         {headline}
       </p>
       <Disclose label={PROPOSAL.compat.disclose} testId={`v2-compat-more-${decision.category}`}>
+        {/*
+          THE RULE'S NAME, NOT ITS KEY.
+
+          This rendered `frame-size` — an English kebab-cased database
+          identifier, inside a disclosure where it was easy to miss, in a
+          product written for someone who has never built a drone. The label
+          is an exhaustive map over `CompatRuleId`, so a new rule cannot reach
+          this list without someone writing the sentence a reader will see.
+        */}
         <ul style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 3 }}>
           {ev.map(e => (
-            <li key={e.ruleId} style={{ fontSize: 12, lineHeight: 1.8 }}>
-              <Ltr>{e.ruleId}</Ltr>
+            <li key={e.ruleId} data-rule={e.ruleId}
+              style={{ fontSize: 12, lineHeight: 1.8 }}>
+              {compatRuleLabelAr(e.ruleId)}
               {' — '}
               {PROPOSAL.compat.status[e.status]}
             </li>
@@ -271,20 +282,25 @@ const Candidates: React.FC<{
         <div style={{ display: 'grid', gap: 7 }}>
           <ul data-testid={`v2-candidates-${decision.category}`}
             style={{ margin: 0, padding: 0, display: 'grid', gap: 6, listStyle: 'none' }}>
+            {/*
+              NO `?? id` FALLBACK. A candidate the catalogue cannot resolve is
+              an integrity defect that refuses the whole proposal upstream, so
+              every id here is known to resolve. The non-null assertion is that
+              guarantee written down — if it ever breaks, the reader gets a
+              refusal, not a database key wearing a product's clothes.
+            */}
             {decision.candidateIds.map(id => {
-              const c = partsById[id];
+              const c = partsById[id]!;
               return (
                 <li key={id} data-testid={`v2-candidate-${id}`} data-selected="false"
                   style={{
                     padding: '9px 11px', border: '1px solid var(--border-soft)',
                     borderRadius: 8, display: 'grid', gap: 3,
                   }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>{c?.nameAr ?? id}</span>
-                  {c && (
-                    <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
-                      <Ltr>{c.brand ? `${c.brand} · ${c.nameEn}` : c.nameEn}</Ltr>
-                    </span>
-                  )}
+                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>{c.nameAr}</span>
+                  <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+                    <Ltr>{c.brand ? `${c.brand} · ${c.nameEn}` : c.nameEn}</Ltr>
+                  </span>
                 </li>
               );
             })}

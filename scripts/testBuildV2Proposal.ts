@@ -26,7 +26,12 @@ import { join } from 'node:path';
 import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
 import type { ProposedBuild } from '../src/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '../src/data/project/store';
-import { proposalView, proposalBurdenAr, groupOf } from '../web/components/build/v2/proposalModel';
+import { SHARED_COMPAT_RULES } from '../src/data/assembly/compatibility/rules';
+import {
+  proposalView, proposalBurdenAr, groupOf, proposalDefects,
+  type ProposalContext, type ProposalDefectKind,
+} from '../web/components/build/v2/proposalModel';
+import { COMPAT_RULE_LABEL_AR, compatRuleLabelAr } from '../web/components/build/v2/compatLabels';
 import { arabicCount, CHOICE_NOUN, arabicNumber } from '../web/components/build/v2/arabicCount';
 import { partFacts } from '../web/components/build/v2/partFacts';
 import { PROPOSAL, SUMMARY } from '../web/components/build/v2/copy';
@@ -48,7 +53,18 @@ const src = Object.fromEntries(readdirSync(V2).filter(f => /\.tsx?$/.test(f))
   .map(f => [f, code(read(join(V2, f)))]));
 const allCode = Object.values(src).join('\n');
 
+const CATALOGUE: Record<string, ReturnType<typeof Object.values> extends never ? never
+  : (typeof PART_CATEGORY_MAP)[string][number]> = {};
+for (const list of Object.values(PART_CATEGORY_MAP)) for (const p of list) CATALOGUE[p.id] = p;
+
+/** The real world: the live catalogue and the copy file's manual labels. */
+const CTX: ProposalContext = {
+  resolvePart: id => CATALOGUE[id],
+  hasManualLabel: id => id in PROPOSAL.manual.labels,
+};
+
 const b = (input: Record<string, unknown>) => proposeBuild(input as never);
+const view = (input: Record<string, unknown>) => proposalView(b(input), CTX);
 const FREESTYLE_MID = { droneTypeId: 'freestyle', cellCount: 6, budgetTier: 'mid', owned: {} };
 const FREESTYLE_NONE = { droneTypeId: 'freestyle', cellCount: 6, owned: {} };
 const FREESTYLE_DJI = {
@@ -76,7 +92,7 @@ const BURDEN_CASES: Array<[string, Record<string, unknown>]> = [
 const pad = (s: string, n: number) => s + ' '.repeat(Math.max(0, n - s.length));
 console.log(`  ${pad('build', 32)}req rec only choice lock unav manual  quality`);
 for (const [label, input] of BURDEN_CASES) {
-  const v = proposalView(b(input));
+  const v = proposalView(b(input), CTX);
   const c = v.counts;
   console.log(`  ${pad(label, 32)}${pad(String(c.required), 4)}${pad(String(c.recommended), 4)}`
     + `${pad(String(c.onlyCompatible), 5)}${pad(String(c.choiceRequired), 7)}`
@@ -115,7 +131,7 @@ section('2 — THE COUNTS ARE DERIVED FROM THE DECISIONS');
 // ═══════════════════════════════════════════════════════════════════════════
 for (const [label, input] of BURDEN_CASES) {
   const build = b(input);
-  const c = proposalView(build).counts;
+  const c = proposalView(build, CTX).counts;
   const real = (s: string) => build.decisions.filter(d => d.status === s).length;
   ok(`${label}: every count matches the engine`,
     c.recommended === real('recommended') && c.onlyCompatible === real('only-compatible')
@@ -131,7 +147,7 @@ for (const [label, input] of BURDEN_CASES) {
  */
 for (const [label, input] of BURDEN_CASES) {
   const build = b(input);
-  const v = proposalView(build);
+  const v = proposalView(build, CTX);
   const placed = Object.values(v.groups).flat();
   ok(`${label}: every decision is placed exactly once`,
     placed.length === build.decisions.length
@@ -324,24 +340,24 @@ const fakeInconsistent = {
     (i === 0 ? { ...d, status: 'unavailable' as const } : d)),
 } as ProposedBuild;
 ok('an unavailable category sets the consistency flag',
-  proposalView(fakeInconsistent).consistencyError);
-ok('a healthy build does not', !proposalView(b(FREESTYLE_MID)).consistencyError);
+  proposalView(fakeInconsistent, CTX).consistencyError);
+ok('a healthy build does not', !proposalView(b(FREESTYLE_MID), CTX).consistencyError);
 ok('the screen refuses to render a proposal in that state',
   /if \(view\.consistencyError\)/.test(src['ProposalScreen.tsx']));
 ok('…and says so out loud, with role="alert"',
   /role="alert"/.test(src['ProposalScreen.tsx']));
 ok('no real representative build is inconsistent',
-  BURDEN_CASES.every(([, i]) => !proposalView(b(i)).consistencyError));
+  BURDEN_CASES.every(([, i]) => !proposalView(b(i), CTX).consistencyError));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('9 — «PROPOSED» IS NOT CLAIMED WHEN NOTHING WAS PROPOSED');
 // ═══════════════════════════════════════════════════════════════════════════
 ok('Freestyle with a budget tier IS a proposal',
-  proposalView(b(FREESTYLE_MID)).quality === 'proposed');
+  proposalView(b(FREESTYLE_MID), CTX).quality === 'proposed');
 ok('Freestyle with «لا تفضيل» recommends nothing at all',
-  proposalView(b(FREESTYLE_NONE)).counts.systemDecided === 0);
+  proposalView(b(FREESTYLE_NONE), CTX).counts.systemDecided === 0);
 ok('…so the headline weakens instead of lying',
-  proposalView(b(FREESTYLE_NONE)).quality === 'all-open');
+  proposalView(b(FREESTYLE_NONE), CTX).quality === 'all-open');
 ok('…and it still has a proven path — it is open, not broken',
   b(FREESTYLE_NONE).provenPath !== null);
 ok('the weaker headline does not say «المقترح لك»',
@@ -370,7 +386,30 @@ for (const [, input] of BURDEN_CASES) {
   }
 }
 ok(`the fact rows are not vacuously empty (${factRows} rendered across the cases)`, factRows > 10);
-ok('no component renders a part id', !/part\.id|\.partId\}/.test(allCode));
+/*
+ * THE OLD ASSERTION COULD NOT SEE THE LEAK IT WAS FOR.
+ *
+ * It grepped for `part.id`. The actual leak was `c?.nameAr ?? id` — a fallback
+ * whose variable happens to be called `id`, so the regex sailed past a line
+ * that rendered a database key as a product name. Two more of the same shape
+ * were live at the same time: `PROPOSAL.manual.labels[id] ?? id`, and the rule
+ * identifier printed straight into the compatibility detail.
+ *
+ * Structural greps cannot be trusted for this. The replacements below inject a
+ * broken world and assert on the OUTCOME.
+ */
+ok('no component uses an id as a display fallback',
+  !/\?\?\s*id\b/.test(allCode) && !/\|\|\s*id\b/.test(allCode));
+/*
+ * As TEXT. `data-rule={e.ruleId}` is a machine hook and is fine — the id may
+ * live in attributes, logs and tests. What it may not be is a sentence, so the
+ * check rejects `{e.ruleId}` only where it is a JSX child rather than an
+ * attribute value.
+ */
+ok('the raw rule id is never a text node',
+  !/(^|[^=])\{e\.ruleId\}/m.test(allCode));
+ok('…and the label is what gets rendered instead',
+  /\{compatRuleLabelAr\(e\.ruleId\)\}/.test(src['ProposalCategoryCard.tsx']));
 ok('no component renders the tier back at the reader', !/part\.tier|\.tier\}/.test(allCode));
 ok('no component dumps the whole spec bag',
   !/Object\.(keys|entries)\(\s*(part|p)\.specs/.test(allCode));
@@ -397,6 +436,133 @@ ok('every design token the proposal names exists', (() => {
   const used = [...new Set(allCode.match(/var\(--[a-zA-Z0-9-]+/g) ?? [])].map(t => t.slice(4));
   return used.every(t => globals.includes(`${t}:`));
 })());
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('11b — A COMPAT RULE HAS A NAME, NOT A KEY');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The disclosure printed `frame-size` — an English, kebab-cased database
+ * identifier, to a reader who has never built a drone. The map is exhaustive
+ * over `CompatRuleId`, so a fifth rule cannot reach this list without someone
+ * writing the sentence that will be shown.
+ */
+ok('every CompatRuleId in the shared registry has a reader-facing label',
+  SHARED_COMPAT_RULES.every(r => typeof COMPAT_RULE_LABEL_AR[r.id] === 'string'
+    && COMPAT_RULE_LABEL_AR[r.id].trim() !== ''));
+ok('…and no label is just the id in disguise',
+  Object.entries(COMPAT_RULE_LABEL_AR).every(([id, label]) =>
+    !label.includes(id) && !/[a-zA-Z-]{6,}/.test(label)));
+ok('…and the label matches the registry\'s own Arabic, so the two cannot drift',
+  SHARED_COMPAT_RULES.every(r => COMPAT_RULE_LABEL_AR[r.id] === r.whatAr));
+ok('the map covers exactly the registry, no more and no less',
+  Object.keys(COMPAT_RULE_LABEL_AR).length === SHARED_COMPAT_RULES.length);
+ok('every label is Arabic prose', Object.values(COMPAT_RULE_LABEL_AR)
+  .every(l => (l.match(/[\u0621-\u064A]+/g) ?? []).length >= 3));
+
+/*
+ * CASE A — a real recommended decision's evidence renders the LABEL, and the
+ * identifier appears nowhere in the text a reader can read.
+ */
+const evidenceIds = recommended.compatibility.map(e => e.ruleId);
+ok('the recommended decision really carries evidence to render', evidenceIds.length > 0);
+ok('…every one of its rule ids has a label',
+  evidenceIds.every(id => compatRuleLabelAr(id).trim() !== ''));
+ok('…and «frame-size» is rendered as «الإطار مقابل حجم البناء المعلن»',
+  compatRuleLabelAr('frame-size') === 'الإطار مقابل حجم البناء المعلن');
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('11c — A BROKEN WORLD IS REFUSED, NOT PRINTED');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * Every id that used to have a display fallback now has an integrity check.
+ * These inject the exact breakage each fallback existed to survive and assert
+ * the proposal is withheld — the ids stay in machine state and never become a
+ * product name, a safety instruction, or a rule description.
+ */
+const healthy = b(FREESTYLE_MID);
+const kindsOf = (ds: readonly { kind: ProposalDefectKind }[]) => ds.map(d => d.kind);
+
+ok('the healthy build has no defects at all',
+  proposalDefects(healthy, CTX).length === 0);
+
+// CASE C — a candidate id the catalogue cannot resolve.
+const MISSING = 'probe-missing-part';
+const withMissingCandidate = {
+  ...healthy,
+  decisions: healthy.decisions.map((d, i) => (i === 0
+    ? { ...d, candidateIds: [...d.candidateIds, MISSING] } : d)),
+} as ProposedBuild;
+ok('an unresolvable candidate is a defect',
+  kindsOf(proposalDefects(withMissingCandidate, CTX)).includes('unresolved-candidate'));
+ok('…so the proposal is refused',
+  proposalView(withMissingCandidate, CTX).consistencyError);
+ok('…and the missing id is not in any copy the screen can print',
+  !JSON.stringify(PROPOSAL).includes(MISSING));
+
+// CASE D — the card's part and the decision's part disagree.
+const decided = healthy.decisions.find(d => d.partId !== undefined)!;
+const swapped = {
+  ...healthy,
+  parts: { ...healthy.parts, [decided.category]: CATALOGUE[
+    Object.keys(CATALOGUE).find(id => id !== decided.partId)!] },
+} as ProposedBuild;
+ok('a card about to show a different part than the decision selected is a defect',
+  kindsOf(proposalDefects(swapped, CTX)).includes('part-mismatch'));
+ok('…so the proposal is refused', proposalView(swapped, CTX).consistencyError);
+
+const droppedPart = { ...healthy, parts: {} } as ProposedBuild;
+ok('a selected part missing from build.parts is caught too',
+  kindsOf(proposalDefects(droppedPart, CTX)).includes('part-mismatch'));
+
+const unknownPartId = {
+  ...healthy,
+  decisions: healthy.decisions.map(d => (d.partId ? { ...d, partId: MISSING } : d)),
+  parts: Object.fromEntries(Object.entries(healthy.parts)
+    .map(([c, p]) => [c, { ...p, id: MISSING }])),
+} as ProposedBuild;
+ok('a selected part the catalogue does not have is caught',
+  kindsOf(proposalDefects(unknownPartId, CTX)).includes('unresolved-part'));
+
+// CASE B — a manual check with no reader-facing description.
+const UNLABELLED = 'probe-unknown-check';
+const withUnknownCheck = { ...healthy, manualChecks: [UNLABELLED] } as ProposedBuild;
+ok('a manual check with no label is a defect',
+  kindsOf(proposalDefects(withUnknownCheck, CTX)).includes('unlabelled-manual-check'));
+ok('…so the proposal is refused rather than printing the finding id',
+  proposalView(withUnknownCheck, CTX).consistencyError);
+ok('…and the refusal names the KIND, in Arabic, with no id in it',
+  PROPOSAL.consistency.kinds['unlabelled-manual-check'].includes('فحص يدوي')
+  && !PROPOSAL.consistency.kinds['unlabelled-manual-check'].includes(UNLABELLED));
+ok('the screen has no `?? id` fallback left for manual checks',
+  !/manual\.labels\[id\]\s*\?\?/.test(src['ProposalScreen.tsx']));
+
+/*
+ * MANUAL LABEL COMPLETENESS, NON-VACUOUSLY. At least one real manual check
+ * from a real build must have been checked against the map — otherwise this
+ * whole section could pass on a catalogue that emits none.
+ */
+const realChecks = [...new Set(BURDEN_CASES.flatMap(([, i]) => [...b(i).manualChecks]))];
+ok(`every manual check real builds emit has a label (${realChecks.join(', ')})`,
+  realChecks.length > 0 && realChecks.every(id => id in PROPOSAL.manual.labels));
+ok('…and «current-headroom» is one of them, with its honest wording kept',
+  realChecks.includes('current-headroom')
+  && PROPOSAL.manual.labels['current-headroom'].includes('هامش التيار'));
+
+/*
+ * And the refusal itself must not leak. Every defect kind has Arabic wording,
+ * and the ids ride on `data-*` hooks only.
+ */
+const DEFECT_KINDS: readonly ProposalDefectKind[] = [
+  'unavailable-required', 'unresolved-part', 'part-mismatch',
+  'unresolved-candidate', 'unlabelled-manual-check',
+];
+ok('every defect kind has reader-facing Arabic',
+  DEFECT_KINDS.every(k => (PROPOSAL.consistency.kinds[k] ?? '').trim() !== ''));
+ok('no defect wording contains a Latin identifier',
+  DEFECT_KINDS.every(k => !/[a-zA-Z]{4,}/.test(PROPOSAL.consistency.kinds[k])));
+ok('the screen prints kinds, never the defect ids',
+  /PROPOSAL\.consistency\.kinds\[k\]/.test(src['ProposalScreen.tsx'])
+  && !/defects\.map\(d => d\.id/.test(src['ProposalScreen.tsx']));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('12 — SCOPE: NOTHING PHASE 2C WAS NOT ASKED FOR');

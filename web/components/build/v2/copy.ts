@@ -277,14 +277,28 @@ export const PROPOSAL = {
   },
 
   /*
-   * A `ready` build cannot contain an unavailable required category — the
-   * engine proved a complete blocker-free assignment. If both are true at
-   * once, something is inconsistent and the screen says so instead of drawing
-   * a normal card over it.
+   * WHEN THE SCREEN REFUSES.
+   *
+   * Each of these was once a fallback that printed a database key — an
+   * unresolvable part rendered its own id as a product name, a manual check
+   * with no copy rendered its finding id. A missing mapping is a developer
+   * defect, and showing the reader the key is not graceful degradation.
+   *
+   * So the proposal is withheld and the reason is named IN KIND, never by id.
+   * The ids stay in `data-*` hooks and machine state for whoever is debugging.
    */
-  consistencyError:
-    'تعارض داخلي: البناء مُثبَت وفيه فئة متعذّرة في الوقت نفسه. لا نعرض اقتراحًا '
-    + 'في هذه الحالة.',
+  consistency: {
+    title: 'لا نستطيع عرض هذا الاقتراح',
+    lead: 'وجدنا تعارضًا داخليًا في بيانات الاقتراح، ولا نعرض اقتراحًا ناقصًا أو '
+      + 'غير متسق.',
+    kinds: {
+      'unavailable-required': 'فئة أساسية متعذّرة داخل بناء يُفترض أنه مُثبَت.',
+      'unresolved-part': 'قطعة مختارة غير موجودة في الكتالوج الحالي.',
+      'part-mismatch': 'القطعة المعروضة لا تطابق القطعة التي حسمها النظام.',
+      'unresolved-candidate': 'أحد الخيارات المتوافقة غير موجود في الكتالوج الحالي.',
+      'unlabelled-manual-check': 'هناك فحص يدوي لا تملك الواجهة وصفًا له.',
+    },
+  },
 
   /* «رجوع» comes from NAV — the journey's footer is the same on every screen. */
   open: 'اعرض البناء المقترح',
