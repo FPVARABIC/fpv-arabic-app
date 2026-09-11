@@ -127,7 +127,26 @@ export type ProposalQuality =
  * hooks and machine state — never in a sentence.
  */
 export type ProposalDefect =
-  /** A proven build cannot contain a required category with nothing to offer. */
+  /**
+   * A PROVEN build cannot contain a required category with nothing to offer.
+   *
+   * THE WORD «PROVEN» IS THE WHOLE RULE, AND IT WAS MISSING FROM THE CODE.
+   * ---------------------------------------------------------------------
+   * This fired on every `unavailable` decision, whatever the build said about
+   * itself. That is a strictly stronger claim than the one written here, and
+   * the difference is not academic: an honest «no build exists» — every
+   * category unavailable, `provenPath` null, each carrying the engine's own
+   * Arabic reason — was classified as INTERNAL CORRUPTION and replaced by the
+   * refusal page. The reader lost the reasons, and, once Phase 2E let them
+   * choose, lost the «تغيير الاختيار» that would have undone the choice
+   * responsible. The card had the way out; the screen never rendered the card.
+   *
+   * `provenPath !== null` is the contradiction, and only it: the engine says a
+   * complete blocker-free assignment EXISTS while a required category says it
+   * has nothing. Those two cannot both be true, and the screen must not pick
+   * one. Without a proven path there is no contradiction to report — just a
+   * build that does not exist, which this product says out loud.
+   */
   | { kind: 'unavailable-required'; category: string }
   /**
    * `CategoryDecision.category` is a `string`, and the catalogue has no such
@@ -170,7 +189,13 @@ export interface ProposalView {
    * Shorthand for «do not draw a proposal». Historically this meant only the
    * unavailable-required contradiction; it now covers every defect above,
    * because a card naming a part that does not exist is no more renderable
-   * than a build that cannot exist.
+   * than a build that claims to be proven and also impossible.
+   *
+   * What it deliberately does NOT cover is a build that simply cannot be made.
+   * «تعذّر» is an ANSWER, and the screen is the place it gets said — with the
+   * category, the engine's reason, and, where the reader's own choice is
+   * involved, the control that takes it back. Refusing the page there would
+   * hide a recoverable state behind a message about internal consistency.
    */
   consistencyError: boolean;
 }
@@ -234,7 +259,16 @@ export function proposalDefects(
   const defects: ProposalDefect[] = [];
 
   for (const d of build.decisions) {
-    if (d.status === 'unavailable') {
+    /*
+     * ONLY AGAINST A RECEIPT.
+     *
+     * `provenPath` is the claim «a complete blocker-free assignment exists».
+     * An unavailable required category contradicts it, and a screen cannot
+     * honestly draw both. With no receipt there is nothing to contradict: the
+     * build does not exist, the engine has said why per category, and that is
+     * a page worth rendering rather than a defect worth hiding.
+     */
+    if (d.status === 'unavailable' && build.provenPath !== null) {
       defects.push({ kind: 'unavailable-required', category: d.category });
     }
 

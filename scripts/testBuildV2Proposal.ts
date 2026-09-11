@@ -383,18 +383,31 @@ ok('the manual section renders from build.manualChecks, not a hard-coded list',
 section('8 — AN INCONSISTENT PROPOSAL IS REFUSED, NOT DRAWN');
 // ═══════════════════════════════════════════════════════════════════════════
 /*
- * A proven build cannot contain an unavailable REQUIRED category — the engine
+ * A PROVEN build cannot contain an unavailable REQUIRED category — the engine
  * found a complete blocker-free assignment, so every category had something to
  * offer. If both are ever true, the screen must not render a plausible-looking
  * proposal over the contradiction.
+ *
+ * THE RECEIPT IS THE CONDITION, and for a while the code did not say so: the
+ * defect fired on any unavailable decision, so an honest «no build exists» was
+ * reported as internal corruption and its per-category reasons were replaced
+ * by the refusal page. Both directions are asserted on the SAME decision, so
+ * `provenPath` is visibly what separates them.
  */
-const fakeInconsistent = {
+const withUnavailable = (over: Partial<ProposedBuild>) => ({
   ...b(FREESTYLE_MID),
   decisions: b(FREESTYLE_MID).decisions.map((d, i) =>
     (i === 0 ? { ...d, status: 'unavailable' as const } : d)),
-} as ProposedBuild;
-ok('an unavailable category sets the consistency flag',
+  ...over,
+}) as ProposedBuild;
+const fakeInconsistent = withUnavailable({});
+ok('the fixture really does carry a receipt', fakeInconsistent.provenPath !== null);
+ok('an unavailable category on a PROVEN build sets the consistency flag',
   proposalView(fakeInconsistent, CTX).consistencyError);
+ok('…the same decision on an UNPROVEN build does not — it is an honest answer',
+  !proposalView(withUnavailable({ provenPath: null }), CTX).consistencyError);
+ok('…and that category is then shown under «تعذّر» rather than hidden',
+  proposalView(withUnavailable({ provenPath: null }), CTX).groups.problem.length === 1);
 ok('a healthy build does not', !proposalView(b(FREESTYLE_MID), CTX).consistencyError);
 ok('the screen refuses to render a proposal in that state',
   /if \(view\.consistencyError\)/.test(src['ProposalScreen.tsx']));

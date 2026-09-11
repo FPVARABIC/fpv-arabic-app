@@ -42,6 +42,7 @@ import { PROPOSAL } from '../web/components/build/v2/copy';
 import { PART_VOCAB } from '../web/lib/build/labels';
 import { ProposalScreen } from '../web/components/build/v2/ProposalScreen';
 import { ProposalCategoryCard } from '../web/components/build/v2/ProposalCategoryCard';
+import { readinessOf } from '../web/components/build/v2/readiness';
 import {
   ECOSYSTEM_SELECTION_CATEGORY, NO_SELECTIONS, selectionsSurviving,
   withCategory, withoutCategory, type ReaderSelections, type SelectionContext,
@@ -1378,13 +1379,15 @@ ok('Z: the fixture really is a choice the engine refused',
   && rxDecision.selectionSource === 'user-selected'
   && rxDecision.partId === CROSSFIRE_RX.id);
 /*
- * THE CARD ON ITS OWN, because the SCREEN never gets that far.
+ * THE CARD ON ITS OWN FIRST, then the same thing through the whole screen.
  *
- * `proposalDefects` reports `unavailable-required` for ANY unavailable
- * required category, so a build that cannot exist is refused as a whole page
- * rather than drawn card by card — which is why no reader ever meets a
- * half-built proposal, and is asserted below rather than assumed. The rule
- * being proved here belongs to the CARD, so the card is what gets rendered.
+ * The rule under test belongs to the CARD, so the card is rendered directly —
+ * that keeps the claim about the control, not about the page around it. The
+ * page is then asserted separately, because for a while it was the page that
+ * made this control unreachable: `proposalDefects` reported
+ * `unavailable-required` for EVERY unavailable decision, so an honest «no
+ * build exists» was classified as internal corruption and replaced by the
+ * refusal screen — with the reasons, and the way out, behind it.
  */
 const cardHtml = (d: CategoryDecision, b: ProposedBuild) => renderToStaticMarkup(
   ReactRT.createElement(ProposalCategoryCard, {
@@ -1415,16 +1418,41 @@ const bystander = REFUSED_BUILD.decisions.find(
 ok(`Z: …while «${bystander.category}», which nobody chose, offers nothing to un-choose`,
   !cardHtml(bystander, REFUSED_BUILD).includes('v2-change-choice-'));
 /*
- * AND THE READER CANNOT GET HERE BY PRESSING ANYTHING — section X walked
- * every first and second press across every reader and then to full depth, and
- * no press ever produced a build that cannot exist. This state is reachable
- * only from an input the journey does not offer, which is why the screen-level
- * refusal below is a guard rather than something a reader meets.
+ * AND NOW THE WHOLE SCREEN, which is where this used to be lost.
+ *
+ * «تعذّر» is an ANSWER. The build does not exist, the engine has said why per
+ * category, and one of those categories is the reader's own choice. Refusing
+ * the page here reported a consistency problem the code did not have and hid a
+ * recoverable one it did.
  */
 const refusedPage = renderProposal(REFUSED_BUILD);
-ok('Z: the screen refuses such a build as a whole page, rather than half-drawing it',
-  /data-quality="inconsistent"/.test(refusedPage)
-  && refusedPage.includes('v2-proposal-inconsistent'));
+ok('Z: the screen RENDERS an impossible build rather than calling it corruption',
+  !/data-quality="inconsistent"/.test(refusedPage)
+  && !refusedPage.includes('v2-proposal-inconsistent')
+  && refusedPage.includes('data-testid="v2-cat-receivers"'));
+ok('Z: …the reader’s failed choice is on it, named as theirs',
+  /data-testid="v2-cat-receivers" data-status="unavailable" data-source="user-selected"/
+    .test(refusedPage));
+ok('Z: …with the way out reachable on the page, not just on the card',
+  refusedPage.includes('data-testid="v2-change-choice-receivers"'));
+ok('Z: …and the engine’s reason printed where the reader can read it',
+  rxDecision.reasons.some(r => r.ar.length > 0 && refusedPage.includes(r.ar)));
+ok('Z: …under «تعذّر», which is the group an unavailable decision belongs to',
+  refusedPage.includes('data-testid="v2-group-problem"'));
+/*
+ * Still no keys on screen. A page that now renders MORE has more chances to
+ * leak one, so the sweep is repeated on exactly this page.
+ */
+const refusedText = refusedPage.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+ok('Z: …and no catalogue id, category key or check id reaches the reader',
+  KEYS.every(k => !refusedText.includes(k)));
+/*
+ * THE READER STILL CANNOT GET HERE BY PRESSING ANYTHING — section X walked
+ * every first and second press across every reader, then to full depth, and no
+ * press ever produced a build that cannot exist. The recovery contract is a
+ * guarantee about states the DOMAIN can produce, held correct so the screen
+ * can never hide one; it is not a state the journey hands out.
+ */
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('AA — THE COPY SAYS WHAT THE LIST IS NOW FOR');
@@ -1586,6 +1614,218 @@ for (const [, inp] of Object.entries(INPUTS)) {
 }
 ok(`AD: an empty selection map changes nothing, on all ${Object.keys(INPUTS).length} baseline readers`,
   Object.keys(INPUTS).length >= 20 && emptyDiffs === 0);
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AE — THE RECOVERY CONTRACT: `unavailable` IS NOT ALWAYS A DEFECT');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `unavailable-required` exists to catch ONE contradiction: the engine hands
+ * back a receipt — «a complete blocker-free assignment exists» — while a
+ * required category says it has nothing. Both cannot be true, and a screen
+ * that drew either would be asserting something the data does not support.
+ *
+ * The check was written without the receipt: every `unavailable` decision
+ * became a defect. So the ordinary, honest outcome «this build cannot be
+ * made» was reported as internal corruption, the engine's per-category reasons
+ * were replaced by a message about consistency, and — once Phase 2E let the
+ * reader choose — the «تغيير الاختيار» that would have undone the choice
+ * responsible was rendered behind a page nobody ever saw.
+ *
+ * The two halves are asserted here on builds constructed by hand, so that each
+ * carries EXACTLY the property under test and nothing else: the real engine
+ * cannot be asked for a proven build that also has an unavailable category,
+ * because that is the contradiction itself.
+ */
+const REAL_PART = BY_CATEGORY[TIE][TIE_A];
+const RECOVER_CAT = TIE;
+
+/** A skeleton every case below varies from — valid in every other respect. */
+const syntheticBuild = (over: Partial<ProposedBuild>): ProposedBuild => ({
+  droneTypeId: 'freestyle',
+  sizeInch: 5,
+  cellCount: 6,
+  requiredInputs: [],
+  decisions: [],
+  parts: {},
+  unresolved: [],
+  manualChecks: [],
+  complete: false,
+  provenPath: null,
+  blockerFindingIds: [],
+  selectionIssues: [],
+  ...over,
+});
+
+const unavailableChosen: CategoryDecision = {
+  category: RECOVER_CAT,
+  status: 'unavailable',
+  selectionSource: 'user-selected',
+  partId: REAL_PART.id,
+  candidateIds: [REAL_PART.id],
+  compatibility: [],
+  reasons: [{
+    kind: 'no-candidate', evidence: 'user-input', inputKey: 'selectedParts',
+    ar: 'القطعة التي اخترتها لا تسمح بإتمام بناء خالٍ من الموانع — لم تُستبدل، والقرار لك.',
+  }],
+};
+
+// ── AE-1 · A RECOVERABLE FAILURE IS NOT CORRUPTION ─────────────────────────
+const RECOVERABLE = syntheticBuild({
+  decisions: [unavailableChosen],
+  parts: { [RECOVER_CAT]: REAL_PART },
+  unresolved: [RECOVER_CAT],
+  provenPath: null,
+});
+const recoverView = proposalView(RECOVERABLE, VIEW_CTX);
+ok('AE-1: the fixture is clean apart from the property under test',
+  PART_VOCAB[RECOVER_CAT]?.ar !== undefined
+  && BY_CATEGORY[RECOVER_CAT][REAL_PART.id] !== undefined
+  && RECOVERABLE.parts[RECOVER_CAT].id === unavailableChosen.partId);
+ok('AE-1: an unavailable category on an UNPROVEN build raises no defect at all',
+  recoverView.defects.length === 0);
+ok('AE-1: …so the screen is not withheld',
+  recoverView.consistencyError === false);
+ok('AE-1: …and the category is grouped under «تعذّر»',
+  recoverView.groups.problem.length === 1
+  && recoverView.groups.problem[0].category === RECOVER_CAT);
+
+const recoverHtml = renderProposal(RECOVERABLE);
+ok('AE-1: the screen renders the ordinary proposal, not the consistency page',
+  !recoverHtml.includes('v2-proposal-inconsistent')
+  && !/data-quality="inconsistent"/.test(recoverHtml)
+  && recoverHtml.includes(`data-testid="v2-cat-${RECOVER_CAT}"`));
+ok('AE-1: …the card carries the «غير متاح» badge',
+  new RegExp(`data-testid="v2-badge-${RECOVER_CAT}"[^>]*>${PROPOSAL.unavailableBadge}`)
+    .test(recoverHtml));
+ok('AE-1: …it shows the part the reader chose, by name',
+  recoverHtml.includes(REAL_PART.nameAr));
+ok('AE-1: …it prints the engine’s reason verbatim',
+  recoverHtml.includes(unavailableChosen.reasons[0].ar));
+ok('AE-1: …and it offers «تغيير الاختيار»',
+  recoverHtml.includes(`data-testid="v2-change-choice-${RECOVER_CAT}"`)
+  && recoverHtml.includes(PROPOSAL.candidates.change));
+/*
+ * The control is wired to the handler the screen was given — the same code
+ * path the browser walk presses at 390×844 and 1280×900 on a real build. Here
+ * the button's identity and its accessible name are what can be read back from
+ * a static render; that it clears the selection when pressed is proven by the
+ * e2e, not asserted twice in different words.
+ */
+ok('AE-1: …named for the part it would release, so it is not a bare «تغيير»',
+  new RegExp(`data-testid="v2-change-choice-${RECOVER_CAT}"[^>]*aria-label="`
+    + `${PROPOSAL.candidates.change}: ${REAL_PART.nameAr}"`).test(recoverHtml));
+const recoverText = recoverHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+ok('AE-1: …and nothing on it is a raw id',
+  KEYS.every(k => !recoverText.includes(k)));
+
+// ── AE-2 · THE REAL CONTRADICTION STILL REFUSES THE PAGE ───────────────────
+/*
+ * Same decision, same part, same everything — plus a receipt. Now the two
+ * statements cannot both hold, and the screen must not choose between them.
+ */
+const CONTRADICTORY = syntheticBuild({
+  decisions: [unavailableChosen],
+  parts: { [RECOVER_CAT]: REAL_PART },
+  provenPath: { [RECOVER_CAT]: REAL_PART.id },
+  complete: true,
+});
+const contraView = proposalView(CONTRADICTORY, VIEW_CTX);
+ok('AE-2: a PROVEN build with an unavailable required category is a defect',
+  contraView.defects.length === 1
+  && contraView.defects[0].kind === 'unavailable-required'
+  && contraView.defects[0].category === RECOVER_CAT);
+ok('AE-2: …and the proposal is withheld', contraView.consistencyError === true);
+const contraHtml = renderProposal(CONTRADICTORY);
+ok('AE-2: …the screen shows the refusal instead of the cards',
+  /data-quality="inconsistent"/.test(contraHtml)
+  && contraHtml.includes('v2-proposal-inconsistent')
+  && !contraHtml.includes(`data-testid="v2-cat-${RECOVER_CAT}"`));
+ok('AE-2: …naming the defect in words, never by kind-key',
+  contraHtml.includes(PROPOSAL.consistency.kinds['unavailable-required'])
+  && !contraHtml.replace(/<[^>]*>/g, ' ').includes('unavailable-required'));
+/*
+ * THE PAIR IS THE POINT. The two builds differ in `provenPath` and in nothing
+ * else — so the rule really is «only against a receipt», not «unavailable is
+ * fine now».
+ */
+ok('AE-2: the two fixtures differ ONLY in the receipt',
+  JSON.stringify({ ...RECOVERABLE, provenPath: null, complete: false, unresolved: [] })
+  === JSON.stringify({ ...CONTRADICTORY, provenPath: null, complete: false, unresolved: [] }));
+
+// ── AE-3 · EVERY OTHER INTEGRITY GUARD IS UNTOUCHED ────────────────────────
+/*
+ * This correction is about ONE defect kind. An unprovable build is still
+ * refused the moment anything in it cannot be drawn honestly — and each of
+ * those is checked on a build that ALSO has `provenPath: null`, which is
+ * exactly the case the loosened rule now lets through.
+ */
+const stillDefective: [string, ProposedBuild, string][] = [
+  ['a category the catalogue has no shelf for',
+    syntheticBuild({ decisions: [{ ...unavailableChosen, category: 'probe-category' }] }),
+    'unknown-category'],
+  ['a part id that resolves nowhere',
+    syntheticBuild({
+      decisions: [{ ...unavailableChosen, partId: 'probe-missing', candidateIds: [] }],
+      parts: {},
+    }), 'unresolved-part'],
+  ['a candidate that belongs to another shelf',
+    syntheticBuild({
+      decisions: [{
+        ...unavailableChosen, partId: undefined,
+        candidateIds: [PART_CATEGORY_MAP.frames[0].id],
+      }],
+      parts: {},
+    }), 'foreign-category'],
+  ['a card about to show a different part from the one decided',
+    syntheticBuild({
+      decisions: [unavailableChosen],
+      parts: { [RECOVER_CAT]: BY_CATEGORY[RECOVER_CAT][TIE_B] },
+    }), 'part-mismatch'],
+  ['a manual check with no reader-facing wording',
+    syntheticBuild({
+      decisions: [unavailableChosen], parts: { [RECOVER_CAT]: REAL_PART },
+      manualChecks: ['probe-unknown-check'],
+    }), 'unlabelled-manual-check'],
+];
+for (const [what, b, kind] of stillDefective) {
+  const v = proposalView(b, VIEW_CTX);
+  ok(`AE-3: ${what} still refuses the page («${kind}»)`,
+    v.consistencyError === true && v.defects.some(d => d.kind === kind));
+}
+ok('AE-3: …and an unlabelled category is still caught too',
+  proposalView(syntheticBuild({
+    decisions: [{ ...unavailableChosen, category: 'gps' }],
+  }), {
+    ...VIEW_CTX, categoryLabel: c => (c === 'gps' ? undefined : PART_VOCAB[c]?.ar),
+  }).defects.some(d => d.kind === 'unlabelled-category'));
+
+// ── AE-4 · THE DOOR IN IS STILL SHUT ───────────────────────────────────────
+/*
+ * The correction must NOT turn an impossible initial build into a proposal the
+ * reader can walk into. That rule lives in `readinessOf`, it was not touched,
+ * and it is asserted here rather than assumed — including on the very build
+ * the screen will now happily render if it is somehow already open.
+ */
+ok('AE-4: an unprovable build is still «no-viable-build» on the summary',
+  readinessOf(RECOVERABLE, {}).state === 'no-viable-build');
+ok('AE-4: …including the real engine refusal from section Z',
+  REFUSED_BUILD.provenPath === null
+  && readinessOf(REFUSED_BUILD, {}).state === 'no-viable-build');
+ok('AE-4: …and it hands the reader the engine’s own reasons, not a UI sentence',
+  (readinessOf(REFUSED_BUILD, {}) as { reasonsAr: readonly string[] }).reasonsAr.length > 0);
+ok('AE-4: a provable build is still «ready», so the gate did not seize shut',
+  readinessOf(build(BASE), {}).state === 'ready');
+/*
+ * And the door itself: the proposal button is rendered on the readiness state
+ * and on nothing else, so this change cannot have opened a second way in.
+ */
+ok('AE-4: the proposal opens on `readiness.state === ready` alone',
+  /readiness\.state === 'ready' && \(/.test(PREVIEW_SRC)
+  && (PREVIEW_SRC.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+ok('AE-4: …and the screen does not re-implement readiness for itself',
+  !/provenPath/.test(SCREEN_SRC) && !/provenPath/.test(CARD_SRC));
 
 
 console.log(`\n[reader selection] ${passed} passed, ${failures.length} failed`);

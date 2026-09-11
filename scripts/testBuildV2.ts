@@ -579,12 +579,25 @@ ok('the reader can always get back out of the proposal',
  */
 const readinessProse = read('web/components/build/v2/readiness.ts')
   .replace(/\n\s*\*\s?/g, ' ');
-ok('the Phase 2C contract warning is still in the readiness module',
-  /PHASE 2C CONTRACT/.test(readinessProse)
-  && /«owns an unknown radio» is NOT «owns no radio»/.test(readinessProse));
-ok('…and it still names what must be settled before 2C recommends parts',
-  /receiver for an owned-but- unidentified radio|receiver for an owned-but-unidentified radio/
+/*
+ * The warning's SUBSTANCE, not its phase number.
+ *
+ * It was headed «PHASE 2C CONTRACT — DO NOT SKIP» and closed by pointing at a
+ * tripwire that Phase 2C legitimately removed, so by Phase 2E it named a
+ * deadline that had passed and a guard that no longer existed. Matching on the
+ * phase number would have forced that staleness to be preserved. What must not
+ * be lost is the CLAIM — an unnamed radio is not the absence of one — and the
+ * place the line is actually held, which is the readiness gate.
+ */
+ok('the unidentified-ecosystem warning is still in the readiness module',
+  /UNIDENTIFIED-ECOSYSTEM CONTRACT/.test(readinessProse)
+  && /«Owns an unknown radio» is NOT «owns no radio»/.test(readinessProse));
+ok('…and it still names the failure it exists to prevent',
+  /proposing an ExpressLRS receiver to someone holding a Crossfire transmitter/
     .test(readinessProse));
+ok('…and now names where the line is held, which the phase wording never did',
+  /needs-equipment-identification. is the readiness state/.test(readinessProse)
+  && /opens the proposal only on .ready./.test(readinessProse));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('8 — AVAILABILITY IS READ, NEVER RE-DERIVED');

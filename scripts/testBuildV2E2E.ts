@@ -909,6 +909,20 @@ async function main() {
         && await page.locator('[data-testid="v2-proposal"]').count() === 0);
 
       // ── P-E. A BLOCKED BUILD CANNOT REACH THE PROPOSAL ───────────────────
+      /*
+       * THIS GATE IS NOW THE ONLY ONE, AND THAT IS DELIBERATE.
+       *
+       * `proposalDefects` used to report every `unavailable` decision as
+       * `unavailable-required`, so a blocked build that somehow reached the
+       * proposal would have hit the consistency refusal — a second, accidental
+       * door-stop that existed only because the defect rule was wrong. Fixing
+       * the rule (it now needs a `provenPath` to have a contradiction with)
+       * removed that accident, so `readinessOf` carries the whole weight.
+       *
+       * Which is exactly why these assertions matter more than they did: they
+       * are what stands between a reader and a proposal for a build that does
+       * not exist.
+       */
       console.log(`\n[P-E] ${name} — Crossfire: blocked before any part`);
       await freestyle6S(page);
       await page.click('[data-testid="v2-owned-radio"]');

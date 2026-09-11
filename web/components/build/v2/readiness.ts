@@ -37,23 +37,20 @@ import { ownedWantsGoggles, ownedWantsRadio, type OwnedGear } from './BuildOwned
  * complete build exist under these inputs?», and `provenPath` is the engine's
  * answer to exactly that.
  *
- * ⚠ PHASE 2C CONTRACT — DO NOT SKIP
- * ---------------------------------
+ * ⚠ THE UNIDENTIFIED-ECOSYSTEM CONTRACT — STILL LIVE
+ * --------------------------------------------------
  * `ecosystemValue()` sends an explicit «لست متأكدًا» to the engine as
- * ABSENCE, identical to owning no radio at all. That is acceptable ONLY while
- * no parts are rendered, which is the whole of Phase 2B.
+ * ABSENCE, identical to owning no radio at all. «Owns an unknown radio» is NOT
+ * «owns no radio», and proposing an ExpressLRS receiver to someone holding a
+ * Crossfire transmitter is the exact failure this journey exists to prevent.
  *
- * Before Phase 2C may automatically recommend a receiver for an owned-but-
- * unidentified radio, or a video unit for owned-but-unidentified goggles, the
- * domain semantics have to be settled: «owns an unknown radio» is NOT «owns no
- * radio», and proposing an ExpressLRS receiver to someone holding a Crossfire
- * transmitter is the exact failure this journey exists to prevent. The
- * `needs-equipment-identification` state below is the placeholder for that
- * conversation, not a solution to it.
- *
- * `scripts/testBuildV2.ts` fails if any V2 component starts rendering
- * `build.decisions` or `build.parts`, so Phase 2C cannot cross this line
- * without reading it.
+ * Phase 2B could hold that line by rendering no parts at all. Phases 2C to 2E
+ * render parts, and the line is held HERE instead: while either ecosystem is
+ * owned-but-unnamed, `needs-equipment-identification` is the readiness state,
+ * and `BuildV2Preview` opens the proposal only on `ready`. So the reader is
+ * asked before a receiver is ever proposed on that basis. Nothing has solved
+ * the underlying semantics; the door is simply still shut, which is why this
+ * note stays.
  */
 
 /** Which piece of the reader's own gear is still unidentified. */
