@@ -26,12 +26,36 @@
  * Run: npx tsx scripts/testReaderSelection.ts
  */
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
 import type {
   ProposedBuild, CategoryDecision, RecommendationInput,
 } from '../src/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '../src/data/project/store';
 import { REQUIRED_BUILD_CATEGORIES } from '../src/data/assembly/recommendation/eligibility';
+import type { BasePart } from '../src/data/assembly/types';
+import {
+  proposalView, type ProposalContext,
+} from '../web/components/build/v2/proposalModel';
+import { PROPOSAL } from '../web/components/build/v2/copy';
+import { PART_VOCAB } from '../web/lib/build/labels';
+import { ProposalScreen } from '../web/components/build/v2/ProposalScreen';
+
+/** The real world, indexed the way the screen indexes it. */
+const BY_CATEGORY: Record<string, Record<string, BasePart>> = {};
+const ALL_IDS = new Set<string>();
+for (const [category, list] of Object.entries(PART_CATEGORY_MAP)) {
+  BY_CATEGORY[category] = {};
+  for (const p of list) { BY_CATEGORY[category][p.id] = p; ALL_IDS.add(p.id); }
+}
+const VIEW_CTX: ProposalContext = {
+  resolvePart: (category, id) => BY_CATEGORY[category]?.[id],
+  existsInAnyCategory: id => ALL_IDS.has(id),
+  hasCategory: category => category in PART_CATEGORY_MAP,
+  categoryLabel: category => PART_VOCAB[category]?.ar,
+  hasManualLabel: id => id in PROPOSAL.manual.labels,
+};
 
 let passed = 0;
 const failures: string[] = [];
@@ -598,6 +622,267 @@ ok('the counts keep a separate tally for reader choices',
   /userSelected: by\('user-selected'\)\.length/.test(MODEL_SRC));
 ok('…and `systemDecided` still counts only what the SYSTEM decided',
   /systemDecided: by\('recommended'\)\.length \+ by\('only-compatible'\)\.length/.test(MODEL_SRC));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('R — AN EARLY DEAD END MAY REFUSE A CHOICE, NEVER ERASE IT');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `deadEnd()` read `input.owned?.parts` and nothing else — complete until
+ * Phase 2D gave the reader a second way to put a part in.
+ *
+ * Cinewhoop is the live fixture: the catalogue tags no frame for it, so
+ * `getAvailableSizeOptions` returns nothing and the engine exits before the
+ * category loop ever runs. A structurally valid selection — a real frame id,
+ * on the frames shelf, raising no `selectionIssue` — was then simply gone:
+ *
+ *     status=unavailable  source=none  partId=—  candidateIds=[]
+ *     parts.frames = (absent)
+ *
+ * while an OWNED frame in the same build came back intact. A selection may
+ * become unusable. It may never be silently replaced OR erased.
+ */
+const DEAD_TYPE = 'cinewhoop';
+const DEAD = { droneTypeId: DEAD_TYPE, cellCount: 4, budgetTier: 'mid', owned: {} };
+const DEAD_FRAME = PART_CATEGORY_MAP.frames[0];
+const DEAD_OTHER = PART_CATEGORY_MAP.frames[1];
+
+ok(`«${DEAD_TYPE}» really is an early dead end — no frame is tagged for it`,
+  PART_CATEGORY_MAP.frames.every(f => !f.compatibilityTags.droneTypes.includes(DEAD_TYPE)));
+ok('…and it dies before any category is decided, so this is the `deadEnd()` path',
+  build(DEAD).decisions.every(d => d.status === 'unavailable' && d.candidateIds.length === 0));
+
+// R-A — a valid selection survives the refusal.
+const deadSelected = build({ ...DEAD, selectedParts: { frames: DEAD_FRAME.id } });
+const rA = dec(deadSelected, 'frames');
+ok('R-A: the chosen frame keeps its identity', rA.partId === DEAD_FRAME.id);
+ok('R-A: …reported as a CHOICE, not as nobody\'s', rA.selectionSource === 'user-selected');
+ok('R-A: …with the status the build actually has', rA.status === 'unavailable');
+ok('R-A: …and on `candidateIds`, machine-readably',
+  rA.candidateIds.join() === DEAD_FRAME.id);
+ok('R-A: the part is still identifiable in `parts`',
+  deadSelected.parts.frames?.id === DEAD_FRAME.id);
+ok('R-A: nothing is proven and nothing is complete',
+  deadSelected.provenPath === null && deadSelected.complete === false);
+ok('R-A: no other category invents a reader part',
+  deadSelected.decisions.filter(d => d.category !== 'frames')
+    .every(d => d.partId === undefined && d.selectionSource === 'none'));
+
+// R-B — the owned behaviour that was already right stays right.
+const deadOwned = build({ ...DEAD, owned: { parts: { frames: DEAD_FRAME } } });
+ok('R-B: an OWNED part in the same dead end stays `user-owned`',
+  dec(deadOwned, 'frames').selectionSource === 'user-owned'
+  && dec(deadOwned, 'frames').partId === DEAD_FRAME.id
+  && deadOwned.parts.frames?.id === DEAD_FRAME.id);
+
+// R-C — the same part both ways: ownership is the stronger claim.
+const deadBoth = build({
+  ...DEAD, owned: { parts: { frames: DEAD_FRAME } }, selectedParts: { frames: DEAD_FRAME.id },
+});
+ok('R-C: owning AND choosing the same part still resolves to ownership',
+  dec(deadBoth, 'frames').selectionSource === 'user-owned');
+ok('R-C: …and is identical to owning it without choosing it',
+  JSON.stringify(deadBoth) === JSON.stringify(deadOwned));
+
+// R-D — two different parts: the contradiction survives the early exit too.
+const deadClash = build({
+  ...DEAD, owned: { parts: { frames: DEAD_FRAME } }, selectedParts: { frames: DEAD_OTHER.id },
+});
+const rD = dec(deadClash, 'frames');
+ok('R-D: a collision is still an explicit conflict, not a winner',
+  rD.partId === undefined && rD.selectionSource === 'none');
+ok('R-D: …with BOTH identities preserved',
+  rD.candidateIds.length === 2
+  && rD.candidateIds.includes(DEAD_FRAME.id) && rD.candidateIds.includes(DEAD_OTHER.id));
+ok('R-D: …and the reason names both, not one',
+  rD.reasons[0].ar.includes(DEAD_FRAME.nameAr) && rD.reasons[0].ar.includes(DEAD_OTHER.nameAr));
+
+// R-E / R-F — the two channels stay distinct at the dead end as well.
+ok('R-E: a structurally valid selection raises no issue, even when refused',
+  deadSelected.selectionIssues.length === 0 && deadBoth.selectionIssues.length === 0
+  && deadClash.selectionIssues.length === 0);
+const deadMalformed = build({ ...DEAD, selectedParts: { frames: 'probe-no-such-frame' } });
+ok('R-F: a MALFORMED selection still goes to `selectionIssues`…',
+  deadMalformed.selectionIssues.length === 1
+  && deadMalformed.selectionIssues[0]?.kind === 'unknown-part');
+ok('R-F: …and never onto the identity-preservation path',
+  dec(deadMalformed, 'frames').partId === undefined
+  && dec(deadMalformed, 'frames').selectionSource === 'none'
+  && deadMalformed.parts.frames === undefined);
+
+/*
+ * And the fix is not a blind merge. A category may hold an owned part or a
+ * chosen one, never both, because the collision is normalised BEFORE any dead
+ * end can fire — which is why the two cases above can be told apart at all.
+ */
+ok('the engine normalises owned-vs-selected before the first early exit',
+  ENGINE_SRC.indexOf('OWNED AND SELECTED IN THE SAME CATEGORY')
+  < ENGINE_SRC.indexOf('لا يوجد إطار في الكتالوج موسوم لهذا النوع'));
+ok('…and the dead end resolves owned FIRST, so the stronger claim survives',
+  /const mine = owned \?\? chosen;/.test(ENGINE_SRC));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('S — «ALL OPEN» IS A LIE ONCE THE READER HAS CLOSED SOMETHING');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The quality model had two states because only the SYSTEM could settle a
+ * category. Now a third situation is real — no budget preference, one part
+ * chosen, seven still open — and BOTH old headlines are false about it:
+ * «الخيارات كلها أمامك» denies the reader's choice, and «هذا البناء المقترح
+ * لك» claims a proposal nobody made.
+ */
+const noTier = { droneTypeId: 'freestyle', cellCount: 6, owned: {} };
+const viewOf = (inp: Record<string, unknown>) => proposalView(build(inp), VIEW_CTX);
+
+const sA = viewOf(noTier);
+ok('S-A: nothing settled by anyone → `all-open`',
+  sA.counts.systemDecided === 0 && sA.counts.userSelected === 0
+  && sA.counts.choiceRequired > 0 && sA.quality === 'all-open');
+
+const sB = viewOf({ ...noTier, selectedParts: { [TIE]: TIE_A } });
+ok('S-B: one reader choice with categories still open → `reader-shaped`',
+  sB.counts.systemDecided === 0 && sB.counts.userSelected === 1
+  && sB.counts.choiceRequired > 0 && sB.quality === 'reader-shaped');
+
+const everyCategory = Object.fromEntries(
+  build(noTier).decisions.map(d => [d.category, d.candidateIds[0]]));
+const sC = viewOf({ ...noTier, selectedParts: everyCategory });
+ok('S-C: every category chosen by the reader, none open → still `reader-shaped`',
+  sC.counts.systemDecided === 0 && sC.counts.userSelected > 0
+  && sC.counts.choiceRequired === 0 && sC.quality === 'reader-shaped');
+ok('S-C: …and that build really is complete, so this is not a broken case',
+  sC.consistencyError === false);
+
+const sD = viewOf({ ...BASE, selectedParts: { [TIE]: TIE_A } });
+ok('S-D: a system decision anywhere still wins the headline → `proposed`',
+  sD.counts.systemDecided > 0 && sD.counts.userSelected > 0
+  && sD.quality === 'proposed');
+
+/*
+ * S-E — the count itself. Making the headline work by inflating
+ * `systemDecided` would have fixed the sentence by breaking its meaning.
+ */
+/*
+ * Two different categories, because a choice does two different things
+ * depending on what the system had already done with it — and «does not
+ * raise» has to hold in both.
+ */
+const sBase = viewOf(BASE);
+ok('S-E: choosing an OPEN category leaves `systemDecided` untouched',
+  sD.counts.systemDecided === sBase.counts.systemDecided
+  && sD.counts.choiceRequired === sBase.counts.choiceRequired - 1
+  && sD.counts.userSelected === 1);
+const sOverride = viewOf({ ...BASE, selectedParts: { [RANKED]: NOT_PREFERRED } });
+ok('S-E: choosing a category the SYSTEM had settled LOWERS it',
+  sOverride.counts.systemDecided === sBase.counts.systemDecided - 1
+  && sOverride.counts.userSelected === 1);
+ok('S-E: …so a reader choice can never inflate the system\'s credit',
+  sB.counts.systemDecided === 0 && sC.counts.systemDecided === 0);
+ok('S-E: `systemDecided` is still exactly recommended + only-compatible',
+  sD.counts.systemDecided === sD.counts.recommended + sD.counts.onlyCompatible);
+
+/* S-F — the copy may claim neither of the things that are not true. */
+const READER_COPY = `${PROPOSAL.titleReaderShaped} ${PROPOSAL.leadReaderShaped}`;
+ok('S-F: reader-shaped copy does not claim the system proposed the build',
+  !READER_COPY.includes('المقترح') && READER_COPY !== PROPOSAL.titleProposed);
+ok('S-F: …nor that the system settled anything',
+  !READER_COPY.includes('حسمها النظام'));
+ok('S-F: …nor that everything is still open',
+  !READER_COPY.includes(PROPOSAL.titleAllOpen));
+ok('S-F: …and it does say the choices are the READER\'s',
+  PROPOSAL.titleReaderShaped.includes('اختيارات')
+  && PROPOSAL.leadReaderShaped.includes('اخترته أنت'));
+ok('S-F: the three headlines are three different sentences',
+  new Set([PROPOSAL.titleProposed, PROPOSAL.titleReaderShaped, PROPOSAL.titleAllOpen]).size === 3);
+/*
+ * The lead must not promise a decision that may already be made: S-C closes
+ * every category, and «وما بقي يحتاج قرارك» would be a request for something
+ * finished. What remains is reported by the burden line instead.
+ */
+ok('S-F: the lead makes no claim about what is left — the burden line owns that',
+  !PROPOSAL.leadReaderShaped.includes('بقي'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('T — THE HEADLINE, ACTUALLY RENDERED');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * S proves the MODEL picks the right quality. This proves the SCREEN prints
+ * the matching sentence — by rendering it and reading the `<h2>`, not by
+ * grepping for a map. A ternary replaced by a Record is exactly the kind of
+ * change a source pattern can be made to approve while the rendered string
+ * stays wrong.
+ *
+ * React comes from `web/`'s own copy: a component on one React instance and a
+ * renderer on another share no hook dispatcher and the render throws, so the
+ * indirection is the test working rather than the test cheating.
+ */
+const webRequire = createRequire(join(process.cwd(), 'web/package.json'));
+const ReactRT = webRequire('react') as {
+  createElement: (t: unknown, p: Record<string, unknown>) => unknown;
+};
+const renderToStaticMarkup = (webRequire('react-dom/server') as {
+  renderToStaticMarkup: (el: unknown) => string;
+}).renderToStaticMarkup;
+
+const headlineOf = (inp: Record<string, unknown>) => {
+  const html = renderToStaticMarkup(
+    ReactRT.createElement(ProposalScreen, { build: build(inp) }),
+  );
+  return {
+    quality: /data-quality="([^"]*)"/.exec(html)?.[1] ?? '',
+    title: (/<h2[^>]*data-testid="v2-proposal-title"[^>]*>([\s\S]*?)<\/h2>/.exec(html)?.[1] ?? '')
+      .trim(),
+    text: html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
+  };
+};
+
+const hAllOpen = headlineOf(noTier);
+const hReader = headlineOf({ ...noTier, selectedParts: { [TIE]: TIE_A } });
+const hProposed = headlineOf(BASE);
+
+ok('T: a build nobody has touched still renders «الخيارات كلها أمامك»',
+  hAllOpen.quality === 'all-open' && hAllOpen.title === PROPOSAL.titleAllOpen);
+ok('T: a build the SYSTEM shaped still renders «هذا البناء المقترح لك»',
+  hProposed.quality === 'proposed' && hProposed.title === PROPOSAL.titleProposed);
+
+/* The one that was wrong before this fix. */
+ok('T: a build the READER shaped renders their own headline',
+  hReader.quality === 'reader-shaped' && hReader.title === PROPOSAL.titleReaderShaped);
+ok('T: …and NOT «الخيارات كلها أمامك», which is the claim it used to make',
+  hReader.title !== PROPOSAL.titleAllOpen
+  && !hReader.text.includes(PROPOSAL.titleAllOpen));
+ok('T: …and NOT «هذا البناء المقترح لك» either',
+  hReader.title !== PROPOSAL.titleProposed
+  && !hReader.text.includes(PROPOSAL.titleProposed));
+ok('T: the reader-shaped page carries its own lead, not the open one',
+  hReader.text.includes(PROPOSAL.leadReaderShaped)
+  && !hReader.text.includes(PROPOSAL.leadAllOpen));
+ok('T: the three qualities really do render three different headings',
+  new Set([hAllOpen.title, hReader.title, hProposed.title]).size === 3);
+/*
+ * And the burden line underneath is still the system's own tally: «لم نحسم أي
+ * اختيار» stays true on a reader-shaped build, because we did not.
+ */
+ok('T: the burden line still reports that the SYSTEM settled nothing',
+  hReader.text.includes(PROPOSAL.burden.nothingSettled));
+/*
+ * NO INTERNAL IDENTIFIER — said precisely, because a kebab-case sweep is the
+ * wrong instrument on this page. It flags «T-Motor», «R-Line» and «4-in-1»,
+ * which are the products' own names and belong on screen. What must never
+ * appear is a key: a catalogue part id, a category key, a rule id or a
+ * finding id. Those are enumerable, so they are checked by name.
+ */
+const KEYS = [
+  ...ALL_IDS,
+  ...Object.keys(PART_CATEGORY_MAP),
+  ...Object.keys(PROPOSAL.manual.labels),
+];
+ok(`T: none of the three renders any internal key (${KEYS.length} checked)`,
+  KEYS.length > 50
+  && [hAllOpen, hReader, hProposed].every(h => KEYS.every(k => !h.text.includes(k))));
+ok('T: …and the check is not vacuous — those keys ARE in the machine state',
+  /data-testid="v2-cat-/.test(
+    renderToStaticMarkup(ReactRT.createElement(ProposalScreen, { build: build(noTier) })),
+  ));
 
 console.log(`\n[reader selection] ${passed} passed, ${failures.length} failed`);
 if (failures.length) {

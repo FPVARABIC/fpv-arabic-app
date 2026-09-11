@@ -85,11 +85,32 @@ export interface DecisionCounts {
  *
  * Measured, not hypothesised — `scripts/testBuildV2Proposal.ts` prints the
  * decision burden for every representative build.
+ *
+ * WHY TWO WAS NOT ENOUGH AFTER PHASE 2D
+ * -------------------------------------
+ * The pair was complete while only the SYSTEM could settle a category. Now the
+ * reader can, and that makes a third situation real:
+ *
+ *     no budget preference · one part chosen by the reader · seven still open
+ *
+ * `systemDecided` is 0, so this fell to `all-open` and the screen said «الخيارات
+ * كلها أمامك». One of them is not: the reader closed it themselves. And the
+ * other headline is just as false — «هذا البناء المقترح لك» claims a proposal
+ * the system did not make.
+ *
+ * Neither claim is true, so neither is used. The fix is a third state, not a
+ * bigger `systemDecided`: inflating that count to make a sentence work would
+ * have made the sentence lie in the other direction.
  */
 export type ProposalQuality =
   /** At least one category the system settled. */
   | 'proposed'
-  /** A viable build exists, but the system ranked nothing: it is all open. */
+  /**
+   * The system settled nothing, but the READER has chosen at least one part.
+   * The build has a shape, and it is theirs rather than ours.
+   */
+  | 'reader-shaped'
+  /** Nothing settled by anyone: the field really is open. */
   | 'all-open';
 
 /**
@@ -296,7 +317,14 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
 
   return {
     counts,
-    quality: counts.systemDecided > 0 ? 'proposed' : 'all-open',
+    /*
+     * Explicit, in this order, because the two failure modes are opposite:
+     * fall through to `proposed` and the system takes credit for the reader's
+     * choice; fall through to `all-open` and the reader's choice is denied.
+     */
+    quality: counts.systemDecided > 0 ? 'proposed'
+      : counts.userSelected > 0 ? 'reader-shaped'
+        : 'all-open',
     groups,
     manualChecks: build.manualChecks,
     defects,
@@ -317,9 +345,15 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
  *     blocker-free build EXISTS; it picked one arbitrary member of each tie to
  *     do so. Showing it as «the system's pick» would turn a proof of
  *     existence into a recommendation the engine explicitly refused to make.
- *   · carry a selection at all. The domain has no way to say «the reader chose
- *     this but does not own it» — `owned.parts` means «already in hand» and
- *     produces `user-locked`. Selection waits for that contract.
+ *   · carry a selection of its own. The DOMAIN can now say «the reader chose
+ *     this but does not own it» — Phase 2D added `selectedParts` and
+ *     `user-selected`, kept apart from `owned.parts`, which still means
+ *     «already in hand». What this function must not do is invent one: a
+ *     selection is an INPUT to `proposeBuild`, and a candidate list that
+ *     marked something chosen without the engine having seen it would be a
+ *     React-only lock — a claim no search ever tested. Phase 2E sends the
+ *     click to the engine and reads the answer back; until then this is a
+ *     list, deliberately.
  */
 export const candidatesOf = (d: CategoryDecision): readonly string[] => d.candidateIds;
 

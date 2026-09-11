@@ -370,27 +370,51 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
   };
 
   /*
-   * Nothing can be built. Every category says so — but a part the READER owns
-   * keeps its identity even here, because when a build is impossible the one
-   * thing they most need to know is which of their own parts is involved.
-   * Withdrawing it would erase exactly that.
+   * Nothing can be built. Every category says so — but a part the READER put
+   * in keeps its identity even here, because when a build is impossible the
+   * one thing they most need to know is which of their own pieces is
+   * involved. Withdrawing it would erase exactly that.
+   *
+   * BOTH KINDS OF «THEIRS», AND THIS IS A FIX
+   * -----------------------------------------
+   * This read `input.owned?.parts` and nothing else, which was complete until
+   * Phase 2D gave the reader a second way to put a part in. A structurally
+   * valid selection could then pass validation and be silently erased by an
+   * early exit that has nothing to do with it: choose a real frame, ask for a
+   * type the catalogue cannot start at all, and the answer came back with
+   * `selectionSource: 'none'`, no `partId`, and the chosen frame gone from
+   * `parts` — while an OWNED frame in the same build survived intact. A
+   * selection may become unusable; it may never be quietly replaced or erased.
+   *
+   * OWNED WINS, EXPLICITLY. By the time anything can call this, a category
+   * holding both an owned and a selected part has already been normalised: the
+   * same part collapses to ownership, and two different parts returned an
+   * explicit conflict long before here. The `??` is therefore never exercised
+   * — it is written the strict way round so that if that ordering is ever
+   * disturbed, the stronger claim survives rather than the weaker one.
    */
-  const deadEnd = (ar: string): ProposedBuild => {
-    const owned = input.owned?.parts ?? {};
-    return {
-      ...base,
-      parts: { ...owned },
-      decisions: REQUIRED_BUILD_CATEGORIES.map(category => ({
+  const deadEnd = (ar: string): ProposedBuild => ({
+    ...base,
+    parts: { ...selectedParts, ...ownedParts },
+    decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
+      const owned = ownedParts[category];
+      const chosen = selectedParts[category];
+      const mine = owned ?? chosen;
+      return {
         category,
         status: 'unavailable' as const,
-        selectionSource: owned[category] ? ('user-owned' as const) : ('none' as const),
-        partId: owned[category]?.id,
-        candidateIds: owned[category] ? [owned[category].id] : [],
+        selectionSource: owned ? ('user-owned' as const)
+          : chosen ? ('user-selected' as const) : ('none' as const),
+        partId: mine?.id,
+        candidateIds: mine ? [mine.id] : [],
         compatibility: [],
         reasons: [{ kind: 'no-candidate' as const, evidence: 'documented' as const, ar }],
-      })),
-    };
-  };
+      };
+    }),
+  });
+
+  const ownedParts = input.owned?.parts ?? {};
+  const ownedLocks: Record<string, BasePart> = { ...ownedParts };
 
   /*
    * ── 0. THE READER'S SELECTIONS, VALIDATED AS INPUT BEFORE ANYTHING ELSE ──
@@ -466,29 +490,15 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     };
   }
 
-  // ── 1. Prerequisites: derive only what the catalogue derives UNIQUELY ─────
-  //
-  // Where several values are equally valid the engine ASKS. `[4, 6]` says both
-  // work; it does not say 4 is preferable, and taking the first would be the
-  // array-position tiebreak this engine exists to refuse.
-  const sizes = getAvailableSizeOptions(droneTypeId).map(o => o.sizeInch);
-  if (sizes.length === 0) {
-    return deadEnd('لا يوجد إطار في الكتالوج موسوم لهذا النوع، فلا مقاس يمكن اشتقاقه ولا بناء يمكن بدؤه.');
-  }
-
-  const stockedVoltages = new Set(batteryVoltageOptions.map(o => o.sCount));
-  const voltages = (droneType?.recommendedBatteryVoltages ?? [])
-    .filter(v => stockedVoltages.has(v));
-
-  if (voltages.length === 0 && input.cellCount === undefined) {
-    return deadEnd('لا يوجد جهد بطارية مدعوم لهذا النوع ضمن الجهود المتوفرة في الكتالوج.');
-  }
-
-  const ownedParts = input.owned?.parts ?? {};
-  const ownedLocks: Record<string, BasePart> = { ...ownedParts };
-
   /*
    * ── OWNED AND SELECTED IN THE SAME CATEGORY ──────────────────────────────
+   *
+   * BEFORE THE FIRST DEAD END, not after it. This block used to sit below the
+   * size and voltage checks, which meant `deadEnd` could fire while a category
+   * still held two competing claims — and then whichever of them it read first
+   * would win silently, which is exactly the outcome this block exists to
+   * refuse. Normalising the locks is input handling, so it belongs with the
+   * other input handling: before anything is computed.
    *
    * Two hard locks on one shelf. The engine does not get to decide which of
    * them is true.
@@ -551,6 +561,24 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         };
       }),
     };
+  }
+
+  // ── 1. Prerequisites: derive only what the catalogue derives UNIQUELY ─────
+  //
+  // Where several values are equally valid the engine ASKS. `[4, 6]` says both
+  // work; it does not say 4 is preferable, and taking the first would be the
+  // array-position tiebreak this engine exists to refuse.
+  const sizes = getAvailableSizeOptions(droneTypeId).map(o => o.sizeInch);
+  if (sizes.length === 0) {
+    return deadEnd('لا يوجد إطار في الكتالوج موسوم لهذا النوع، فلا مقاس يمكن اشتقاقه ولا بناء يمكن بدؤه.');
+  }
+
+  const stockedVoltages = new Set(batteryVoltageOptions.map(o => o.sCount));
+  const voltages = (droneType?.recommendedBatteryVoltages ?? [])
+    .filter(v => stockedVoltages.has(v));
+
+  if (voltages.length === 0 && input.cellCount === undefined) {
+    return deadEnd('لا يوجد جهد بطارية مدعوم لهذا النوع ضمن الجهود المتوفرة في الكتالوج.');
   }
 
   /*

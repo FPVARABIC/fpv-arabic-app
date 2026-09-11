@@ -173,7 +173,19 @@ export const PROPOSAL = {
    */
   titleProposed: 'هذا البناء المقترح لك',
   titleAllOpen: 'الخيارات كلها أمامك',
+  /*
+   * THE READER'S OWN BUILD, SAID BACK TO THEM.
+   *
+   * «اختياراتك» — never «المقترح لك», because we proposed nothing here, and
+   * never «الخيارات كلها أمامك», because at least one of them is not: they
+   * closed it. What remains open is already reported, count by count, in the
+   * burden line right underneath, so this sentence does not repeat it — and
+   * must not, because a reader who has closed every category would read
+   * «وما بقي يحتاج قرارك» as a request for something that is finished.
+   */
+  titleReaderShaped: 'اختياراتك لهذا البناء',
   leadProposed: 'ما حسمه النظام، وما ما زال يحتاج رأيك — وسبب كل اختيار.',
+  leadReaderShaped: 'ما تراه هنا اخترته أنت — والنظام لم يحسم شيئًا من عنده في هذا البناء.',
   leadAllOpen:
     'كل القطع المتوافقة صالحة لهذا البناء، ولم يجد النظام ما يرجّح واحدة على '
     + 'أخرى. اختيار فئة ميزانية يعطيه أساسًا للترجيح.',
@@ -256,9 +268,15 @@ export const PROPOSAL = {
   candidates: {
     title: 'الخيارات المتوافقة',
     /*
-     * The sentence that keeps a read-only list honest. The reader will want to
-     * pick one; the domain cannot yet record «chose but does not own», and a
-     * React-only lock would be a lie the engine never sees.
+     * The sentence that keeps a read-only list honest.
+     *
+     * Phase 2C wrote it because the DOMAIN could not record «chose but does
+     * not own». Phase 2D built that: `selectedParts`, `user-selected`, and a
+     * selection that is a real lock in the search. So the reason this list is
+     * still read-only has changed — it is no longer «we cannot say it», it is
+     * «the wiring is Phase 2E's». The sentence stays true either way, and it
+     * stays until a click can reach the engine, because a React-only lock the
+     * engine never sees would be exactly the lie both phases avoided.
      */
     readOnly: 'هذه القائمة للعرض في هذه المرحلة — الاختيار بينها يأتي لاحقًا.',
     /*

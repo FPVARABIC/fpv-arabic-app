@@ -128,8 +128,9 @@ jobs:
           # Phase 2C is the first screen that shows a part, so almost every
           # assertion in it is about restraint: «اقترحناه لك» not «الأفضل», a
           # tie shown as a tie with no candidate preferred, no reader selection
-          # (the domain cannot say «chose but does not own»), and no «متوافق
-          # بالكامل» while a manual check is open. It also PRINTS the decision
+          # in the UI (Phase 2D gave the DOMAIN that word; wiring a click to it
+          # is Phase 2E's), and no «متوافق بالكامل» while a manual check is
+          # open. It also PRINTS the decision
           # burden per build type, because «did V2 reduce the decisions or just
           # move them» is a measurement.
           npm run test:build-v2-proposal
