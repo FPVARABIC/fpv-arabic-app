@@ -371,10 +371,11 @@ console.log('\n[8] The manual-check contract says what the engine actually does'
   // this counts RecommendationStatus and nothing else.
   const block = typesSrc.match(/export type RecommendationStatus =([\s\S]*?);/)![1];
   const statusMembers = [...block.matchAll(/'([a-z-]+)'/g)].map(m => m[1]);
-  ok('the status union declares exactly five members', statusMembers.length === 5);
-  ok('…and they are the five documented ones',
+  ok('the status union declares exactly six members', statusMembers.length === 6);
+  ok('…and they are the six documented ones',
     [...statusMembers].sort().join() ===
-    ['choice-required', 'only-compatible', 'recommended', 'unavailable', 'user-locked'].join());
+    ['choice-required', 'only-compatible', 'recommended', 'unavailable',
+      'user-locked', 'user-selected'].join());
   const emitted = new Set<string>();
   const all: Build[] = [
     proposeBuild({ droneTypeId: 'freestyle', cellCount: 6 }),
@@ -384,6 +385,16 @@ console.log('\n[8] The manual-check contract says what the engine actually does'
       droneTypeId: 'freestyle', cellCount: 6, budgetTier: 'budget',
       owned: { parts: { frames: eligibleCandidates('frames', PART_CATEGORY_MAP.frames ?? [],
         { droneTypeId: 'freestyle', cellCount: 6, sizeInch: 5 })[0] } },
+    }),
+    /*
+     * Phase 2D's member. Added to the sample rather than to the exception
+     * list: the point of this block is that the enum advertises nothing
+     * production cannot reach, and a status excused from the check would be
+     * exactly the claim-about-the-model the block exists to catch.
+     */
+    proposeBuild({
+      droneTypeId: 'freestyle', cellCount: 6, budgetTier: 'mid',
+      selectedParts: { propellers: 'propeller-hqprop-ethix-s5-mid' },
     }),
   ];
   all.forEach(b2 => b2.decisions.forEach(d => emitted.add(d.status)));
@@ -886,8 +897,44 @@ console.log('\n[22] An owned part must satisfy the ecosystem the reader also own
   ok('9: an owned receiver cannot satisfy «CRSF» as an ecosystem',
     decisionFor(crsf, 'receivers').status === 'unavailable');
 
-  ok('owned parts really are validated against the owned ecosystem',
-    /ecosystemConflict\(cat, part, input\.owned\)/.test(ENGINE_SRC));
+  /*
+   * THE OUTCOME, NOT THE CALL SITE.
+   *
+   * This was a grep for `ecosystemConflict(cat, part, input.owned)`, and a
+   * Phase 2D refactor that renamed the loop variables broke it while changing
+   * no behaviour at all — a source pattern standing in for a behavioural
+   * claim, which is the failure mode this suite spends most of its length
+   * avoiding elsewhere.
+   *
+   * What it was really asserting: a part the reader LOCKS never reaches the
+   * search unvetted. Nothing downstream can catch that — `findCleanCompletion`
+   * filters only the categories it walks, and a locked one it never walks, so
+   * the build would be assembled and `computeFindings` would judge it sound
+   * because it knows nothing about which radio is on the reader's desk.
+   *
+   * Asserted for BOTH locks, because Phase 2D added a second way in.
+   */
+  const ownedCrossfireUnderElrs = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { rcSystem: 'ExpressLRS', parts: { receivers: crossfire } },
+  });
+  ok('an OWNED Crossfire receiver under an ExpressLRS radio proves no path',
+    ownedCrossfireUnderElrs.provenPath === null);
+  ok('…and the receiver decision says so, keeping the reader\'s own part',
+    decisionFor(ownedCrossfireUnderElrs, 'receivers').status === 'unavailable'
+    && decisionFor(ownedCrossfireUnderElrs, 'receivers').partId === crossfire.id
+    && decisionFor(ownedCrossfireUnderElrs, 'receivers').selectionSource === 'user-owned');
+
+  const selectedCrossfireUnderElrs = proposeBuild({
+    droneTypeId: 'freestyle', cellCount: 6,
+    owned: { rcSystem: 'ExpressLRS' },
+    selectedParts: { receivers: crossfire.id },
+  });
+  ok('a SELECTED Crossfire receiver under an ExpressLRS radio proves no path',
+    selectedCrossfireUnderElrs.provenPath === null);
+  ok('…and it is reported as a SELECTION, never re-attributed to ownership',
+    decisionFor(selectedCrossfireUnderElrs, 'receivers').selectionSource === 'user-selected'
+    && decisionFor(selectedCrossfireUnderElrs, 'receivers').partId === crossfire.id);
 }
 
 console.log(`\n${passed} assertions passed.\n`);

@@ -128,11 +128,27 @@ jobs:
           # Phase 2C is the first screen that shows a part, so almost every
           # assertion in it is about restraint: «اقترحناه لك» not «الأفضل», a
           # tie shown as a tie with no candidate preferred, no reader selection
-          # (the domain cannot say «chose but does not own»), and no «متوافق
-          # بالكامل» while a manual check is open. It also PRINTS the decision
+          # in the UI (Phase 2D gave the DOMAIN that word; wiring a click to it
+          # is Phase 2E's), and no «متوافق بالكامل» while a manual check is
+          # open. It also PRINTS the decision
           # burden per build type, because «did V2 reduce the decisions or just
           # move them» is a measurement.
           npm run test:build-v2-proposal
+          # «I CHOSE THIS» IS NOT «I OWN THIS».
+          #
+          # Phase 2D gave the domain a third kind of answer, and the whole
+          # phase is a set of things that must NOT happen: a reader's choice
+          # re-attributed to ownership, a budget preference quietly overruling
+          # it, a selected id resolved against the wrong shelf, an ecosystem
+          # constraint waived because the part was locked rather than searched.
+          # None of those fails loudly on its own — each one produces a build
+          # that looks entirely correct — so they are asserted on every commit.
+          #
+          # Its longest section is the one with the least to look at: every
+          # reader who has selected NOTHING must get byte-identical output,
+          # compared against a snapshot taken from canonical before any of this
+          # existed. `snapshot:recommendation` refuses to overwrite that file.
+          npm run test:reader-selection
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters

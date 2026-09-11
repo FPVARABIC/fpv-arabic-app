@@ -1,0 +1,463 @@
+{
+ "freestyle-6S-mid": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "freestyle-6S-budget": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "budget",
+  "owned": {}
+ },
+ "freestyle-6S-premium": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "premium",
+  "owned": {}
+ },
+ "freestyle-6S-nopref": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "owned": {}
+ },
+ "freestyle-4S-mid": {
+  "droneTypeId": "freestyle",
+  "cellCount": 4,
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "freestyle-4S-nopref": {
+  "droneTypeId": "freestyle",
+  "cellCount": 4,
+  "owned": {}
+ },
+ "freestyle-noVoltage-mid": {
+  "droneTypeId": "freestyle",
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "cinematic-6S-mid": {
+  "droneTypeId": "cinematic",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "cinematic-6S-nopref": {
+  "droneTypeId": "cinematic",
+  "cellCount": 6,
+  "owned": {}
+ },
+ "cinematic-4S-budget": {
+  "droneTypeId": "cinematic",
+  "cellCount": 4,
+  "budgetTier": "budget",
+  "owned": {}
+ },
+ "longrange-mid": {
+  "droneTypeId": "long-range",
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "longrange-nopref": {
+  "droneTypeId": "long-range",
+  "owned": {}
+ },
+ "longrange-premium": {
+  "droneTypeId": "long-range",
+  "budgetTier": "premium",
+  "owned": {}
+ },
+ "cinewhoop-mid": {
+  "droneTypeId": "cinewhoop",
+  "cellCount": 4,
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "racing-mid": {
+  "droneTypeId": "racing",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {}
+ },
+ "unknown-type": {
+  "droneTypeId": "no-such-type",
+  "owned": {}
+ },
+ "freestyle-6S-mid-elrs": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "rcSystem": "ExpressLRS"
+  }
+ },
+ "freestyle-6S-mid-crossfire": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "rcSystem": "Crossfire"
+  }
+ },
+ "freestyle-6S-mid-dji": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "videoSystem": "DJI"
+  }
+ },
+ "freestyle-6S-mid-walksnail": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "videoSystem": "Walksnail"
+  }
+ },
+ "freestyle-6S-nopref-dji-elrs": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "owned": {
+   "videoSystem": "DJI",
+   "rcSystem": "ExpressLRS"
+  }
+ },
+ "longrange-mid-elrs": {
+  "droneTypeId": "long-range",
+  "budgetTier": "mid",
+  "owned": {
+   "rcSystem": "ExpressLRS"
+  }
+ },
+ "freestyle-6S-mid-ownedFrame": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "parts": {
+    "frames": {
+     "id": "frame-speedybee-mario5-budget",
+     "tier": "budget",
+     "nameAr": "إطار 5.1 إنش - اقتصادي",
+     "nameEn": "SpeedyBee Mario 5 DC O4 Pro Frame",
+     "brand": "SpeedyBee",
+     "priceRangeUSD": [
+      35,
+      50
+     ],
+     "specs": {
+      "sizeInch": 5.1,
+      "stackSizeMm": "30.5x30.5 / 25.5x25.5 / 20x20"
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "freestyle"
+      ],
+      "batteryVoltages": [
+       4,
+       6
+      ]
+     },
+     "whyChoose": "فريم 5 إنش Deadcat اقتصادي موثّق من SpeedyBee، مناسب لبناء HD مع DJI O4/O3 ومساحة تركيب مريحة.",
+     "notFor": "لا تختاره إذا كان الهدف سباق خفيف جداً؛ الوزن أعلى من فريمات السباق البحتة.",
+     "upgradePath": "AOS 5 EVO V1.2",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "Deadcat اقتصادي واسع — جاهز لـDJI O4/O3",
+      "noteTag": "أثقل من فريمات السباق — ليس لسباق خفيف",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "ممتاز كبداية لأنه واسع وواضح في التركيب ويدعم مقاسات ستاك متعددة."
+     ],
+     "safetyNotes": [
+      "تأكد من طول براغي المحرك ومن خلوص المراوح؛ لا تعتمد على الشكل فقط."
+     ],
+     "buildNotes": [
+      "إذا أضفت كاميرا أكشن وبطارية 6S ثقيلة سيبقى عملياً، لكن سيحتاج محركات ومراوح متوازنة لتجنب الخمول.",
+      "الوزن التقريبي: 129g تقريباً بدون TPU؛ 170g تقريباً مع القطع المطبوعة/المقولبة."
+     ]
+    }
+   }
+  }
+ },
+ "freestyle-6S-mid-ownedMotors": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "parts": {
+    "motors": {
+     "id": "motor-emax-eco-ii-2306-budget",
+     "tier": "budget",
+     "nameAr": "محرك 2306 - اقتصادي",
+     "nameEn": "EMAX ECO II 2306 1700KV",
+     "brand": "EMAX",
+     "priceRangeUSD": [
+      13,
+      20
+     ],
+     "specs": {
+      "kv": 1700,
+      "statorSize": "2306",
+      "compatibleVoltages": [
+       6
+      ],
+      "maxFrameSizeInch": 5.5
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "freestyle",
+       "racing"
+      ],
+      "batteryVoltages": [
+       6
+      ],
+      "frameSizeInch": 5
+     },
+     "whyChoose": "محرك اقتصادي 2306 موثق بوزن ~30.4g بدون السلك ويدعم مراوح من 5 إلى 5.5 إنش؛ مناسب لـ5 إنش 6S عند اختيار KV الصحيح.",
+     "notFor": "لا تختاره إذا أردت أخف وزن أو أعلى نعومة؛ الخطأ الشائع استخدام KV عالي مع 6S دون فهم.",
+     "upgradePath": "iFlight XING2 2207 1750KV",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "اقتصادي خفيف (~30.4g) — يدعم مراوح من 5 إلى 5.5 إنش",
+      "noteTag": "ليس الأخف ولا الأنعم — انتبه لاختيار KV مع 6S",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "اختيار جيد لأول بناء بشرط اختيار KV مناسب للبطارية."
+     ],
+     "safetyNotes": [
+      "اختبر اتجاه المحركات بدون مراوح أولاً، ولا تركب مروحة أثناء إعداد Betaflight."
+     ],
+     "buildNotes": [
+      "مع 6S وProp ثقيل قد يصل لتيار مرتفع؛ استخدم ESC بهامش وراقب الحرارة.",
+      "الوزن: ~30.4g بدون السلك (حسب التوثيق).",
+      "ملاحظة جهد: النص المصدري \"6S أساساً لنسخة 1700KV؛ عائلة ECO II 2306 تشمل KV أخرى لجهود مختلفة\" — يخص هذا الصف تحديداً نسخة 1700KV وهي 6S؛ الإشارة لعائلة المنتج تخص نسخ KV أخرى غير مدرجة هنا."
+     ]
+    }
+   }
+  }
+ },
+ "freestyle-6S-mid-ownedFrameMotors": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "budgetTier": "mid",
+  "owned": {
+   "parts": {
+    "frames": {
+     "id": "frame-speedybee-mario5-budget",
+     "tier": "budget",
+     "nameAr": "إطار 5.1 إنش - اقتصادي",
+     "nameEn": "SpeedyBee Mario 5 DC O4 Pro Frame",
+     "brand": "SpeedyBee",
+     "priceRangeUSD": [
+      35,
+      50
+     ],
+     "specs": {
+      "sizeInch": 5.1,
+      "stackSizeMm": "30.5x30.5 / 25.5x25.5 / 20x20"
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "freestyle"
+      ],
+      "batteryVoltages": [
+       4,
+       6
+      ]
+     },
+     "whyChoose": "فريم 5 إنش Deadcat اقتصادي موثّق من SpeedyBee، مناسب لبناء HD مع DJI O4/O3 ومساحة تركيب مريحة.",
+     "notFor": "لا تختاره إذا كان الهدف سباق خفيف جداً؛ الوزن أعلى من فريمات السباق البحتة.",
+     "upgradePath": "AOS 5 EVO V1.2",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "Deadcat اقتصادي واسع — جاهز لـDJI O4/O3",
+      "noteTag": "أثقل من فريمات السباق — ليس لسباق خفيف",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "ممتاز كبداية لأنه واسع وواضح في التركيب ويدعم مقاسات ستاك متعددة."
+     ],
+     "safetyNotes": [
+      "تأكد من طول براغي المحرك ومن خلوص المراوح؛ لا تعتمد على الشكل فقط."
+     ],
+     "buildNotes": [
+      "إذا أضفت كاميرا أكشن وبطارية 6S ثقيلة سيبقى عملياً، لكن سيحتاج محركات ومراوح متوازنة لتجنب الخمول.",
+      "الوزن التقريبي: 129g تقريباً بدون TPU؛ 170g تقريباً مع القطع المطبوعة/المقولبة."
+     ]
+    },
+    "motors": {
+     "id": "motor-emax-eco-ii-2306-budget",
+     "tier": "budget",
+     "nameAr": "محرك 2306 - اقتصادي",
+     "nameEn": "EMAX ECO II 2306 1700KV",
+     "brand": "EMAX",
+     "priceRangeUSD": [
+      13,
+      20
+     ],
+     "specs": {
+      "kv": 1700,
+      "statorSize": "2306",
+      "compatibleVoltages": [
+       6
+      ],
+      "maxFrameSizeInch": 5.5
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "freestyle",
+       "racing"
+      ],
+      "batteryVoltages": [
+       6
+      ],
+      "frameSizeInch": 5
+     },
+     "whyChoose": "محرك اقتصادي 2306 موثق بوزن ~30.4g بدون السلك ويدعم مراوح من 5 إلى 5.5 إنش؛ مناسب لـ5 إنش 6S عند اختيار KV الصحيح.",
+     "notFor": "لا تختاره إذا أردت أخف وزن أو أعلى نعومة؛ الخطأ الشائع استخدام KV عالي مع 6S دون فهم.",
+     "upgradePath": "iFlight XING2 2207 1750KV",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "اقتصادي خفيف (~30.4g) — يدعم مراوح من 5 إلى 5.5 إنش",
+      "noteTag": "ليس الأخف ولا الأنعم — انتبه لاختيار KV مع 6S",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "اختيار جيد لأول بناء بشرط اختيار KV مناسب للبطارية."
+     ],
+     "safetyNotes": [
+      "اختبر اتجاه المحركات بدون مراوح أولاً، ولا تركب مروحة أثناء إعداد Betaflight."
+     ],
+     "buildNotes": [
+      "مع 6S وProp ثقيل قد يصل لتيار مرتفع؛ استخدم ESC بهامش وراقب الحرارة.",
+      "الوزن: ~30.4g بدون السلك (حسب التوثيق).",
+      "ملاحظة جهد: النص المصدري \"6S أساساً لنسخة 1700KV؛ عائلة ECO II 2306 تشمل KV أخرى لجهود مختلفة\" — يخص هذا الصف تحديداً نسخة 1700KV وهي 6S؛ الإشارة لعائلة المنتج تخص نسخ KV أخرى غير مدرجة هنا."
+     ]
+    }
+   }
+  }
+ },
+ "freestyle-6S-nopref-ownedReceiver-elrs": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "owned": {
+   "rcSystem": "ExpressLRS",
+   "parts": {
+    "receivers": {
+     "id": "receiver-radiomaster-rp1-v2-budget",
+     "tier": "budget",
+     "nameAr": "ريسيفر ELRS - اقتصادي",
+     "nameEn": "RadioMaster RP1 V2 ExpressLRS 2.4GHz Nano Receiver",
+     "brand": "RadioMaster",
+     "priceRangeUSD": [
+      15,
+      22
+     ],
+     "protocolOrSystem": "ELRS 2.4GHz / CRSF",
+     "specs": {
+      "protocol": "ExpressLRS",
+      "frequencyGHz": 2.4,
+      "weightG": 2.2,
+      "hasTelemetry": true
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "freestyle",
+       "racing",
+       "cinematic"
+      ],
+      "batteryVoltages": [
+       4,
+       6
+      ]
+     },
+     "whyChoose": "مستقبل صغير وموثوق ومناسب لمعظم بنايات 5 إنش مع ELRS.",
+     "notFor": "لا تختاره إذا تريد Diversity حقيقي أو مدى طويل جداً 868/915MHz.",
+     "upgradePath": "Happymodel EP1 Dual TCXO",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "ELRS صغير موثوق لمعظم بنايات 5 إنش",
+      "noteTag": "لا يناسب مدى طويل جداً (2.4GHz فقط)",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "اختيار ممتاز كبداية: TX/RX عبر UART CRSF فقط، لا SBUS."
+     ],
+     "safetyNotes": [
+      "لا توصله على VBAT؛ هذا مستقبل 5V فقط."
+     ],
+     "buildNotes": [
+      "مع 1W ELRS خارجي سيعمل جيداً، لكن تركيب الهوائي أهم من اسم المستقبل.",
+      "الشريحة: EPS8285 + SX1281، 13×11×3mm، 500Hz/F1000Hz أقصى معدل تحديث."
+     ]
+    }
+   }
+  }
+ },
+ "freestyle-6S-nopref-ownedReceiver-conflict": {
+  "droneTypeId": "freestyle",
+  "cellCount": 6,
+  "owned": {
+   "rcSystem": "ExpressLRS",
+   "parts": {
+    "receivers": {
+     "id": "receiver-tbs-crossfire-nano-mid",
+     "tier": "mid",
+     "nameAr": "ريسيفر Crossfire - متوسط",
+     "nameEn": "TBS Crossfire Nano RX",
+     "brand": "TBS",
+     "priceRangeUSD": [
+      30,
+      40
+     ],
+     "protocolOrSystem": "Crossfire / CRSF",
+     "specs": {
+      "protocol": "Crossfire",
+      "weightG": 0.5,
+      "hasTelemetry": true
+     },
+     "compatibilityTags": {
+      "droneTypes": [
+       "long-range"
+      ],
+      "batteryVoltages": [
+       4,
+       6
+      ]
+     },
+     "whyChoose": "خيار معروف للمدى الطويل ومناسب لمن يملك نظام Crossfire أصلاً.",
+     "notFor": "لا تختاره إذا نظامك كله ELRS 2.4GHz ولا تريد شراء ecosystem جديد.",
+     "upgradePath": "TBS Crossfire Diversity Nano RX",
+     "lastReviewed": "2026-07",
+     "confidence": "مؤكد",
+     "quickTags": {
+      "whyTag": "مدى طويل معروف — 868/915MHz",
+      "noteTag": "يتطلب منظومة Crossfire كاملة — لا يعمل مع ELRS",
+      "noteTagSource": "notFor"
+     },
+     "beginnerNotes": [
+      "ليس أفضل اختيار للمبتدئ إذا لم يكن لديه Crossfire TX module."
+     ],
+     "safetyNotes": [
+      "احترم قوانين التردد في بلدك واضبط region صحيح."
+     ],
+     "buildNotes": [
+      "مع 900MHz، الهوائي أكبر والتركيب يختلف عن ELRS 2.4GHz.",
+      "التردد: 868/915MHz (حسب المنطقة)، 12 قناة، PPM/SBUS/CRSF/PWM، 11×18×11mm."
+     ]
+    }
+   }
+  }
+ }
+}

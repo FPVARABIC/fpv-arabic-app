@@ -8,7 +8,8 @@ import { PART_VOCAB } from '@/lib/build/labels';
 import { PROPOSAL } from './copy';
 import { arabicCount, CHOICE_NOUN } from './arabicCount';
 import {
-  proposalBurdenAr, proposalView, type DecisionGroup, type ProposalDefectKind,
+  proposalBurdenAr, proposalView,
+  type DecisionGroup, type ProposalDefectKind, type ProposalQuality,
 } from './proposalModel';
 import { ProposalCategoryCard } from './ProposalCategoryCard';
 
@@ -57,7 +58,28 @@ function useCatalogue(): Catalogue {
   }, []);
 }
 
-const GROUP_ORDER: readonly DecisionGroup[] = ['needs-you', 'system-decided', 'yours', 'problem'];
+/**
+ * THE HEADLINE, ONE PER QUALITY — a Record, not a ternary.
+ *
+ * It was `proposed ? … : …`, and «anything that is not a proposal is wide
+ * open» stopped being true the moment the reader could close a category
+ * themselves. A ternary has no room for a third answer, so the third answer
+ * would have been silently absorbed into whichever branch it fell into, and
+ * both branches state something false about it.
+ */
+const HEADLINE: Record<ProposalQuality, { title: string; lead: string }> = {
+  proposed: { title: PROPOSAL.titleProposed, lead: PROPOSAL.leadProposed },
+  'reader-shaped': { title: PROPOSAL.titleReaderShaped, lead: PROPOSAL.leadReaderShaped },
+  'all-open': { title: PROPOSAL.titleAllOpen, lead: PROPOSAL.leadAllOpen },
+};
+
+/*
+ * Reading order: what still needs you, then what was settled for you, then
+ * what is already yours — owned first, then chosen — then what went wrong.
+ */
+const GROUP_ORDER: readonly DecisionGroup[] = [
+  'needs-you', 'system-decided', 'yours', 'chosen', 'problem',
+];
 
 /** Typed against the defect union, so a new kind cannot ship without wording. */
 const CONSISTENCY_KINDS: Record<ProposalDefectKind, string> = PROPOSAL.consistency.kinds;
@@ -133,15 +155,13 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
     );
   }
 
-  const proposed = view.quality === 'proposed';
-
   return (
     <section data-testid="v2-proposal" data-quality={view.quality}
       style={{ display: 'grid', gap: 18 }}>
       <header style={{ display: 'grid', gap: 7 }}>
         <h2 data-testid="v2-proposal-title"
           style={{ margin: 0, fontSize: 21, fontWeight: 900, lineHeight: 1.55 }}>
-          {proposed ? PROPOSAL.titleProposed : PROPOSAL.titleAllOpen}
+          {HEADLINE[view.quality].title}
         </h2>
         {/*
           The decision burden, in one sentence, from real counts — «حسمنا ٦
@@ -154,7 +174,7 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
           {proposalBurdenAr(view.counts, PROPOSAL.burden, n => arabicCount(n, CHOICE_NOUN))}
         </p>
         <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.9 }}>
-          {proposed ? PROPOSAL.leadProposed : PROPOSAL.leadAllOpen}
+          {HEADLINE[view.quality].lead}
         </p>
       </header>
 
@@ -218,7 +238,7 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
                   categoryLabelAr={PART_VOCAB[d.category]!.ar}
                   // Settled categories collapse. The ones needing the reader do
                   // not — that decision is why they opened this screen.
-                  compact={g === 'system-decided' || g === 'yours'}
+                  compact={g === 'system-decided' || g === 'yours' || g === 'chosen'}
                   expandCandidates={expandsByDefault(
                     d.candidateIds.length, view.counts.choiceRequired,
                   )}

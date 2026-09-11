@@ -262,14 +262,21 @@ ok('…and the decision still reports NO selection for that category',
   tied.partId === undefined && tied.selectionSource === 'none');
 
 // ═══════════════════════════════════════════════════════════════════════════
-section('5 — NO READER SELECTION, BECAUSE THE DOMAIN HAS NO WORD FOR IT');
+section('5 — NO READER SELECTION IN THE UI, THOUGH THE DOMAIN NOW HAS ONE');
 // ═══════════════════════════════════════════════════════════════════════════
 /*
- * `RecommendationInput.owned.parts` means «already in hand» and produces
- * `user-locked` / `selectionSource: 'user-owned'`. Using it for a part the
- * reader merely picked in a wizard would tell them they own something they do
- * not, and make the engine refuse to replace it. There is no third channel, so
- * Phase 2C shows candidates read-only and the contract is designed later.
+ * Phase 2C found no way to say «chose but does not own»: `owned.parts` means
+ * «already in hand» and produces `user-locked` / `selectionSource:
+ * 'user-owned'`, so routing a wizard click through it would have told someone
+ * they own hardware they had not bought. It showed candidates read-only and
+ * reported the gap instead.
+ *
+ * PHASE 2D CLOSED THE GAP. `selectedParts` / `user-selected` now exist, and
+ * `scripts/testReaderSelection.ts` is their proof. What has NOT changed is
+ * this screen: the cards stay read-only until Phase 2E wires a click to the
+ * engine, because a selection the engine never sees is still a lie. So these
+ * assertions keep their teeth — they are now about the UI's restraint rather
+ * than the domain's silence.
  */
 ok('nothing in the V2 layer writes owned.parts', !/owned\s*:\s*\{[^}]*parts/.test(allCode));
 ok('nothing in the V2 layer even mentions owned.parts', !/owned\.parts/.test(allCode));
@@ -277,8 +284,13 @@ ok('no candidate is clickable', !/onSelect|onClick=\{\(\) => set[A-Z]\w*Candidat
   src['ProposalCategoryCard.tsx']));
 ok('the screen says the list is read-only for now',
   /هذه القائمة للعرض في هذه المرحلة/.test(PROPOSAL.candidates.readOnly));
-ok('the model documents why selection is absent',
-  /owned\.parts` means «already in hand»/.test(read(`${V2}/proposalModel.ts`).replace(/\n\s*\*\s?/g, ' ')));
+/* Flattened to ONE space: a doc comment's indentation is not its meaning. */
+const modelProse = read(`${V2}/proposalModel.ts`).replace(/\n\s*\*/g, ' ')
+  .replace(/\s+/g, ' ');
+ok('the model documents that the domain CAN now express selection',
+  modelProse.includes('The DOMAIN can now say «the reader chose this but does not own it»'));
+ok('…and that the UI stays read-only until Phase 2E on purpose',
+  modelProse.includes('Phase 2E sends the click to the engine and reads the answer back'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('6 — EXPLANATIONS AND EVIDENCE ARE THE ENGINE\'S');

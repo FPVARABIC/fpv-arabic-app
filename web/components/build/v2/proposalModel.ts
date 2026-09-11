@@ -14,25 +14,44 @@ import type {
  *
  * WHY THE GROUPS ARE NOT THE STATUSES
  * -----------------------------------
- * Five statuses, three things a reader has to do about them:
+ * Six statuses, four things a reader has to do about them:
  *
  *   recommended, only-compatible  →  read it, or don't. The system decided.
  *   choice-required               →  YOU decide. This is the actual work.
  *   user-locked                   →  it's yours; nothing to do.
+ *   user-selected                 →  you already decided. Also nothing to do,
+ *                                    and NOT the same as owning it.
  *   unavailable                   →  something is wrong.
  *
  * An eight-card wall where all eight shout equally is the V1 wizard again. The
  * group that needs the reader gets the room; the group that does not gets a
  * compact row.
+ *
+ * WHY THIS IS A RECORD AND NOT A CHAIN
+ * ------------------------------------
+ * It was a chain, and it ended in `: 'system-decided'` — so «anything I have
+ * not named is a system decision». Phase 2D added `user-selected`, and that
+ * default would have silently filed a READER'S OWN CHOICE under «حسمها
+ * النظام»: the system claiming credit for a decision it explicitly refused to
+ * make, which is the precise failure this whole module exists to prevent.
+ *
+ * A `Record` over the union cannot be under-populated. A sixth status will not
+ * compile until someone decides, in writing, what a reader is supposed to do
+ * about it — the same guarantee `COMPAT_RULE_LABEL_AR` gives for rules.
  */
 
-export type DecisionGroup = 'needs-you' | 'system-decided' | 'yours' | 'problem';
+export type DecisionGroup = 'needs-you' | 'system-decided' | 'yours' | 'chosen' | 'problem';
 
-export const groupOf = (status: RecommendationStatus): DecisionGroup =>
-  status === 'choice-required' ? 'needs-you'
-    : status === 'user-locked' ? 'yours'
-      : status === 'unavailable' ? 'problem'
-        : 'system-decided';
+const GROUP_BY_STATUS: Record<RecommendationStatus, DecisionGroup> = {
+  'choice-required': 'needs-you',
+  recommended: 'system-decided',
+  'only-compatible': 'system-decided',
+  'user-locked': 'yours',
+  'user-selected': 'chosen',
+  unavailable: 'problem',
+};
+
+export const groupOf = (status: RecommendationStatus): DecisionGroup => GROUP_BY_STATUS[status];
 
 export interface DecisionCounts {
   required: number;
@@ -40,8 +59,17 @@ export interface DecisionCounts {
   onlyCompatible: number;
   choiceRequired: number;
   userLocked: number;
+  /** Chosen by the READER. Never counted as settled by the system. */
+  userSelected: number;
   unavailable: number;
-  /** What the system settled on the reader's behalf, by any route. */
+  /**
+   * What the system settled on the reader's behalf, by any route.
+   *
+   * `user-locked` and `user-selected` are both excluded on purpose: the
+   * headline built from this number says «حسمنا N اختيارات», and neither a
+   * part someone already owns nor one they picked themselves was settled by
+   * us.
+   */
   systemDecided: number;
   manualChecks: number;
 }
@@ -57,11 +85,32 @@ export interface DecisionCounts {
  *
  * Measured, not hypothesised — `scripts/testBuildV2Proposal.ts` prints the
  * decision burden for every representative build.
+ *
+ * WHY TWO WAS NOT ENOUGH AFTER PHASE 2D
+ * -------------------------------------
+ * The pair was complete while only the SYSTEM could settle a category. Now the
+ * reader can, and that makes a third situation real:
+ *
+ *     no budget preference · one part chosen by the reader · seven still open
+ *
+ * `systemDecided` is 0, so this fell to `all-open` and the screen said «الخيارات
+ * كلها أمامك». One of them is not: the reader closed it themselves. And the
+ * other headline is just as false — «هذا البناء المقترح لك» claims a proposal
+ * the system did not make.
+ *
+ * Neither claim is true, so neither is used. The fix is a third state, not a
+ * bigger `systemDecided`: inflating that count to make a sentence work would
+ * have made the sentence lie in the other direction.
  */
 export type ProposalQuality =
   /** At least one category the system settled. */
   | 'proposed'
-  /** A viable build exists, but the system ranked nothing: it is all open. */
+  /**
+   * The system settled nothing, but the READER has chosen at least one part.
+   * The build has a shape, and it is theirs rather than ours.
+   */
+  | 'reader-shaped'
+  /** Nothing settled by anyone: the field really is open. */
   | 'all-open';
 
 /**
@@ -253,13 +302,14 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
     onlyCompatible: by('only-compatible').length,
     choiceRequired: by('choice-required').length,
     userLocked: by('user-locked').length,
+    userSelected: by('user-selected').length,
     unavailable: by('unavailable').length,
     systemDecided: by('recommended').length + by('only-compatible').length,
     manualChecks: build.manualChecks.length,
   };
 
   const groups: Record<DecisionGroup, CategoryDecision[]> = {
-    'needs-you': [], 'system-decided': [], yours: [], problem: [],
+    'needs-you': [], 'system-decided': [], yours: [], chosen: [], problem: [],
   };
   for (const d of build.decisions) groups[groupOf(d.status)].push(d);
 
@@ -267,7 +317,14 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
 
   return {
     counts,
-    quality: counts.systemDecided > 0 ? 'proposed' : 'all-open',
+    /*
+     * Explicit, in this order, because the two failure modes are opposite:
+     * fall through to `proposed` and the system takes credit for the reader's
+     * choice; fall through to `all-open` and the reader's choice is denied.
+     */
+    quality: counts.systemDecided > 0 ? 'proposed'
+      : counts.userSelected > 0 ? 'reader-shaped'
+        : 'all-open',
     groups,
     manualChecks: build.manualChecks,
     defects,
@@ -288,9 +345,15 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
  *     blocker-free build EXISTS; it picked one arbitrary member of each tie to
  *     do so. Showing it as «the system's pick» would turn a proof of
  *     existence into a recommendation the engine explicitly refused to make.
- *   · carry a selection at all. The domain has no way to say «the reader chose
- *     this but does not own it» — `owned.parts` means «already in hand» and
- *     produces `user-locked`. Selection waits for that contract.
+ *   · carry a selection of its own. The DOMAIN can now say «the reader chose
+ *     this but does not own it» — Phase 2D added `selectedParts` and
+ *     `user-selected`, kept apart from `owned.parts`, which still means
+ *     «already in hand». What this function must not do is invent one: a
+ *     selection is an INPUT to `proposeBuild`, and a candidate list that
+ *     marked something chosen without the engine having seen it would be a
+ *     React-only lock — a claim no search ever tested. Phase 2E sends the
+ *     click to the engine and reads the answer back; until then this is a
+ *     list, deliberately.
  */
 export const candidatesOf = (d: CategoryDecision): readonly string[] => d.candidateIds;
 

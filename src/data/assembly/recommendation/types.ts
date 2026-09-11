@@ -35,6 +35,14 @@
  *   user-locked      the reader already owns it and it is compatible and
  *                    viable. Kept, not chosen.
  *
+ *   user-selected    the reader CHOSE it for this build and it is viable. Not
+ *                    a recommendation — the system did not weigh it against
+ *                    the others; not `user-locked` — they do not claim to own
+ *                    it; not `only-compatible` — others survived too; and not
+ *                    `choice-required` — the choice has been made. Every one
+ *                    of those four would have been a lie, which is why this
+ *                    outcome exists rather than reusing one of them.
+ *
  *   unavailable      nothing viable — including the case where the part the
  *                    reader owns is the thing ruling the build out.
  *
@@ -65,10 +73,19 @@ export type RecommendationStatus =
   | 'only-compatible'
   | 'choice-required'
   | 'user-locked'
+  | 'user-selected'
   | 'unavailable';
 
-/** WHO decided. `none` means nobody has — the reader still must. */
-export type SelectionSource = 'system' | 'user-owned' | 'none';
+/**
+ * WHO decided. `none` means nobody has — the reader still must.
+ *
+ * `user-owned` and `user-selected` are BOTH the reader, and they are not the
+ * same claim. «I already have this» is a fact about the world; «I want this in
+ * this build» is an intention about a proposal. Collapsing them would put
+ * hardware in someone's hands that is not there — and would make the engine
+ * refuse to reconsider a part they never bought. Kept apart on purpose.
+ */
+export type SelectionSource = 'system' | 'user-owned' | 'user-selected' | 'none';
 
 /**
  * WHERE A CLAIM CAME FROM — the honest replacement for a confidence score.
@@ -79,8 +96,15 @@ export type SelectionSource = 'system' | 'user-owned' | 'none';
  *                  tag, ecosystem string). True, and authored rather than
  *                  measured — so it ranks, but it never overrides physics.
  *   manual-required  nothing in the data decides it; a human must check.
+ *   user-input     the READER said so. Not evidence about the world at all —
+ *                  evidence about what they asked for. It is separate because
+ *                  labelling a reader's choice `documented` would dress an
+ *                  intention up as a spec, and a later screen reading
+ *                  «documented» would present it as something the catalogue
+ *                  established.
  */
-export type EvidenceKind = 'documented' | 'catalogue-tag' | 'manual-required';
+export type EvidenceKind =
+  'documented' | 'catalogue-tag' | 'manual-required' | 'user-input';
 
 /**
  * The inputs a reader can give. Named as a type rather than left as loose
@@ -95,7 +119,8 @@ export type RecommendationInputKey =
   | 'budgetTier'
   | 'ownedVideoSystem'
   | 'ownedRcSystem'
-  | 'ownedParts';
+  | 'ownedParts'
+  | 'selectedParts';
 
 /** One sentence of why, plus what produced it. */
 export interface DecisionReason {
@@ -106,8 +131,12 @@ export interface DecisionReason {
    *   tie          why no choice could be made
    *   no-candidate why nothing survived
    *   manual       why a judgement is being refused
+   *   selection    the reader chose this part. Not a filter (nothing was
+   *                excluded), not a ranking (nothing was compared), not a tie
+   *                (the tie is over) — a direct choice, and the only reason
+   *                kind whose authority is the reader rather than the data.
    */
-  kind: 'filter' | 'ranking' | 'tie' | 'no-candidate' | 'manual';
+  kind: 'filter' | 'ranking' | 'tie' | 'no-candidate' | 'manual' | 'selection';
   evidence: EvidenceKind;
   /** One sentence, for a reader. */
   ar: string;
@@ -131,6 +160,57 @@ export interface CompatibilityEvidence {
   status: CompatRuleStatus;
 }
 
+/**
+ * A READER SELECTION THE ENGINE COULD NOT EVEN CONSIDER.
+ *
+ * WHY THIS EXISTS AT ALL — it is the one thing `ProposedBuild` could not say.
+ *
+ * Everything else the engine reports is an outcome for a category of the
+ * build, carried on `CategoryDecision`. A selection can be malformed in ways
+ * that have no category to report against: it can name a shelf the catalogue
+ * does not stock, or a shelf that is not part of a build at all (`gps`), and
+ * then there IS no decision to hang the answer on. It can also name an id
+ * that does not resolve in the category it was filed under — and `partId` is
+ * defined as «the part this decision is ABOUT», so putting a phantom or a
+ * foreign id there would be a lie of exactly the kind Phase 2C spent four
+ * rounds removing: a frame's id under «المحركات» resolves globally and
+ * renders.
+ *
+ * So malformed selection input gets its own channel, and the build FAILS
+ * CLOSED — no proven path, nothing complete, no manufactured parts map.
+ * Silently dropping a bad entry would leave the reader looking at a
+ * recommendation while believing they had chosen something.
+ *
+ * This is NOT the channel for a selection that is real but unusable — an
+ * ineligible part, one that breaks a shared rule, one that contradicts the
+ * owned ecosystem, or one that cannot appear in any clean build. Those have a
+ * category and a resolvable id, so they are reported where they belong: on
+ * that category's decision, as `unavailable` with `selectionSource:
+ * 'user-selected'` and the id intact.
+ *
+ * And it is NOT `blockerFindingIds`: those are verdict-engine finding ids, and
+ * a malformed input is not a finding about a drone.
+ */
+export interface SelectionIssue {
+  /** The category key exactly as the input spelled it. */
+  category: string;
+  /** The part id exactly as the input spelled it. */
+  partId: string;
+  /**
+   *   unknown-category      the catalogue has no such shelf.
+   *   not-a-build-category  a real shelf, but not one a build must fill —
+   *                         `gps`, `tools`. There is no decision for it.
+   *   unknown-part          no part in the catalogue has this id.
+   *   foreign-category      the id is real and belongs to a DIFFERENT
+   *                         category. Reported apart from `unknown-part`
+   *                         because «exists, wrong shelf» is the more
+   *                         dangerous bug: it resolves.
+   */
+  kind: 'unknown-category' | 'not-a-build-category' | 'unknown-part' | 'foreign-category';
+  /** One sentence, for a reader. */
+  ar: string;
+}
+
 /** What the engine concluded about one category. */
 export interface CategoryDecision {
   category: string;
@@ -140,10 +220,16 @@ export interface CategoryDecision {
   /**
    * The part this decision is ABOUT, when there is one.
    *
-   * Set when the system selected a part (`recommended`, `only-compatible`) AND
+   * Set when the system selected a part (`recommended`, `only-compatible`),
    * when the reader owns one (`user-locked`, or `unavailable` where their own
-   * part is the reason). `selectionSource` is what tells those apart — a
-   * caller must never read `partId` as «the system chose this».
+   * part is the reason), and when the reader SELECTED one (`user-selected`, or
+   * `unavailable` where their selection is the reason). `selectionSource` is
+   * what tells those three apart — a caller must never read `partId` as «the
+   * system chose this».
+   *
+   * It always resolves inside `category` in the CURRENT catalogue. A selection
+   * whose id does not is refused before it reaches here, and reported on
+   * `ProposedBuild.selectionIssues` instead.
    */
   partId?: string;
   /**
@@ -228,6 +314,13 @@ export interface ProposedBuild {
    * construction.
    */
   blockerFindingIds: readonly string[];
+  /**
+   * Reader selections that could not be filed against any category — see
+   * `SelectionIssue`. Non-empty means the input was malformed and the build
+   * failed closed; empty is the ordinary case, including every build where
+   * nothing was selected.
+   */
+  selectionIssues: readonly SelectionIssue[];
 }
 
 /**
@@ -271,4 +364,34 @@ export interface RecommendationInput {
      */
     parts?: Readonly<Record<string, BasePart>>;
   };
+  /**
+   * PARTS THE READER CHOSE FOR THIS BUILD — category → catalogue part id.
+   *
+   * A THIRD kind of answer, and it is deliberately not under `owned`.
+   *
+   * `owned.parts` means «already in my hands», and the engine treats it as a
+   * fact about the world: it is never replaced, it constrains what else can
+   * be proposed, and a reason attached to it says «قطعة تملكها بالفعل». Using
+   * that channel to carry a wizard click would tell a reader they own
+   * hardware they have not bought, and would make the engine defend a part
+   * they never had. That is the bug this field exists to prevent.
+   *
+   * WHAT A SELECTION IS
+   *   · a HARD CHOICE for this proposal until it is changed or cleared —
+   *     budget is a preference and a preference does not outrank a choice;
+   *   · NOT ownership, and NOT a system recommendation;
+   *   · subject to every normal check: eligibility, the shared compatibility
+   *     rules, the owned ecosystem, and global viability alongside every
+   *     other lock. Selecting a part does not make it work.
+   *
+   * IDS, NOT PARTS. The choice is an identity in the CURRENT catalogue, and
+   * an id is the whole of it. `owned.parts` carries `BasePart` objects
+   * because owned hardware may outlive a catalogue entry; a selection cannot
+   * — a reader cannot choose something that is not on the shelf. Accepting
+   * arbitrary objects here would let a caller invent a part.
+   *
+   * Absent or empty means nothing was chosen, and every output below is
+   * exactly what it was before this field existed.
+   */
+  selectedParts?: Readonly<Record<string, string>>;
 }
