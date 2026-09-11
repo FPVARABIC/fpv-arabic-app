@@ -369,6 +369,36 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     selectionIssues: [] as SelectionIssue[],
   };
 
+  /**
+   * WHOSE PART IS THIS, AND WHAT DO WE CALL IT.
+   *
+   * Four different returns refuse a build while still having to name what the
+   * reader put in: the dead ends, the owned/selected collision, the ecosystem
+   * contradiction, and the unusable-selection path. Each one wrote this out by
+   * hand, and one of them got it wrong in a way nothing could catch: the
+   * collision return read `ownedParts[category]` only, so a frame conflict
+   * silently erased an unrelated propeller CHOICE two categories away.
+   *
+   * Three correct copies and one wrong one is what a shared invariant looks
+   * like when it is not shared. It is written once now, and the ordering is
+   * the point: OWNED FIRST. After normalisation a category holds at most one
+   * of the two, so `??` never actually chooses — it is written the strict way
+   * round so that if that ever stops being true, the stronger claim («I have
+   * this») survives rather than the weaker one («I want this»).
+   */
+  const readerPartIn = (category: string) => {
+    const owned = ownedParts[category];
+    const chosen = selectedParts[category];
+    const mine = owned ?? chosen;
+    return {
+      mine,
+      selectionSource: owned ? ('user-owned' as const)
+        : chosen ? ('user-selected' as const) : ('none' as const),
+      partId: mine?.id,
+      candidateIds: mine ? [mine.id] : [],
+    };
+  };
+
   /*
    * Nothing can be built. Every category says so — but a part the READER put
    * in keeps its identity even here, because when a build is impossible the
@@ -397,16 +427,13 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     ...base,
     parts: { ...selectedParts, ...ownedParts },
     decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
-      const owned = ownedParts[category];
-      const chosen = selectedParts[category];
-      const mine = owned ?? chosen;
+      const { selectionSource, partId, candidateIds } = readerPartIn(category);
       return {
         category,
         status: 'unavailable' as const,
-        selectionSource: owned ? ('user-owned' as const)
-          : chosen ? ('user-selected' as const) : ('none' as const),
-        partId: mine?.id,
-        candidateIds: mine ? [mine.id] : [],
+        selectionSource,
+        partId,
+        candidateIds,
         compatibility: [],
         reasons: [{ kind: 'no-candidate' as const, evidence: 'documented' as const, ar }],
       };
@@ -529,7 +556,25 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
     const conflicted = new Set(ownedSelectedConflicts);
     return {
       ...base,
-      parts: { ...ownedParts },
+      /*
+       * A CONTRADICTION IS LOCAL TO ITS CATEGORY.
+       *
+       * This was `{ ...ownedParts }`, which answered the conflicted shelf
+       * correctly and erased every OTHER thing the reader had chosen: a frame
+       * they owned against a frame they picked also lost them the propeller
+       * they picked, two categories away and involved in nothing.
+       *
+       * Selections first, owned over the top — deliberately, not a blind
+       * merge. The conflicted category is the only one that can hold both, and
+       * there the owned part must stay, because letting the selection win
+       * would be the silent decision this whole branch exists to refuse.
+       */
+      parts: {
+        ...Object.fromEntries(
+          Object.entries(selectedParts).filter(([c]) => !conflicted.has(c)),
+        ),
+        ...ownedParts,
+      },
       decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
         const owned = ownedParts[category];
         const chosen = selectedParts[category];
@@ -547,12 +592,14 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
             }],
           };
         }
+        // Every OTHER category answers for itself — owned or chosen, named.
+        const { selectionSource, partId, candidateIds } = readerPartIn(category);
         return {
           category,
           status: 'unavailable' as const,
-          selectionSource: owned ? ('user-owned' as const) : ('none' as const),
-          partId: owned?.id,
-          candidateIds: owned ? [owned.id] : [],
+          selectionSource,
+          partId,
+          candidateIds,
           compatibility: [],
           reasons: [{
             kind: 'no-candidate' as const, evidence: 'documented' as const,
@@ -614,19 +661,16 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
       parts: { ...ownedParts, ...selectedParts },
       decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
         const hit = byCat.get(category);
-        const owned = ownedParts[category];
-        const chosen = selectedParts[category];
-        const mine = owned ?? chosen;
+        // The reader's part is never re-attributed on its way out: a selection
+        // that conflicts stays `user-selected`, so nothing downstream can read
+        // it as hardware they own.
+        const { selectionSource, partId, candidateIds } = readerPartIn(category);
         return {
           category,
           status: 'unavailable' as const,
-          // The reader's part is never re-attributed on its way out: a
-          // selection that conflicts stays `user-selected`, so nothing
-          // downstream can read it as hardware they own.
-          selectionSource: owned ? ('user-owned' as const)
-            : chosen ? ('user-selected' as const) : ('none' as const),
-          partId: mine?.id,
-          candidateIds: mine ? [mine.id] : [],
+          selectionSource,
+          partId,
+          candidateIds,
           compatibility: [],
           reasons: [hit
             ? {
@@ -738,17 +782,15 @@ export function proposeBuild(input: RecommendationInput): ProposedBuild {
         parts: { ...ownedParts, ...selectedParts },
         decisions: REQUIRED_BUILD_CATEGORIES.map(category => {
           const chosen = selectedParts[category];
-          const owned = ownedParts[category];
-          const mine = chosen ?? owned;
+          // The identity survives the refusal. Nothing here is replaced, and a
+          // selection that failed is still reported as a selection.
+          const { selectionSource, partId, candidateIds } = readerPartIn(category);
           return {
             category,
             status: 'unavailable' as const,
-            // The identity survives the refusal. Nothing here is replaced,
-            // and a selection that failed is still reported as a selection.
-            selectionSource: chosen ? ('user-selected' as const)
-              : owned ? ('user-owned' as const) : ('none' as const),
-            partId: mine?.id,
-            candidateIds: mine ? [mine.id] : [],
+            selectionSource,
+            partId,
+            candidateIds,
             compatibility: [],
             reasons: [{
               kind: 'no-candidate' as const, evidence: 'user-input' as const,

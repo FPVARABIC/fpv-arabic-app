@@ -884,6 +884,125 @@ ok('T: …and the check is not vacuous — those keys ARE in the machine state',
     renderToStaticMarkup(ReactRT.createElement(ProposalScreen, { build: build(noTier) })),
   ));
 
+// ═══════════════════════════════════════════════════════════════════════════
+section('U — A CONTRADICTION IS LOCAL TO THE CATEGORY THAT HAS IT');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The collision return answered its own shelf correctly and erased every OTHER
+ * thing the reader had chosen. `parts: { ...ownedParts }`, and a non-conflicted
+ * category read `ownedParts[category]` alone — so:
+ *
+ *     owned.frames = X · selectedParts.frames = Y · selectedParts.propellers = P
+ *
+ * reported the frame conflict properly and then lost P, which is involved in
+ * nothing, two categories away:
+ *
+ *     propellers  source=none  partId=—  candidateIds=[]   parts.propellers = (absent)
+ *
+ * Three of the four «the reader's part survives a refusal» returns were right
+ * and one was wrong, which is what a shared invariant looks like when it is not
+ * shared. `readerPartIn()` is now the single answer to «whose part is this»,
+ * and all four ask it.
+ */
+const OWNED_X = PART_CATEGORY_MAP.frames[0];
+const SELECTED_Y = PART_CATEGORY_MAP.frames[1];
+const SELECTED_P = TIE_A;
+const OWNED_BATTERY = PART_CATEGORY_MAP.batteries
+  .find(b => b.compatibilityTags.batteryVoltages.includes(6))!;
+
+ok('the fixture is a real collision between two different real frames',
+  OWNED_X.id !== SELECTED_Y.id
+  && PART_CATEGORY_MAP.frames.some(f => f.id === SELECTED_Y.id));
+ok('…and the unrelated selection is a real propeller in another category',
+  PART_CATEGORY_MAP.propellers.some(p => p.id === SELECTED_P));
+
+// U-A — the conflict stands, and the bystander survives it.
+const localA = build({
+  ...BASE,
+  owned: { parts: { frames: OWNED_X } },
+  selectedParts: { frames: SELECTED_Y.id, propellers: SELECTED_P },
+});
+const uFrames = dec(localA, 'frames');
+const uProps = dec(localA, 'propellers');
+
+ok('U-A: the frame conflict is still explicit — nobody won',
+  uFrames.status === 'unavailable' && uFrames.selectionSource === 'none'
+  && uFrames.partId === undefined);
+ok('U-A: …with both frame identities intact',
+  uFrames.candidateIds.length === 2
+  && uFrames.candidateIds.includes(OWNED_X.id)
+  && uFrames.candidateIds.includes(SELECTED_Y.id));
+ok('U-A: the unrelated propeller keeps its provenance',
+  uProps.selectionSource === 'user-selected');
+ok('U-A: …its identity', uProps.partId === SELECTED_P);
+ok('U-A: …and its candidate list', uProps.candidateIds.join() === SELECTED_P);
+ok('U-A: …and it is still in `parts`', localA.parts.propellers?.id === SELECTED_P);
+ok('U-A: the conflicted shelf does NOT quietly become the selected one',
+  localA.parts.frames?.id === OWNED_X.id && localA.parts.frames?.id !== SELECTED_Y.id);
+ok('U-A: the whole build is still refused',
+  localA.provenPath === null && localA.complete === false
+  && localA.decisions.every(d => d.status === 'unavailable'));
+ok('U-A: and this is a contradiction between inputs, not a malformed one',
+  localA.selectionIssues.length === 0);
+
+// U-B — an unrelated OWNED part is equally a bystander.
+const localB = build({
+  ...BASE,
+  owned: { parts: { frames: OWNED_X, batteries: OWNED_BATTERY } },
+  selectedParts: { frames: SELECTED_Y.id, propellers: SELECTED_P },
+});
+ok('U-B: an unrelated owned battery stays `user-owned`',
+  dec(localB, 'batteries').selectionSource === 'user-owned'
+  && dec(localB, 'batteries').partId === OWNED_BATTERY.id
+  && localB.parts.batteries?.id === OWNED_BATTERY.id);
+ok('U-B: …while the unrelated selection stays `user-selected`',
+  dec(localB, 'propellers').selectionSource === 'user-selected'
+  && dec(localB, 'propellers').partId === SELECTED_P);
+ok('U-B: …and the frame conflict is unchanged by either of them',
+  JSON.stringify(dec(localB, 'frames')) === JSON.stringify(uFrames));
+
+// U-C — with no bystanders, nothing moved.
+const localC = build({
+  ...BASE, owned: { parts: { frames: OWNED_X } }, selectedParts: { frames: SELECTED_Y.id },
+});
+ok('U-C: a bare collision still reports exactly what it used to',
+  JSON.stringify(dec(localC, 'frames')) === JSON.stringify(uFrames));
+ok('U-C: …with only the owned part in `parts`',
+  Object.keys(localC.parts).join() === 'frames'
+  && localC.parts.frames?.id === OWNED_X.id);
+ok('U-C: …and every other category empty-handed, because the reader gave nothing',
+  localC.decisions.filter(d => d.category !== 'frames')
+    .every(d => d.selectionSource === 'none' && d.partId === undefined
+      && d.candidateIds.length === 0));
+
+// U-D — agreement is still not a collision.
+const localD = build({
+  ...BASE, owned: { parts: { frames: OWNED_X } }, selectedParts: { frames: OWNED_X.id },
+});
+ok('U-D: owning and choosing the SAME frame still resolves to ownership',
+  dec(localD, 'frames').selectionSource === 'user-owned'
+  && dec(localD, 'frames').status === 'user-locked');
+ok('U-D: …and does not trip the conflict branch at all',
+  localD.provenPath !== null);
+
+// U-E — the bystander is never re-attributed on its way through.
+for (const wrong of ['user-owned', 'system', 'none'] as const) {
+  ok(`U-E: the unrelated selection is NOT «${wrong}»`,
+    uProps.selectionSource !== wrong);
+}
+
+/*
+ * And the invariant has one home now. Four returns refuse a build while naming
+ * what the reader put in; asking the same helper is what stops three of them
+ * being right and the fourth quietly wrong again.
+ */
+const readerPartUses = ENGINE_SRC.match(/readerPartIn\(category\)/g) ?? [];
+ok(`every refusal path asks the same question (${readerPartUses.length} call sites)`,
+  readerPartUses.length === 4);
+ok('…and that question resolves OWNED first, so the stronger claim survives',
+  /const mine = owned \?\? chosen;/.test(ENGINE_SRC)
+  && !/const mine = chosen \?\? owned;/.test(ENGINE_SRC));
+
 console.log(`\n[reader selection] ${passed} passed, ${failures.length} failed`);
 if (failures.length) {
   failures.forEach(f => console.log(`  FAILED: ${f}`));

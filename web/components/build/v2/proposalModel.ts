@@ -14,7 +14,7 @@ import type {
  *
  * WHY THE GROUPS ARE NOT THE STATUSES
  * -----------------------------------
- * Five statuses, three things a reader has to do about them:
+ * Six statuses, four things a reader has to do about them:
  *
  *   recommended, only-compatible  →  read it, or don't. The system decided.
  *   choice-required               →  YOU decide. This is the actual work.
