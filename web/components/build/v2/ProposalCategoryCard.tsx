@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
 import type {
   CategoryDecision, RecommendationStatus,
@@ -239,8 +239,49 @@ export const ProposalCategoryCard: React.FC<{
    * is noise when it is one of eight.
    */
   expandCandidates: boolean;
-}> = ({ decision, parts, categoryParts, categoryLabelAr, compact, expandCandidates }) => {
+  /** The reader chose a candidate. The name rides along for the announcement. */
+  onChoose: (category: string, partId: string, partAr: string) => void;
+  /** The reader wants this category open again. */
+  onClearChoice: (category: string, partAr: string) => void;
+  /**
+   * This is the card whose state the reader just changed, so the keyboard
+   * belongs on it — the control they pressed no longer exists.
+   */
+  takeFocus: boolean;
+}> = ({
+  decision, parts, categoryParts, categoryLabelAr, compact, expandCandidates,
+  onChoose, onClearChoice, takeFocus,
+}) => {
   const part = decision.partId ? parts[decision.category] : undefined;
+
+  /**
+   * WHOSE PART IS THIS — asked of the ENGINE, never of a React flag.
+   *
+   * `selectionSource` and not `status`, deliberately. A selection that turned
+   * out to make the build impossible comes back `unavailable` while still
+   * being the reader's own choice, and keying the undo control on the status
+   * would strand them on a screen with no way out of a decision they made.
+   * Keyed on who chose, the control appears wherever their choice is in play
+   * and — by the same token — can never appear on a `recommended`,
+   * `only-compatible` or `user-locked` card, because on those this is
+   * `system` or `user-owned`.
+   */
+  const readerChose = decision.selectionSource === 'user-selected';
+
+  /*
+   * Focus lands on the card, and only when the ENGINE'S ANSWER for it moved.
+   *
+   * The key is what the engine last said. Without it a card that is owed focus
+   * would steal it back on every unrelated re-render — expanding a disclosure
+   * elsewhere on the screen would yank the keyboard across the page.
+   */
+  const cardRef = useRef<HTMLLIElement>(null);
+  const focusedOn = useRef<string | null>(null);
+  useEffect(() => {
+    const key = takeFocus ? `${decision.status}:${decision.partId ?? ''}` : null;
+    if (key !== null && key !== focusedOn.current) cardRef.current?.focus();
+    focusedOn.current = key;
+  });
 
   const details = (
     <div style={{ display: 'grid', gap: 10, paddingTop: 4 }}>
@@ -256,8 +297,9 @@ export const ProposalCategoryCard: React.FC<{
   );
 
   return (
-    <li className="card-sm" data-testid={`v2-cat-${decision.category}`}
-      data-status={decision.status}
+    <li ref={cardRef} tabIndex={-1} className="card-sm"
+      data-testid={`v2-cat-${decision.category}`}
+      data-status={decision.status} data-source={decision.selectionSource}
       style={{ padding: '13px 15px', display: 'grid', gap: 8, listStyle: 'none' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <h4 style={{ margin: 0, fontSize: 13, color: 'var(--text-dimmer)', fontWeight: 700 }}>
@@ -281,18 +323,48 @@ export const ProposalCategoryCard: React.FC<{
       ) : details}
 
       {/*
+        UNDO — and it is the reader's own choice it undoes, nothing else.
+
+        It does not «deselect» in the UI: it removes this one category from
+        what the engine is told and asks again. The category may reopen with a
+        fresh candidate list, or the locks the reader still has may now leave
+        exactly one compatible part — and the screen reports whichever answer
+        comes back rather than the one it expected.
+      */}
+      {readerChose && part && (
+        <button
+          type="button"
+          data-testid={`v2-change-choice-${decision.category}`}
+          aria-label={`${PROPOSAL.candidates.change}: ${part.nameAr}`}
+          onClick={() => onClearChoice(decision.category, part.nameAr)}
+          className="btn-ghost"
+          style={{
+            justifySelf: 'start', minHeight: 44, padding: '10px 16px',
+            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}
+        >
+          {PROPOSAL.candidates.change}
+        </button>
+      )}
+
+      {/*
         THE OPEN DECISION. Every surviving candidate, in the catalogue's own
         order, with NONE marked. `candidateIds[0]` is not a winner and the
         `provenPath` member is not a pick — that path proves a complete build
         exists, and it broke each tie arbitrarily to do so. Presenting either
         as «the system's choice» would manufacture a recommendation the engine
         deliberately refused to make.
+
+        Since Phase 2E each row carries a button, and the rule above survives
+        the change: the reader arrives at a list where nothing is chosen, and
+        the only way any of it becomes chosen is a press.
       */}
       {decision.status === 'choice-required' && (
         <Candidates
           decision={decision}
           categoryParts={categoryParts}
           defaultOpen={expandCandidates}
+          onChoose={onChoose}
         />
       )}
     </li>
@@ -304,12 +376,24 @@ export const ProposalCategoryCard: React.FC<{
  *
  * Split out so the list can collapse without the disclosure state leaking into
  * the card, and so the «none is selected» rule lives in one readable place.
+ *
+ * WHY EVERY ROW HERE IS UNSELECTED, BY CONSTRUCTION
+ * ------------------------------------------------
+ * This component renders only under `choice-required`, and a category the
+ * reader has closed is not `choice-required` — the engine returns it as
+ * `user-selected` with its one part and no list to show. So there is no state
+ * in which a row in this list could be the chosen one, and `data-selected` is
+ * a constant rather than a flag that could disagree with the engine. The
+ * instruction line below says which list this is and what pressing a row's
+ * button costs, so «nothing is selected yet» is stated rather than implied by
+ * an absence of highlighting.
  */
 const Candidates: React.FC<{
   decision: CategoryDecision;
   categoryParts: Readonly<Record<string, BasePart>>;
   defaultOpen: boolean;
-}> = ({ decision, categoryParts, defaultOpen }) => {
+  onChoose: (category: string, partId: string, partAr: string) => void;
+}> = ({ decision, categoryParts, defaultOpen, onChoose }) => {
   const list = (
         <div style={{ display: 'grid', gap: 7 }}>
           <ul data-testid={`v2-candidates-${decision.category}`}
@@ -329,18 +413,48 @@ const Candidates: React.FC<{
                 <li key={id} data-testid={`v2-candidate-${id}`} data-selected="false"
                   style={{
                     padding: '9px 11px', border: '1px solid var(--border-soft)',
-                    borderRadius: 8, display: 'grid', gap: 3,
+                    borderRadius: 8, display: 'flex', gap: 10,
+                    alignItems: 'center', justifyContent: 'space-between',
+                    flexWrap: 'wrap',
                   }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>{c.nameAr}</span>
-                  <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
-                    <Ltr>{c.brand ? `${c.brand} · ${c.nameEn}` : c.nameEn}</Ltr>
+                  <span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>{c.nameAr}</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-dimmer)' }}>
+                      <Ltr>{c.brand ? `${c.brand} · ${c.nameEn}` : c.nameEn}</Ltr>
+                    </span>
                   </span>
+                  {/*
+                    A REAL BUTTON, AND ITS NAME CARRIES THE PART.
+
+                    «اختيار» alone is what a sighted reader needs — the product
+                    is the line it sits on. A screen-reader user moving by
+                    control hears only the accessible name, so eight rows would
+                    be eight buttons called «اختيار» and the list would be
+                    unusable. The visible word opens the accessible name rather
+                    than being replaced by it, so voice control still reaches it
+                    by what is written on it.
+
+                    The id is never spoken or shown: it is what gets SENT.
+                  */}
+                  <button
+                    type="button"
+                    data-testid={`v2-choose-${decision.category}-${id}`}
+                    aria-label={`${PROPOSAL.candidates.choose} ${c.nameAr}`}
+                    onClick={() => onChoose(decision.category, id, c.nameAr)}
+                    className="btn-ghost"
+                    style={{
+                      minHeight: 44, padding: '10px 18px', fontSize: 13,
+                      fontWeight: 800, cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    {PROPOSAL.candidates.choose}
+                  </button>
                 </li>
               );
             })}
           </ul>
           <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text-dimmer)', lineHeight: 1.8 }}>
-            {PROPOSAL.candidates.readOnly}
+            {PROPOSAL.candidates.instruction}
           </p>
         </div>
   );

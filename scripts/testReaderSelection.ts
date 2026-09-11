@@ -25,7 +25,7 @@
  *
  * Run: npx tsx scripts/testReaderSelection.ts
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
@@ -41,6 +41,12 @@ import {
 import { PROPOSAL } from '../web/components/build/v2/copy';
 import { PART_VOCAB } from '../web/lib/build/labels';
 import { ProposalScreen } from '../web/components/build/v2/ProposalScreen';
+import { ProposalCategoryCard } from '../web/components/build/v2/ProposalCategoryCard';
+import { readinessOf } from '../web/components/build/v2/readiness';
+import {
+  ECOSYSTEM_SELECTION_CATEGORY, NO_SELECTIONS, selectionsSurviving,
+  withCategory, withoutCategory, type ReaderSelections, type SelectionContext,
+} from '../web/components/build/v2/selectionState';
 
 /** The real world, indexed the way the screen indexes it. */
 const BY_CATEGORY: Record<string, Record<string, BasePart>> = {};
@@ -823,10 +829,24 @@ const renderToStaticMarkup = (webRequire('react-dom/server') as {
   renderToStaticMarkup: (el: unknown) => string;
 }).renderToStaticMarkup;
 
+/**
+ * Render the screen with REAL handler props.
+ *
+ * They are required props, so there is no «read-only ProposalScreen» that can
+ * exist by forgetting them — and the recorder is what sections V onward read
+ * to check that a press sends a category and an id and nothing else.
+ */
+const rendered: { calls: [string, ...string[]][] } = { calls: [] };
+const renderProposal = (b: ProposedBuild) => renderToStaticMarkup(
+  ReactRT.createElement(ProposalScreen, {
+    build: b,
+    onChoose: (c: string, id: string) => rendered.calls.push(['choose', c, id]),
+    onClearChoice: (c: string) => rendered.calls.push(['clear', c]),
+  }),
+);
+
 const headlineOf = (inp: Record<string, unknown>) => {
-  const html = renderToStaticMarkup(
-    ReactRT.createElement(ProposalScreen, { build: build(inp) }),
-  );
+  const html = renderProposal(build(inp));
   return {
     quality: /data-quality="([^"]*)"/.exec(html)?.[1] ?? '',
     title: (/<h2[^>]*data-testid="v2-proposal-title"[^>]*>([\s\S]*?)<\/h2>/.exec(html)?.[1] ?? '')
@@ -880,9 +900,7 @@ ok(`T: none of the three renders any internal key (${KEYS.length} checked)`,
   KEYS.length > 50
   && [hAllOpen, hReader, hProposed].every(h => KEYS.every(k => !h.text.includes(k))));
 ok('T: …and the check is not vacuous — those keys ARE in the machine state',
-  /data-testid="v2-cat-/.test(
-    renderToStaticMarkup(ReactRT.createElement(ProposalScreen, { build: build(noTier) })),
-  ));
+  /data-testid="v2-cat-/.test(renderProposal(build(noTier))));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('U — A CONTRADICTION IS LOCAL TO THE CATEGORY THAT HAS IT');
@@ -1002,6 +1020,813 @@ ok(`every refusal path asks the same question (${readerPartUses.length} call sit
 ok('…and that question resolves OWNED first, so the stronger claim survives',
   /const mine = owned \?\? chosen;/.test(ENGINE_SRC)
   && !/const mine = chosen \?\? owned;/.test(ENGINE_SRC));
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('V — WHAT A READER CHOICE SURVIVES, AS A FUNCTION');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * Phase 2E's invalidation rule, asked directly rather than inferred from a
+ * screen. «A budget change keeps the reader's frame» should be a sentence a
+ * test can evaluate, and it is only that if the rule is a function over plain
+ * data — which is why `selectionState.ts` contains no React.
+ */
+const CTX: SelectionContext = {
+  droneTypeId: 'freestyle', sizeInch: 5, cellCount: 6,
+  rcSystem: 'ExpressLRS', videoSystem: 'DJI',
+};
+const THREE: ReaderSelections = {
+  frames: 'f1', receivers: 'r1', videoUnits: 'v1',
+};
+const keysOf = (s: ReaderSelections) => Object.keys(s).sort().join(',');
+
+ok('V: nothing chosen survives trivially — and as the SAME object',
+  selectionsSurviving(CTX, { ...CTX, droneTypeId: 'racing' }, NO_SELECTIONS) === NO_SELECTIONS);
+
+/* A different build. Not a narrower one — a different one. */
+for (const [what, next] of [
+  ['the drone type', { ...CTX, droneTypeId: 'long-range' }],
+  ['the size', { ...CTX, sizeInch: 7 }],
+  ['the voltage', { ...CTX, cellCount: 4 }],
+] as [string, SelectionContext][]) {
+  ok(`V: changing ${what} discards every choice`,
+    keysOf(selectionsSurviving(CTX, next, THREE)) === '');
+}
+
+/* An ecosystem answer clears ONE shelf. That is the whole of its authority. */
+const afterRc = selectionsSurviving(CTX, { ...CTX, rcSystem: 'Crossfire' }, THREE);
+ok('V: changing the radio clears the RECEIVER choice',
+  afterRc.receivers === undefined);
+ok('V: …and leaves the frame and the video unit exactly as they were',
+  afterRc.frames === 'f1' && afterRc.videoUnits === 'v1'
+  && keysOf(afterRc) === 'frames,videoUnits');
+
+const afterVideo = selectionsSurviving(CTX, { ...CTX, videoSystem: 'Walksnail' }, THREE);
+ok('V: changing the goggles clears the VIDEO choice',
+  afterVideo.videoUnits === undefined);
+ok('V: …and leaves the frame and the receiver alone',
+  afterVideo.frames === 'f1' && afterVideo.receivers === 'r1'
+  && keysOf(afterVideo) === 'frames,receivers');
+
+const afterBoth = selectionsSurviving(
+  CTX, { ...CTX, rcSystem: undefined, videoSystem: undefined }, THREE);
+ok('V: dropping BOTH ecosystems clears both shelves and nothing else',
+  keysOf(afterBoth) === 'frames');
+
+/*
+ * IDENTITY, NOT EQUALITY. An answer that invalidates nothing must hand back
+ * the very same object: a fresh copy would give `answers` a new identity every
+ * keystroke and re-run the viability search for nothing.
+ */
+ok('V: an answer that changes nothing returns the SAME map',
+  selectionsSurviving(CTX, { ...CTX }, THREE) === THREE);
+/*
+ * THE «لست متأكدًا» CASE, which is the one a literal reading gets wrong.
+ *
+ * A reader who had not answered the radio question and now says «I don't
+ * know» HAS changed their answer and has changed NOTHING about what can be
+ * proposed — the engine sees absence either way. Clearing their receiver here
+ * would be erasing a valid selection, which is the eager failure Phase 2D
+ * spent a correction round removing.
+ */
+const noRc: SelectionContext = { ...CTX, rcSystem: undefined };
+ok('V: an answer the ENGINE cannot tell apart clears nothing',
+  selectionsSurviving(noRc, { ...noRc }, THREE) === THREE);
+
+/*
+ * BUDGET CANNOT REACH THIS FUNCTION AT ALL.
+ *
+ * Expressed as a field that does not exist rather than as an `if` that does
+ * nothing, so a later edit cannot make budget invalidating by accident: there
+ * is no budget here to compare.
+ */
+ok('V: the context carries no budget — there is nothing for it to change',
+  !('budget' in CTX) && !('budgetTier' in CTX)
+  && Object.keys(CTX).sort().join(',') === 'cellCount,droneTypeId,rcSystem,sizeInch,videoSystem');
+
+/* The two accumulators, and both are immutable and local. */
+const added = withCategory(THREE, 'motors', 'm1');
+ok('V: adding a choice does not mutate the map it came from',
+  added.motors === 'm1' && (THREE as Record<string, string>).motors === undefined);
+const replaced = withCategory(THREE, 'frames', 'f2');
+ok('V: choosing again in one category replaces only that category',
+  replaced.frames === 'f2' && replaced.receivers === 'r1'
+  && keysOf(replaced) === keysOf(THREE));
+const dropped = withoutCategory(THREE, 'frames');
+ok('V: clearing one category removes that key and no other',
+  dropped.frames === undefined && keysOf(dropped) === 'receivers,videoUnits'
+  && keysOf(THREE) === 'frames,receivers,videoUnits');
+ok('V: clearing a category that was never chosen is a no-op, identically',
+  withoutCategory(THREE, 'escs') === THREE);
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('W — THE ECOSYSTEM MAP IS THE ENGINE’S, NOT THE UI’S');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `ECOSYSTEM_SELECTION_CATEGORY` says the radio answer gates `receivers` and
+ * the goggle answer gates `videoUnits`. That is a claim about the DOMAIN made
+ * inside the UI, so it is only as good as its proof — and a grep for the
+ * category names in `proposeBuild.ts` would prove nothing about behaviour.
+ *
+ * So the map is DERIVED from what the engine actually returns: a category
+ * whose decision rests on an ecosystem answer says so itself, on the reason's
+ * `inputKey`. If a third category ever starts depending on one, this goes red
+ * rather than the constant going quietly stale.
+ */
+const ECO_SPREAD: Record<string, unknown>[] = [];
+for (const droneTypeId of ['freestyle', 'cinematic', 'long-range', 'racing', 'cinewhoop']) {
+  for (const cellCount of [undefined, 4, 6]) {
+    for (const rcSystem of [undefined, 'ExpressLRS', 'Crossfire']) {
+      for (const videoSystem of [undefined, 'DJI', 'Walksnail']) {
+        ECO_SPREAD.push({ droneTypeId, cellCount, budgetTier: 'mid', owned: { rcSystem, videoSystem } });
+      }
+    }
+  }
+}
+const restsOn = (key: string) => {
+  const cats = new Set<string>();
+  for (const inp of ECO_SPREAD) {
+    for (const d of build(inp).decisions) {
+      if (d.reasons.some(r => r.inputKey === key)) cats.add(d.category);
+    }
+  }
+  return cats;
+};
+const rcCats = restsOn('ownedRcSystem');
+const videoCats = restsOn('ownedVideoSystem');
+ok(`W: the spread really does exercise both ecosystems (${ECO_SPREAD.length} builds)`,
+  rcCats.size > 0 && videoCats.size > 0);
+ok('W: the RADIO answer gates exactly one category, and it is the one the UI clears',
+  rcCats.size === 1 && rcCats.has(ECOSYSTEM_SELECTION_CATEGORY.rc));
+ok('W: the GOGGLE answer gates exactly one category, and it is the one the UI clears',
+  videoCats.size === 1 && videoCats.has(ECOSYSTEM_SELECTION_CATEGORY.video));
+ok('W: …and they are not the same shelf', rcCats.has('receivers') && videoCats.has('videoUnits'));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('X — A PRESS CAN NEVER TRAP THE READER');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The screen offers a candidate BECAUSE the engine proved a complete
+ * blocker-free build exists with it. So choosing one should always leave a
+ * build that still exists — and if that ever stops being true, a reader ends
+ * up on a page that says «تعذّر» because of a button this phase added, with
+ * the headline still claiming every compatible part is fine.
+ *
+ * That is worth proving rather than reasoning about, so it is walked twice:
+ * exhaustively for the first two presses across every reader, and randomly to
+ * full depth — all eight categories closed by hand.
+ */
+const WALK_SPREAD: Record<string, unknown>[] = [];
+for (const droneTypeId of ['freestyle', 'cinematic', 'long-range', 'racing', 'cinewhoop']) {
+  for (const budgetTier of [undefined, 'budget', 'mid', 'premium']) {
+    for (const cellCount of [undefined, 4, 6]) {
+      WALK_SPREAD.push({ droneTypeId, cellCount, budgetTier, owned: {} });
+    }
+  }
+}
+let exhaustiveClicks = 0;
+let exhaustiveTraps = 0;
+const walk = (base: Record<string, unknown>, sel: Record<string, string>, depth: number) => {
+  const b = build({ ...base, selectedParts: sel });
+  if (b.requiredInputs.length > 0) return;
+  if (b.provenPath === null) { if (depth > 0) exhaustiveTraps++; return; }
+  if (depth >= 2) return;
+  for (const d of b.decisions.filter(x => x.status === 'choice-required')) {
+    for (const id of d.candidateIds) {
+      exhaustiveClicks++;
+      walk(base, { ...sel, [d.category]: id }, depth + 1);
+    }
+  }
+};
+for (const base of WALK_SPREAD) walk(base, {}, 0);
+ok(`X: the exhaustive walk really pressed things (${exhaustiveClicks} presses)`,
+  exhaustiveClicks > 1000);
+ok('X: …and not one of them left a build that cannot exist', exhaustiveTraps === 0);
+
+let seed = 20260911;
+const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+const pickOne = <T,>(xs: readonly T[]) => xs[Math.floor(rnd() * xs.length)];
+let deepClicks = 0;
+let deepTraps = 0;
+let closedByHand = 0;
+let deepest = 0;
+for (let i = 0; i < 4000; i++) {
+  const base = {
+    droneTypeId: pickOne(['freestyle', 'cinematic', 'long-range', 'racing', 'cinewhoop']),
+    cellCount: pickOne([undefined, 4, 6]),
+    budgetTier: pickOne([undefined, 'budget', 'mid', 'premium']),
+    owned: {
+      rcSystem: pickOne([undefined, 'ExpressLRS', 'Crossfire']),
+      videoSystem: pickOne([undefined, 'DJI', 'Walksnail']),
+    },
+  };
+  const sel: Record<string, string> = {};
+  let depth = 0;
+  for (;;) {
+    const b = build({ ...base, selectedParts: sel });
+    if (b.requiredInputs.length > 0) break;
+    if (b.provenPath === null) { if (depth > 0) deepTraps++; break; }
+    const open = b.decisions.filter(d => d.status === 'choice-required');
+    if (open.length === 0) { closedByHand++; break; }
+    const d = pickOne(open);
+    sel[d.category] = pickOne(d.candidateIds);
+    deepClicks++; depth++; deepest = Math.max(deepest, depth);
+  }
+}
+ok(`X: the deep walk reached the bottom (${deepClicks} presses, deepest ${deepest})`,
+  deepClicks > 500 && deepest >= 5 && closedByHand > 100);
+ok('X: …and a fully hand-built drone is still a drone that exists', deepTraps === 0);
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('Y — THE CONTROLS, ACTUALLY RENDERED');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * Rendered and read back, never grepped. «Every candidate has a button whose
+ * name carries the part» is a claim about output, and the only honest way to
+ * check output is to produce it.
+ */
+const OPEN_BUILD = build(noTier);
+const openHtml = renderProposal(OPEN_BUILD);
+const openTie = dec(OPEN_BUILD, TIE);
+ok(`Y: the fixture really leaves «${TIE}» open with options`,
+  openTie.status === 'choice-required' && openTie.candidateIds.length >= 2);
+
+const chooseIds = [...openHtml.matchAll(/data-testid="v2-choose-([^"]+)"/g)].map(m => m[1]);
+ok('Y: every candidate in the open category is offered a control',
+  openTie.candidateIds.every(id => chooseIds.includes(`${TIE}-${id}`)));
+const buttonFor = (cat: string, id: string) =>
+  new RegExp(`<button[^>]*data-testid="v2-choose-${cat}-${id}"[^>]*>`).exec(openHtml)?.[0] ?? '';
+ok('Y: each one is a real <button type="button">',
+  openTie.candidateIds.every(id => {
+    const b = buttonFor(TIE, id);
+    return b.startsWith('<button') && b.includes('type="button"');
+  }));
+ok('Y: each one names the PART in its accessible name',
+  openTie.candidateIds.every(id =>
+    buttonFor(TIE, id).includes(
+      `aria-label="${PROPOSAL.candidates.choose} ${BY_CATEGORY[TIE][id].nameAr}"`)));
+ok('Y: …and the visible word is the start of that name, so voice control reaches it',
+  openTie.candidateIds.every(id => {
+    const label = /aria-label="([^"]*)"/.exec(buttonFor(TIE, id))?.[1] ?? '';
+    return label.startsWith(PROPOSAL.candidates.choose);
+  }));
+ok('Y: each one clears the 44px touch floor',
+  openTie.candidateIds.every(id => /min-height:44px/.test(buttonFor(TIE, id))));
+/*
+ * NO ID ANYWHERE A HUMAN OR A SCREEN READER MEETS IT. `data-testid` is machine
+ * state and carries one by design; an `aria-label` is READ ALOUD, so a leak
+ * there is the same failure as printing the key on screen — and the visible
+ * text sweep in section T cannot see it, because it strips attributes.
+ */
+const ariaLabels = [...openHtml.matchAll(/aria-label="([^"]*)"/g)].map(m => m[1]);
+ok(`Y: no spoken label carries a catalogue id (${ariaLabels.length} labels checked)`,
+  ariaLabels.length >= 4
+  && ariaLabels.every(l => ![...ALL_IDS].some(id => l.includes(id))));
+ok('Y: nothing is pre-chosen in a list the reader has not touched',
+  !/data-selected="true"/.test(openHtml)
+  && !/data-testid="v2-change-choice-/.test(openHtml)
+  && !/data-source="user-selected"/.test(openHtml));
+ok('Y: the live region exists, is polite, and says nothing yet',
+  /<p role="status" aria-live="polite" class="sr-only" data-testid="v2-selection-announcement"[^>]*>\s*<span><\/span>\s*<\/p>/
+    .test(openHtml));
+
+/*
+ * Now a screen where BOTH kinds of answer are present.
+ *
+ * `BASE` names a budget, so the engine settles some categories on its own —
+ * which is what makes «the undo control appears on exactly the reader's
+ * categories» a statement with two sides. On the tier-less build every
+ * category is open and the comparison would have nothing to exclude.
+ */
+const CHOSEN_BUILD = build({ ...BASE, selectedParts: { [TIE]: TIE_A } });
+const chosenHtml = renderProposal(CHOSEN_BUILD);
+ok('Y: the chosen category comes back as the reader’s, from the engine',
+  dec(CHOSEN_BUILD, TIE).selectionSource === 'user-selected');
+ok('Y: …so the card offers the way out',
+  chosenHtml.includes(`data-testid="v2-change-choice-${TIE}"`));
+ok('Y: …and the undo button names the part it would release',
+  new RegExp(`<button[^>]*data-testid="v2-change-choice-${TIE}"[^>]*aria-label="`
+    + `${PROPOSAL.candidates.change}: ${BY_CATEGORY[TIE][TIE_A].nameAr}"`).test(chosenHtml));
+ok('Y: …and there is no candidate list left to disagree with it',
+  !chosenHtml.includes(`data-testid="v2-candidates-${TIE}"`)
+  && !chosenHtml.includes(`data-testid="v2-choose-${TIE}-`));
+
+/*
+ * NO CONTROL ON A DECISION THAT IS NOT THE READER'S. A «تغيير الاختيار» on a
+ * recommendation would invite them to un-choose something they never chose.
+ */
+const controlledCats = new Set(
+  [...chosenHtml.matchAll(/data-testid="v2-change-choice-([^"]+)"/g)].map(m => m[1]));
+const readerCats = new Set(CHOSEN_BUILD.decisions
+  .filter(d => d.selectionSource === 'user-selected').map(d => d.category));
+ok('Y: the undo control appears on exactly the reader’s own categories',
+  controlledCats.size === readerCats.size
+  && [...readerCats].every(c => controlledCats.has(c)));
+const notReaders = CHOSEN_BUILD.decisions
+  .filter(d => d.selectionSource === 'system' || d.selectionSource === 'user-owned');
+ok(`Y: …and on none of the ${notReaders.length} the system or ownership settled`,
+  notReaders.length > 0 && notReaders.every(d => !controlledCats.has(d.category)));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('Z — THE AFFORDANCE FOLLOWS `selectionSource`, AND NOTHING ELSE');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The strongest version of «no parallel truth»: hand the screen a build whose
+ * decisions have been REWRITTEN, and watch the controls follow the rewrite. A
+ * component with a selection of its own would keep drawing what it remembered;
+ * a component reading `selectionSource` cannot.
+ */
+const rewrite = (b: ProposedBuild, cat: string, patch: Partial<CategoryDecision>) => ({
+  ...b,
+  decisions: b.decisions.map(d => (d.category === cat ? { ...d, ...patch } : d)),
+}) as ProposedBuild;
+
+/* Take the reader's own decision and call it the system's. The undo must go. */
+const asSystem = renderProposal(rewrite(CHOSEN_BUILD, TIE, { selectionSource: 'system' }));
+ok('Z: relabelling the reader’s choice as the system’s removes the undo control',
+  !asSystem.includes(`data-testid="v2-change-choice-${TIE}"`));
+ok('Z: …and the card is still on screen, so this is not «it vanished»',
+  asSystem.includes(`data-testid="v2-cat-${TIE}"`));
+
+/* And the other direction, on a category the reader never touched. */
+const systemCat = notReaders[0].category;
+const asReaders = renderProposal(
+  rewrite(CHOSEN_BUILD, systemCat, { selectionSource: 'user-selected' }));
+ok(`Z: relabelling «${systemCat}» as the reader’s makes the undo control appear`,
+  asReaders.includes(`data-testid="v2-change-choice-${systemCat}"`));
+ok('Z: …proving the control is drawn from the engine’s field, not from a memory',
+  !chosenHtml.includes(`data-testid="v2-change-choice-${systemCat}"`));
+
+/*
+ * AND THE ESCAPE HATCH SURVIVES A REFUSAL.
+ *
+ * A choice that makes the build impossible comes back `unavailable` while
+ * still being the reader's. Keying the undo on the STATUS would strand them on
+ * a page with no way back out of their own decision; keying it on WHO CHOSE
+ * cannot. The fixture is a real engine refusal rather than a hand-edited
+ * decision — a proven build with an unavailable required category is a
+ * contradiction the screen correctly refuses to render at all, so rewriting
+ * one would have tested the refusal screen instead of the escape hatch.
+ */
+const CROSSFIRE_RX = (PART_CATEGORY_MAP.receivers ?? []).find(
+  r => (r as unknown as { specs: { protocol: string } }).specs.protocol === 'Crossfire')!;
+const REFUSED_BUILD = build({
+  ...BASE, owned: { rcSystem: 'ExpressLRS' }, selectedParts: { receivers: CROSSFIRE_RX.id },
+});
+const rxDecision = dec(REFUSED_BUILD, 'receivers');
+ok('Z: the fixture really is a choice the engine refused',
+  REFUSED_BUILD.provenPath === null && rxDecision.status === 'unavailable'
+  && rxDecision.selectionSource === 'user-selected'
+  && rxDecision.partId === CROSSFIRE_RX.id);
+/*
+ * THE CARD ON ITS OWN FIRST, then the same thing through the whole screen.
+ *
+ * The rule under test belongs to the CARD, so the card is rendered directly —
+ * that keeps the claim about the control, not about the page around it. The
+ * page is then asserted separately, because for a while it was the page that
+ * made this control unreachable: `proposalDefects` reported
+ * `unavailable-required` for EVERY unavailable decision, so an honest «no
+ * build exists» was classified as internal corruption and replaced by the
+ * refusal screen — with the reasons, and the way out, behind it.
+ */
+const cardHtml = (d: CategoryDecision, b: ProposedBuild) => renderToStaticMarkup(
+  ReactRT.createElement(ProposalCategoryCard, {
+    decision: d,
+    parts: b.parts,
+    categoryParts: BY_CATEGORY[d.category] ?? {},
+    categoryLabelAr: PART_VOCAB[d.category]!.ar,
+    compact: false,
+    expandCandidates: true,
+    onChoose: () => {},
+    onClearChoice: () => {},
+    takeFocus: false,
+  }),
+);
+const refusedCard = cardHtml(rxDecision, REFUSED_BUILD);
+ok('Z: a refused choice is still the reader’s, and still has a way out',
+  refusedCard.includes('data-testid="v2-change-choice-receivers"')
+  && /data-status="unavailable"/.test(refusedCard)
+  && /data-source="user-selected"/.test(refusedCard));
+ok('Z: …and the reader is told, in the engine’s own words, why it failed',
+  rxDecision.reasons.some(r => r.ar.length > 0 && refusedCard.includes(r.ar)));
+/*
+ * And a category the refusal is not ABOUT gets no undo control: it is
+ * `unavailable` too, but nobody chose it, so there is nothing to un-choose.
+ */
+const bystander = REFUSED_BUILD.decisions.find(
+  d => d.category !== 'receivers' && d.selectionSource === 'none')!;
+ok(`Z: …while «${bystander.category}», which nobody chose, offers nothing to un-choose`,
+  !cardHtml(bystander, REFUSED_BUILD).includes('v2-change-choice-'));
+/*
+ * AND NOW THE WHOLE SCREEN, which is where this used to be lost.
+ *
+ * «تعذّر» is an ANSWER. The build does not exist, the engine has said why per
+ * category, and one of those categories is the reader's own choice. Refusing
+ * the page here reported a consistency problem the code did not have and hid a
+ * recoverable one it did.
+ */
+const refusedPage = renderProposal(REFUSED_BUILD);
+ok('Z: the screen RENDERS an impossible build rather than calling it corruption',
+  !/data-quality="inconsistent"/.test(refusedPage)
+  && !refusedPage.includes('v2-proposal-inconsistent')
+  && refusedPage.includes('data-testid="v2-cat-receivers"'));
+ok('Z: …the reader’s failed choice is on it, named as theirs',
+  /data-testid="v2-cat-receivers" data-status="unavailable" data-source="user-selected"/
+    .test(refusedPage));
+ok('Z: …with the way out reachable on the page, not just on the card',
+  refusedPage.includes('data-testid="v2-change-choice-receivers"'));
+ok('Z: …and the engine’s reason printed where the reader can read it',
+  rxDecision.reasons.some(r => r.ar.length > 0 && refusedPage.includes(r.ar)));
+ok('Z: …under «تعذّر», which is the group an unavailable decision belongs to',
+  refusedPage.includes('data-testid="v2-group-problem"'));
+/*
+ * Still no keys on screen. A page that now renders MORE has more chances to
+ * leak one, so the sweep is repeated on exactly this page.
+ */
+const refusedText = refusedPage.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+ok('Z: …and no catalogue id, category key or check id reaches the reader',
+  KEYS.every(k => !refusedText.includes(k)));
+/*
+ * THE READER STILL CANNOT GET HERE BY PRESSING ANYTHING — section X walked
+ * every first and second press across every reader, then to full depth, and no
+ * press ever produced a build that cannot exist. The recovery contract is a
+ * guarantee about states the DOMAIN can produce, held correct so the screen
+ * can never hide one; it is not a state the journey hands out.
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AA — THE COPY SAYS WHAT THE LIST IS NOW FOR');
+// ═══════════════════════════════════════════════════════════════════════════
+ok('AA: the list tells the reader to choose ONE part for the category',
+  PROPOSAL.candidates.instruction.includes('اختر')
+  && PROPOSAL.candidates.instruction.includes('واحدة'));
+ok('AA: …and tells them the press is not final',
+  PROPOSAL.candidates.instruction.includes('تغيير'));
+ok('AA: the sentence that called this list display-only is gone from the copy',
+  !JSON.stringify(PROPOSAL).includes('للعرض في هذه المرحلة')
+  && !('readOnly' in PROPOSAL.candidates));
+ok('AA: …and gone from the screen it used to be printed on',
+  !openHtml.includes('للعرض في هذه المرحلة')
+  && openHtml.includes(PROPOSAL.candidates.instruction));
+ok('AA: the announcements are past-tense reports, built from the part’s own name',
+  PROPOSAL.candidates.chosenAnnouncement('س') === 'تم اختيار س'
+  && PROPOSAL.candidates.clearedAnnouncement('س') === 'تم إلغاء اختيار س');
+ok('AA: …and they are different sentences, so one cannot be read as the other',
+  PROPOSAL.candidates.chosenAnnouncement('س')
+    !== PROPOSAL.candidates.clearedAnnouncement('س'));
+/* «اخترتها» stays the badge; «اقترحناه لك» must never reach a reader choice. */
+ok('AA: the reader’s card says «اخترتها» and never «اقترحناه لك»',
+  chosenHtml.includes(PROPOSAL.selectedBadge)
+  && !new RegExp(`v2-badge-${TIE}"[^>]*>${PROPOSAL.recommendedBadge}`).test(chosenHtml));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AB — THE UI LAYER STILL CANNOT INVENT A SELECTION');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * READ AS CODE, NOT AS PROSE.
+ *
+ * These files explain at length what they refuse to do — «no localStorage key,
+ * no Firebase write», «a `BasePart` object held in React state would…». A
+ * sweep over the raw text finds those sentences and reports the file as
+ * guilty of exactly what it is promising not to do. Stripping comments first
+ * is what makes the check about behaviour; the doc comments stay, and stay
+ * readable, which is the point of writing them.
+ */
+const codeOnly = (src: string) => src
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+const STATE_SRC = codeOnly(readFileSync('web/components/build/v2/selectionState.ts', 'utf8'));
+const PREVIEW_SRC = codeOnly(readFileSync('web/components/build/v2/BuildV2Preview.tsx', 'utf8'));
+const SCREEN_SRC = codeOnly(readFileSync('web/components/build/v2/ProposalScreen.tsx', 'utf8'));
+const CARD_SRC = codeOnly(readFileSync('web/components/build/v2/ProposalCategoryCard.tsx', 'utf8'));
+ok('AB: …and the stripper is not vacuous — it removes prose these files really carry',
+  /No localStorage key/.test(readFileSync('web/components/build/v2/BuildV2Preview.tsx', 'utf8'))
+  && !/No localStorage key/.test(PREVIEW_SRC));
+ok('AB: the choice is ids, never parts — no BasePart is held in UI state',
+  !/BasePart/.test(STATE_SRC) && !/BasePart/.test(PREVIEW_SRC));
+ok('AB: the selection map lives in exactly one component',
+  /selectedParts: ReaderSelections/.test(PREVIEW_SRC)
+  && !/selectedParts/.test(SCREEN_SRC) && !/selectedParts/.test(CARD_SRC));
+ok('AB: it reaches the engine at the top level, not under `owned`',
+  /^\s{4}selectedParts: a\.selectedParts,$/m.test(PREVIEW_SRC)
+  && !/owned:\s*\{[^}]*selectedParts/s.test(PREVIEW_SRC));
+/*
+ * ONE DOOR FOR ANSWERS.
+ *
+ * `answer()` applies the invalidation rule to the before/after pair, so a
+ * setter that wrote `answers` directly would bypass it — and the bug would be
+ * invisible until a reader lost a choice they had made, or kept one they
+ * should not have. Three writers exist by design: the rule, the choice, and
+ * the undo. Every QUESTION on the journey goes through the first.
+ */
+ok('AB: `answers` is written from exactly three places',
+  (PREVIEW_SRC.match(/setAnswers\(/g) ?? []).length === 3);
+ok('AB: …and no question setter writes it directly, going round the rule',
+  (PREVIEW_SRC.match(/onChange=\{[^}]*answer\(a =>/g) ?? []).length >= 3
+  && !/onChange=\{[^}]*setAnswers\(/.test(PREVIEW_SRC));
+ok('AB: the goal setter goes through the rule too — it is the biggest invalidation',
+  /answer\(a => \(\{ \.\.\.a, droneTypeId, sizeInch: undefined, cellCount: undefined \}\)\)/
+    .test(PREVIEW_SRC));
+ok('AB: no component keeps a second idea of what is chosen',
+  ![PREVIEW_SRC, SCREEN_SRC, CARD_SRC].some(
+    f => /selectedCandidate|selectedRow|chosenPart|activeCandidate/.test(f)));
+ok('AB: nothing in the V2 layer persists anything',
+  ![PREVIEW_SRC, SCREEN_SRC, CARD_SRC, STATE_SRC].some(
+    f => /localStorage|sessionStorage|indexedDB|firestore|mirrorToProject/i.test(f)));
+/*
+ * THE DOMAIN IS FROZEN. Phase 2E is a UI phase, and the one way to be sure of
+ * that is that the engine's answers did not move — which section P already
+ * proves case by case against a baseline written before Phase 2D existed.
+ * This is the narrower statement: the UI does not reach into the domain to
+ * make its own life easier.
+ */
+ok('AB: the UI never imports from inside the recommendation engine’s internals',
+  ![PREVIEW_SRC, SCREEN_SRC, CARD_SRC, STATE_SRC].some(
+    f => /from '[^']*recommendation\/(?!types|proposeBuild)/.test(f)));
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AC — THE ANNOUNCEMENT REPORTS AN ACTION, NOT A STATE');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * The sharpest way to say «this is feedback, not truth»: render a build that
+ * HAS a reader choice in it and check the live region is still silent. If the
+ * sentence were derived from the build, a page the reader merely reloaded into
+ * would announce a choice they made minutes ago — or, worse, the region would
+ * become a second place the selection is stated, and the two could disagree.
+ */
+const silent = /data-testid="v2-selection-announcement"[^>]*>\s*<span><\/span>\s*<\/p>/;
+ok('AC: a page with nothing pressed says nothing', silent.test(openHtml));
+ok('AC: …and a page that ALREADY carries a reader’s choice still says nothing',
+  dec(CHOSEN_BUILD, TIE).selectionSource === 'user-selected' && silent.test(chosenHtml));
+ok('AC: the region is polite and out of the visual flow, not a banner',
+  /role="status" aria-live="polite" class="sr-only"/.test(chosenHtml));
+/*
+ * And the badge — which IS selection truth — is present on the same page,
+ * so «the region is empty» is not «nothing about the choice is rendered».
+ */
+ok('AC: …while the card itself does state the choice, in words',
+  new RegExp(`data-testid="v2-badge-${TIE}"[^>]*>${PROPOSAL.selectedBadge}`).test(chosenHtml));
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AD — WHAT PHASE 2E DID NOT TOUCH');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * V2 is a preview behind `?buildV2=1`. Everything Phase 2E added has to stay
+ * inside it: the V1 build journey is the one readers are actually using, and a
+ * phase that quietly edits it is not a preview.
+ */
+/*
+ * The list is DERIVED, not typed. A hardcoded set of V1 filenames goes stale
+ * the moment one is added, and goes stale silently — which is the same failure
+ * as not checking at all.
+ */
+const v1Files = [
+  ...readdirSync('web/components/build').filter(f => /\.tsx?$/.test(f))
+    .map(f => `web/components/build/${f}`),
+  ...readdirSync('web/lib/build').filter(f => /\.tsx?$/.test(f))
+    .map(f => `web/lib/build/${f}`),
+];
+ok(`AD: the V1 build surface really is several files (${v1Files.length})`, v1Files.length >= 8);
+ok('AD: no V1 file knows anything about reader selections',
+  v1Files.every(f => !/selectedParts|user-selected/.test(readFileSync(f, 'utf8'))));
+ok('AD: …nor about the copy Phase 2E added',
+  v1Files.every(f => !/chosenAnnouncement|clearedAnnouncement/.test(readFileSync(f, 'utf8'))));
+ok('AD: …and the sweep is not vacuous — those strings ARE in the V2 layer',
+  /selectedParts/.test(PREVIEW_SRC)
+  && /chosenAnnouncement/.test(readFileSync('web/components/build/v2/copy.ts', 'utf8')));
+
+/*
+ * AND THE ENGINE STILL ANSWERS AN UNSELECTED QUESTION EXACTLY AS IT DID.
+ *
+ * Section P proves that field for field against a baseline written before
+ * Phase 2D existed. This is the narrower statement Phase 2E needs: an EMPTY
+ * selection map is not an input — sending `{}` must be indistinguishable from
+ * sending nothing, or every reader who has chosen nothing yet is on a
+ * different code path from the one the baseline covers.
+ */
+let emptyDiffs = 0;
+for (const [, inp] of Object.entries(INPUTS)) {
+  const without = JSON.stringify(build(inp as Record<string, unknown>));
+  const withEmpty = JSON.stringify(build({ ...(inp as Record<string, unknown>), selectedParts: {} }));
+  if (without !== withEmpty) emptyDiffs++;
+}
+ok(`AD: an empty selection map changes nothing, on all ${Object.keys(INPUTS).length} baseline readers`,
+  Object.keys(INPUTS).length >= 20 && emptyDiffs === 0);
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AE — THE RECOVERY CONTRACT: `unavailable` IS NOT ALWAYS A DEFECT');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `unavailable-required` exists to catch ONE contradiction: the engine hands
+ * back a receipt — «a complete blocker-free assignment exists» — while a
+ * required category says it has nothing. Both cannot be true, and a screen
+ * that drew either would be asserting something the data does not support.
+ *
+ * The check was written without the receipt: every `unavailable` decision
+ * became a defect. So the ordinary, honest outcome «this build cannot be
+ * made» was reported as internal corruption, the engine's per-category reasons
+ * were replaced by a message about consistency, and — once Phase 2E let the
+ * reader choose — the «تغيير الاختيار» that would have undone the choice
+ * responsible was rendered behind a page nobody ever saw.
+ *
+ * The two halves are asserted here on builds constructed by hand, so that each
+ * carries EXACTLY the property under test and nothing else: the real engine
+ * cannot be asked for a proven build that also has an unavailable category,
+ * because that is the contradiction itself.
+ */
+const REAL_PART = BY_CATEGORY[TIE][TIE_A];
+const RECOVER_CAT = TIE;
+
+/** A skeleton every case below varies from — valid in every other respect. */
+const syntheticBuild = (over: Partial<ProposedBuild>): ProposedBuild => ({
+  droneTypeId: 'freestyle',
+  sizeInch: 5,
+  cellCount: 6,
+  requiredInputs: [],
+  decisions: [],
+  parts: {},
+  unresolved: [],
+  manualChecks: [],
+  complete: false,
+  provenPath: null,
+  blockerFindingIds: [],
+  selectionIssues: [],
+  ...over,
+});
+
+const unavailableChosen: CategoryDecision = {
+  category: RECOVER_CAT,
+  status: 'unavailable',
+  selectionSource: 'user-selected',
+  partId: REAL_PART.id,
+  candidateIds: [REAL_PART.id],
+  compatibility: [],
+  reasons: [{
+    kind: 'no-candidate', evidence: 'user-input', inputKey: 'selectedParts',
+    ar: 'القطعة التي اخترتها لا تسمح بإتمام بناء خالٍ من الموانع — لم تُستبدل، والقرار لك.',
+  }],
+};
+
+// ── AE-1 · A RECOVERABLE FAILURE IS NOT CORRUPTION ─────────────────────────
+const RECOVERABLE = syntheticBuild({
+  decisions: [unavailableChosen],
+  parts: { [RECOVER_CAT]: REAL_PART },
+  unresolved: [RECOVER_CAT],
+  provenPath: null,
+});
+const recoverView = proposalView(RECOVERABLE, VIEW_CTX);
+ok('AE-1: the fixture is clean apart from the property under test',
+  PART_VOCAB[RECOVER_CAT]?.ar !== undefined
+  && BY_CATEGORY[RECOVER_CAT][REAL_PART.id] !== undefined
+  && RECOVERABLE.parts[RECOVER_CAT].id === unavailableChosen.partId);
+ok('AE-1: an unavailable category on an UNPROVEN build raises no defect at all',
+  recoverView.defects.length === 0);
+ok('AE-1: …so the screen is not withheld',
+  recoverView.consistencyError === false);
+ok('AE-1: …and the category is grouped under «تعذّر»',
+  recoverView.groups.problem.length === 1
+  && recoverView.groups.problem[0].category === RECOVER_CAT);
+
+const recoverHtml = renderProposal(RECOVERABLE);
+ok('AE-1: the screen renders the ordinary proposal, not the consistency page',
+  !recoverHtml.includes('v2-proposal-inconsistent')
+  && !/data-quality="inconsistent"/.test(recoverHtml)
+  && recoverHtml.includes(`data-testid="v2-cat-${RECOVER_CAT}"`));
+ok('AE-1: …the card carries the «غير متاح» badge',
+  new RegExp(`data-testid="v2-badge-${RECOVER_CAT}"[^>]*>${PROPOSAL.unavailableBadge}`)
+    .test(recoverHtml));
+ok('AE-1: …it shows the part the reader chose, by name',
+  recoverHtml.includes(REAL_PART.nameAr));
+ok('AE-1: …it prints the engine’s reason verbatim',
+  recoverHtml.includes(unavailableChosen.reasons[0].ar));
+ok('AE-1: …and it offers «تغيير الاختيار»',
+  recoverHtml.includes(`data-testid="v2-change-choice-${RECOVER_CAT}"`)
+  && recoverHtml.includes(PROPOSAL.candidates.change));
+/*
+ * The control is wired to the handler the screen was given — the same code
+ * path the browser walk presses at 390×844 and 1280×900 on a real build. Here
+ * the button's identity and its accessible name are what can be read back from
+ * a static render; that it clears the selection when pressed is proven by the
+ * e2e, not asserted twice in different words.
+ */
+ok('AE-1: …named for the part it would release, so it is not a bare «تغيير»',
+  new RegExp(`data-testid="v2-change-choice-${RECOVER_CAT}"[^>]*aria-label="`
+    + `${PROPOSAL.candidates.change}: ${REAL_PART.nameAr}"`).test(recoverHtml));
+const recoverText = recoverHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+ok('AE-1: …and nothing on it is a raw id',
+  KEYS.every(k => !recoverText.includes(k)));
+
+// ── AE-2 · THE REAL CONTRADICTION STILL REFUSES THE PAGE ───────────────────
+/*
+ * Same decision, same part, same everything — plus a receipt. Now the two
+ * statements cannot both hold, and the screen must not choose between them.
+ */
+const CONTRADICTORY = syntheticBuild({
+  decisions: [unavailableChosen],
+  parts: { [RECOVER_CAT]: REAL_PART },
+  provenPath: { [RECOVER_CAT]: REAL_PART.id },
+  complete: true,
+});
+const contraView = proposalView(CONTRADICTORY, VIEW_CTX);
+ok('AE-2: a PROVEN build with an unavailable required category is a defect',
+  contraView.defects.length === 1
+  && contraView.defects[0].kind === 'unavailable-required'
+  && contraView.defects[0].category === RECOVER_CAT);
+ok('AE-2: …and the proposal is withheld', contraView.consistencyError === true);
+const contraHtml = renderProposal(CONTRADICTORY);
+ok('AE-2: …the screen shows the refusal instead of the cards',
+  /data-quality="inconsistent"/.test(contraHtml)
+  && contraHtml.includes('v2-proposal-inconsistent')
+  && !contraHtml.includes(`data-testid="v2-cat-${RECOVER_CAT}"`));
+ok('AE-2: …naming the defect in words, never by kind-key',
+  contraHtml.includes(PROPOSAL.consistency.kinds['unavailable-required'])
+  && !contraHtml.replace(/<[^>]*>/g, ' ').includes('unavailable-required'));
+/*
+ * THE PAIR IS THE POINT. The two builds differ in `provenPath` and in nothing
+ * else — so the rule really is «only against a receipt», not «unavailable is
+ * fine now».
+ */
+ok('AE-2: the two fixtures differ ONLY in the receipt',
+  JSON.stringify({ ...RECOVERABLE, provenPath: null, complete: false, unresolved: [] })
+  === JSON.stringify({ ...CONTRADICTORY, provenPath: null, complete: false, unresolved: [] }));
+
+// ── AE-3 · EVERY OTHER INTEGRITY GUARD IS UNTOUCHED ────────────────────────
+/*
+ * This correction is about ONE defect kind. An unprovable build is still
+ * refused the moment anything in it cannot be drawn honestly — and each of
+ * those is checked on a build that ALSO has `provenPath: null`, which is
+ * exactly the case the loosened rule now lets through.
+ */
+const stillDefective: [string, ProposedBuild, string][] = [
+  ['a category the catalogue has no shelf for',
+    syntheticBuild({ decisions: [{ ...unavailableChosen, category: 'probe-category' }] }),
+    'unknown-category'],
+  ['a part id that resolves nowhere',
+    syntheticBuild({
+      decisions: [{ ...unavailableChosen, partId: 'probe-missing', candidateIds: [] }],
+      parts: {},
+    }), 'unresolved-part'],
+  ['a candidate that belongs to another shelf',
+    syntheticBuild({
+      decisions: [{
+        ...unavailableChosen, partId: undefined,
+        candidateIds: [PART_CATEGORY_MAP.frames[0].id],
+      }],
+      parts: {},
+    }), 'foreign-category'],
+  ['a card about to show a different part from the one decided',
+    syntheticBuild({
+      decisions: [unavailableChosen],
+      parts: { [RECOVER_CAT]: BY_CATEGORY[RECOVER_CAT][TIE_B] },
+    }), 'part-mismatch'],
+  ['a manual check with no reader-facing wording',
+    syntheticBuild({
+      decisions: [unavailableChosen], parts: { [RECOVER_CAT]: REAL_PART },
+      manualChecks: ['probe-unknown-check'],
+    }), 'unlabelled-manual-check'],
+];
+for (const [what, b, kind] of stillDefective) {
+  const v = proposalView(b, VIEW_CTX);
+  ok(`AE-3: ${what} still refuses the page («${kind}»)`,
+    v.consistencyError === true && v.defects.some(d => d.kind === kind));
+}
+ok('AE-3: …and an unlabelled category is still caught too',
+  proposalView(syntheticBuild({
+    decisions: [{ ...unavailableChosen, category: 'gps' }],
+  }), {
+    ...VIEW_CTX, categoryLabel: c => (c === 'gps' ? undefined : PART_VOCAB[c]?.ar),
+  }).defects.some(d => d.kind === 'unlabelled-category'));
+
+// ── AE-4 · THE DOOR IN IS STILL SHUT ───────────────────────────────────────
+/*
+ * The correction must NOT turn an impossible initial build into a proposal the
+ * reader can walk into. That rule lives in `readinessOf`, it was not touched,
+ * and it is asserted here rather than assumed — including on the very build
+ * the screen will now happily render if it is somehow already open.
+ */
+ok('AE-4: an unprovable build is still «no-viable-build» on the summary',
+  readinessOf(RECOVERABLE, {}).state === 'no-viable-build');
+ok('AE-4: …including the real engine refusal from section Z',
+  REFUSED_BUILD.provenPath === null
+  && readinessOf(REFUSED_BUILD, {}).state === 'no-viable-build');
+ok('AE-4: …and it hands the reader the engine’s own reasons, not a UI sentence',
+  (readinessOf(REFUSED_BUILD, {}) as { reasonsAr: readonly string[] }).reasonsAr.length > 0);
+ok('AE-4: a provable build is still «ready», so the gate did not seize shut',
+  readinessOf(build(BASE), {}).state === 'ready');
+/*
+ * And the door itself: the proposal button is rendered on the readiness state
+ * and on nothing else, so this change cannot have opened a second way in.
+ */
+ok('AE-4: the proposal opens on `readiness.state === ready` alone',
+  /readiness\.state === 'ready' && \(/.test(PREVIEW_SRC)
+  && (PREVIEW_SRC.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+ok('AE-4: …and the screen does not re-implement readiness for itself',
+  !/provenPath/.test(SCREEN_SRC) && !/provenPath/.test(CARD_SRC));
+
 
 console.log(`\n[reader selection] ${passed} passed, ${failures.length} failed`);
 if (failures.length) {

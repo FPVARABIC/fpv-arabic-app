@@ -721,8 +721,8 @@ async function main() {
       ok(`${name}: the short list is open without being asked`,
         await page.locator('[data-testid="v2-show-candidates-propellers"]').count() === 0
         && await page.locator('[data-testid="v2-candidates-propellers"]').count() === 1);
-      ok(`${name}: …and the list says it is read-only for now`,
-        ((await choiceCards.first().textContent()) ?? '').includes('الاختيار بينها يأتي لاحقًا'));
+      ok(`${name}: …and the list tells the reader what to do with it`,
+        ((await choiceCards.first().textContent()) ?? '').includes('اختر قطعة واحدة لهذه الفئة'));
 
       ok(`${name}: the manual check is announced`,
         await page.locator('[data-testid="v2-proposal-manual"]').count() === 1);
@@ -909,6 +909,20 @@ async function main() {
         && await page.locator('[data-testid="v2-proposal"]').count() === 0);
 
       // ── P-E. A BLOCKED BUILD CANNOT REACH THE PROPOSAL ───────────────────
+      /*
+       * THIS GATE IS NOW THE ONLY ONE, AND THAT IS DELIBERATE.
+       *
+       * `proposalDefects` used to report every `unavailable` decision as
+       * `unavailable-required`, so a blocked build that somehow reached the
+       * proposal would have hit the consistency refusal — a second, accidental
+       * door-stop that existed only because the defect rule was wrong. Fixing
+       * the rule (it now needs a `provenPath` to have a contradiction with)
+       * removed that accident, so `readinessOf` carries the whole weight.
+       *
+       * Which is exactly why these assertions matter more than they did: they
+       * are what stands between a reader and a proposal for a build that does
+       * not exist.
+       */
       console.log(`\n[P-E] ${name} — Crossfire: blocked before any part`);
       await freestyle6S(page);
       await page.click('[data-testid="v2-owned-radio"]');
@@ -950,6 +964,361 @@ async function main() {
         pf.burdenBottom <= pf.viewport);
       if (name === '390px') {
         await page.screenshot({ path: `${SHOTS}/14-proposal-longrange-390.png`, fullPage: true });
+      }
+
+      // ── G2. THE READER ACTUALLY CHOOSES ───────────────────────────────────
+      /*
+       * PHASE 2E, IN THE ONLY PLACE IT CAN BE PROVEN.
+       *
+       * Everything below is about one claim: a card looks chosen because the
+       * ENGINE said so. That cannot be checked by reading source — a component
+       * with its own `selected` flag would render identically on the happy
+       * path. So this presses the real button and then reads what came back,
+       * including the cases where the answer is NOT the obvious one.
+       *
+       * «لا تفضيل» is the fixture on purpose: with no budget to rank by, the
+       * engine settles nothing and all eight categories are open, which is the
+       * heaviest screen the reader can reach and the one with the most to get
+       * wrong.
+       */
+      console.log(`\n[G2] ${name} — choosing a part, and unchoosing it`);
+
+      /**
+       * Press «التالي» until the summary's door appears, then go through it.
+       *
+       * Written as a loop rather than a fixed number of clicks because the
+       * journey is DERIVED: changing one answer on the way back can leave every
+       * later question already answered, in which case «التالي» goes straight
+       * to the summary and a scripted second click has nothing to press. A walk
+       * that assumes a fixed shape tests a journey the product does not have.
+       */
+      const advanceToProposal = async () => {
+        for (let step = 0; step < 8; step++) {
+          if (await page.locator('[data-testid="v2-open-proposal"]').count() === 1) break;
+          const next = page.locator('[data-testid="v2-next"]');
+          if (await next.count() !== 1 || !(await next.isEnabled())) break;
+          await next.click();
+          await page.waitForTimeout(220);
+        }
+        await page.click('[data-testid="v2-open-proposal"]');
+        await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 15000 });
+        await page.waitForTimeout(150);
+      };
+
+      const openAllOpenProposal = async () => {
+        await startJourney(page);
+        await page.click('[data-testid="v2-goal-freestyle"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(200);
+        await page.click('[data-testid="v2-input-cellCount-6"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(200);
+        await page.click('[data-testid="v2-budget-none"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(200);
+        await page.click('[data-testid="v2-owned-none"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(250);
+        await page.click('[data-testid="v2-open-proposal"]');
+        await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 15000 });
+      };
+
+      /** Every candidate button in one category, in the order rendered. */
+      const chooseButtons = (cat: string) =>
+        page.locator(`[data-testid^="v2-choose-${cat}-"]`);
+
+      /** Open a collapsed candidate list, if it is collapsed. */
+      const revealCandidates = async (cat: string) => {
+        const toggle = page.locator(`[data-testid="v2-show-candidates-${cat}"]`);
+        if (await toggle.count() === 1 && await toggle.getAttribute('aria-expanded') === 'false') {
+          await toggle.click();
+          await page.waitForTimeout(120);
+        }
+      };
+
+      const statusOf = (cat: string) =>
+        page.locator(`[data-testid="v2-cat-${cat}"]`).getAttribute('data-status');
+      const sourceOf = (cat: string) =>
+        page.locator(`[data-testid="v2-cat-${cat}"]`).getAttribute('data-source');
+
+      await openAllOpenProposal();
+
+      ok(`${name}: the all-open build really does leave every category open`,
+        await page.locator('[data-testid^="v2-cat-"][data-status="choice-required"]').count() === 8);
+      /*
+       * NOTHING STARTS CHOSEN. Not `candidateIds[0]`, not the `provenPath`
+       * member, not the first row on screen. This is the assertion that fails
+       * the moment someone «helpfully» preselects a default.
+       */
+      ok(`${name}: no category is chosen before the reader presses anything`,
+        await page.locator('[data-testid^="v2-cat-"][data-source="user-selected"]').count() === 0);
+      ok(`${name}: …and there is nothing to un-choose either`,
+        await page.locator('[data-testid^="v2-change-choice-"]').count() === 0);
+      ok(`${name}: every candidate row is offered as unselected`,
+        (await page.locator('[data-testid^="v2-candidate-"][data-selected="true"]').count()) === 0
+        && (await page.locator('[data-testid^="v2-candidate-"]').count()) > 0);
+      ok(`${name}: the list no longer calls itself display-only`,
+        !((await page.locator('[data-testid="v2-proposal"]').textContent()) ?? '')
+          .includes('للعرض في هذه المرحلة'));
+
+      await revealCandidates('frames');
+      const frameButtons = await chooseButtons('frames').count();
+      ok(`${name}: the frame list offers more than one real choice`, frameButtons >= 2);
+
+      /*
+       * THE LAST ROW, NEVER THE FIRST.
+       *
+       * A UI that quietly defaults to `candidateIds[0]` passes every assertion
+       * about «the chosen one» if the test also presses the first row. Pressing
+       * the last one makes the two answers different, so a default cannot hide
+       * behind the click.
+       */
+      const lastFrame = chooseButtons('frames').nth(frameButtons - 1);
+      const lastFrameName = (await lastFrame.getAttribute('aria-label') ?? '')
+        .replace(/^اختيار\s+/, '');
+      const firstFrameName = (await chooseButtons('frames').first().getAttribute('aria-label') ?? '')
+        .replace(/^اختيار\s+/, '');
+      ok(`${name}: the row pressed is NOT the first one offered`,
+        lastFrameName.length > 0 && lastFrameName !== firstFrameName);
+      ok(`${name}: the button's accessible name carries the part, not an id`,
+        lastFrameName.length > 2 && !/[a-z]+-[a-z0-9-]+/.test(lastFrameName));
+
+      const box = await lastFrame.boundingBox();
+      ok(`${name}: the choose button is a real touch target`,
+        !!box && box.height >= 44);
+
+      /*
+       * A RING A KEYBOARD USER CAN SEE.
+       *
+       * `:focus-visible` is a browser judgement, not a class the markup can
+       * assert, so the only honest check is to focus the button FROM THE
+       * KEYBOARD and read the computed outline back. A `minHeight` in a style
+       * object proves nothing about this.
+       */
+      await lastFrame.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      const ring = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement | null;
+        if (!el) return null;
+        const cs = getComputedStyle(el);
+        return {
+          testId: el.getAttribute('data-testid') ?? '',
+          width: parseFloat(cs.outlineWidth) || 0,
+          style: cs.outlineStyle,
+          colour: cs.outlineColor,
+        };
+      });
+      ok(`${name}: the keyboard really is on the choose button`,
+        !!ring && ring.testId.startsWith('v2-choose-'));
+      ok(`${name}: …and it draws a visible focus ring`,
+        !!ring && ring.width >= 2 && ring.style !== 'none'
+        && !/rgba\(0, 0, 0, 0\)|transparent/.test(ring.colour));
+
+      /*
+       * AND THE SCREEN IS STILL A SCREEN. Eight open categories, each list now
+       * carrying a button per row, is the heaviest this page ever gets.
+       */
+      const openMetrics = await page.evaluate(() => {
+        const el = document.querySelector('[data-testid="v2-proposal"]')!;
+        return {
+          screens: +(el.getBoundingClientRect().height / window.innerHeight).toFixed(2),
+          controls: el.querySelectorAll('button, a[href]').length,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+      console.log(`      all-open proposal with one list open (${name}): `
+        + `${openMetrics.screens} screens · ${openMetrics.controls} controls `
+        + `· overflow ${openMetrics.overflow}px`);
+      ok(`${name}: the page never scrolls sideways`, openMetrics.overflow === 0);
+
+      await lastFrame.click();
+      await page.waitForTimeout(250);
+
+      ok(`${name}: the engine now reports the frame as the READER's choice`,
+        await statusOf('frames') === 'user-selected'
+        && await sourceOf('frames') === 'user-selected');
+      ok(`${name}: …and it is the part that was pressed, not the first row`,
+        ((await page.locator('[data-testid="v2-part-name-frames"]').first().textContent()) ?? '')
+          .trim() === lastFrameName);
+      ok(`${name}: the card carries «اخترتها», never «اقترحناه لك»`,
+        ((await page.locator('[data-testid="v2-badge-frames"]').textContent()) ?? '')
+          .includes('اخترتها'));
+      ok(`${name}: the card moved into «اخترتها», out of «نحتاج اختيارك»`,
+        await page.locator('[data-testid="v2-group-chosen"] [data-testid="v2-cat-frames"]')
+          .count() === 1);
+      ok(`${name}: the choice was announced politely`,
+        ((await page.locator('[data-testid="v2-selection-announcement"]').textContent()) ?? '')
+          === `تم اختيار ${lastFrameName}`);
+      ok(`${name}: the keyboard landed on the card that changed`,
+        await page.evaluate(() => document.activeElement
+          ?.getAttribute('data-testid')) === 'v2-cat-frames');
+      ok(`${name}: the chosen category has no candidate list left to argue with`,
+        await page.locator('[data-testid="v2-candidates-frames"]').count() === 0);
+      ok(`${name}: …and it offers the way back out`,
+        await page.locator('[data-testid="v2-change-choice-frames"]').count() === 1);
+      /*
+       * A CHOICE IS NOT A RECOMMENDATION. The headline may only change to the
+       * reader's own, never to «هذا البناء المقترح لك», because the system
+       * still settled nothing here.
+       */
+      const afterOneTitle =
+        (await page.locator('[data-testid="v2-proposal-title"]').textContent()) ?? '';
+      ok(`${name}: the page now says the build is the reader's shape`,
+        afterOneTitle.includes('اختياراتك لهذا البناء'));
+
+      /*
+       * THE NEXT DECISION IS RECOMPUTED, NOT REPLAYED.
+       *
+       * With a frame fixed, the surviving motors are the ones that fit THAT
+       * frame. A UI that kept the list it had already rendered would offer
+       * parts the engine has just ruled out.
+       */
+      await revealCandidates('motors');
+      const motorButtons = await chooseButtons('motors').count();
+      ok(`${name}: motors are still an open decision after the frame`,
+        await statusOf('motors') === 'choice-required' && motorButtons >= 1);
+
+      const lastMotor = chooseButtons('motors').nth(motorButtons - 1);
+      const motorName = (await lastMotor.getAttribute('aria-label') ?? '')
+        .replace(/^اختيار\s+/, '');
+      await lastMotor.click();
+      await page.waitForTimeout(250);
+
+      ok(`${name}: the second choice lands too`,
+        await sourceOf('motors') === 'user-selected');
+      /* ACCUMULATION. The first choice is not a thing the second replaced. */
+      ok(`${name}: …and the first choice is still the reader's`,
+        await sourceOf('frames') === 'user-selected');
+
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/15-two-reader-choices-390.png`, fullPage: true });
+      }
+
+      // ── Undo, and ONLY the category it belongs to ─────────────────────────
+      await page.click('[data-testid="v2-change-choice-frames"]');
+      await page.waitForTimeout(250);
+      ok(`${name}: clearing the frame reopens exactly that category`,
+        await sourceOf('frames') !== 'user-selected');
+      ok(`${name}: …and leaves the motor choice alone`,
+        await sourceOf('motors') === 'user-selected');
+      ok(`${name}: the undo was announced too`,
+        ((await page.locator('[data-testid="v2-selection-announcement"]').textContent()) ?? '')
+          === `تم إلغاء اختيار ${lastFrameName}`);
+      ok(`${name}: …and the keyboard followed the change again`,
+        await page.evaluate(() => document.activeElement
+          ?.getAttribute('data-testid')) === 'v2-cat-frames');
+
+      // ── What survives navigation, and what must not ───────────────────────
+      /*
+       * IN-V2 NAVIGATION IS NOT AN ANSWER CHANGE.
+       *
+       * Going to the summary and back moves the screen, not the answers, so a
+       * choice the reader made has to still be there. Losing it here is the
+       * cheapest possible way to make the feature feel broken.
+       */
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(200);
+      await page.click('[data-testid="v2-open-proposal"]');
+      await page.waitForTimeout(250);
+      ok(`${name}: a choice survives proposal → summary → proposal`,
+        await sourceOf('motors') === 'user-selected');
+
+      /*
+       * BUDGET CLEARS NOTHING. It is a preference and a preference does not
+       * outrank a choice — so changing it must not quietly discard one.
+       */
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(200);
+      let guard = 0;
+      while (!(await questionTitle(page)).includes('الميزانية') && guard++ < 6) {
+        await page.click('[data-testid="v2-back"]');
+        await page.waitForTimeout(150);
+      }
+      ok(`${name}: reached the budget question again`,
+        (await questionTitle(page)).includes('الميزانية'));
+      await page.click('[data-testid="v2-budget-mid"]');
+      await page.waitForTimeout(200);
+      await advanceToProposal();
+      ok(`${name}: changing the BUDGET keeps the reader's choice`,
+        await sourceOf('motors') === 'user-selected');
+      ok(`${name}: …and the choice still outranks the new ranking`,
+        ((await page.locator('[data-testid="v2-part-name-motors"]').first().textContent()) ?? '')
+          .trim() === motorName);
+
+      /*
+       * THE GOAL IS A DIFFERENT BUILD. Everything chosen under the old one goes.
+       */
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(200);
+      guard = 0;
+      while (!(await questionTitle(page)).includes('ماذا تريد أن تبني') && guard++ < 8) {
+        await page.click('[data-testid="v2-back"]');
+        await page.waitForTimeout(150);
+      }
+      ok(`${name}: reached the goal question again`,
+        (await questionTitle(page)).includes('ماذا تريد أن تبني'));
+      await page.click('[data-testid="v2-goal-long-range"]');
+      await page.waitForTimeout(200);
+      await advanceToProposal();
+      ok(`${name}: changing the GOAL discards every earlier choice`,
+        await page.locator('[data-testid^="v2-cat-"][data-source="user-selected"]')
+          .count() === 0);
+
+      /*
+       * AN ECOSYSTEM ANSWER CLEARS ITS OWN SHELF, AND ONLY ITS OWN.
+       *
+       * Naming a radio narrows `receivers`. It says nothing whatever about the
+       * frame the reader picked, and taking that away would be the eager
+       * failure `selectionState.ts` is written to avoid.
+       */
+      await openAllOpenProposal();
+      await revealCandidates('frames');
+      const ecoFrame = chooseButtons('frames').first();
+      const ecoFrameName = (await ecoFrame.getAttribute('aria-label') ?? '')
+        .replace(/^اختيار\s+/, '');
+      await ecoFrame.click();
+      await page.waitForTimeout(250);
+      await revealCandidates('receivers');
+      const rxCount = await chooseButtons('receivers').count();
+      ok(`${name}: receivers are an open decision before any radio is named`,
+        await statusOf('receivers') === 'choice-required' && rxCount >= 1);
+      await chooseButtons('receivers').first().click();
+      await page.waitForTimeout(250);
+      ok(`${name}: both a frame and a receiver are now the reader's`,
+        await sourceOf('frames') === 'user-selected'
+        && await sourceOf('receivers') === 'user-selected');
+
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(150);
+      await page.click('[data-testid="v2-back"]');
+      await page.waitForTimeout(200);
+      guard = 0;
+      while (!(await questionTitle(page)).includes('معدات') && guard++ < 8) {
+        await page.click('[data-testid="v2-back"]');
+        await page.waitForTimeout(150);
+      }
+      ok(`${name}: reached the owned-gear question again`,
+        (await questionTitle(page)).includes('معدات'));
+      await page.click('[data-testid="v2-owned-radio"]');
+      await page.click('[data-testid="v2-next"]');
+      await page.waitForTimeout(250);
+      await page.click('[data-testid="v2-owned-rc-ExpressLRS"]');
+      await page.waitForTimeout(200);
+      await advanceToProposal();
+      ok(`${name}: naming a radio clears the RECEIVER choice`,
+        await sourceOf('receivers') !== 'user-selected');
+      ok(`${name}: …and does not touch the frame, which it says nothing about`,
+        await sourceOf('frames') === 'user-selected'
+        && ((await page.locator('[data-testid="v2-part-name-frames"]').first().textContent())
+          ?? '').trim() === ecoFrameName);
+
+      if (name === '390px') {
+        await page.screenshot({ path: `${SHOTS}/16-ecosystem-cleared-receiver-390.png`, fullPage: true });
       }
 
       // ── H. THE PREVIEW'S OWN WAY OUT ──────────────────────────────────────
