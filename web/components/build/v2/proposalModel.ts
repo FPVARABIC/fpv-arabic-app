@@ -345,15 +345,16 @@ export function proposalView(build: ProposedBuild, ctx: ProposalContext): Propos
  *     blocker-free build EXISTS; it picked one arbitrary member of each tie to
  *     do so. Showing it as «the system's pick» would turn a proof of
  *     existence into a recommendation the engine explicitly refused to make.
- *   · carry a selection of its own. The DOMAIN can now say «the reader chose
- *     this but does not own it» — Phase 2D added `selectedParts` and
- *     `user-selected`, kept apart from `owned.parts`, which still means
- *     «already in hand». What this function must not do is invent one: a
- *     selection is an INPUT to `proposeBuild`, and a candidate list that
- *     marked something chosen without the engine having seen it would be a
- *     React-only lock — a claim no search ever tested. Phase 2E sends the
- *     click to the engine and reads the answer back; until then this is a
- *     list, deliberately.
+ *   · carry a selection of its own. The DOMAIN says «the reader chose this but
+ *     does not own it» — Phase 2D added `selectedParts` and `user-selected`,
+ *     kept apart from `owned.parts`, which still means «already in hand».
+ *     What this function must not do is invent one: a selection is an INPUT to
+ *     `proposeBuild`, and a candidate list that marked something chosen
+ *     without the engine having seen it would be a React-only lock — a claim
+ *     no search ever tested. Phase 2E sends the click to the engine and reads
+ *     the answer back, which is why this list still carries no selection: a
+ *     chosen category is not `choice-required` any more, so it has no list
+ *     here at all.
  */
 export const candidatesOf = (d: CategoryDecision): readonly string[] => d.candidateIds;
 

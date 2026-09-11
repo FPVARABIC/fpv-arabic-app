@@ -123,7 +123,7 @@ const preview = src['BuildV2Preview.tsx'];
 ok('the door is the readiness state itself', /readiness\.state === 'ready' && \(/.test(preview));
 ok('there is exactly one way in', (preview.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
 ok('the proposal screen renders only on that screen name',
-  /screen === 'proposal' && build && <ProposalScreen/.test(preview));
+  /screen === 'proposal' && build && \(\s*\n?\s*<ProposalScreen/.test(preview));
 
 /*
  * The three readiness states, checked at the source rather than trusted: an
@@ -262,7 +262,7 @@ ok('…and the decision still reports NO selection for that category',
   tied.partId === undefined && tied.selectionSource === 'none');
 
 // ═══════════════════════════════════════════════════════════════════════════
-section('5 — NO READER SELECTION IN THE UI, THOUGH THE DOMAIN NOW HAS ONE');
+section('5 — A READER CHOICE IS AN ENGINE INPUT, NEVER A REACT FLAG');
 // ═══════════════════════════════════════════════════════════════════════════
 /*
  * Phase 2C found no way to say «chose but does not own»: `owned.parts` means
@@ -271,26 +271,53 @@ section('5 — NO READER SELECTION IN THE UI, THOUGH THE DOMAIN NOW HAS ONE');
  * they own hardware they had not bought. It showed candidates read-only and
  * reported the gap instead.
  *
- * PHASE 2D CLOSED THE GAP. `selectedParts` / `user-selected` now exist, and
- * `scripts/testReaderSelection.ts` is their proof. What has NOT changed is
- * this screen: the cards stay read-only until Phase 2E wires a click to the
- * engine, because a selection the engine never sees is still a lie. So these
- * assertions keep their teeth — they are now about the UI's restraint rather
- * than the domain's silence.
+ * PHASE 2D BUILT THE CHANNEL — `selectedParts` / `user-selected` — and PHASE
+ * 2E wired the click to it. So the assertion that used to read «nothing here
+ * is clickable» has to invert, and what replaces it must be stronger rather
+ * than merely different: the click exists, and the ONLY thing it may do is
+ * become an input to `proposeBuild`.
+ *
+ * The two that do NOT change are the two that mattered most. A selection must
+ * never travel through `owned`, in this phase or any later one.
  */
 ok('nothing in the V2 layer writes owned.parts', !/owned\s*:\s*\{[^}]*parts/.test(allCode));
 ok('nothing in the V2 layer even mentions owned.parts', !/owned\.parts/.test(allCode));
-ok('no candidate is clickable', !/onSelect|onClick=\{\(\) => set[A-Z]\w*Candidate/.test(
-  src['ProposalCategoryCard.tsx']));
-ok('the screen says the list is read-only for now',
-  /هذه القائمة للعرض في هذه المرحلة/.test(PROPOSAL.candidates.readOnly));
+/*
+ * NO PARALLEL TRUTH. A component that remembers which candidate was pressed is
+ * a second answer to «what is chosen here», and it disagrees with the engine
+ * the first time the engine refuses the choice. The names below are the ones
+ * such a state would plausibly be given; the behavioural proof that the engine
+ * is the only source lives in `scripts/testReaderSelection.ts`.
+ */
+ok('no component keeps its own idea of what is selected',
+  !/selectedCandidate|selectedRow|chosenPart|activeCandidate/.test(componentCode));
+ok('the card asks the ENGINE whose part this is',
+  /decision\.selectionSource === 'user-selected'/.test(src['ProposalCategoryCard.tsx']));
+ok('the selection map never reaches the presentation layer',
+  !/selectedParts/.test(src['ProposalScreen.tsx'])
+  && !/selectedParts/.test(src['ProposalCategoryCard.tsx']));
+ok('…and it does reach the engine, from the one component that owns it',
+  /selectedParts: a\.selectedParts/.test(preview));
+ok('a candidate row is chosen by a real button, not a clickable box',
+  /<button[\s\S]{0,400}PROPOSAL\.candidates\.choose/.test(src['ProposalCategoryCard.tsx']));
+ok('the button names the part it would choose',
+  /aria-label=\{`\$\{PROPOSAL\.candidates\.choose\} \$\{c\.nameAr\}`\}/
+    .test(src['ProposalCategoryCard.tsx']));
+ok('no candidate id is ever shown to a reader',
+  !/>\{id\}<|\{`\$\{id\}`\}/.test(src['ProposalCategoryCard.tsx']));
+ok('the screen tells the reader what to do with the list',
+  PROPOSAL.candidates.instruction.includes('اختر')
+  && PROPOSAL.candidates.instruction.includes('واحدة'));
+ok('…and no longer claims the list is display-only',
+  !/للعرض في هذه المرحلة/.test(JSON.stringify(PROPOSAL))
+  && !('readOnly' in PROPOSAL.candidates));
 /* Flattened to ONE space: a doc comment's indentation is not its meaning. */
 const modelProse = read(`${V2}/proposalModel.ts`).replace(/\n\s*\*/g, ' ')
   .replace(/\s+/g, ' ');
-ok('the model documents that the domain CAN now express selection',
-  modelProse.includes('The DOMAIN can now say «the reader chose this but does not own it»'));
-ok('…and that the UI stays read-only until Phase 2E on purpose',
-  modelProse.includes('Phase 2E sends the click to the engine and reads the answer back'));
+ok('the model documents that the domain expresses selection',
+  modelProse.includes('The DOMAIN says «the reader chose this but does not own it»'));
+ok('…and that a chosen category leaves the candidate list entirely',
+  modelProse.includes('a chosen category is not `choice-required` any more'));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('6 — EXPLANATIONS AND EVIDENCE ARE THE ENGINE\'S');

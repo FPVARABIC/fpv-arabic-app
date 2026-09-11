@@ -268,17 +268,47 @@ export const PROPOSAL = {
   candidates: {
     title: 'الخيارات المتوافقة',
     /*
-     * The sentence that keeps a read-only list honest.
+     * THE SENTENCE THAT TELLS THE READER WHAT TO DO — AND WHAT IT COSTS.
      *
-     * Phase 2C wrote it because the DOMAIN could not record «chose but does
-     * not own». Phase 2D built that: `selectedParts`, `user-selected`, and a
-     * selection that is a real lock in the search. So the reason this list is
-     * still read-only has changed — it is no longer «we cannot say it», it is
-     * «the wiring is Phase 2E's». The sentence stays true either way, and it
-     * stays until a click can reach the engine, because a React-only lock the
-     * engine never sees would be exactly the lie both phases avoided.
+     * It used to say «هذه القائمة للعرض في هذه المرحلة — الاختيار بينها يأتي
+     * لاحقًا.» That was true for two phases and is now false: the buttons
+     * below it reach the engine. Phase 2C wrote it because the DOMAIN could
+     * not record «chose but does not own»; Phase 2D built that; Phase 2E wired
+     * it. A list that has become clickable while still announcing itself as
+     * display-only is worse than either state on its own.
+     *
+     * «واحدة» is the whole instruction: a category takes ONE part, choosing a
+     * second replaces the first, and neither of those needs a sentence once
+     * the first one is clear. «ويمكنك تغييرها» is the other half — a reader who
+     * believes a click is final does not click — and the pronoun is feminine
+     * because it refers to «قطعة», not to «الاختيار».
      */
-    readOnly: 'هذه القائمة للعرض في هذه المرحلة — الاختيار بينها يأتي لاحقًا.',
+    instruction: 'اختر قطعة واحدة لهذه الفئة — ويمكنك تغييرها بعد ذلك.',
+    /*
+     * The button, and it is a VERB. «اختيار» names the action the reader is
+     * taking; the part it applies to is on the accessible name, so a screen
+     * reader hears «اختيار Source One V5» rather than eight identical buttons.
+     */
+    choose: 'اختيار',
+    /*
+     * Undo, named for what it does rather than for what it undoes. NOT «إلغاء»
+     * on its own, which in Arabic reads as «cancel» and would leave the reader
+     * unsure whether the category goes back to being open or empties out.
+     */
+    change: 'تغيير الاختيار',
+    /*
+     * WHAT THE LIVE REGION SAYS — and it is feedback, never state.
+     *
+     * A sighted reader sees the card move to «اخترتها» and change shape. A
+     * screen-reader user gets no such cue, because the change happens far from
+     * the button they pressed. So the action is announced politely, once, in
+     * the past tense — «تم» — because by the time it is read the engine has
+     * already recomputed and the screen already shows the result. Nothing here
+     * decides anything: if the engine refused the choice, the card says so and
+     * this sentence is still only a report that the click was received.
+     */
+    chosenAnnouncement: (partAr: string) => `تم اختيار ${partAr}`,
+    clearedAnnouncement: (partAr: string) => `تم إلغاء اختيار ${partAr}`,
     /*
      * Long lists, and screens with many open decisions, collapse.
      *

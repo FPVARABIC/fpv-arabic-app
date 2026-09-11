@@ -24,6 +24,7 @@ import type { ProposedBuild } from '../src/data/assembly/recommendation/types';
 import { BUILD_TYPE_AVAILABILITY } from '../web/lib/build/availability';
 import { isBuildV2Preview, BUILD_V2_PREVIEW_PARAM } from '../web/lib/build/v2/previewFlag';
 import { readinessOf } from '../web/components/build/v2/readiness';
+import { NO_SELECTIONS } from '../web/components/build/v2/selectionState';
 
 let passed = 0;
 const failures: string[] = [];
@@ -212,8 +213,17 @@ section('5 — NO ARRAY[0] DEFAULT REACHES THE READER');
  * first. The reader's answers start EMPTY and the option lists are rendered,
  * never sampled.
  */
+/*
+ * Phase 2E gave `Answers` a fifth field, so this can no longer be «the literal
+ * is `{ owned: {} }`». What it means has not changed: every field a reader
+ * could answer starts empty, including the parts they might choose. The
+ * emptiness of that one is asserted on the VALUE rather than on its spelling.
+ */
 ok('the preview starts with no answers at all',
-  /emptyAnswers\s*=\s*\(\)\s*:\s*Answers\s*=>\s*\(\{\s*owned:\s*\{\}\s*\}\)/.test(preview));
+  /emptyAnswers\s*=\s*\(\)\s*:\s*Answers\s*=>\s*\(\{\s*owned:\s*\{\},\s*selectedParts:\s*NO_SELECTIONS\s*\}\)/
+    .test(preview));
+ok('…and «no selections» really is empty — nothing is pre-chosen for the reader',
+  Object.keys(NO_SELECTIONS).length === 0);
 ok('no V2 component seeds a value from `options[0]`',
   !Object.values(v2Code).some(f => /options\s*\[\s*0\s*\]/.test(f)));
 ok('no V2 component seeds a value from a `??` fallback into a first element',

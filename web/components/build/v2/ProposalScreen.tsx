@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { BasePart } from '@core/data/assembly/types';
 import type { ProposedBuild } from '@core/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '@core/data/project/store';
@@ -25,9 +25,19 @@ import { ProposalCategoryCard } from './ProposalCategoryCard';
  * So the screen is ordered by what the reader has to DO. The categories that
  * need them come first and open; the ones the system settled are compact rows
  * that expand. The counts in the headline are derived, the reasons are the
- * engine's, and the candidate lists carry no selection at all — see
- * `proposalModel.ts` for why that last one is a domain limit rather than an
- * omission.
+ * engine's, and — since Phase 2E — the candidate lists are where the reader
+ * actually answers.
+ *
+ * WHAT THIS SCREEN DOES NOT KNOW
+ * ------------------------------
+ * It never receives the reader's selection map. It is handed two callbacks and
+ * a `ProposedBuild`, and every «chosen» thing it draws is drawn because a
+ * decision came back `selectionSource: 'user-selected'`. There is deliberately
+ * no way to render a selected-looking card from here without the engine having
+ * said so first: a click calls out, the engine runs again, and the new answer
+ * is the only thing that reaches the pixels. A React-side «selected» flag
+ * would be a second truth, and the two would disagree the first time the
+ * engine refused a choice.
  */
 
 /**
@@ -102,8 +112,60 @@ const LIGHT_LOAD = 3;
 const expandsByDefault = (candidateCount: number, openDecisions: number) =>
   candidateCount <= SHORT_LIST && openDecisions <= LIGHT_LOAD;
 
-export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) => {
+export const ProposalScreen: React.FC<{
+  build: ProposedBuild;
+  /** The reader closed a category. Category key and catalogue part id — never a part. */
+  onChoose: (category: string, partId: string) => void;
+  /** The reader reopened one. A delete, and only of this category. */
+  onClearChoice: (category: string) => void;
+}> = ({ build, onChoose, onClearChoice }) => {
   const catalogue = useCatalogue();
+
+  /*
+   * FEEDBACK, AND IT IS NOT STATE.
+   *
+   * A sighted reader watches the card move from «نحتاج اختيارك» to «اخترتها».
+   * A screen-reader user pressed a button that then vanished, and nothing
+   * about the page they were reading announced itself. So the action is
+   * reported politely, in the past tense, and nothing on this screen is drawn
+   * from it — if the engine refused the choice, the card says so and this
+   * sentence still only reports that the click arrived.
+   *
+   * The counter is what makes a REPEATED message announce again: choosing,
+   * clearing and re-choosing the same part produces the same string twice, and
+   * a live region with unchanged text has nothing to read out. Keying the span
+   * on it puts a new node in the region each time, which is the change
+   * assistive technology actually listens for.
+   */
+  const [said, setSaid] = useState<{ text: string; n: number }>({ text: '', n: 0 });
+  const say = (text: string) => setSaid(prev => ({ text, n: prev.n + 1 }));
+
+  /*
+   * WHERE THE KEYBOARD GOES WHEN THE BUTTON UNDER IT DISAPPEARS.
+   *
+   * Both controls destroy themselves: choosing collapses the candidate list,
+   * clearing removes the «تغيير الاختيار» button. Focus would fall to the
+   * document body, which on a screen this long means the reader's next Tab
+   * starts from the top of the page — the change they just made is somewhere
+   * below, and nothing points at it.
+   *
+   * So focus moves to the CARD whose state changed. It is the one target that
+   * always exists whatever the engine answered, and landing on it reads the
+   * category heading and its new badge — which is precisely the outcome of the
+   * press.
+   */
+  const [focusCategory, setFocusCategory] = useState<string | null>(null);
+
+  const choose = (category: string, partId: string, partAr: string) => {
+    onChoose(category, partId);
+    say(PROPOSAL.candidates.chosenAnnouncement(partAr));
+    setFocusCategory(category);
+  };
+  const clearChoice = (category: string, partAr: string) => {
+    onClearChoice(category);
+    say(PROPOSAL.candidates.clearedAnnouncement(partAr));
+    setFocusCategory(category);
+  };
   /*
    * The integrity context: what the model needs to check that everything the
    * screen is about to name exists IN THE CATEGORY IT IS SHOWN UNDER. Passed
@@ -158,6 +220,16 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
   return (
     <section data-testid="v2-proposal" data-quality={view.quality}
       style={{ display: 'grid', gap: 18 }}>
+      {/*
+        `role="status"` already implies `aria-live="polite"`; both are written
+        because the pair is what every assistive technology in the field
+        actually honours. It is empty on first render, so nothing is announced
+        to a reader who has pressed nothing.
+      */}
+      <p role="status" aria-live="polite" className="sr-only"
+        data-testid="v2-selection-announcement" style={{ margin: 0 }}>
+        <span key={said.n}>{said.text}</span>
+      </p>
       <header style={{ display: 'grid', gap: 7 }}>
         <h2 data-testid="v2-proposal-title"
           style={{ margin: 0, fontSize: 21, fontWeight: 900, lineHeight: 1.55 }}>
@@ -242,6 +314,9 @@ export const ProposalScreen: React.FC<{ build: ProposedBuild }> = ({ build }) =>
                   expandCandidates={expandsByDefault(
                     d.candidateIds.length, view.counts.choiceRequired,
                   )}
+                  onChoose={choose}
+                  onClearChoice={clearChoice}
+                  takeFocus={focusCategory === d.category}
                 />
               ))}
             </ul>

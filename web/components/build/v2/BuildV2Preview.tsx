@@ -14,6 +14,10 @@ import {
 } from './BuildOwnedGearQuestion';
 import { BuildInputSummary, summaryValue, type SummaryRow } from './BuildInputSummary';
 import { readinessOf } from './readiness';
+import {
+  NO_SELECTIONS, selectionsSurviving, withCategory, withoutCategory,
+  type ReaderSelections, type SelectionContext,
+} from './selectionState';
 import { ProposalScreen } from './ProposalScreen';
 import { PROPOSAL } from './copy';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
@@ -41,6 +45,21 @@ type Answers = {
   cellCount?: number;
   budget?: BudgetAnswer;
   owned: OwnedGear;
+  /**
+   * The categories the reader closed themselves — category → part id.
+   *
+   * IN MEMORY ONLY, exactly like every other field here. No storage key, no
+   * draft document, no project schema. That is not an oversight to be fixed by
+   * adding one: persisting a selection means agreeing on a shape for it, and
+   * the shape is only worth agreeing on after this interaction is accepted.
+   * A refresh clears it, and the notice at the top of the screen says so.
+   *
+   * It sits BESIDE `owned`, never inside it. «I have this» and «I want this in
+   * this build» are different claims, the engine keeps them in different
+   * fields for that reason, and the moment the UI merges them it starts
+   * telling readers they own hardware they have not bought.
+   */
+  selectedParts: ReaderSelections;
 };
 
 /**
@@ -67,7 +86,7 @@ const BLOCKED_ID = 'v2-blocked';
 /** Both ecosystem screens block for the same reason, in the same words. */
 const OWNED_BLOCKED = 'اختر النظام، أو اختر «لست متأكدًا».';
 
-const emptyAnswers = (): Answers => ({ owned: {} });
+const emptyAnswers = (): Answers => ({ owned: {}, selectedParts: NO_SELECTIONS });
 
 /** What the reader's answers mean to the domain. One translation, one place. */
 function toEngineInput(a: Answers): RecommendationInput {
@@ -84,8 +103,37 @@ function toEngineInput(a: Answers): RecommendationInput {
       rcSystem: ecosystemValue(a.owned.rc),
       videoSystem: ecosystemValue(a.owned.video),
     },
+    /*
+     * THE READER'S OWN CHOICES — a top-level field, not a member of `owned`.
+     *
+     * This is the whole of the wiring. There is no second place a choice can
+     * be recorded and no React-side lock the engine does not see: the map goes
+     * in here, `proposeBuild` runs again, and whatever comes back is what the
+     * screen shows. A card that looks chosen looks that way because the engine
+     * said `user-selected`, never because a component remembered a click.
+     */
+    selectedParts: a.selectedParts,
   };
 }
+
+/**
+ * The answers REDUCED TO WHAT CAN INVALIDATE A CHOICE.
+ *
+ * Read off `toEngineInput` rather than off `Answers`, so the comparison is
+ * against the values that actually constrain the build. Two answers the engine
+ * cannot tell apart must not clear anything, and the only way to guarantee
+ * that is to ask the same translation the engine is given.
+ */
+const selectionContext = (a: Answers): SelectionContext => {
+  const input = toEngineInput(a);
+  return {
+    droneTypeId: a.droneTypeId,
+    sizeInch: input.sizeInch,
+    cellCount: input.cellCount,
+    rcSystem: input.owned?.rcSystem,
+    videoSystem: input.owned?.videoSystem,
+  };
+};
 
 export const BuildV2Preview: React.FC = () => {
   const [answers, setAnswers] = useState<Answers>(emptyAnswers);
@@ -163,6 +211,14 @@ export const BuildV2Preview: React.FC = () => {
     setIdx(idx + 1);
   };
 
+  /*
+   * Navigation moves the SCREEN, never the answers.
+   *
+   * Which is why a selection survives «رجوع» from the proposal to the summary
+   * and back again: nothing here writes `answers`, so there is nothing for the
+   * invalidation rule to act on. Memory-only does not mean fragile — it means
+   * it lives exactly as long as this component does.
+   */
   const goBack = () => {
     if (screen === 'proposal') { setScreen('summary'); return; }
     if (screen === 'summary') { setScreen('questions'); return; }
@@ -171,16 +227,60 @@ export const BuildV2Preview: React.FC = () => {
   };
 
   /**
+   * THE ONLY WAY AN ANSWER IS WRITTEN — so it is the only place the reader's
+   * choices can be invalidated, and there is no route around it.
+   *
+   * Every answer setter below goes through here. The rule itself is in
+   * `selectionState.ts`, stated over the values the engine sees, and it runs on
+   * the before/after pair rather than on the setter's intent: a setter cannot
+   * forget to declare what it invalidates, because it does not get to say.
+   */
+  const answer = (change: (a: Answers) => Answers) => setAnswers(prev => {
+    const next = change(prev);
+    const selectedParts = selectionsSurviving(
+      selectionContext(prev), selectionContext(next), next.selectedParts,
+    );
+    return selectedParts === next.selectedParts ? next : { ...next, selectedParts };
+  });
+
+  /**
+   * A CHOICE, which is a different kind of write from an answer.
+   *
+   * It never invalidates anything: closing one category says nothing about the
+   * reader's frame two cards up, and the accumulation is a fresh object with
+   * one key added so that it cannot. What comes back from the engine on the
+   * next render is the whole of the result — this function decides nothing
+   * about how the card will look.
+   */
+  const chooseFor = (category: string, partId: string) =>
+    setAnswers(a => ({ ...a, selectedParts: withCategory(a.selectedParts, category, partId) }));
+
+  /**
+   * UNDO, and it is a DELETE rather than a re-selection.
+   *
+   * Clearing `frames` removes the `frames` key and nothing else, and then the
+   * engine is asked again with one fewer lock — so the candidate list the
+   * reader sees next is recomputed against the choices they still have, never
+   * the list they were shown before. Whatever status comes back is the answer:
+   * this may reopen the category, or the remaining locks may now leave exactly
+   * one compatible part, and the screen reports whichever it is.
+   */
+  const clearChoiceIn = (category: string) =>
+    setAnswers(a => ({ ...a, selectedParts: withoutCategory(a.selectedParts, category) }));
+
+  /**
    * Changing the goal invalidates what was answered UNDER it.
    *
    * A voltage chosen for a Freestyle build is not an answer about a Long-range
    * one, and silently keeping it would produce a summary the reader never
    * agreed to. Budget and owned gear are about the reader, not the build, so
-   * they survive.
+   * they survive. The reader's PART choices do not: a frame picked for a
+   * Freestyle build is an answer about that build, and `answer()` clears them
+   * without this setter having to remember to.
    */
   const setGoal = (droneTypeId: string) => {
     if (answers.droneTypeId === droneTypeId) return;
-    setAnswers(a => ({ ...a, droneTypeId, sizeInch: undefined, cellCount: undefined }));
+    answer(a => ({ ...a, droneTypeId, sizeInch: undefined, cellCount: undefined }));
     setTrail([{ id: 'goal' }]);
     setIdx(0);
   };
@@ -341,13 +441,13 @@ export const BuildV2Preview: React.FC = () => {
             <BuildRequiredInputQuestion
               input={{ key: current.key, options: current.options, ar: '' }}
               value={current.key === 'cellCount' ? answers.cellCount : answers.sizeInch}
-              onChange={v => setAnswers(a => ({ ...a, [current.key]: v }))}
+              onChange={v => answer(a => ({ ...a, [current.key]: v }))}
             />
           )}
           {current?.id === 'budget' && (
             <BuildPreferenceQuestion
               value={answers.budget}
-              onChange={v => setAnswers(a => ({ ...a, budget: v }))}
+              onChange={v => answer(a => ({ ...a, budget: v }))}
             />
           )}
           {(current?.id === 'owned' || current?.id === 'owned-rc'
@@ -355,7 +455,7 @@ export const BuildV2Preview: React.FC = () => {
             <BuildOwnedGearQuestion
               mode={current.id === 'owned' ? 'which' : current.id === 'owned-rc' ? 'rc' : 'video'}
               value={answers.owned}
-              onChange={owned => setAnswers(a => ({ ...a, owned }))}
+              onChange={owned => answer(a => ({ ...a, owned }))}
             />
           )}
         </>
@@ -385,7 +485,15 @@ export const BuildV2Preview: React.FC = () => {
         </>
       )}
 
-      {screen === 'proposal' && build && <ProposalScreen build={build} />}
+      {/*
+        The proposal screen is handed WHAT TO DO, never WHAT IS CHOSEN. The
+        selections map does not cross this line: the screen reads the reader's
+        choices out of the engine's own decisions, so there is no second
+        source of truth for it to disagree with.
+      */}
+      {screen === 'proposal' && build && (
+        <ProposalScreen build={build} onChoose={chooseFor} onClearChoice={clearChoiceIn} />
+      )}
 
       {screen !== 'entry' && (
         <footer style={{ display: 'grid', gap: 9 }}>
