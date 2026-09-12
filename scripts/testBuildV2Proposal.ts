@@ -663,15 +663,38 @@ section('10c — THE MANUAL CHECK SENDS THE READER SOMEWHERE REAL');
   ok('it never reports the check as passed',
     !/(سليم|متوافق بالكامل|تم التحقق|آمن)/.test(headroom));
   /*
-   * And nothing anywhere derives an ampere from KV or a stator size. A
-   * computed «probably fine» is the unearned reassurance the verdict engine
-   * exists to refuse, and it would be trivially easy to add here.
+   * AND NO MOTOR CARD EVER SHOWS AN AMPERE.
+   *
+   * A computed «probably fine» is the unearned reassurance the verdict engine
+   * exists to refuse, and it is trivially easy to add here — one `format`
+   * multiplying KV by a cell count would do it.
+   *
+   * The first version of this guard grepped the source for `kv *` and
+   * `statorSize *`. A mutation writing `r * cellCount / 40` — same derivation,
+   * different variable name, because `format` receives the spec as `r` — sailed
+   * straight past it. That is the third time in this journey a structural grep
+   * has stood in for a behavioural claim and quietly failed to hold it.
+   *
+   * So the claim is checked where the reader meets it: every fact rendered for
+   * every motor in the catalogue, asserting none of them is an ampere. A
+   * derivation cannot hide from that, however it is spelled.
    */
-  ok('no V2 file derives a current from KV or stator size',
-    !readdirSync('web/components/build/v2')
-      .filter(f => f.endsWith('.ts') || f.endsWith('.tsx'))
-      .some(f => /kv\s*[*/]|statorSize\s*[*/]|\*\s*cellCount.*[Aa]mp/
-        .test(readFileSync(join('web/components/build/v2', f), 'utf8'))));
+  {
+    const motorFacts = PART_CATEGORY_MAP.motors.flatMap(m => partFacts('motors', m));
+    ok(`no motor card renders an ampere figure (${motorFacts.length} facts checked)`,
+      motorFacts.length > 0
+      && !motorFacts.some(f => /\d\s*A\b|أمبير/.test(f.value))
+      && !motorFacts.some(f => /تيار|أمبير/.test(f.labelAr)));
+    /*
+     * Non-vacuous in the direction that matters: the ESC cards, which DO carry
+     * documented amperes, must still be full of them. A guard that passed
+     * because nothing renders anywhere would be worthless.
+     */
+    const escFacts = PART_CATEGORY_MAP.escs.flatMap(e => partFacts('escs', e));
+    ok(`…while ESC cards DO carry amperes (${escFacts.filter(f => /\d+A/.test(f.value)).length} of `
+      + `${escFacts.length} facts), so the check above is not vacuous`,
+      escFacts.some(f => /^\d+A$/.test(f.value)));
+  }
 }
 /*
  * THE OLD ASSERTION COULD NOT SEE THE LEAK IT WAS FOR.
