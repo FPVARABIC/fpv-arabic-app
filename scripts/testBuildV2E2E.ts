@@ -1741,6 +1741,15 @@ async function main() {
         ok(`${name}: …and the voltage answer is now taken`,
           await page.locator('[data-testid="v2-input-cellCount-4"]')
             .getAttribute('data-selected') === 'true');
+        /*
+         * Focus after CONFIRM, not just after cancel. Something did happen, so
+         * the reader is put on the control carrying the answer they agreed to —
+         * rather than on `<body>`, which is where a dialog that unmounts under
+         * the focused button leaves a keyboard user.
+         */
+        ok(`${name}: confirming returns focus to the changed journey state`,
+          await page.evaluate(() =>
+            document.activeElement?.getAttribute('data-testid') === 'v2-input-cellCount-4'));
         await advanceToProposal();
         const after = await chosenCategories();
         ok(`${name}: exactly the promised categories were removed, no more `
