@@ -1266,6 +1266,9 @@ async function main() {
       /*
        * THE GOAL IS A DIFFERENT BUILD. Everything chosen under the old one goes.
        */
+      const chosenBeforeGoal = await page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid^="v2-cat-"][data-source="user-selected"]')]
+          .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-cat-', '')));
       await page.click('[data-testid="v2-back"]');
       await page.waitForTimeout(150);
       await page.click('[data-testid="v2-back"]');
@@ -1278,7 +1281,34 @@ async function main() {
       ok(`${name}: reached the goal question again`,
         (await questionTitle(page)).includes('ماذا تريد أن تبني'));
       await page.click('[data-testid="v2-goal-long-range"]');
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(250);
+      /*
+       * SINCE PHASE 2G-A THE DISCARD IS ASKED FOR FIRST.
+       *
+       * The claim below is unchanged — a different goal is a different build
+       * and nothing chosen under the old one carries over. What changed is that
+       * the reader is shown what it costs and gets to say no. So the walk now
+       * goes through the confirmation, and asserts on the way that it appeared
+       * and named the choices it was about to take.
+       */
+      ok(`${name}: changing the GOAL asks before discarding anything`,
+        await page.locator('[data-testid="v2-invalidation-confirm"]').count() === 1);
+      const goalPromised = await page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid^="v2-invalidation-line-"]')]
+          .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-invalidation-line-', '')));
+      /*
+       * Compared against what was ACTUALLY chosen a moment ago, captured off
+       * the proposal — not against a number typed here. A goal change discards
+       * everything, so «everything» is the expectation, and how many that is
+       * depends on what this walk happened to choose.
+       */
+      ok(`${name}: …and it names every choice at stake, exactly `
+        + `(chosen [${chosenBeforeGoal.join(', ')}], warned [${goalPromised.join(', ')}])`,
+        chosenBeforeGoal.length > 0
+        && goalPromised.length === chosenBeforeGoal.length
+        && chosenBeforeGoal.every(c => goalPromised.includes(c)));
+      await page.click('[data-testid="v2-invalidation-confirm-button"]');
+      await page.waitForTimeout(250);
       await advanceToProposal();
       ok(`${name}: changing the GOAL discards every earlier choice`,
         await page.locator('[data-testid^="v2-cat-"][data-source="user-selected"]')
@@ -1323,7 +1353,23 @@ async function main() {
       await page.click('[data-testid="v2-next"]');
       await page.waitForTimeout(250);
       await page.click('[data-testid="v2-owned-rc-ExpressLRS"]');
-      await page.waitForTimeout(200);
+      await page.waitForTimeout(250);
+      /*
+       * The same confirmation, and here it earns its keep twice over: the
+       * reader is about to lose exactly ONE of their two choices, and the
+       * dialog is where that becomes visible before it happens rather than
+       * after.
+       */
+      ok(`${name}: naming a radio asks before clearing anything`,
+        await page.locator('[data-testid="v2-invalidation-confirm"]').count() === 1);
+      const ecoPromisedInline = await page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid^="v2-invalidation-line-"]')]
+          .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-invalidation-line-', '')));
+      ok(`${name}: …and warns about the RECEIVER only, never the frame `
+        + `(${ecoPromisedInline.join(', ')})`,
+        ecoPromisedInline.length === 1 && ecoPromisedInline[0] === 'receivers');
+      await page.click('[data-testid="v2-invalidation-confirm-button"]');
+      await page.waitForTimeout(250);
       await advanceToProposal();
       ok(`${name}: naming a radio clears the RECEIVER choice`,
         await sourceOf('receivers') !== 'user-selected');
@@ -1566,6 +1612,342 @@ async function main() {
         await page.locator('a[href^="/build/wizard"]').count() >= 3);
       if (name === '390px') {
         await page.screenshot({ path: `${SHOTS}/09-back-to-v1-390.png`, fullPage: true });
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      console.log(`\n[G4] ${name} — NOTHING THE READER CHOSE DISAPPEARS SILENTLY`);
+      // ══════════════════════════════════════════════════════════════════
+      /*
+       * The defect this phase exists to close, walked the way a reader hits it:
+       * choose a real part, go back, change an upstream answer, and see whether
+       * the product tells you what that costs BEFORE it costs it.
+       *
+       * Every assertion below is about a real product name on screen, not about
+       * a flag. «سيُلغى بعض اختياراتك» would pass a laxer test and would still
+       * leave the reader guessing which ones.
+       */
+      {
+        await freestyle6S(page);
+        await page.click('[data-testid="v2-owned-none"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(220);
+        await advanceToProposal();
+
+        /** Press the first «اختيار» there is, and report what it was. */
+        const chooseFirst = async () => {
+          const row = page.locator('[data-testid^="v2-choose-"]').first();
+          if (await row.count() === 0) return null;
+          const id = (await row.getAttribute('data-testid'))!;
+          const label = (await row.getAttribute('aria-label'))!;
+          await row.click();
+          await page.waitForTimeout(220);
+          return { id, category: id.split('-')[2], label };
+        };
+        const chosenCategories = () => page.evaluate(() =>
+          [...document.querySelectorAll('[data-source="user-selected"]')]
+            .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-cat-', '')));
+        /** Walk back from the proposal to a named question. */
+        const backTo = async (testId: string) => {
+          for (let i = 0; i < 10; i++) {
+            if (await page.locator(`[data-testid="${testId}"]`).count() === 1) return true;
+            const back = page.locator('[data-testid="v2-back"]');
+            if (await back.count() !== 1) return false;
+            await back.click();
+            await page.waitForTimeout(180);
+          }
+          return false;
+        };
+
+        const picked = await chooseFirst();
+        ok(`${name}: the reader really chose a part`, picked !== null);
+        const partName = picked!.label.replace(/^اختيار\s*/, '');
+        ok(`${name}: the card reports it as theirs`,
+          (await chosenCategories()).includes(picked!.category));
+
+        // ── 1. BUDGET: no confirmation, and the choice survives ────────────
+        ok(`${name}: can walk back to the budget question`, await backTo('v2-budget-premium'));
+        await page.click('[data-testid="v2-budget-premium"]');
+        await page.waitForTimeout(220);
+        ok(`${name}: changing the BUDGET opens no confirmation — a preference `
+          + 'never outranks a choice',
+          await page.locator('[data-testid="v2-invalidation-confirm"]').count() === 0);
+        await advanceToProposal();
+        ok(`${name}: …and the reader's part is still theirs after a budget change`,
+          (await chosenCategories()).includes(picked!.category));
+
+        // ── 2. VOLTAGE: confirmation FIRST, naming the real part ───────────
+        ok(`${name}: can walk back to the voltage question`, await backTo('v2-input-cellCount-4'));
+        await page.click('[data-testid="v2-input-cellCount-4"]');
+        await page.waitForTimeout(250);
+
+        const dialog = page.locator('[data-testid="v2-invalidation-confirm"]');
+        ok(`${name}: changing the VOLTAGE asks before it removes anything`,
+          await dialog.count() === 1);
+        ok(`${name}: it is a real dialog with an accessible name`,
+          await dialog.getAttribute('role') === 'dialog'
+          && await dialog.getAttribute('aria-modal') === 'true'
+          && await page.locator('[data-testid="v2-invalidation-title"]').count() === 1);
+        const dialogText = await dialog.innerText();
+        ok(`${name}: it names the actual part — «${partName}»`,
+          dialogText.includes(partName));
+        ok(`${name}: …and names its category too`,
+          await page.locator(`[data-testid="v2-invalidation-line-${picked!.category}"]`).count() === 1);
+        ok(`${name}: it leaks no part id`, !/[a-z]+-[a-z0-9]+-[a-z0-9-]+/.test(dialogText));
+        ok(`${name}: focus is INSIDE the dialog, on the safe answer`,
+          await page.evaluate(() =>
+            document.activeElement?.getAttribute('data-testid') === 'v2-invalidation-cancel'));
+        ok(`${name}: the question behind it is not still answerable`,
+          await page.locator('[data-testid="v2-input-cellCount-4"]').count() === 0);
+        ok(`${name}: no horizontal overflow while it is open`,
+          await page.evaluate(() =>
+            document.documentElement.scrollWidth <= document.documentElement.clientWidth));
+
+        // ── 3. CANCEL leaves everything exactly as it was ──────────────────
+        await page.click('[data-testid="v2-invalidation-cancel"]');
+        await page.waitForTimeout(220);
+        ok(`${name}: cancelling closes the dialog`, await dialog.count() === 0);
+        ok(`${name}: …and the voltage answer was never taken`,
+          await page.locator('[data-testid="v2-input-cellCount-6"]')
+            .getAttribute('data-selected') === 'true');
+        await advanceToProposal();
+        ok(`${name}: …and the reader's part is STILL theirs`,
+          (await chosenCategories()).includes(picked!.category));
+
+        // ── 4. ESCAPE cancels too ─────────────────────────────────────────
+        await backTo('v2-input-cellCount-4');
+        await page.click('[data-testid="v2-input-cellCount-4"]');
+        await page.waitForTimeout(230);
+        ok(`${name}: the dialog is open again`, await dialog.count() === 1);
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(200);
+        ok(`${name}: Escape cancels it`, await dialog.count() === 0);
+        ok(`${name}: …and focus went back to the control that opened it`,
+          await page.evaluate(() =>
+            document.activeElement?.getAttribute('data-testid') === 'v2-input-cellCount-4'));
+        await advanceToProposal();
+        ok(`${name}: …with the part still chosen after an Escape`,
+          (await chosenCategories()).includes(picked!.category));
+
+        // ── 5. CONFIRM removes exactly what it promised ────────────────────
+        await backTo('v2-input-cellCount-4');
+        await page.click('[data-testid="v2-input-cellCount-4"]');
+        await page.waitForTimeout(230);
+        const promised = await page.evaluate(() =>
+          [...document.querySelectorAll('[data-testid^="v2-invalidation-line-"]')]
+            .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-invalidation-line-', '')));
+        await page.click('[data-testid="v2-invalidation-confirm-button"]');
+        await page.waitForTimeout(260);
+        ok(`${name}: confirming closes the dialog`, await dialog.count() === 0);
+        ok(`${name}: …and the voltage answer is now taken`,
+          await page.locator('[data-testid="v2-input-cellCount-4"]')
+            .getAttribute('data-selected') === 'true');
+        /*
+         * Focus after CONFIRM, not just after cancel. Something did happen, so
+         * the reader is put on the control carrying the answer they agreed to —
+         * rather than on `<body>`, which is where a dialog that unmounts under
+         * the focused button leaves a keyboard user.
+         */
+        ok(`${name}: confirming returns focus to the changed journey state`,
+          await page.evaluate(() =>
+            document.activeElement?.getAttribute('data-testid') === 'v2-input-cellCount-4'));
+        await advanceToProposal();
+        const after = await chosenCategories();
+        ok(`${name}: exactly the promised categories were removed, no more `
+          + `(promised [${promised.join(', ')}], still chosen [${after.join(', ')}])`,
+          promised.every(c => !after.includes(c)));
+
+        // ── 6. ECOSYSTEM changes touch one shelf each ─────────────────────
+        for (const [gearTestId, ecoTestId, ecoOther, only] of [
+          ['v2-owned-radio', 'v2-owned-rc-ExpressLRS', 'v2-owned-rc-Crossfire', 'receivers'],
+        ] as const) {
+          await openPreview(page);
+          await startJourney(page);
+          await page.click('[data-testid="v2-goal-freestyle"]');
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click('[data-testid="v2-input-cellCount-6"]');
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click('[data-testid="v2-budget-mid"]');
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click(`[data-testid="${gearTestId}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click(`[data-testid="${ecoTestId}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(250);
+          await advanceToProposal();
+
+          /*
+           * Open whichever disclosure the category HAS — a settled card hides
+           * its options behind «تغيير القطعة», an open one behind «الخيارات
+           * المتوافقة». Naming only one of them is how this walk silently
+           * stopped choosing anything and started testing nothing.
+           */
+          const reveal = async (cat: string) => {
+            for (const kind of ['show-candidates', 'show-alternatives']) {
+              const t = page.locator(`[data-testid="v2-${kind}-${cat}"]`);
+              if (await t.count() === 1 && await t.getAttribute('aria-expanded') === 'false') {
+                await t.click();
+                await page.waitForTimeout(140);
+              }
+            }
+          };
+          // Choose in the ecosystem's own category AND in one unrelated one.
+          await reveal(only);
+          const rx = page.locator(`[data-testid^="v2-choose-${only}-"]`).first();
+          const hasRx = await rx.count() > 0;
+          if (hasRx) { await rx.click(); await page.waitForTimeout(220); }
+          await reveal('propellers');
+          const other = page.locator('[data-testid^="v2-choose-propellers-"]').first();
+          const hasOther = await other.count() > 0;
+          if (hasOther) { await other.click(); await page.waitForTimeout(220); }
+          ok(`${name}: set up a selection in ${only} and one outside it`,
+            await page.locator(`[data-testid="v2-cat-${only}"]`)
+              .getAttribute('data-source') === 'user-selected'
+            && await page.locator('[data-testid="v2-cat-propellers"]')
+              .getAttribute('data-source') === 'user-selected');
+
+          await backTo(ecoOther);
+          await page.click(`[data-testid="${ecoOther}"]`);
+          await page.waitForTimeout(250);
+          const ecoPromised = await page.evaluate(() =>
+            [...document.querySelectorAll('[data-testid^="v2-invalidation-line-"]')]
+              .map(e => (e.getAttribute('data-testid') ?? '').replace('v2-invalidation-line-', '')));
+          ok(`${name}: changing the RC ecosystem warns about ${only} and nothing else `
+            + `(promised [${ecoPromised.join(', ')}])`,
+            ecoPromised.length === 1 && ecoPromised[0] === only);
+          await page.click('[data-testid="v2-invalidation-cancel"]');
+          await page.waitForTimeout(180);
+        }
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      console.log(`\n[G5] ${name} — THE CARDS SHOW THE NUMBERS THE CHECK ASKS FOR`);
+      // ══════════════════════════════════════════════════════════════════
+      {
+        await freestyle6S(page);
+        await page.click('[data-testid="v2-owned-none"]');
+        await page.click('[data-testid="v2-next"]');
+        await page.waitForTimeout(220);
+        await advanceToProposal();
+        const facts = await page.evaluate(() => {
+          const out: Record<string, string[]> = {};
+          for (const card of document.querySelectorAll('[data-testid^="v2-cat-"]')) {
+            const cat = (card.getAttribute('data-testid') ?? '').replace('v2-cat-', '');
+            const dl = card.querySelector(`[data-testid="v2-facts-${cat}"]`);
+            out[cat] = dl
+              ? [...dl.querySelectorAll('dd')].map(d => (d as HTMLElement).innerText.trim())
+              : [];
+          }
+          return out;
+        });
+        ok(`${name}: the ESC card shows a real ampere figure `
+          + `(${(facts.escs ?? []).join(' · ') || 'nothing'})`,
+          (facts.escs ?? []).some(v => /^\d+A$/.test(v)));
+        ok(`${name}: the flight controller shows its mounting size `
+          + `(${(facts.flightControllers ?? []).join(' · ') || 'nothing'})`,
+          (facts.flightControllers ?? []).some(v => /^\d/.test(v)));
+        ok(`${name}: no settled required card is blank`,
+          ['frames', 'motors', 'escs', 'flightControllers', 'receivers', 'batteries']
+            .every(c => (facts[c] ?? []).length > 0));
+
+        const manual = await page.locator('[data-testid="v2-manual-current-headroom"]').innerText();
+        ok(`${name}: the manual check no longer claims both figures are on the cards`,
+          !manual.includes('راجع الرقمين'));
+        ok(`${name}: …it sends the reader to the motor's manufacturer instead`,
+          manual.includes('مواصفات الشركة') && manual.includes('غير موجود في الكتالوج'));
+        ok(`${name}: …and never reports the check as passed`,
+          !/(سليم|متوافق بالكامل|تم التحقق|آمن)/.test(manual));
+        ok(`${name}: the manual check is still presented as OUTSTANDING`,
+          (await page.locator('[data-testid="v2-proposal-manual"]').innerText())
+            .includes('قبل اعتماد البناء'));
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      console.log(`\n[G6] ${name} — A DEAD END NAMES THE ANSWER THAT CAUSED IT`);
+      // ══════════════════════════════════════════════════════════════════
+      {
+        const deadEndJourney = async (
+          goal: string, cell: string | null, gear: string, eco: string,
+        ) => {
+          await openPreview(page);
+          await startJourney(page);
+          await page.click(`[data-testid="v2-goal-${goal}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(220);
+          if (cell) {
+            await page.click(`[data-testid="v2-input-cellCount-${cell}"]`);
+            await page.click('[data-testid="v2-next"]');
+            await page.waitForTimeout(200);
+          }
+          await page.click('[data-testid="v2-budget-mid"]');
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click(`[data-testid="v2-owned-${gear}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(200);
+          await page.click(`[data-testid="${eco}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(300);
+          return page.evaluate(() => {
+            const box = document.querySelector('[data-testid="v2-summary-next"]') as HTMLElement;
+            const list = document.querySelector('[data-testid="v2-summary-blocked-reasons"]');
+            return {
+              state: box?.getAttribute('data-state') ?? '',
+              text: box?.innerText ?? '',
+              cause: list?.getAttribute('data-cause') ?? '',
+              engineReasons: list?.getAttribute('data-engine-reasons') ?? '',
+              canOpenProposal:
+                document.querySelectorAll('[data-testid="v2-open-proposal"]').length === 1,
+            };
+          });
+        };
+
+        // Freestyle + Crossfire — the radio is the constraint.
+        const cross = await deadEndJourney('freestyle', '6', 'radio', 'v2-owned-rc-Crossfire');
+        ok(`${name}: freestyle + Crossfire is refused`,
+          cross.state === 'no-viable-build' && !cross.canOpenProposal);
+        ok(`${name}: …and the RADIO is named as the cause`, cross.cause === 'rc');
+        ok(`${name}: …the visible text does NOT blame the drone type`,
+          !cross.text.includes('لهذا النوع'));
+        ok(`${name}: …while the engine's own sentence is still carried for debugging`,
+          cross.engineReasons.includes('لهذا النوع'));
+        ok(`${name}: …and the reader is told they can change an answer`,
+          cross.text.includes('يمكنك تغيير أحد اختياراتك'));
+
+        // Long-range + ExpressLRS — the same shape, the other way round.
+        const lr = await deadEndJourney('long-range', null, 'radio', 'v2-owned-rc-ExpressLRS');
+        ok(`${name}: long-range + ExpressLRS is refused, and names the radio`,
+          lr.state === 'no-viable-build' && lr.cause === 'rc'
+          && !lr.text.includes('لهذا النوع'));
+
+        // Cinematic + an unsupported goggle system — the VIDEO half.
+        const cine = await deadEndJourney('cinematic', '6', 'goggles', 'v2-owned-video-Walksnail');
+        ok(`${name}: cinematic + Walksnail is refused, and names the GOGGLES`,
+          cine.state === 'no-viable-build' && cine.cause === 'video'
+          && !cine.text.includes('لهذا النوع'));
+        ok(`${name}: rc and video produce genuinely different sentences`,
+          cross.text !== cine.text);
+
+        // A supported ecosystem is still ready.
+        const good = await deadEndJourney('freestyle', '6', 'radio', 'v2-owned-rc-ExpressLRS');
+        ok(`${name}: freestyle + ExpressLRS is still READY`,
+          good.state === 'ready' && good.canOpenProposal);
+
+        // And the two genuinely type-level refusals are untouched.
+        await openPreview(page);
+        await startJourney(page);
+        const unavailable = await page.evaluate(() =>
+          ['cinewhoop', 'racing'].map(id => {
+            const b = document.querySelector(`[data-testid="v2-goal-${id}"]`) as HTMLButtonElement;
+            return { id, disabled: b?.disabled ?? false, text: b?.innerText ?? '' };
+          }));
+        ok(`${name}: cinewhoop and racing are still disabled at the entry`,
+          unavailable.every(u => u.disabled));
+        ok(`${name}: …still carrying their catalogue-derived reasons`,
+          unavailable.every(u => u.text.includes('الكتالوج')));
       }
 
       // ── No persistence ────────────────────────────────────────────────────

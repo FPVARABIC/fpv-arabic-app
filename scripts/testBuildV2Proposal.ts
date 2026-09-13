@@ -24,7 +24,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
+import { proposeBuild, videoSystemOf } from '../src/data/assembly/recommendation/proposeBuild';
 import type { ProposedBuild } from '../src/data/assembly/recommendation/types';
 import { PART_CATEGORY_MAP } from '../src/data/project/store';
 import { SHARED_COMPAT_RULES } from '../src/data/assembly/compatibility/rules';
@@ -468,6 +468,234 @@ for (const [, input] of BURDEN_CASES) {
   }
 }
 ok(`the fact rows are not vacuously empty (${factRows} rendered across the cases)`, factRows > 10);
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('10b — EVERY SPEC KEY IS A KEY THE CATALOGUE ACTUALLY WRITES');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * THE FLOOR ABOVE IS A PAGE-WIDE TOTAL, AND THAT IS WHY IT MISSED THIS.
+ *
+ * `factRows > 10` is satisfied by frames, motors and batteries alone. Under
+ * it, THREE of the eight required categories rendered nothing at all for every
+ * part they stock — `escs`, `flightControllers` and `videoUnits` — because the
+ * spec keys were spelled for a schema the catalogue does not use:
+ *
+ *     asked for        catalogue writes
+ *     currentA         currentRatingA
+ *     uarts            uartCount
+ *     gyro             mcu
+ *     mountingMm       mountingSizeMm
+ *     blades           bladeCount
+ *     cellCount        sCount
+ *     system           (not a spec at all — `part.protocolOrSystem`)
+ *     powerMw          (nothing stocks it)
+ *     antenna          (nothing stocks it)
+ *
+ * A wrong key does not throw and does not warn. It renders NOTHING, which on
+ * screen is indistinguishable from «we have no data for this part» — so the ESC
+ * whose 55A rating is sitting in the catalogue showed a name and a blank card,
+ * while the manual check told the reader to go and compare that very number.
+ *
+ * Two assertions, at two different levels, because either alone can be fooled:
+ * the first says every key we ask for is real, the second says every required
+ * category actually produces something. A key could be real and still never
+ * render; a category could render from one lucky key while three are dead.
+ */
+const REQUIRED_FACT_CATEGORIES = [
+  'frames', 'motors', 'propellers', 'escs',
+  'flightControllers', 'receivers', 'videoUnits', 'batteries',
+] as const;
+
+for (const cat of REQUIRED_FACT_CATEGORIES) {
+  const parts = PART_CATEGORY_MAP[cat] ?? [];
+  const rendered = parts.map(pt => partFacts(cat, pt));
+  const withRows = rendered.filter(f => f.length > 0).length;
+  ok(`${cat}: every part renders at least one fact (${withRows}/${parts.length})`,
+    parts.length > 0 && withRows === parts.length);
+  /*
+   * Labels must be distinct within a card. Two rows reading «التيار» would be
+   * the continuous and the burst rating rendered as though they were the same
+   * promise — which is the specific way this category can mislead.
+   */
+  ok(`${cat}: no card repeats a label`,
+    rendered.every(f => new Set(f.map(x => x.labelAr)).size === f.length));
+}
+
+/*
+ * EVERY CONFIGURED KEY EXISTS ON A REAL PART.
+ *
+ * Read out of the source rather than exported, so the check cannot be
+ * satisfied by a table that agrees with itself. `from:` entries are exempt —
+ * those deliberately do NOT read `specs`, and the video ecosystem below is
+ * checked against the engine's own accessor instead.
+ */
+const FACTS_SRC = readFileSync('web/components/build/v2/partFacts.ts', 'utf8');
+const configured: { cat: string; key: string; viaFrom: boolean }[] = [];
+{
+  const table = FACTS_SRC.slice(
+    FACTS_SRC.indexOf('const CATEGORY_SPECS'), FACTS_SRC.indexOf('export interface PartFact'));
+  let cat = '';
+  for (const line of table.split('\n')) {
+    const head = /^\s{2}(\w+): \[/.exec(line);
+    if (head) { cat = head[1]; continue; }
+    const entry = /\{ key: '([^']+)'/.exec(line);
+    if (entry && cat) configured.push({ cat, key: entry[1], viaFrom: /from:/.test(line) });
+  }
+}
+ok(`the spec table was really parsed (${configured.length} keys across `
+  + `${new Set(configured.map(c => c.cat)).size} categories)`,
+  configured.length >= 16 && new Set(configured.map(c => c.cat)).size === 8);
+
+for (const { cat, key, viaFrom } of configured) {
+  if (viaFrom) continue;
+  const parts = PART_CATEGORY_MAP[cat] ?? [];
+  const present = parts.filter(
+    pt => (pt as unknown as { specs?: Record<string, unknown> }).specs?.[key] !== undefined).length;
+  ok(`${cat}.${key} is a key the catalogue actually writes (${present}/${parts.length} parts)`,
+    present > 0);
+}
+
+/*
+ * THE THREE FACTS THE REST OF THE PRODUCT DEPENDS ON.
+ *
+ * Named one by one rather than left to the general rules above, because each
+ * is load-bearing for something OUTSIDE this card:
+ *
+ *   ESC current      the `current-headroom` manual check sends the reader to
+ *                    compare against it. Withheld, the instruction is not
+ *                    followable.
+ *   FC mounting      `stack-mount` is the blocker that withdrew the racing
+ *                    type from the entire product.
+ *   video ecosystem  the reader was ASKED about their goggles; a card that
+ *                    never says which family the unit belongs to cannot be
+ *                    checked against their answer.
+ */
+for (const esc of PART_CATEGORY_MAP.escs) {
+  const f = partFacts('escs', esc);
+  ok(`ESC «${esc.nameAr}» shows its documented continuous current`,
+    f.some(x => /^\d+A$/.test(x.value)
+      && x.value === `${(esc as unknown as { specs: { currentRatingA: number } }).specs.currentRatingA}A`));
+}
+{
+  const burstStock = PART_CATEGORY_MAP.escs.filter(
+    e => (e as unknown as { specs: Record<string, unknown> }).specs.burstCurrentRatingA !== undefined);
+  ok(`burst is stocked on some ESCs but not all (${burstStock.length}/${PART_CATEGORY_MAP.escs.length}) `
+    + '— so the row must be conditional, not invented',
+    burstStock.length > 0 && burstStock.length < PART_CATEGORY_MAP.escs.length);
+  ok('…and it renders as its OWN row where present, never merged into continuous',
+    burstStock.every(e => {
+      const f = partFacts('escs', e);
+      const cont = (e as unknown as { specs: { currentRatingA: number } }).specs.currentRatingA;
+      const burst = (e as unknown as { specs: { burstCurrentRatingA: number } }).specs.burstCurrentRatingA;
+      return f.some(x => x.value === `${cont}A`) && f.some(x => x.value === `${burst}A`);
+    }));
+  ok('…and an ESC without a burst figure simply has no burst row',
+    PART_CATEGORY_MAP.escs
+      .filter(e => (e as unknown as { specs: Record<string, unknown> }).specs.burstCurrentRatingA === undefined)
+      .every(e => partFacts('escs', e).length === new Set(partFacts('escs', e).map(x => x.labelAr)).size
+        && !partFacts('escs', e).some(x => x.labelAr.includes('الذروة'))));
+}
+for (const fc of PART_CATEGORY_MAP.flightControllers) {
+  const f = partFacts('flightControllers', fc);
+  const mount = (fc as unknown as { specs: { mountingSizeMm?: unknown } }).specs.mountingSizeMm;
+  ok(`FC «${fc.nameAr}» shows its mounting size`,
+    mount !== undefined && f.some(x => x.value === String(mount)));
+}
+for (const vu of PART_CATEGORY_MAP.videoUnits) {
+  const f = partFacts('videoUnits', vu);
+  ok(`video unit «${vu.nameAr}» names its ecosystem, from the engine's own accessor`,
+    f.some(x => x.value === videoSystemOf(vu)) && videoSystemOf(vu) !== undefined);
+}
+/*
+ * And it is the ENGINE's accessor, not a second copy of the field name. A
+ * duplicate `part.protocolOrSystem` typed here would agree today and drift the
+ * day the domain renames it — which is the whole class of bug this section is
+ * about, one level up.
+ */
+ok('the video ecosystem is read through `videoSystemOf`, not a retyped field',
+  /from: videoSystemOf/.test(FACTS_SRC)
+  && /import \{ videoSystemOf \}/.test(FACTS_SRC));
+
+/*
+ * BOUNDED. The fix must not turn into V1's spec wall — the thing this journey
+ * was built to replace. Three rows is the cap and no category may sit at zero.
+ */
+{
+  const counts = REQUIRED_FACT_CATEGORIES.flatMap(
+    c => (PART_CATEGORY_MAP[c] ?? []).map(pt => partFacts(c, pt).length));
+  ok(`facts stay bounded: every required part renders 1–3 rows `
+    + `(min ${Math.min(...counts)}, max ${Math.max(...counts)})`,
+    Math.min(...counts) >= 1 && Math.max(...counts) <= 3);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('10c — THE MANUAL CHECK SENDS THE READER SOMEWHERE REAL');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `current-headroom` asks for two numbers. Only one of them exists.
+ *
+ * Every ESC documents a continuous rating; NO motor documents current draw,
+ * and none can — draw is not a property of a motor but of a motor turning a
+ * given propeller at a given voltage. The instruction used to read «راجع
+ * الرقمين على القطعتين», which tells the reader both are on the cards in front
+ * of them. One is. The other sent them looking for a figure this product does
+ * not have and cannot get.
+ */
+{
+  const motorCurrentKeys = PART_CATEGORY_MAP.motors.flatMap(
+    m => Object.keys((m as unknown as { specs: Record<string, unknown> }).specs));
+  ok(`no motor in the catalogue documents a current draw `
+    + `(keys seen: ${[...new Set(motorCurrentKeys)].join(', ')})`,
+    !motorCurrentKeys.some(k => /current|amp|draw/i.test(k)));
+  ok('every ESC DOES document one, so the two halves are genuinely different',
+    PART_CATEGORY_MAP.escs.every(
+      e => typeof (e as unknown as { specs: { currentRatingA?: unknown } }).specs.currentRatingA === 'number'));
+
+  const headroom = PROPOSAL.manual.labels['current-headroom'];
+  ok('the instruction no longer claims both figures are on our cards',
+    !/راجع الرقمين/.test(headroom));
+  ok('it says where the ESC figure comes from — the part data we show',
+    /الـESC/.test(headroom) && /بيانات القطعة/.test(headroom));
+  ok('it says the motor figure is NOT in this catalogue',
+    /غير موجود في الكتالوج/.test(headroom));
+  ok('it sends them to the manufacturer, for THEIR voltage and propeller',
+    /مواصفات الشركة/.test(headroom) && /الجهد والمروحة/.test(headroom));
+  ok('it never reports the check as passed',
+    !/(سليم|متوافق بالكامل|تم التحقق|آمن)/.test(headroom));
+  /*
+   * AND NO MOTOR CARD EVER SHOWS AN AMPERE.
+   *
+   * A computed «probably fine» is the unearned reassurance the verdict engine
+   * exists to refuse, and it is trivially easy to add here — one `format`
+   * multiplying KV by a cell count would do it.
+   *
+   * The first version of this guard grepped the source for `kv *` and
+   * `statorSize *`. A mutation writing `r * cellCount / 40` — same derivation,
+   * different variable name, because `format` receives the spec as `r` — sailed
+   * straight past it. That is the third time in this journey a structural grep
+   * has stood in for a behavioural claim and quietly failed to hold it.
+   *
+   * So the claim is checked where the reader meets it: every fact rendered for
+   * every motor in the catalogue, asserting none of them is an ampere. A
+   * derivation cannot hide from that, however it is spelled.
+   */
+  {
+    const motorFacts = PART_CATEGORY_MAP.motors.flatMap(m => partFacts('motors', m));
+    ok(`no motor card renders an ampere figure (${motorFacts.length} facts checked)`,
+      motorFacts.length > 0
+      && !motorFacts.some(f => /\d\s*A\b|أمبير/.test(f.value))
+      && !motorFacts.some(f => /تيار|أمبير/.test(f.labelAr)));
+    /*
+     * Non-vacuous in the direction that matters: the ESC cards, which DO carry
+     * documented amperes, must still be full of them. A guard that passed
+     * because nothing renders anywhere would be worthless.
+     */
+    const escFacts = PART_CATEGORY_MAP.escs.flatMap(e => partFacts('escs', e));
+    ok(`…while ESC cards DO carry amperes (${escFacts.filter(f => /\d+A/.test(f.value)).length} of `
+      + `${escFacts.length} facts), so the check above is not vacuous`,
+      escFacts.some(f => /^\d+A$/.test(f.value)));
+  }
+}
 /*
  * THE OLD ASSERTION COULD NOT SEE THE LEAK IT WAS FOR.
  *

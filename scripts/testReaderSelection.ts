@@ -46,9 +46,17 @@ import {
 } from '../web/components/build/v2/ProposalCategoryCard';
 import { readinessOf } from '../web/components/build/v2/readiness';
 import {
-  ECOSYSTEM_SELECTION_CATEGORY, NO_SELECTIONS, selectionsSurviving,
+  ECOSYSTEM_SELECTION_CATEGORY, NO_SELECTIONS, selectionOutcome, selectionsSurviving,
   withCategory, withoutCategory, type ReaderSelections, type SelectionContext,
 } from '../web/components/build/v2/selectionState';
+import {
+  diagnoseDeadEnd, type DeadEndDiagnosis,
+} from '../web/components/build/v2/deadEndDiagnosis';
+import { rcSystemsInCatalogue } from '../src/data/assembly/recommendation/proposeBuild';
+import { videoSystemOptions } from '../web/lib/build/checks';
+import { InvalidationConfirm } from '../web/components/build/v2/InvalidationConfirm';
+import { INVALIDATION, SUMMARY } from '../web/components/build/v2/copy';
+import { BuildInputSummary } from '../web/components/build/v2/BuildInputSummary';
 
 /** The real world, indexed the way the screen indexes it. */
 const BY_CATEGORY: Record<string, Record<string, BasePart>> = {};
@@ -1521,14 +1529,98 @@ ok('AB: it reaches the engine at the top level, not under `owned`',
  * should not have. Three writers exist by design: the rule, the choice, and
  * the undo. Every QUESTION on the journey goes through the first.
  */
-ok('AB: `answers` is written from exactly three places',
-  (PREVIEW_SRC.match(/setAnswers\(/g) ?? []).length === 3);
+/*
+ * FOUR WRITERS SINCE PHASE 2G-A, AND THE FOURTH IS NOT A NEW DOOR.
+ *
+ * The rule's own fast path, the CONFIRMATION of a change the rule already
+ * computed, the choice, and the undo. `confirmPending` looks like a new way
+ * to write `answers` and is deliberately not one: the value it writes was
+ * produced inside `answer()` by `selectionOutcome` and parked, unapplied,
+ * until the reader said yes. The three assertions below are what make that a
+ * fact rather than a description — a confirmation that recomputed the answer
+ * itself, or a `setPending` reachable from outside the rule, would be exactly
+ * the bypass the old count was watching for.
+ */
+ok('AB: `answers` is written from exactly four places',
+  (PREVIEW_SRC.match(/setAnswers\(/g) ?? []).length === 4);
+/*
+ * Anchored on the FUNCTION, not on how many characters apart two lines sit —
+ * a distance window is the same brittleness in a different costume, and it
+ * would fail the next time somebody adds a comment.
+ */
+const answerSrc = PREVIEW_SRC.slice(
+  PREVIEW_SRC.indexOf('const answer ='),
+  PREVIEW_SRC.indexOf('const confirmPending ='),
+);
+ok('AB: a confirmation can only be OPENED from inside the rule',
+  (PREVIEW_SRC.match(/setPending\(\{/g) ?? []).length === 1
+  && answerSrc.length > 80
+  && /selectionOutcome\(/.test(answerSrc)
+  && /setPending\(\{/.test(answerSrc)
+  && /committed/.test(answerSrc) && /dropped/.test(answerSrc));
+ok('AB: confirming writes the value the rule computed, and recomputes nothing',
+  /setAnswers\(pending\.committed\)/.test(PREVIEW_SRC)
+  && !/confirmPending[\s\S]{0,400}?selectionOutcome/.test(PREVIEW_SRC));
+/*
+ * Anchored on the FUNCTION BODY, not on its exact text. The first version of
+ * this pinned the whole one-line definition and broke the moment cancelling
+ * also had to restore focus — with nothing about the claim having changed.
+ * The claim is «cancelling writes no answer», and that is what is checked.
+ */
+const cancelSrc = PREVIEW_SRC.slice(
+  PREVIEW_SRC.indexOf('const cancelPending ='),
+  PREVIEW_SRC.indexOf('const droppedLines ='),
+);
+ok('AB: cancelling writes nothing at all',
+  cancelSrc.length > 30
+  && /setPending\(null\)/.test(cancelSrc)
+  && !/setAnswers\(/.test(cancelSrc));
+/*
+ * BOTH answers put the reader back somewhere real.
+ *
+ * Cancel returns them to the control they pressed; confirm returns them to the
+ * same control, now showing the answer they agreed to. Neither may leave focus
+ * on a button that has just been unmounted — which drops it to `<body>` and
+ * loses a keyboard user's place without a sound.
+ */
+const confirmSrc = PREVIEW_SRC.slice(
+  PREVIEW_SRC.indexOf('const confirmPending ='),
+  PREVIEW_SRC.indexOf('const cancelPending ='),
+);
+ok('AB: confirming also restores focus, to the changed journey state',
+  /restoreFocus\.current = pending\.openedBy/.test(confirmSrc));
+ok('AB: neither answer leaves focus on the unmounted dialog',
+  /restoreFocus\.current/.test(confirmSrc) && /restoreFocus\.current/.test(cancelSrc));
 ok('AB: …and no question setter writes it directly, going round the rule',
   (PREVIEW_SRC.match(/onChange=\{[^}]*answer\(a =>/g) ?? []).length >= 3
   && !/onChange=\{[^}]*setAnswers\(/.test(PREVIEW_SRC));
+/*
+ * THE GOAL SETTER STILL GOES THROUGH THE RULE — asserted on what is durable.
+ *
+ * This used to pin the exact source line, which broke the moment the call
+ * gained a second argument, with nothing a reader sees having changed. Phase
+ * 2F learned this the hard way: a structural grep standing in for a
+ * behavioural claim is the failure mode. The claim is «setGoal does not write
+ * answers directly», and that is what is checked now — plus the behavioural
+ * half, which section V already proves: a droneTypeId change drops everything.
+ */
+const setGoalSrc = PREVIEW_SRC.slice(
+  PREVIEW_SRC.indexOf('const setGoal ='),
+  PREVIEW_SRC.indexOf('const blockedReason'),
+);
 ok('AB: the goal setter goes through the rule too — it is the biggest invalidation',
-  /answer\(a => \(\{ \.\.\.a, droneTypeId, sizeInch: undefined, cellCount: undefined \}\)\)/
-    .test(PREVIEW_SRC));
+  setGoalSrc.length > 40
+  && /\banswer\(/.test(setGoalSrc)
+  && !/setAnswers\(/.test(setGoalSrc)
+  && /droneTypeId, sizeInch: undefined, cellCount: undefined/.test(setGoalSrc));
+/*
+ * …and the trail reset rides WITH it rather than running first. A cancelled
+ * type change that had already sent the reader back to question one would be
+ * the cancel button lying about what it did.
+ */
+ok('AB: the goal setter defers its trail reset to the same confirmation',
+  /setTrail\(\[\{ id: 'goal' \}\]\); setIdx\(0\);/.test(setGoalSrc)
+  && /answer\(\s*a => \(\{[\s\S]*?\}\),\s*\(\) => \{ setTrail/.test(setGoalSrc));
 ok('AB: no component keeps a second idea of what is chosen',
   ![PREVIEW_SRC, SCREEN_SRC, CARD_SRC].some(
     f => /selectedCandidate|selectedRow|chosenPart|activeCandidate/.test(f)));
@@ -2164,6 +2256,305 @@ ok('AF: after the override the card is an ordinary reader choice',
     .test(overHtml));
 ok('AF: …and offers no alternatives control of its own any more',
   !overHtml.includes(`data-testid="v2-show-alternatives-${RANKED}"`));
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AG — WHAT THE READER LOSES, NAMED BEFORE IT IS LOST');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * `selectionOutcome` is a VIEW of `selectionsSurviving`, not a second copy of
+ * the rule. These assertions are written to fail if it ever becomes one: for
+ * every context change, survivors must be identical to what the rule alone
+ * returns, and dropped must be exactly the complement. A re-stated rule that
+ * drifted would break one or the other.
+ */
+{
+  const held: ReaderSelections = {
+    frames: 'f1', motors: 'm1', receivers: 'r1', videoUnits: 'v1', propellers: 'p1',
+  };
+  const ctx = (o: Partial<SelectionContext>): SelectionContext => ({ droneTypeId: 'freestyle', ...o });
+
+  const CASES: { what: string; prev: SelectionContext; next: SelectionContext; lose: string[] }[] = [
+    { what: 'drone type', prev: ctx({ cellCount: 6 }), next: ctx({ droneTypeId: 'long-range', cellCount: 6 }),
+      lose: ['frames', 'motors', 'receivers', 'videoUnits', 'propellers'] },
+    { what: 'size', prev: ctx({ sizeInch: 5, cellCount: 6 }), next: ctx({ sizeInch: 7, cellCount: 6 }),
+      lose: ['frames', 'motors', 'receivers', 'videoUnits', 'propellers'] },
+    { what: 'voltage', prev: ctx({ cellCount: 4 }), next: ctx({ cellCount: 6 }),
+      lose: ['frames', 'motors', 'receivers', 'videoUnits', 'propellers'] },
+    { what: 'RC ecosystem', prev: ctx({ cellCount: 6, rcSystem: 'ExpressLRS' }),
+      next: ctx({ cellCount: 6, rcSystem: 'Crossfire' }), lose: ['receivers'] },
+    { what: 'video ecosystem', prev: ctx({ cellCount: 6, videoSystem: 'Analog' }),
+      next: ctx({ cellCount: 6, videoSystem: 'DJI' }), lose: ['videoUnits'] },
+    { what: 'nothing (identical contexts)', prev: ctx({ cellCount: 6 }), next: ctx({ cellCount: 6 }),
+      lose: [] },
+  ];
+
+  for (const c of CASES) {
+    const out = selectionOutcome(c.prev, c.next, held);
+    ok(`AG: changing ${c.what} drops exactly [${c.lose.join(', ') || '—'}]`,
+      new Set(Object.keys(out.dropped)).size === c.lose.length
+      && c.lose.every(k => out.dropped[k] === held[k]));
+    ok(`AG: …and its survivors are IDENTICAL to the rule's own answer`,
+      JSON.stringify(out.surviving)
+      === JSON.stringify(selectionsSurviving(c.prev, c.next, held)));
+    ok(`AG: …survivors and dropped partition the selections exactly, no overlap`,
+      Object.keys(out.surviving).length + Object.keys(out.dropped).length
+        === Object.keys(held).length
+      && !Object.keys(out.surviving).some(k => k in out.dropped));
+    ok(`AG: …every dropped entry carries the PART ID, so a sentence can name it`,
+      Object.values(out.dropped).every(v => typeof v === 'string' && v.length > 0));
+  }
+
+  /*
+   * BUDGET IS NOT IN THE CONTEXT AT ALL, so it cannot reach this function —
+   * which is exactly why it can never produce a confirmation. Stated here as a
+   * property of the TYPE rather than as a case that happens to pass.
+   */
+  const ctxKeys = Object.keys(ctx({ cellCount: 6, rcSystem: 'x', videoSystem: 'y', sizeInch: 5 }));
+  ok(`AG: the invalidation context has no budget field to compare `
+    + `(${ctxKeys.join(', ')})`,
+    !ctxKeys.some(k => /budget/i.test(k)));
+  ok('AG: an unchanged context returns the SAME object, so no confirmation can open',
+    selectionOutcome(ctx({ cellCount: 6 }), ctx({ cellCount: 6 }), held).surviving === held);
+  /*
+   * «لست متأكدًا» reaches the engine as absence, identically to owning no
+   * radio. Two answers the engine cannot tell apart must not cost the reader a
+   * confirmation — or a selection.
+   */
+  ok('AG: an answer that reaches the engine unchanged drops nothing',
+    Object.keys(selectionOutcome(
+      ctx({ cellCount: 6, rcSystem: undefined }),
+      ctx({ cellCount: 6, rcSystem: undefined }), held).dropped).length === 0);
+}
+
+/*
+ * THE CONFIRMATION ITSELF — rendered, and read back.
+ */
+{
+  const lines = [
+    { category: 'propellers', categoryAr: PART_VOCAB.propellers.ar,
+      partAr: PART_CATEGORY_MAP.propellers[0].nameAr },
+    { category: 'frames', categoryAr: PART_VOCAB.frames.ar,
+      partAr: PART_CATEGORY_MAP.frames[0].nameAr },
+  ];
+  const html = renderToStaticMarkup(
+    ReactRT.createElement(InvalidationConfirm as never, {
+      lines, onConfirm: () => {}, onCancel: () => {},
+    }) as never);
+
+  ok('AG: it is a real dialog, not a clickable div',
+    /role="dialog"/.test(html) && /aria-modal="true"/.test(html));
+  ok('AG: …with an accessible name and description that point at real nodes',
+    /aria-labelledby="v2-invalidation-title"/.test(html)
+    && /id="v2-invalidation-title"/.test(html)
+    && /aria-describedby="v2-invalidation-lead"/.test(html)
+    && /id="v2-invalidation-lead"/.test(html));
+  ok('AG: both answers are real buttons',
+    (html.match(/<button[^>]*type="button"/g) ?? []).length === 2);
+  ok('AG: it names every affected PART, not just the categories',
+    lines.every(l => html.includes(l.partAr!) && html.includes(l.categoryAr)));
+  ok('AG: no raw part id reaches the reader',
+    !PART_CATEGORY_MAP.propellers.some(x => html.includes(x.id))
+    && !PART_CATEGORY_MAP.frames.some(x => html.includes(x.id)));
+  ok('AG: the safe answer comes FIRST in the tab order',
+    html.indexOf('v2-invalidation-cancel') < html.indexOf('v2-invalidation-confirm-button'));
+  ok('AG: both targets clear 44px',
+    (html.match(/min-height:44px/g) ?? []).length === 2);
+  /*
+   * An id that no longer resolves must still be REPORTED — the reader is
+   * losing it either way. It falls back to a named category, never to the id.
+   */
+  const orphan = renderToStaticMarkup(
+    ReactRT.createElement(InvalidationConfirm as never, {
+      lines: [{ category: 'frames', categoryAr: PART_VOCAB.frames.ar }],
+      onConfirm: () => {}, onCancel: () => {},
+    }) as never);
+  ok('AG: an unresolvable part is still named as a loss, by category',
+    orphan.includes(PART_VOCAB.frames.ar) && orphan.includes(INVALIDATION.unnamedPart));
+  ok('AG: …and never as an id or an «undefined»',
+    !/undefined|null/.test(orphan));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('AH — WHICH ANSWER CLOSED THE DOOR');
+// ═══════════════════════════════════════════════════════════════════════════
+/*
+ * FIRST, THE FACT THAT FORCED THIS SHAPE.
+ *
+ * The natural implementation reads `DecisionReason.inputKey` off the failing
+ * decisions — the engine's own structured provenance. It is not there on this
+ * path: the search fails globally, so every unavailable category carries one
+ * bare `no-candidate` reason with no inputKey at all. Asserted, not assumed,
+ * because if the engine ever DOES start tagging these the counterfactual
+ * approach should be reconsidered — and this is the assertion that will say so.
+ */
+{
+  const lrEntry = { droneTypeId: 'long-range', budgetTier: 'mid' };
+  const dead = build({ ...lrEntry, owned: { rcSystem: 'ExpressLRS' } });
+  ok('AH: the dead-end build genuinely has no proven path',
+    dead.provenPath === null);
+  const failing = dead.decisions.filter(d => d.status === 'unavailable');
+  ok(`AH: every category fails together (${failing.length} of ${dead.decisions.length})`,
+    failing.length === dead.decisions.length && failing.length > 0);
+  ok('AH: and NONE of their reasons carries an inputKey — so there is nothing to read',
+    failing.every(d => d.reasons.every(r => r.inputKey === undefined)));
+  ok('AH: …while a HEALTHY build DOES tag its receiver decision with ownedRcSystem',
+    build({ droneTypeId: 'freestyle', cellCount: 6, budgetTier: 'mid',
+      owned: { rcSystem: 'ExpressLRS' } })
+      .decisions.find(d => d.category === 'receivers')!
+      .reasons.some(r => r.inputKey === 'ownedRcSystem'));
+}
+
+/*
+ * THE DIAGNOSIS, OVER EVERY READER WHO CAN REACH A DEAD END.
+ *
+ * Not a sample. The claim is «no reader is told the wrong thing», and the only
+ * way to hold it is to enumerate them.
+ */
+{
+  const RC = [undefined, ...rcSystemsInCatalogue()];
+  const VS = [undefined, ...videoSystemOptions()];
+  const BUD = ['budget', 'mid', 'premium', undefined] as const;
+  const entryOf = (t: string) => {
+    let p = build({ droneTypeId: t });
+    const acc: Record<string, unknown> = {};
+    let g = 0;
+    while (p.requiredInputs.length > 0 && g++ < 8) {
+      acc[p.requiredInputs[0].key] = p.requiredInputs[0].options[0];
+      p = build({ droneTypeId: t, ...acc });
+    }
+    return { droneTypeId: t, ...acc };
+  };
+
+  let dead = 0; let blamedType = 0; let namedRc = 0; let namedVideo = 0; let namedBoth = 0;
+  const wrong: string[] = [];
+  for (const t of ['freestyle', 'cinematic', 'long-range']) {
+    const e = entryOf(t);
+    for (const bud of BUD) for (const rc of RC) for (const vs of VS) {
+      const input = { ...e, budgetTier: bud, owned: { rcSystem: rc, videoSystem: vs } };
+      const b = build(input);
+      if (b.provenPath !== null) continue;
+      dead++;
+      const d = diagnoseDeadEnd(input as never, build as never);
+      if (d.kind === 'type-level') {
+        blamedType++;
+        wrong.push(`${t}/${bud ?? 'none'}/${rc ?? '-'}/${vs ?? '-'}`);
+        continue;
+      }
+      /*
+       * Every cause named must be an answer the reader actually gave. Naming
+       * goggles to somebody who told us they own none would be a new way of
+       * being wrong, replacing the old one.
+       */
+      if (d.causes.includes('rc') && !rc) wrong.push(`named rc but none owned: ${t}`);
+      if (d.causes.includes('video') && !vs) wrong.push(`named video but none owned: ${t}`);
+      if (d.causes.length === 2) namedBoth++;
+      else if (d.causes[0] === 'rc') namedRc++;
+      else namedVideo++;
+    }
+  }
+  ok(`AH: the sweep really reached dead ends (${dead} of them)`, dead > 100);
+  ok(`AH: NOT ONE is still blamed on the drone type (${blamedType})`, blamedType === 0);
+  ok(`AH: every cause named is an answer the reader gave (${wrong.length} violations)`,
+    wrong.length === 0);
+  ok(`AH: radio-only ${namedRc}, goggles-only ${namedVideo}, both ${namedBoth} — `
+    + 'all three kinds occur, so the distinction is not decorative',
+    namedRc > 0 && namedVideo > 0 && namedBoth > 0);
+  ok('AH: rc and video remain distinguishable — neither collapses into the other',
+    namedRc !== namedVideo || namedBoth > 0);
+}
+
+/*
+ * A GENUINE TYPE-LEVEL REFUSAL STAYS TYPE-LEVEL.
+ *
+ * Cinewhoop and racing are unavailable because the CATALOGUE cannot finish
+ * them, and the goal screen says so in a sentence `availability.ts` owns.
+ * Nothing in this work may rewrite that.
+ */
+for (const t of ['cinewhoop', 'racing']) {
+  ok(`AH: ${t} is diagnosed type-level, whatever equipment is named`,
+    diagnoseDeadEnd({ droneTypeId: t } as never, build as never).kind === 'type-level'
+    && diagnoseDeadEnd(
+      { droneTypeId: t, owned: { rcSystem: 'ExpressLRS', videoSystem: 'DJI' } } as never,
+      build as never).kind === 'type-level');
+}
+ok('AH: a reader who named no equipment can never be told their equipment is at fault',
+  diagnoseDeadEnd({ droneTypeId: 'freestyle', cellCount: 6 } as never, build as never)
+    .kind === 'type-level');
+
+/*
+ * THE BRANCH THE CATALOGUE CANNOT REACH.
+ *
+ * «neither alone is fatal, the pair is» produces no reader today — measured in
+ * the sweep above, where every two-cause result had both causes individually
+ * fatal. It still has to be CORRECT, because a catalogue change would reach it
+ * silently and the copy for it makes a different claim. So it is proven with a
+ * constructed engine: viable unless BOTH are named.
+ */
+{
+  const synthetic = (i: { owned?: { rcSystem?: string; videoSystem?: string } }) =>
+    ({ provenPath: (i.owned?.rcSystem && i.owned?.videoSystem) ? null : {} });
+  const d = diagnoseDeadEnd(
+    { droneTypeId: 'freestyle', owned: { rcSystem: 'A', videoSystem: 'B' } } as never,
+    synthetic as never);
+  ok('AH: a pair that is only fatal together is reported as jointOnly',
+    d.kind === 'owned-equipment' && d.jointOnly === true
+    && d.causes.length === 2);
+  ok('AH: …and the joint copy accuses neither one on its own',
+    SUMMARY.status.blocked.causeJoint !== SUMMARY.status.blocked.cause.rc
+    && SUMMARY.status.blocked.causeJoint !== SUMMARY.status.blocked.cause.video
+    && /وحده|معًا/.test(SUMMARY.status.blocked.causeJoint));
+  /*
+   * And the inverse, so the flag is not simply always true: a cause that IS
+   * individually fatal must come back jointOnly === false.
+   */
+  const onlyRcFatal = (i: { owned?: { rcSystem?: string; videoSystem?: string } }) =>
+    ({ provenPath: i.owned?.rcSystem ? null : {} });
+  const d2 = diagnoseDeadEnd(
+    { droneTypeId: 'freestyle', owned: { rcSystem: 'A', videoSystem: 'B' } } as never,
+    onlyRcFatal as never);
+  ok('AH: an individually fatal answer is NOT reported as joint',
+    d2.kind === 'owned-equipment' && d2.jointOnly === false
+    && d2.causes.length === 1 && d2.causes[0] === 'rc');
+}
+
+/*
+ * AND THE SCREEN. A correct diagnosis rendered next to the sentence it
+ * corrects would leave the reader refereeing two answers, so the summary must
+ * show the specific cause INSTEAD of the engine's type-level line.
+ */
+{
+  const input = { droneTypeId: 'long-range', budgetTier: 'mid', owned: { rcSystem: 'ExpressLRS' } };
+  const b = build(input);
+  const readiness = readinessOf(b, { answer: 'radio', rc: { kind: 'known', value: 'ExpressLRS' } });
+  const diag = diagnoseDeadEnd(input as never, build as never);
+  const html = renderToStaticMarkup(ReactRT.createElement(BuildInputSummary as never, {
+    rows: [], readiness, deadEnd: diag,
+  }) as never);
+
+  ok('AH: the rendered block names the RADIO as the cause',
+    html.includes(SUMMARY.status.blocked.cause.rc));
+  ok('AH: …and the engine’s type-level sentence reaches no visible text',
+    !readiness.reasonsAr.some(r => html.split('data-engine-reasons=')[0].includes(r)));
+  ok('AH: …while the engine’s own words stay available for debugging',
+    /data-engine-reasons="[^"]+"/.test(html));
+  ok('AH: the cause is exposed as machine state, not inferred from the prose',
+    /data-cause="rc"/.test(html) && /data-joint="false"/.test(html));
+  ok('AH: the reader is still told they can change an answer and retry',
+    html.includes(SUMMARY.status.blocked.body));
+
+  /*
+   * With no diagnosis supplied the screen falls back to the engine's own
+   * words rather than showing nothing — the type-level case, and the
+   * behaviour every caller had before this phase.
+   */
+  const fallback = renderToStaticMarkup(ReactRT.createElement(BuildInputSummary as never, {
+    rows: [], readiness, deadEnd: null,
+  }) as never);
+  ok('AH: with no diagnosis the engine’s reason is what is shown',
+    readiness.reasonsAr.every(r => fallback.includes(r))
+    && /data-cause="type-level"/.test(fallback));
+}
 
 
 console.log(`\n[reader selection] ${passed} passed, ${failures.length} failed`);

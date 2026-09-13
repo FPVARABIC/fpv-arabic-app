@@ -1,4 +1,5 @@
 import type { BasePart } from '@core/data/assembly/types';
+import { videoSystemOf } from '@core/data/assembly/recommendation/proposeBuild';
 
 /**
  * THE TWO OR THREE THINGS WORTH SAYING ABOUT A PART — AND NOTHING ELSE
@@ -24,16 +25,40 @@ import type { BasePart } from '@core/data/assembly/types';
  */
 
 interface SpecSpec {
+  /**
+   * The spec key, EXACTLY as the catalogue spells it.
+   *
+   * Every key here is verified against real parts by
+   * `scripts/testBuildV2Proposal.ts`. It has to be: a key that matches nothing
+   * does not fail, it renders NOTHING, and a card with no rows looks like a
+   * part we have no data for rather than a name we spelled wrong. Three of the
+   * eight required categories shipped exactly that way — `currentA` for
+   * `currentRatingA`, `uarts` for `uartCount`, `blades` for `bladeCount` —
+   * and the suite stayed green because its only guard was a page-wide total.
+   */
   key: string;
   labelAr: string;
   /** Rendered value, or undefined to drop the row entirely. */
   format?: (raw: unknown) => string | undefined;
+  /**
+   * Where to read it from, when it does not live in `specs`.
+   *
+   * The video ecosystem is the reason this exists. «DJI» / «Walksnail» /
+   * «HDZero» / «Analog» is the single most important fact about an air unit —
+   * it is what the owned-goggles question was ABOUT — and it is not a spec
+   * key at all: it is `part.protocolOrSystem`, which the engine reads through
+   * `videoSystemOf`. Copying that field name into a string here would be a
+   * second spelling of a domain fact, which is the class of bug this whole
+   * file just had. So the accessor is the engine's own.
+   */
+  from?: (part: BasePart) => unknown;
 }
 
 const inch = (raw: unknown) => (typeof raw === 'number' ? `${raw} إنش` : undefined);
 const plain = (raw: unknown) =>
   (typeof raw === 'string' || typeof raw === 'number') && String(raw).trim() !== ''
     ? String(raw) : undefined;
+const amps = (raw: unknown) => (typeof raw === 'number' ? `${raw}A` : undefined);
 
 /**
  * Curated per category. A category missing from this map shows no specs at
@@ -51,28 +76,49 @@ const CATEGORY_SPECS: Record<string, readonly SpecSpec[]> = {
   ],
   propellers: [
     { key: 'sizeInch', labelAr: 'قطر المروحة', format: inch },
-    { key: 'blades', labelAr: 'عدد الشفرات', format: plain },
+    { key: 'bladeCount', labelAr: 'عدد الشفرات', format: plain },
   ],
+  /*
+   * THE TWO NUMBERS THE MANUAL CHECK IS ABOUT.
+   *
+   * `current-headroom` asks the reader to weigh what the motor will pull
+   * against what this ESC can take. The ESC half of that is documented, on
+   * every ESC we stock — and it was on screen nowhere, because this list asked
+   * for `currentA` and the catalogue writes `currentRatingA`. Burst is a
+   * SEPARATE row and never merged into the continuous figure: they are
+   * different promises, one sustained and one for a moment, and a card showing
+   * «65A» without saying which one has answered the reader's question wrongly.
+   */
   escs: [
-    { key: 'currentA', labelAr: 'التيار المستمر', format: r => (typeof r === 'number' ? `${r}A` : undefined) },
-    { key: 'mountingMm', labelAr: 'نمط التثبيت', format: plain },
-    { key: 'protocol', labelAr: 'البروتوكول', format: plain },
+    { key: 'currentRatingA', labelAr: 'التيار المستمر', format: amps },
+    { key: 'burstCurrentRatingA', labelAr: 'تيار الذروة', format: amps },
+    { key: 'firmware', labelAr: 'البرنامج الثابت', format: plain },
   ],
+  /*
+   * Mounting first, because it is the fact that decides whether the stack goes
+   * together at all — `stack-mount` is the blocker that withdrew the racing
+   * type from the whole product, and the card was silent about it.
+   */
   flightControllers: [
-    { key: 'mountingMm', labelAr: 'نمط التثبيت', format: plain },
-    { key: 'gyro', labelAr: 'الجيروسكوب', format: plain },
-    { key: 'uarts', labelAr: 'منافذ UART', format: plain },
+    { key: 'mountingSizeMm', labelAr: 'نمط التثبيت', format: plain },
+    { key: 'mcu', labelAr: 'المعالج', format: plain },
+    { key: 'uartCount', labelAr: 'منافذ UART', format: plain },
   ],
   receivers: [
     { key: 'protocol', labelAr: 'المنظومة', format: plain },
-    { key: 'antenna', labelAr: 'الهوائي', format: plain },
+    { key: 'frequencyGHz', labelAr: 'التردد', format: r => (typeof r === 'number' ? `${r} GHz` : undefined) },
   ],
+  /*
+   * `system` was never a key on any video unit. The ecosystem lives on the
+   * part, and `videoSystemOf` is how the engine reads it — so that is how this
+   * reads it too. `powerMw` was invented outright; nothing stocks it.
+   */
   videoUnits: [
-    { key: 'system', labelAr: 'المنظومة', format: plain },
-    { key: 'powerMw', labelAr: 'قدرة الإرسال', format: r => (typeof r === 'number' ? `${r}mW` : undefined) },
+    { key: 'protocolOrSystem', labelAr: 'المنظومة', from: videoSystemOf, format: plain },
+    { key: 'operatingVoltageRange', labelAr: 'مدى جهد التشغيل', format: plain },
   ],
   batteries: [
-    { key: 'cellCount', labelAr: 'عدد الخلايا', format: r => (typeof r === 'number' ? `${r}S` : undefined) },
+    { key: 'sCount', labelAr: 'عدد الخلايا', format: r => (typeof r === 'number' ? `${r}S` : undefined) },
     { key: 'capacityMah', labelAr: 'السعة', format: r => (typeof r === 'number' ? `${r}mAh` : undefined) },
     { key: 'cRating', labelAr: 'معدل C', format: plain },
   ],
@@ -85,7 +131,7 @@ export function partFacts(category: string, part: BasePart): readonly PartFact[]
   const specs = (part as unknown as { specs?: Record<string, unknown> }).specs ?? {};
   const out: PartFact[] = [];
   for (const s of CATEGORY_SPECS[category] ?? []) {
-    const value = (s.format ?? plain)(specs[s.key]);
+    const value = (s.format ?? plain)(s.from ? s.from(part) : specs[s.key]);
     if (value !== undefined && value !== '') out.push({ labelAr: s.labelAr, value });
     if (out.length === 3) break;
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { proposeBuild } from '@core/data/assembly/recommendation/proposeBuild';
 import type { RecommendationInput } from '@core/data/assembly/recommendation/types';
 import { isBuildTypeAvailable } from '@/lib/build/availability';
@@ -15,10 +15,14 @@ import {
 import { BuildInputSummary, summaryValue, type SummaryRow } from './BuildInputSummary';
 import { readinessOf } from './readiness';
 import {
-  NO_SELECTIONS, selectionsSurviving, withCategory, withoutCategory,
+  NO_SELECTIONS, selectionOutcome, withCategory, withoutCategory,
   type ReaderSelections, type SelectionContext,
 } from './selectionState';
+import { diagnoseDeadEnd, type DeadEndDiagnosis } from './deadEndDiagnosis';
+import { InvalidationConfirm, type DroppedLine } from './InvalidationConfirm';
 import { ProposalScreen } from './ProposalScreen';
+import { PART_CATEGORY_MAP } from '@core/data/project/store';
+import { PART_VOCAB } from '@/lib/build/labels';
 import { PROPOSAL } from './copy';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
 
@@ -140,6 +144,56 @@ export const BuildV2Preview: React.FC = () => {
   const [trail, setTrail] = useState<Question[]>([{ id: 'goal' }]);
   const [idx, setIdx] = useState(0);
   const [screen, setScreen] = useState<'entry' | 'questions' | 'summary' | 'proposal'>('entry');
+  /**
+   * AN ANSWER THE READER HAS PRESSED BUT WE HAVE NOT ACTED ON.
+   *
+   * This is the whole of the fix for silent loss. While it is non-null the
+   * reader's answers are UNTOUCHED — `answers` still holds what it held before
+   * the press — so «إلغاء» is not an undo that has to reconstruct anything. It
+   * is a `setPending(null)`, and nothing was ever changed to change back.
+   *
+   * `after` carries whatever else the setter wanted to do. `setGoal` resets the
+   * trail, and that reset has to wait for the same confirmation: cancelling a
+   * type change and finding yourself back on the first question would be the
+   * cancel button lying.
+   */
+  const [pending, setPending] = useState<{
+    committed: Answers;
+    dropped: ReaderSelections;
+    after?: () => void;
+    /**
+     * The test id of the control that opened this, so «إلغاء» can put the
+     * reader back on it.
+     *
+     * An ID rather than the NODE. The confirmation replaces the question it is
+     * about, so that node is unmounted while the dialog is up and `.focus()`
+     * on it does nothing at all — silently, landing the reader on `<body>`.
+     * The id survives the round trip because the re-rendered control carries
+     * the same one.
+     */
+    openedBy?: string;
+  } | null>(null);
+  /**
+   * Where to put focus once the question is back on screen.
+   *
+   * A REF, not state, for the same reason `ProposalCategoryCard` uses one:
+   * this is not something the render reads, it is a one-shot instruction for
+   * the effect below — and writing state from inside an effect is the
+   * cascading render the lint rule is right to refuse.
+   */
+  const restoreFocus = useRef<string | null>(null);
+
+  /*
+   * No dependency array: it runs after EVERY render and is a no-op unless the
+   * ref is set. That is what makes it fire at the right moment — after the
+   * cancelled question has been re-rendered, never during the handler that
+   * cancelled it, when the control does not exist yet.
+   */
+  useEffect(() => {
+    if (restoreFocus.current === null) return;
+    document.querySelector<HTMLElement>(`[data-testid="${restoreFocus.current}"]`)?.focus();
+    restoreFocus.current = null;
+  });
 
   /*
    * The engine runs on every ANSWER, not on every render.
@@ -235,13 +289,76 @@ export const BuildV2Preview: React.FC = () => {
    * the before/after pair rather than on the setter's intent: a setter cannot
    * forget to declare what it invalidates, because it does not get to say.
    */
-  const answer = (change: (a: Answers) => Answers) => setAnswers(prev => {
+  const answer = (change: (a: Answers) => Answers, after?: () => void) => {
+    const prev = answers;
     const next = change(prev);
-    const selectedParts = selectionsSurviving(
+    const { surviving, dropped } = selectionOutcome(
       selectionContext(prev), selectionContext(next), next.selectedParts,
     );
-    return selectedParts === next.selectedParts ? next : { ...next, selectedParts };
-  });
+    const committed = surviving === next.selectedParts
+      ? next : { ...next, selectedParts: surviving };
+
+    // Nothing of the reader's is at stake — this is the ordinary case and it
+    // must stay instant. A confirmation for a change that costs nothing is a
+    // dialog readers learn to dismiss without reading.
+    if (Object.keys(dropped).length === 0) {
+      setAnswers(committed);
+      after?.();
+      return;
+    }
+    // Something IS at stake. Do not write `answers`; ask first.
+    setPending({
+      committed, dropped, after,
+      openedBy: (document.activeElement as HTMLElement | null)?.dataset?.testid,
+    });
+  };
+
+  /** «متابعة بالتغيير» — now, and only now, the answer is written. */
+  const confirmPending = () => {
+    if (!pending) return;
+    /*
+     * Focus follows the reader to the state they just agreed to.
+     *
+     * `openedBy` is the control they pressed, which IS the new answer's
+     * control — so putting focus back on it lands them on the question with
+     * their change visibly taken. Without this the dialog unmounts under the
+     * focused button and the reader is dropped on `<body>`: the page is
+     * correct, and a keyboard or screen-reader user has silently lost their
+     * place in it.
+     */
+    restoreFocus.current = pending.openedBy ?? null;
+    setAnswers(pending.committed);
+    pending.after?.();
+    setPending(null);
+  };
+
+  /**
+   * «إلغاء» — and there is genuinely nothing to roll back.
+   *
+   * `answers` was never written, the trail was never reset, and the engine was
+   * never re-run, so dropping the pending record leaves the journey byte for
+   * byte where it was. That is why the commit is deferred rather than made and
+   * undone: an undo has to be correct, and this has nothing to get wrong.
+   */
+  const cancelPending = () => {
+    restoreFocus.current = pending?.openedBy ?? null;
+    setPending(null);
+  };
+
+  /**
+   * The rows the confirmation shows — resolved to real Arabic product names.
+   *
+   * NO `?? id` FALLBACK. A chosen id that no longer resolves still has to be
+   * reported, because the reader is about to lose it; it falls back to the
+   * category, which always has a name. Printing the id is the one thing this
+   * journey never does.
+   */
+  const droppedLines = (dropped: ReaderSelections): DroppedLine[] =>
+    Object.entries(dropped).map(([category, partId]) => ({
+      category,
+      categoryAr: PART_VOCAB[category]?.ar ?? category,
+      partAr: PART_CATEGORY_MAP[category]?.find(x => x.id === partId)?.nameAr,
+    }));
 
   /**
    * A CHOICE, which is a different kind of write from an answer.
@@ -280,9 +397,12 @@ export const BuildV2Preview: React.FC = () => {
    */
   const setGoal = (droneTypeId: string) => {
     if (answers.droneTypeId === droneTypeId) return;
-    answer(a => ({ ...a, droneTypeId, sizeInch: undefined, cellCount: undefined }));
-    setTrail([{ id: 'goal' }]);
-    setIdx(0);
+    // The trail reset rides along with the answer, so a cancelled type change
+    // leaves the reader exactly where they were standing.
+    answer(
+      a => ({ ...a, droneTypeId, sizeInch: undefined, cellCount: undefined }),
+      () => { setTrail([{ id: 'goal' }]); setIdx(0); },
+    );
   };
 
   const blockedReason = (): string | null => {
@@ -324,6 +444,25 @@ export const BuildV2Preview: React.FC = () => {
 
   const blocked = blockedReason();
   const readiness = readinessOf(build, answers.owned);
+
+  /**
+   * WHICH ANSWER CLOSED THE DOOR — asked only when the door is shut.
+   *
+   * `diagnoseDeadEnd` runs the engine two or three more times, so it is gated
+   * on the readiness state rather than computed every render: on a healthy
+   * build the answer is meaningless and the work is pure waste. On a failed
+   * one the reader is looking at a dead end and a few more milliseconds is the
+   * cheapest thing on the screen.
+   *
+   * The engine is handed in rather than imported by the module, which is what
+   * lets a test hand it a constructed world instead.
+   */
+  const deadEnd: DeadEndDiagnosis | null = useMemo(
+    () => (readiness.state === 'no-viable-build' && answers.droneTypeId
+      ? diagnoseDeadEnd(toEngineInput(answers), proposeBuild)
+      : null),
+    [readiness.state, answers],
+  );
 
   const rows: SummaryRow[] = [];
   // No row rather than a row naming the id — see `summaryValue.droneType`.
@@ -432,7 +571,24 @@ export const BuildV2Preview: React.FC = () => {
         </section>
       )}
 
-      {screen === 'questions' && (
+      {/*
+        THE CONFIRMATION REPLACES THE QUESTION IT IS ABOUT.
+
+        Not layered over it. At 390px an overlay on top of a question screen is
+        two competing decisions in one viewport, and the one underneath is
+        still tappable — so a reader can answer the question again while being
+        asked whether they meant it. One decision on screen at a time is the
+        rule this journey is built on, and a confirmation is a decision.
+      */}
+      {pending && (
+        <InvalidationConfirm
+          lines={droppedLines(pending.dropped)}
+          onConfirm={confirmPending}
+          onCancel={cancelPending}
+        />
+      )}
+
+      {screen === 'questions' && !pending && (
         <>
           {current?.id === 'goal' && (
             <BuildGoalQuestion value={answers.droneTypeId} onChange={setGoal} />
@@ -463,7 +619,7 @@ export const BuildV2Preview: React.FC = () => {
 
       {screen === 'summary' && (
         <>
-          <BuildInputSummary rows={rows} readiness={readiness} />
+          <BuildInputSummary rows={rows} readiness={readiness} deadEnd={deadEnd} />
           {/*
             THE ONLY DOOR TO THE PROPOSAL, AND IT IS LOCKED BY THE READINESS
             STATE — not by a separate check that could drift from it.
@@ -495,7 +651,13 @@ export const BuildV2Preview: React.FC = () => {
         <ProposalScreen build={build} onChoose={chooseFor} onClearChoice={clearChoiceIn} />
       )}
 
-      {screen !== 'entry' && (
+      {/*
+        No «رجوع»/«التالي» while the confirmation is open. They are answers to
+        a different question, and navigating away from an unanswered
+        confirmation would commit or discard the reader's work depending on
+        which one they happened to press.
+      */}
+      {screen !== 'entry' && !pending && (
         <footer style={{ display: 'grid', gap: 9 }}>
           {/*
             * The id is what `aria-describedby` on «التالي» points at. It was

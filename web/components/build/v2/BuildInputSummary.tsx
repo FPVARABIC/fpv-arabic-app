@@ -5,6 +5,7 @@ import { droneTypes } from '@core/data/assembly/droneTypes';
 import { batteryVoltageOptions } from '@core/data/assembly/batteryVoltageOptions';
 import { SUMMARY } from './copy';
 import type { Readiness } from './readiness';
+import type { DeadEndDiagnosis } from './deadEndDiagnosis';
 
 /** Who put this value here. The whole point of the screen. */
 export type Provenance = 'chosen' | 'derived';
@@ -31,7 +32,18 @@ export interface SummaryRow {
 export const BuildInputSummary: React.FC<{
   rows: readonly SummaryRow[];
   readiness: Readiness;
-}> = ({ rows, readiness }) => (
+  /**
+   * WHICH ANSWER CLOSED THE DOOR, when one did.
+   *
+   * A separate prop rather than a field on `Readiness`, because they answer
+   * two different questions. `readiness` decides whether the proposal opens —
+   * a gate, and one that must stay decidable from the build alone. This is a
+   * diagnosis of a failure that has already happened, and producing it costs
+   * extra engine runs. Folding it into `readinessOf` would make the gate pay
+   * for an explanation it never uses on the path that matters.
+   */
+  deadEnd?: DeadEndDiagnosis | null;
+}> = ({ rows, readiness, deadEnd }) => (
   <section data-testid="v2-summary" style={{ display: 'grid', gap: 16 }}>
     <header style={{ display: 'grid', gap: 6 }}>
       <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, lineHeight: 1.6 }}>
@@ -115,29 +127,52 @@ export const BuildInputSummary: React.FC<{
         </>
       )}
 
-      {readiness.state === 'no-viable-build' && (
-        <>
-          <strong style={{ fontSize: 14.5, color: 'var(--sev-warning)' }}>
-            {SUMMARY.status.blocked.title}
-          </strong>
-          {readiness.reasonsAr.length > 0 && (
-            <>
-              <span style={{ fontSize: 12, color: 'var(--text-dimmer)', fontWeight: 700 }}>
-                {SUMMARY.status.blocked.reasonsLabel}
-              </span>
-              <ul data-testid="v2-summary-blocked-reasons"
-                style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
-                {readiness.reasonsAr.map(r => (
-                  <li key={r} style={{ fontSize: 12.5, lineHeight: 1.85 }}>{r}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
-            {SUMMARY.status.blocked.body}
-          </span>
-        </>
-      )}
+      {readiness.state === 'no-viable-build' && (() => {
+        /*
+         * ONE ANSWER ON THE SCREEN, NOT TWO.
+         *
+         * Where the reader's own equipment is the cause, the specific sentences
+         * REPLACE the engine's «لهذا النوع» line rather than sitting beside it.
+         * Two explanations of the same failure, pointing at different answers,
+         * is worse than the wrong one alone: it asks the reader to referee.
+         *
+         * The engine's own text is still carried, on `data-engine-reasons`, so
+         * a test or a maintainer can see exactly what it said. It reaches no
+         * visible string on this path.
+         */
+        const owned = deadEnd?.kind === 'owned-equipment' ? deadEnd : null;
+        const lines = owned
+          ? (owned.jointOnly
+            ? [SUMMARY.status.blocked.causeJoint]
+            : owned.causes.map(c => SUMMARY.status.blocked.cause[c]))
+          : readiness.reasonsAr;
+        return (
+          <>
+            <strong style={{ fontSize: 14.5, color: 'var(--sev-warning)' }}>
+              {SUMMARY.status.blocked.title}
+            </strong>
+            {lines.length > 0 && (
+              <>
+                <span style={{ fontSize: 12, color: 'var(--text-dimmer)', fontWeight: 700 }}>
+                  {SUMMARY.status.blocked.reasonsLabel}
+                </span>
+                <ul data-testid="v2-summary-blocked-reasons"
+                  data-cause={owned ? owned.causes.join(' ') : 'type-level'}
+                  data-joint={owned?.jointOnly ? 'true' : 'false'}
+                  data-engine-reasons={readiness.reasonsAr.join(' ¶ ')}
+                  style={{ margin: 0, paddingInlineStart: 18, display: 'grid', gap: 4 }}>
+                  {lines.map(r => (
+                    <li key={r} style={{ fontSize: 12.5, lineHeight: 1.85 }}>{r}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <span style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.85 }}>
+              {SUMMARY.status.blocked.body}
+            </span>
+          </>
+        );
+      })()}
     </div>
   </section>
 );
