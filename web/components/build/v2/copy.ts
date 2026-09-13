@@ -151,8 +151,90 @@ export const SUMMARY = {
       title: 'لا نستطيع تكوين اقتراح كامل ومتوافق بهذه الاختيارات حاليًا.',
       body: 'يمكنك تغيير أحد اختياراتك أعلاه والمحاولة مرة أخرى.',
       reasonsLabel: 'ما وجدناه:',
+      /*
+       * WHEN THE READER'S OWN EQUIPMENT IS THE CAUSE, SAY SO — AND SAY ONLY SO.
+       *
+       * The engine's sentence on this path is «لا توجد تركيبة كاملة خالية من
+       * الموانع لهذا النوع…», which names THE TYPE. For 108 of the 180 readers
+       * who can reach a dead end, the type is fine and their radio or their
+       * goggles is the constraint. Leaving that sentence beside a more specific
+       * one would put two different answers on the same screen and let the
+       * reader pick the wrong one to act on — so where the cause is a specific
+       * owned answer, these REPLACE it rather than joining it. The engine's
+       * text stays reachable in `data-engine-reasons` for whoever is debugging.
+       *
+       * Which one is shown is decided by `deadEndDiagnosis.ts`, by re-running
+       * the engine without that answer. Never by reading these strings, and
+       * never by matching on the engine's.
+       */
+      cause: {
+        rc:
+          'نظام التحكم الذي ذكرت أنك تملكه لا يوجد له مستقبل متوافق مع هذا '
+          + 'البناء في الكتالوج الحالي. إن كانت إجابتك عن نظام جهاز التحكم غير '
+          + 'دقيقة فصحّحها، وإلا فاختر نوع بناء يدعم هذا النظام.',
+        video:
+          'منظومة النظارة التي ذكرت أنك تملكها لا توجد لها وحدة فيديو متوافقة '
+          + 'مع هذا البناء في الكتالوج الحالي. إن كانت إجابتك عن المنظومة غير '
+          + 'دقيقة فصحّحها، وإلا فاختر نوع بناء يدعم هذه المنظومة.',
+      },
+      /*
+       * The case where NEITHER answer is impossible on its own and the pair is.
+       * It needs its own sentence because reusing either one above would accuse
+       * a piece of equipment that is, by itself, perfectly fine.
+       *
+       * No reader in the current catalogue reaches this. It exists so that a
+       * catalogue change cannot turn a true sentence into a false one in
+       * silence — `scripts/testReaderSelection.ts` proves the branch with a
+       * constructed engine rather than pretending the shelf produces one.
+       */
+      causeJoint:
+        'كلٌّ من نظام التحكم ومنظومة النظارة اللذين ذكرتهما ممكن وحده، لكن '
+        + 'اجتماعهما معًا لا يترك تركيبة كاملة في الكتالوج الحالي. غيّر أحدهما '
+        + 'أو اختر نوع بناء يدعمهما معًا.',
     },
   },
+} as const;
+
+/**
+ * BEFORE WE REMOVE ANYTHING THE READER CHOSE.
+ *
+ * The invalidation rule in `selectionState.ts` is right: a frame chosen for a
+ * 6S build is not an answer about a 4S build, and carrying it over would leave
+ * a choice nobody made attached to a build nobody agreed to. What was wrong was
+ * the SILENCE. The reader changed a voltage, their propeller vanished, and
+ * nothing on any screen said so.
+ *
+ * A message after the fact is not enough either. By then the work is gone and
+ * the only thing left to offer is an apology. So the question is asked BEFORE
+ * the answer is committed, it names the actual PARTS — not «some selections» —
+ * and «إلغاء» leaves every byte exactly where it was.
+ *
+ * WHY THE COUNT IS NOT IN THESE STRINGS
+ * -------------------------------------
+ * Same reason as `burden` below: the list is anything from one part to seven,
+ * and «سيُلغى ١ اختيار» is not a sentence. The parts are rendered as rows; the
+ * prose says what is about to happen and nothing that has to agree with a
+ * number.
+ */
+export const INVALIDATION = {
+  title: 'هذا التغيير سيُلغي اختيارات سبق أن اخترتها',
+  /*
+   * WHY, not just WHAT. A reader who is told «these will be removed» and not
+   * told why reads it as the product losing their work. Told that the part
+   * needs re-evaluating against the new answer, they can decide.
+   */
+  lead: 'القطع التالية اخترتها بنفسك، ولم تعد صالحة للتقييم تحت الإجابة '
+    + 'الجديدة — سنعيد فتحها لك بعد التغيير:',
+  /* The two answers, in the reader's words. «متابعة» commits; «إلغاء» does not. */
+  confirm: 'متابعة بالتغيير',
+  cancel: 'إلغاء',
+  /*
+   * A category whose chosen part no longer resolves in the catalogue still has
+   * to be named. Printing its id would be the one thing this journey never
+   * does, so the row falls back to the category — which always has an Arabic
+   * name, and `proposalModel` refuses the whole screen if it ever does not.
+   */
+  unnamedPart: 'القطعة المختارة',
 } as const;
 
 /**
@@ -366,10 +448,33 @@ export const PROPOSAL = {
   manual: {
     title: 'هناك فحص يدوي قبل اعتماد البناء',
     lead: 'شيء لا تحسمه البيانات وحدها — يحتاج تأكيدًا منك قبل الطيران.',
+    /*
+     * A MANUAL CHECK MUST NOT SEND THE READER TO A NUMBER WE DO NOT HAVE.
+     *
+     * This used to say «راجع الرقمين على القطعتين» — review the two figures on
+     * the two parts. Only one of those two figures exists. Every ESC in the
+     * catalogue documents its continuous rating and most document burst; NO
+     * motor documents current draw, and none can, because draw is not a
+     * property of a motor: it is a property of a motor turning a particular
+     * propeller at a particular voltage. `specs` on a motor carries `kv` and a
+     * stator size, and neither of those is an ampere.
+     *
+     * So the instruction now says where each half actually comes from. The ESC
+     * side is on the card (Phase 2G-A put it there). The motor side is on the
+     * manufacturer's own sheet, FOR THE PROP AND VOLTAGE THIS READER PICKED,
+     * and the sentence says so rather than implying we could have shown it.
+     *
+     * What it must never become: a derived number. KV × cells is not current,
+     * stator volume is not current, and a «probably fine» computed here would
+     * be exactly the unearned reassurance the whole verdict engine refuses to
+     * give. This stays a MANUAL check, and it is never reported as passed.
+     */
     labels: {
       'current-headroom':
-        'هامش التيار بين المحرك والمنظّم: راجع الرقمين على القطعتين وتأكد أن '
-        + 'المنظّم يحتمل ذروة سحب المحرك.',
+        'هامش التيار بين المحرك والمنظّم: قدرة الـESC المستمرة والذروية معروضة '
+        + 'على بطاقته من بيانات القطعة، أمّا تيار المحرك فغير موجود في الكتالوج '
+        + 'الحالي — راجع مواصفات الشركة المصنّعة للمحرك عند الجهد والمروحة '
+        + 'اللذين ستستخدمهما، ثم قارنها بقدرة الـESC وشروطها.',
     } as Record<string, string>,
   },
 

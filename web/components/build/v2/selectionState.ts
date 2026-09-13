@@ -147,3 +147,45 @@ export function selectionsSurviving(
   }
   return out;
 }
+
+/**
+ * WHAT SURVIVES, AND WHAT THIS COSTS THE READER — THE SAME ANSWER, BOTH HALVES.
+ *
+ * Phase 2G-A has to warn BEFORE it removes anything, and a warning that says
+ * «some of your choices will be lost» is not a warning — the reader has to see
+ * which ones. So the caller needs the dropped entries, not just the survivors.
+ *
+ * DERIVED, NEVER RE-DECIDED
+ * ------------------------
+ * This calls `selectionsSurviving` and subtracts. It does NOT re-state the
+ * rule, and that is the whole point of its shape: a second copy of «type, size
+ * and voltage discard everything; an ecosystem answer clears one shelf; budget
+ * clears nothing» is a second copy that can drift, and the drift would show up
+ * as a confirmation dialog promising to remove something the rule then keeps —
+ * or worse, keeping quiet about something it removes. There is one rule above,
+ * and this is a view of it.
+ *
+ * `dropped` carries the PART ID, not just the category, because the sentence
+ * the reader reads names the part. Resolving that id to a name is the UI's
+ * job; knowing which id was lost is this function's.
+ */
+export interface SelectionOutcome {
+  /** Exactly what `selectionsSurviving` returns, identity preserved. */
+  surviving: ReaderSelections;
+  /** category → part id, for every entry the rule removed. Empty is the norm. */
+  dropped: ReaderSelections;
+}
+
+export function selectionOutcome(
+  prev: SelectionContext, next: SelectionContext, selections: ReaderSelections,
+): SelectionOutcome {
+  const surviving = selectionsSurviving(prev, next, selections);
+  // Same object back means the rule removed nothing — no need to walk it.
+  if (surviving === selections) return { surviving, dropped: NO_SELECTIONS };
+
+  const dropped: Record<string, string> = {};
+  for (const [category, partId] of Object.entries(selections)) {
+    if (!(category in surviving)) dropped[category] = partId;
+  }
+  return { surviving, dropped };
+}

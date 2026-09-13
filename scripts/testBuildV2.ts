@@ -530,8 +530,55 @@ ok('the readiness module invents no Arabic explanation of its own',
   !/[؀-ۿ]{10,}/.test(readinessCode));
 ok('the readiness module names no ecosystem or part',
   !/Crossfire|ExpressLRS|DJI|Walksnail|receiver-|frame-/.test(readinessCode));
-ok('the blocked copy defers to the engine for the «why»',
-  /reasonsLabel/.test(copy) && !/لا يوجد.*مستقبل متوافق/.test(copyStrings));
+/*
+ * WHAT «THE UI MUST NOT INVENT A COMPATIBILITY CLAIM» MEANS AFTER PHASE 2G-A.
+ *
+ * This used to assert that the copy file contained no sentence shaped like
+ * «…no compatible receiver…», on the reasoning that only the engine may say
+ * such a thing. Phase 2G-A gives the reader exactly that sentence — because
+ * the engine's own line on this path blames THE TYPE, and for 108 of the 180
+ * readers who reach a dead end the type is fine and their radio is not.
+ *
+ * The invariant underneath is unchanged, and it was never really «no Arabic
+ * about receivers». It is:
+ *
+ *   · nothing DECIDES compatibility in React — `readiness.ts` still invents
+ *     nothing, still names no ecosystem and no part (asserted above, green);
+ *   · the sentence that IS shown is CHOSEN by re-running the engine, never by
+ *     reading what the engine wrote;
+ *   · and it stays generic — «the radio system you named», never «Crossfire»,
+ *     because the moment the copy hard-codes a value it has started keeping a
+ *     second, stale list of what the catalogue stocks.
+ *
+ * All three are stronger than the string ban they replace.
+ */
+ok('the blocked copy still labels the engine’s own reasons',
+  /reasonsLabel/.test(copy));
+ok('the dead-end cause sentences name no ecosystem VALUE and no part id',
+  !/Crossfire|ExpressLRS|HDZero|Walksnail|DJI|receiver-|frame-|motor-|video-unit-/
+    .test(code(read(join(V2_DIR, 'copy.ts')))
+      .slice(code(read(join(V2_DIR, 'copy.ts'))).indexOf('cause:'),
+        code(read(join(V2_DIR, 'copy.ts'))).indexOf('causeJoint') + 400)));
+/*
+ * The diagnosis is a STRUCTURAL probe, so it must carry no Arabic at all: a
+ * module that matched on the engine's prose would break the day somebody
+ * improved a sentence, and break silently, toward telling the reader something
+ * false.
+ */
+const diagnosisCode = code(read(join(V2_DIR, 'deadEndDiagnosis.ts')));
+ok('the dead-end diagnosis matches no Arabic prose — it re-runs the engine',
+  !/[؀-ۿ]/.test(diagnosisCode)
+  && /provenPath === null/.test(diagnosisCode));
+ok('the dead-end diagnosis names no ecosystem value either',
+  !/Crossfire|ExpressLRS|HDZero|Walksnail|DJI/.test(diagnosisCode));
+/*
+ * And it does not import the engine. It takes one in, which is what lets a
+ * test hand it a constructed world — the only way to exercise the branch the
+ * real catalogue never reaches.
+ */
+ok('the dead-end diagnosis takes the engine as a parameter rather than importing it',
+  !/from '@core\/data\/assembly\/recommendation\/proposeBuild'/.test(diagnosisCode)
+  && /propose: \(i: RecommendationInput\) => HasProvenPath/.test(diagnosisCode));
 
 // ═══════════════════════════════════════════════════════════════════════════
 section('7c — THE PHASE 2C TRIPWIRE');
