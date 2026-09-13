@@ -260,6 +260,57 @@ section('1 — AN OPEN QUESTION IS NOT A FINISHED PHASE');
   const settled = FREESTYLE.build.decisions.filter(d => d.status === 'recommended');
   ok('— while a category the system settled needs no answer to close the phase',
     settled.length > 0 && reviewEligibility(FREESTYLE.build).open);
+
+  /*
+   * EACH OF THE EIGHT, ON ITS OWN.
+   *
+   * Walking real readers only ever produces the ties the CATALOGUE happens to
+   * leave open, and no reader in it leaves `frames` alone unresolved. So the
+   * rule was true for the categories that happen to tie and untested for the
+   * rest: a mutation that dropped the first category out of the eligibility
+   * loop entirely passed every assertion here.
+   *
+   * The eight are therefore proved one at a time, against an eligible build
+   * with exactly one category pushed back into each failing state.
+   */
+  const withDecision = (
+    category: string, change: (d: CategoryDecision) => CategoryDecision | null,
+  ): ProposedBuild => {
+    const decisions = FREESTYLE.build.decisions
+      .map(d => (d.category === category ? change(d) : d))
+      .filter((d): d is CategoryDecision => d !== null);
+    const parts = { ...FREESTYLE.build.parts };
+    if (!decisions.some(d => d.category === category)) delete parts[category];
+    return { ...FREESTYLE.build, decisions, parts };
+  };
+
+  const blockedBy = (b: ProposedBuild, category: string, kind: ReviewBlockReason['kind']) => {
+    const r = reviewEligibility(b);
+    if (r.open) return false;
+    return r.reasons.some(x => x.kind === kind && 'categories' in x
+      && x.categories.includes(category));
+  };
+
+  for (const category of REQUIRED_BUILD_CATEGORIES) {
+    ok(`«${PART_VOCAB[category]!.ar}» alone, left as an open tie, shuts the ending`,
+      blockedBy(withDecision(category, d => ({ ...d, status: 'choice-required' })),
+        category, 'open-choices'));
+    ok(`«${PART_VOCAB[category]!.ar}» alone, unavailable, shuts the ending`,
+      blockedBy(withDecision(category, d => ({ ...d, status: 'unavailable' })),
+        category, 'unavailable'));
+    ok(`«${PART_VOCAB[category]!.ar}» alone, decided by nothing at all, shuts the ending`,
+      blockedBy(withDecision(category, () => null), category, 'unresolved'));
+    /*
+     * And the status that SOUNDS settled while resolving to no part — the
+     * failure that would render seven rows and call it eight.
+     */
+    ok(`«${PART_VOCAB[category]!.ar}» alone, settled but part-less, shuts the ending`,
+      blockedBy({
+        ...FREESTYLE.build,
+        parts: Object.fromEntries(Object.entries(FREESTYLE.build.parts)
+          .filter(([c]) => c !== category)),
+      }, category, 'unresolved'));
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -323,6 +374,59 @@ section('3 — EIGHT CATEGORIES, ONCE EACH, IN THE ENGINE\'S OWN ORDER');
   for (const category of REQUIRED_BUILD_CATEGORIES) {
     const hits = HTML_FREESTYLE.split(`data-testid="v2-review-line-${category}"`).length - 1;
     ok(`the rendered review carries exactly one «${PART_VOCAB[category]!.ar}» row`, hits === 1);
+  }
+
+  /*
+   * AND NOTHING OUTSIDE THE EIGHT CAN BECOME A NINTH.
+   *
+   * «exactly eight lines» is satisfied today by a catalogue that never
+   * resolves an optional category: a loop widened to include `gps` still
+   * produced eight rows, because there was no GPS part to put in the ninth.
+   * That is not the rule holding — that is the rule being untested, and it
+   * goes live the moment the engine resolves one.
+   *
+   * So a GPS is put into a build, decision and part both, and the review must
+   * still report the required eight and price only those.
+   */
+  {
+    const gpsPart = (PART_CATEGORY_MAP.gps ?? [])[0];
+    const gpsDecision: CategoryDecision = {
+      ...FREESTYLE.build.decisions[0],
+      category: 'gps',
+      partId: gpsPart.id,
+      candidateIds: [gpsPart.id],
+      status: 'recommended',
+      selectionSource: 'system',
+    };
+    const withGps: ProposedBuild = {
+      ...FREESTYLE.build,
+      decisions: [...FREESTYLE.build.decisions, gpsDecision],
+      parts: { ...FREESTYLE.build.parts, gps: gpsPart },
+    };
+    const gpsView = reviewView(withGps, stocked);
+    ok('a build that HAS a resolved GPS still reports exactly the required eight',
+      gpsView.lines.length === 8
+      && !gpsView.lines.some(l => l.category === 'gps'));
+    ok('— and its price is untouched by that GPS',
+      gpsView.price.priceMinUSD === reviewView(FREESTYLE.build, stocked).price.priceMinUSD
+      && gpsView.price.pricedCount === 8);
+    ok('— and no GPS row is rendered',
+      !hasTestId(render(withGps), 'v2-review-line-gps'));
+    ok('— while the reader is still told a GPS exists and is optional',
+      hasTestId(render(withGps), 'v2-review-optional-gps'));
+    /* The same for a recommended accessory the engine somehow settled. */
+    const capPart = (PART_CATEGORY_MAP.capacitors ?? [])[0];
+    const withCap: ProposedBuild = {
+      ...FREESTYLE.build,
+      decisions: [...FREESTYLE.build.decisions,
+        { ...gpsDecision, category: 'capacitors', partId: capPart.id,
+          candidateIds: [capPart.id] }],
+      parts: { ...FREESTYLE.build.parts, capacitors: capPart },
+    };
+    ok('a resolved capacitor cannot reach the rows or the total either',
+      reviewView(withCap, stocked).lines.length === 8
+      && reviewView(withCap, stocked).price.priceMinUSD
+        === reviewView(FREESTYLE.build, stocked).price.priceMinUSD);
   }
 
   /*
