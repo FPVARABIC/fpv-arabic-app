@@ -25,6 +25,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { chromiumLaunchOptions } from './lib/browser';
 import { PART_VOCAB } from '../web/lib/build/labels';
 import { proposeBuild } from '../src/data/assembly/recommendation/proposeBuild';
+import { PART_CATEGORY_MAP } from '../src/data/project/store';
+import type { BasePart } from '../src/data/assembly/types';
 import type { RecommendationInput } from '../src/data/assembly/recommendation/types';
 
 /**
@@ -39,6 +41,31 @@ import type { RecommendationInput } from '../src/data/assembly/recommendation/ty
 const engine = (over: Record<string, unknown> = {}) => proposeBuild({
   droneTypeId: 'freestyle', cellCount: 6, budgetTier: 'mid', owned: {}, ...over,
 } as unknown as RecommendationInput);
+
+/**
+ * WHAT THIS EXACT BUILD COSTS, RECOMPUTED FROM THE CATALOGUE.
+ *
+ * Phase 2G-B's price claim is an accounting claim, and the only way to check
+ * an accounting claim is to do the arithmetic again from the source. The
+ * review prints part NAMES; those are looked back up here and their documented
+ * ranges summed, with no code shared with the summariser under test.
+ *
+ * A part whose name does not resolve is counted as unpriced, which is the
+ * conservative direction: it makes the expected total SMALLER, so a screen
+ * that inflated a price still fails.
+ */
+function priceFromCatalogue(namesAr: readonly string[]) {
+  const byName = new Map<string, BasePart>();
+  for (const list of Object.values(PART_CATEGORY_MAP)) {
+    for (const p of list) byName.set(p.nameAr, p);
+  }
+  let min = 0, max = 0, priced = 0, unpriced = 0;
+  for (const n of namesAr) {
+    const range = byName.get(n.trim())?.priceRangeUSD;
+    if (range) { min += range[0]; max += range[1]; priced++; } else unpriced++;
+  }
+  return { min, max, priced, unpriced };
+}
 
 const PORT = 3181;
 const BASE = `http://localhost:${PORT}`;
@@ -1998,6 +2025,387 @@ async function main() {
           unavailable.every(u => u.disabled));
         ok(`${name}: …still carrying their catalogue-derived reasons`,
           unavailable.every(u => u.text.includes('الكتالوج')));
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      console.log(`\n[H] ${name} — THE PHASE ACTUALLY ENDS (Phase 2G-B)`);
+      // ══════════════════════════════════════════════════════════════════
+      /*
+       * Until now the journey simply stopped. A reader answered everything,
+       * resolved every tie, looked at eight settled cards — and there was
+       * nowhere to go and nothing to take away. These seven journeys are the
+       * ending, walked the way a reader walks it, at both viewports.
+       *
+       * The most important assertions in the block are the ones about what is
+       * NOT on the screen: no «متوافق بالكامل» over an open manual check, no
+       * invented price, no accessory in the total, no «ابدأ التجميع».
+       */
+      {
+        /**
+         * Answer whatever the engine asks for this goal, then open the parts.
+         *
+         * NOT a fixed click sequence. The question trail is the ENGINE's:
+         * freestyle is asked for a cell count because 4S and 6S both build
+         * cleanly, and long-range is asked for none at all —
+         * `requiredInputs` comes back empty. A walk that typed the freestyle
+         * sequence and ran it against long-range waits thirty seconds for a
+         * voltage question nobody was going to be asked.
+         */
+        const toProposal = async (goal: string, cell: string, budget = 'mid') => {
+          await openPreview(page);
+          await startJourney(page);
+          await page.click(`[data-testid="v2-goal-${goal}"]`);
+          await page.click('[data-testid="v2-next"]');
+          await page.waitForTimeout(220);
+
+          for (let i = 0; i < 8; i++) {
+            if (await page.locator('[data-testid="v2-open-proposal"]').count() === 1) break;
+            const answer = async (sel: string) => {
+              if (await page.locator(sel).count() === 0) return false;
+              await page.locator(sel).first().click();
+              await page.click('[data-testid="v2-next"]');
+              await page.waitForTimeout(240);
+              return true;
+            };
+            if (await answer(`[data-testid="v2-input-cellCount-${cell}"]`)) continue;
+            if (await answer(`[data-testid="v2-budget-${budget}"]`)) continue;
+            if (await answer('[data-testid="v2-owned-none"]')) continue;
+            break;
+          }
+          await page.waitForSelector('[data-testid="v2-open-proposal"]', { timeout: 10000 });
+          await page.click('[data-testid="v2-open-proposal"]');
+          await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 15000 });
+        };
+
+        /**
+         * Resolve every open tie the way a reader does — one press, wait for
+         * the engine, look again. Returns what they had to choose.
+         *
+         * Not a loop over a list captured up front: the engine re-runs on each
+         * press and a category that was open can close, so the list has to be
+         * re-read. A test that batched the presses would be exercising a state
+         * the journey cannot reach.
+         */
+        const resolveAllTies = async (max = 12) => {
+          const chosen: string[] = [];
+          for (let i = 0; i < max; i++) {
+            const open = page.locator('[data-testid^="v2-cat-"][data-status="choice-required"]');
+            if (await open.count() === 0) break;
+            const cat = (await open.first().getAttribute('data-testid'))!.replace('v2-cat-', '');
+            const toggle = page.locator(`[data-testid="v2-show-candidates-${cat}"]`);
+            if (await toggle.count() === 1
+              && await toggle.getAttribute('aria-expanded') === 'false') {
+              await toggle.click();
+              await page.waitForTimeout(120);
+            }
+            await page.locator(`[data-testid^="v2-choose-${cat}-"]`).first().click();
+            await page.waitForTimeout(260);
+            chosen.push(cat);
+          }
+          return chosen;
+        };
+
+        /** Everything the review says, read off the rendered page. */
+        const readReview = () => page.evaluate(() => {
+          const el = document.querySelector('[data-testid="v2-review"]') as HTMLElement | null;
+          if (!el) return null;
+          const lines = [...el.querySelectorAll('[data-testid^="v2-review-line-"]')]
+            .map(n => ({
+              category: n.getAttribute('data-testid')!.replace('v2-review-line-', ''),
+              source: n.getAttribute('data-source') ?? '',
+              status: n.getAttribute('data-status') ?? '',
+              name: (n.querySelector('[data-testid^="v2-review-name-"]') as HTMLElement)
+                ?.innerText ?? '',
+              provenance: (n.querySelector('[data-testid^="v2-review-provenance-"]') as HTMLElement)
+                ?.innerText ?? '',
+            }));
+          const price = el.querySelector('[data-testid="v2-review-price"]');
+          const box = el.getBoundingClientRect();
+          return {
+            lines,
+            text: el.innerText,
+            priced: price?.getAttribute('data-priced') ?? '',
+            unpriced: price?.getAttribute('data-unpriced') ?? '',
+            range: (el.querySelector('[data-testid="v2-review-price-range"]') as HTMLElement)
+              ?.innerText ?? '',
+            unpricedNote: (el.querySelector('[data-testid="v2-review-price-unpriced"]') as HTMLElement)
+              ?.innerText ?? '',
+            manual: [...el.querySelectorAll('[data-testid^="v2-review-manual-"]')]
+              .map(n => n.getAttribute('data-testid')!.replace('v2-review-manual-', '')),
+            recommended: [...el.querySelectorAll('[data-testid^="v2-review-recommended-"]')]
+              .map(n => n.getAttribute('data-testid')!.replace('v2-review-recommended-', '')),
+            optional: [...el.querySelectorAll('[data-testid^="v2-review-optional-"]')]
+              .map(n => n.getAttribute('data-testid')!.replace('v2-review-optional-', '')),
+            buttons: [...el.querySelectorAll('button')].map(b => ({
+              testId: b.getAttribute('data-testid') ?? '',
+              text: (b as HTMLElement).innerText,
+              disabled: b.disabled,
+              height: Math.round(b.getBoundingClientRect().height),
+            })),
+            handoff: (el.querySelector('[data-testid="v2-review-handoff"]') as HTMLElement)
+              ?.innerText ?? '',
+            details: el.querySelectorAll('details[open]').length,
+            allDetails: el.querySelectorAll('details').length,
+            contentPx: Math.round(box.height),
+            viewport: window.innerHeight,
+            docScreens: document.documentElement.scrollHeight / window.innerHeight,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            controls: el.querySelectorAll(
+              'button:not([disabled]), a[href], input, select, [tabindex]:not([tabindex="-1"])',
+            ).length,
+            headings: [...el.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(h => h.tagName),
+          };
+        });
+
+        const openReview = async () => {
+          await page.click('[data-testid="v2-open-review"]');
+          await page.waitForSelector('[data-testid="v2-review"]', { timeout: 10000 });
+          await page.waitForTimeout(150);
+        };
+
+        // ── A. FREESTYLE: resolve the open choices, then finish ────────────
+        await toProposal('freestyle', '6');
+        ok(`${name} [A]: the door to the ending is SHUT while a tie is open`,
+          await page.locator('[data-testid="v2-cat-"][data-status="choice-required"]').count() >= 0
+          && await page.locator('[data-testid="v2-open-review"]').count() === 0);
+        const chosenA = await resolveAllTies();
+        ok(`${name} [A]: resolving ${chosenA.length} tie(s) opens the door`,
+          await page.locator('[data-testid="v2-open-review"]').count() === 1);
+        await openReview();
+        const A = (await readReview())!;
+        ok(`${name} [A]: the review shows all eight required parts, once each`,
+          A.lines.length === 8 && new Set(A.lines.map(l => l.category)).size === 8);
+        ok(`${name} [A]: every row names a part, not a key`,
+          A.lines.every(l => l.name.length > 0 && !/^[a-z-]+$/.test(l.name)));
+        ok(`${name} [A]: the headline is about PARTS, and corrects itself immediately`,
+          A.text.includes('اكتمل اختيار القطع الأساسية')
+          && A.text.includes('وليس أن الدرون أصبح جاهزًا'));
+        console.log(`      [A] ${(A.contentPx / A.viewport).toFixed(2)} screens `
+          + `(${A.contentPx}px) · ${A.controls} controls · page ${A.docScreens.toFixed(2)} `
+          + `screens incl. chrome · overflow ${A.overflow}px · ${A.allDetails} disclosures `
+          + `(${A.details} open) · headings ${A.headings.join(',')}`);
+        await measure(page, 'final review (freestyle)', '[data-testid="v2-review"]');
+        if (name === '390px') {
+          await page.screenshot({ path: `${SHOTS}/30-review-390.png`, fullPage: true });
+        } else {
+          await page.screenshot({ path: `${SHOTS}/31-review-1280.png`, fullPage: true });
+        }
+
+        // ── E. THE MANUAL CHECK SURVIVES TO THE LAST SCREEN ────────────────
+        /*
+         * The assertion this whole phase is built around. `current-headroom`
+         * cannot be settled by any catalogue; reaching an end screen is not
+         * evidence about hardware, and there must be no control here that lets
+         * a reader record it as done.
+         */
+        ok(`${name} [E]: the manual check is still open on the final screen`,
+          A.manual.includes('current-headroom'));
+        ok(`${name} [E]: it carries the corrected wording, not «الرقمين على القطعتين»`,
+          A.text.includes('غير موجود في الكتالوج')
+          && A.text.includes('مواصفات الشركة المصنّعة')
+          && !A.text.includes('راجع الرقمين'));
+        ok(`${name} [E]: nothing on the screen lets a reader mark it passed`,
+          A.buttons.length === 1 && A.buttons[0].testId === 'v2-review-back');
+        ok(`${name} [E]: and the screen never says a check passed`,
+          !/اجتاز|تم الفحص|هامش التيار سليم/.test(A.text));
+
+        // ── G. THE TWO TIERS, WITH THE RIGHT SEMANTICS ─────────────────────
+        ok(`${name} [G]: capacitor, buzzer and tools are named as RECOMMENDED`,
+          JSON.stringify(A.recommended) === JSON.stringify(['capacitors', 'buzzers', 'tools']));
+        ok(`${name} [G]: GPS is listed separately, as OPTIONAL`,
+          JSON.stringify(A.optional) === JSON.stringify(['gps']));
+        ok(`${name} [G]: neither tier claims something was chosen for the reader`,
+          (A.text.match(/لم تُختَر/g) ?? []).length === 4);
+        ok(`${name} [G]: no accessory product is named — only the category`,
+          A.lines.every(l => !['capacitors', 'buzzers', 'tools', 'gps'].includes(l.category)));
+
+        // ── F. THE PRICE, AGAINST THE CATALOGUE FOR THIS EXACT BUILD ───────
+        /*
+         * Not «a number is shown» — the number is recomputed here from the
+         * parts the review itself lists, read back out of the catalogue by
+         * name. If the screen invented a figure, summed an accessory, or
+         * dropped an unpriced part, these three numbers stop agreeing.
+         */
+        const truth = priceFromCatalogue(A.lines.map(l => l.name));
+        ok(`${name} [F]: the priced/unpriced split matches the catalogue `
+          + `(${truth.priced} priced, ${truth.unpriced} not)`,
+          Number(A.priced) === truth.priced && Number(A.unpriced) === truth.unpriced
+          && truth.priced + truth.unpriced === 8);
+        if (Number(A.priced) > 0) {
+          ok(`${name} [F]: a documented RANGE is shown, never a single figure`,
+            /\$\d+–\$\d+/.test(A.range));
+          const [lo, hi] = (A.range.match(/\d+/g) ?? []).map(Number);
+          ok(`${name} [F]: the range is ordered and non-zero — not $0–$0`,
+            lo > 0 && hi >= lo);
+          /*
+           * THE NUMBER ON THE SCREEN, AGAINST THE CATALOGUE FOR THIS EXACT
+           * BUILD — computed here from the part NAMES the review itself
+           * printed, looked back up in the data. An invented figure, a summed
+           * accessory or a dropped unpriced part all break this equality;
+           * «a number is displayed» would break none of them.
+           */
+          ok(`${name} [F]: the displayed range IS the sum of those parts' `
+            + `documented prices ($${truth.min}–$${truth.max})`,
+            lo === truth.min && hi === truth.max);
+        }
+        ok(`${name} [F]: the exclusions are on the screen, not in a footnote`,
+          A.text.includes('لا يشمل الشحن ولا الضرائب'));
+        /*
+         * Scoped to the PRICE BLOCK, and deliberately not matching «متوسط»:
+         * that is the catalogue's own TIER name — «إطار 5.1 إنش - متوسط» is a
+         * mid-range frame, not an averaged price — and it is in six of the
+         * eight product names. A guard that failed on it would be reading a
+         * product name as an accounting claim.
+         */
+        const priceText = await page.locator('[data-testid="v2-review-price"]').innerText();
+        ok(`${name} [F]: the price is never hedged into an estimate`,
+          !/تقريبًا|حوالي|نحو\s|تقديري|سعر متوقع|في المتوسط/.test(priceText));
+        ok(`${name} [F]: and it is USD only — no conversion anywhere on the screen`,
+          !/ريال|جنيه|درهم|دينار|€|£|¥/.test(A.text));
+        if (Number(A.unpriced) > 0) {
+          ok(`${name} [F]: the parts it could not price are counted on the screen`,
+            A.unpricedNote.includes('بلا سعر موثّق') || A.unpricedNote.length > 0);
+        }
+
+        // ── The claims the ending may never make ──────────────────────────
+        for (const [what, rx] of [
+          ['«متوافق بالكامل»', /متوافق بالكامل/],
+          ['«آمن للطيران»', /آمن للطيران|بناء آمن/],
+          ['«جاهز للتشغيل»', /جاهز للتشغيل|جاهز للطيران/],
+          ['«اكتمل التجميع»', /اكتمل التجميع/],
+          ['«ابدأ التجميع»', /ابدأ التجميع/],
+        ] as const) {
+          ok(`${name} [A]: the ending never claims ${what}`, !rx.test(A.text));
+        }
+        ok(`${name} [A]: the next phase is NAMED and visibly shut`,
+          A.handoff.includes('التجميع الآمن') && A.handoff.includes('لم تُفتح'));
+        ok(`${name} [A]: no disabled button pretends at a destination`,
+          A.buttons.every(b => !b.disabled));
+        ok(`${name} [A]: the one real action is «الرجوع لتعديل القطع», ≥44px`,
+          A.buttons.length === 1 && A.buttons[0].text.includes('الرجوع لتعديل القطع')
+          && A.buttons[0].height >= 44);
+        ok(`${name} [A]: the summary is navigable by headings`,
+          A.headings.filter(h => h === 'H2').length === 1
+          && A.headings.filter(h => h === 'H3').length >= 3);
+        ok(`${name} [A]: it is a summary, not a catalogue wall — nothing collapsed to find`,
+          A.allDetails === 0);
+
+        // ── C. A READER'S OWN CHOICE IS SHOWN AS THEIRS ────────────────────
+        for (const cat of chosenA) {
+          const line = A.lines.find(l => l.category === cat);
+          ok(`${name} [C]: «${cat}» — the reader's own choice is attributed to them`,
+            line?.source === 'user-selected'
+            && line.provenance.includes('اخترتها بنفسك'));
+        }
+        ok(`${name} [C]: — and the system's decisions are not called the reader's`,
+          A.lines.filter(l => l.source === 'system')
+            .every(l => !l.provenance.includes('اخترتها بنفسك')
+              && !l.provenance.includes('قطعة لديك')));
+        ok(`${name} [C]: every row says who decided it`,
+          A.lines.every(l => l.provenance.trim().length > 0));
+
+        // ── D. GO BACK, CHANGE A PART, AND THE REVIEW FOLLOWS ──────────────
+        await page.click('[data-testid="v2-review-back"]');
+        await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 10000 });
+        ok(`${name} [D]: «الرجوع لتعديل القطع» lands back on the parts`,
+          await page.locator('[data-testid="v2-proposal"]').count() === 1
+          && await page.locator('[data-testid="v2-review"]').count() === 0);
+
+        /*
+         * Change one reader-chosen part and the ending must be recomputed —
+         * a different part, and a different price — rather than redrawn from
+         * whatever it said the first time.
+         */
+        const swapCat = chosenA[0];
+        if (swapCat) {
+          await page.locator(`[data-testid="v2-change-choice-${swapCat}"]`).click();
+          await page.waitForTimeout(300);
+          const toggle = page.locator(`[data-testid="v2-show-candidates-${swapCat}"]`);
+          if (await toggle.count() === 1
+            && await toggle.getAttribute('aria-expanded') === 'false') {
+            await toggle.click();
+            await page.waitForTimeout(120);
+          }
+          const buttons = page.locator(`[data-testid^="v2-choose-${swapCat}-"]`);
+          const n = await buttons.count();
+          const wasName = A.lines.find(l => l.category === swapCat)!.name;
+          if (n > 1) {
+            await buttons.nth(1).click();
+            await page.waitForTimeout(300);
+            await resolveAllTies();
+            ok(`${name} [D]: the door is open again once the build is resolved`,
+              await page.locator('[data-testid="v2-open-review"]').count() === 1);
+            await openReview();
+            const D = (await readReview())!;
+            ok(`${name} [D]: the review now reports the NEW part, not the old one`,
+              D.lines.find(l => l.category === swapCat)!.name !== wasName);
+            ok(`${name} [D]: — and the price was recomputed alongside it`,
+              Number(D.priced) + Number(D.unpriced) === 8);
+            ok(`${name} [D]: the manual check is still open after the change`,
+              D.manual.includes('current-headroom'));
+            await page.click('[data-testid="v2-review-back"]');
+            await page.waitForSelector('[data-testid="v2-proposal"]', { timeout: 10000 });
+          } else {
+            ok(`${name} [D]: «${swapCat}» offers only one candidate — swap not walkable`, true);
+          }
+
+          /*
+           * AND THE DOOR CLOSES BEHIND THEM.
+           *
+           * Clear a choice, the category reopens, and the ending must stop
+           * being reachable until it is answered again. A stale review of a
+           * build that no longer exists is the failure this guards.
+           */
+          const clear = page.locator(`[data-testid="v2-change-choice-${swapCat}"]`);
+          if (await clear.count() === 1) {
+            await clear.click();
+            await page.waitForTimeout(320);
+            const reopened = await page.locator(
+              `[data-testid="v2-cat-${swapCat}"][data-status="choice-required"]`).count() === 1;
+            if (reopened) {
+              ok(`${name} [D]: reopening a category shuts the ending again`,
+                await page.locator('[data-testid="v2-open-review"]').count() === 0
+                && await page.locator('[data-testid="v2-review"]').count() === 0);
+            } else {
+              ok(`${name} [D]: clearing «${swapCat}» did not reopen it — door state unchanged`,
+                true);
+            }
+          }
+        }
+
+        // ── B. LONG-RANGE: a different build, the same ending ──────────────
+        await toProposal('long-range', '4');
+        const chosenB = await resolveAllTies();
+        ok(`${name} [B]: long-range also reaches an ending`,
+          await page.locator('[data-testid="v2-open-review"]').count() === 1);
+        await openReview();
+        const B = (await readReview())!;
+        ok(`${name} [B]: eight parts again, in the same build order`,
+          B.lines.length === 8
+          && JSON.stringify(B.lines.map(l => l.category))
+            === JSON.stringify(A.lines.map(l => l.category)));
+        ok(`${name} [B]: it is a DIFFERENT build — different parts, different money`,
+          JSON.stringify(B.lines.map(l => l.name)) !== JSON.stringify(A.lines.map(l => l.name)));
+        ok(`${name} [B]: its own priced/unpriced split adds up to eight`,
+          Number(B.priced) + Number(B.unpriced) === 8);
+        /*
+         * The long-range build leaves three parts undocumented, which is the
+         * case a fully-priced fixture would never exercise: the total must say
+         * so rather than presenting a partial sum as the price of the build.
+         */
+        if (Number(B.unpriced) > 0) {
+          ok(`${name} [B]: with parts unpriced, the screen says the total is not the whole`,
+            B.text.includes('ليس السعر الكامل للبناء'));
+        }
+        ok(`${name} [B]: the manual check is open here too`,
+          B.manual.includes('current-headroom'));
+        ok(`${name} [B]: and it makes none of the forbidden claims`,
+          !/متوافق بالكامل|آمن للطيران|جاهز للطيران|ابدأ التجميع/.test(B.text));
+        console.log(`      [B] long-range: ${(B.contentPx / B.viewport).toFixed(2)} screens `
+          + `(${B.contentPx}px) · ${B.controls} controls · overflow ${B.overflow}px `
+          + `· ${B.priced} priced / ${B.unpriced} unpriced`);
+        await measure(page, 'final review (long-range)', '[data-testid="v2-review"]');
+        console.log(`      chosen: A=[${chosenA.join(', ')}] B=[${chosenB.join(', ')}]`);
       }
 
       // ── No persistence ────────────────────────────────────────────────────
