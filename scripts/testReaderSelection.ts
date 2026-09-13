@@ -1915,9 +1915,18 @@ ok('AE-4: a provable build is still «ready», so the gate did not seize shut',
  * And the door itself: the proposal button is rendered on the readiness state
  * and on nothing else, so this change cannot have opened a second way in.
  */
+/*
+ * Counting `setScreen('proposal')` used to stand in for «one way in». Phase
+ * 2G-B's ending returns here by two routes — the footer and «الرجوع لتعديل
+ * القطع» — so the count moved while the claim did not. The gate is asserted
+ * directly instead: the forward door is inside it, and the rest go backwards.
+ */
+const AE4_GATE = PREVIEW_SRC.slice(PREVIEW_SRC.indexOf("readiness.state === 'ready' && ("));
 ok('AE-4: the proposal opens on `readiness.state === ready` alone',
   /readiness\.state === 'ready' && \(/.test(PREVIEW_SRC)
-  && (PREVIEW_SRC.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+  && (AE4_GATE.slice(0, AE4_GATE.indexOf('</>'))
+    .match(/setScreen\('proposal'\)/g) ?? []).length === 1
+  && /onBack=\{\(\) => setScreen\('proposal'\)\}/.test(PREVIEW_SRC));
 ok('AE-4: …and the screen does not re-implement readiness for itself',
   !/provenPath/.test(SCREEN_SRC) && !/provenPath/.test(CARD_SRC));
 

@@ -262,9 +262,14 @@ export const INVALIDATION = {
  * into a phase that does not exist.
  */
 export const REVIEW = {
-  /** The one-word name of the state, for the door out of the proposal. */
+  /*
+   * The name of the state, on the door out of the proposal.
+   *
+   * There is no separate `title`: the review's own heading is `completeTitle`,
+   * which says something this does not. A second identical string sat here
+   * unrendered until the dead-copy guard caught it.
+   */
   open: 'مراجعة البناء',
-  title: 'مراجعة البناء',
   /*
    * THE HEADLINE AND ITS IMMEDIATE CORRECTION, AS ONE THOUGHT.
    *

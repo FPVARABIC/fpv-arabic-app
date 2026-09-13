@@ -615,8 +615,34 @@ section('7c — THE PHASE 2C TRIPWIRE');
 const preview2c = v2Code['BuildV2Preview.tsx'];
 ok('the proposal door is gated on the readiness state itself',
   /readiness\.state === 'ready' && \(/.test(preview2c));
-ok('…and on nothing else — no second, driftable condition',
-  (preview2c.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+/*
+ * «…AND ON NOTHING ELSE» — RE-ANCHORED ON WHAT IT ACTUALLY CLAIMS.
+ *
+ * This counted `setScreen('proposal')` and demanded exactly one, as a proxy
+ * for «there is one door in». Phase 2G-B gave the journey an ending, and the
+ * two ways OUT of it both land on the proposal — the footer's «رجوع» and the
+ * review's own «الرجوع لتعديل القطع» — so the count went to three while the
+ * claim stayed true.
+ *
+ * A count is not the claim. The claim is that the only way FORWARD into the
+ * proposal is the readiness gate, so it is asserted directly: the forward door
+ * lives inside `readiness.state === 'ready' &&`, there is exactly one of it,
+ * and every other occurrence is a documented way back from the review.
+ *
+ * Loosening the count without this would have been the guard quietly retiring.
+ */
+const readinessGate = preview2c.slice(preview2c.indexOf("readiness.state === 'ready' && ("));
+const gateBlock = readinessGate.slice(0, readinessGate.indexOf('</>'));
+ok('the forward door lives INSIDE the readiness gate, and there is one of it',
+  (gateBlock.match(/setScreen\('proposal'\)/g) ?? []).length === 1
+  && gateBlock.includes('data-testid="v2-open-proposal"'));
+const backWays = [
+  /if \(screen === 'review'\) \{ setScreen\('proposal'\); return; \}/,
+  /onBack=\{\(\) => setScreen\('proposal'\)\}/,
+].filter(rx => rx.test(preview2c));
+ok('…and on nothing else — every other route to it is a way BACK from the review',
+  (preview2c.match(/setScreen\('proposal'\)/g) ?? []).length - backWays.length === 1
+  && backWays.length === 2);
 ok('the reader can always get back out of the proposal',
   /screen === 'proposal'\) \{ setScreen\('summary'\); return; \}/.test(preview2c));
 /*

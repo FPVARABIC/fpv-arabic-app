@@ -121,9 +121,41 @@ section('1 — ONLY A READY BUILD MAY OPEN THE PROPOSAL');
 // ═══════════════════════════════════════════════════════════════════════════
 const preview = src['BuildV2Preview.tsx'];
 ok('the door is the readiness state itself', /readiness\.state === 'ready' && \(/.test(preview));
-ok('there is exactly one way in', (preview.match(/setScreen\('proposal'\)/g) ?? []).length === 1);
-ok('the proposal screen renders only on that screen name',
-  /screen === 'proposal' && build && \(\s*\n?\s*<ProposalScreen/.test(preview));
+/*
+ * «EXACTLY ONE WAY IN» — THE CLAIM, NOT THE COUNT.
+ *
+ * This counted `setScreen('proposal')` and required one. Phase 2G-B gave the
+ * journey an ending, and both ways out of it come back here — the footer's
+ * «رجوع» and the review's «الرجوع لتعديل القطع» — so the count reached three
+ * while the thing it stood for stayed true.
+ *
+ * What must hold is that the only way FORWARD is the readiness gate. Loosening
+ * the number would have retired the guard; this asserts the gate instead.
+ */
+const gate = preview.slice(preview.indexOf("readiness.state === 'ready' && ("));
+ok('there is exactly one way in, and it is inside the readiness gate',
+  (gate.slice(0, gate.indexOf('</>')).match(/setScreen\('proposal'\)/g) ?? []).length === 1);
+ok('…and every other route to the proposal is a way BACK from the review',
+  (preview.match(/setScreen\('proposal'\)/g) ?? []).length === 3
+  && /if \(screen === 'review'\) \{ setScreen\('proposal'\); return; \}/.test(preview)
+  && /onBack=\{\(\) => setScreen\('proposal'\)\}/.test(preview));
+/*
+ * AND THE ONE EXTRA CONDITION ON THE RENDER, WHICH IS DELIBERATE.
+ *
+ * The proposal also stands in for a review that has stopped being reachable —
+ * a reader whose build reopened while they were on the ending. Rendering the
+ * eligibility test as a bare `&&` would leave them on a blank screen; falling
+ * back to the parts puts them where the work is.
+ *
+ * That is a second condition, so it is named here rather than allowed in by a
+ * looser pattern: the proposal renders on its own screen name, or as the
+ * review's fallback, and on nothing else.
+ */
+ok('the proposal renders on its own screen name — or as the ineligible review\'s fallback',
+  /\(screen === 'proposal' \|\| \(screen === 'review' && !reviewOpen\)\) && build && \(/
+    .test(preview));
+ok('…and the review itself renders only while it is still eligible',
+  /screen === 'review' && build && reviewOpen && \(/.test(preview));
 
 /*
  * The three readiness states, checked at the source rather than trusted: an
