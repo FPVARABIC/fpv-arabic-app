@@ -16,7 +16,7 @@ import { INVALIDATION } from './copy';
  *
  * NOT A CLICKABLE DIV EITHER
  * --------------------------
- * `role="dialog"` + `aria-modal` + a labelled heading, and two REAL buttons.
+ * `role="dialog"` + a labelled heading + a description, and two REAL buttons.
  * A screen-reader user arriving here has to be told this is a question and
  * what it is about, and a keyboard user has to be able to answer it without a
  * mouse — including with Escape, which everybody expects to mean «no».
@@ -37,14 +37,35 @@ import { INVALIDATION } from './copy';
  * restores it after the question has been re-rendered. `BuildV2Preview` owns
  * that because it owns the re-render.
  *
- * WHAT IS DELIBERATELY NOT HERE
- * -----------------------------
- * No focus TRAP. A trap that is wrong is worse than none — it strands a
- * keyboard user in a box they cannot leave — and this dialog already has three
- * exits (both buttons and Escape). The one thing a trap buys over that is
- * stopping Tab from reaching the page behind, and `inert` on the rest of the
- * page is the modern way to buy it; adding a hand-rolled key-cycling trap for
- * a four-element dialog is more risk than it removes.
+ * A NON-MODAL DIALOG, AND IT SAYS SO
+ * ----------------------------------
+ * There is no focus TRAP here, and none is wanted. A trap that is wrong is
+ * worse than none — it strands a keyboard user in a box they cannot leave —
+ * and this surface already has three exits (both buttons and Escape). Nor is
+ * the rest of the page `inert`: this is a panel IN THE FLOW that replaces the
+ * question it is about, not an overlay floating above a still-live page.
+ *
+ * So it must not carry `aria-modal="true"`, and an earlier version did.
+ *
+ * That attribute is not decoration. It tells assistive technology that
+ * everything outside this element is unavailable — and here it was false in
+ * the plainest way: Shift+Tab out of «إلغاء» lands on the preview's own link,
+ * outside the dialog, exactly as it should for a panel in the flow. A screen
+ * reader that trusts `aria-modal` may confine its virtual cursor to the
+ * dialog, so the reader is told the page behind is gone while their keyboard
+ * walks straight into it. Claiming a behaviour and not implementing it is
+ * worse than claiming nothing: it makes the page's own description of itself
+ * something the reader cannot rely on.
+ *
+ * `role="dialog"` without `aria-modal` is exactly right for this — it is
+ * announced as a dialog, named and described, and nothing is promised about
+ * the rest of the page. `BuildWizard` reached the same conclusion for its own
+ * in-flow confirmation and writes `aria-modal="false"`.
+ *
+ * `scripts/testBuildV2E2E.ts` holds the line in the only way that means
+ * anything: it measures that focus CAN leave this surface, and asserts the
+ * attribute agrees. The claim and the behaviour are checked against each
+ * other, so re-adding the attribute fails until the behaviour changes too.
  */
 export interface DroppedLine {
   /** Stable key and machine hook. Never rendered. */
@@ -76,7 +97,6 @@ export const InvalidationConfirm: React.FC<{
   return (
     <div
       role="dialog"
-      aria-modal="true"
       aria-labelledby="v2-invalidation-title"
       aria-describedby="v2-invalidation-lead"
       data-testid="v2-invalidation-confirm"

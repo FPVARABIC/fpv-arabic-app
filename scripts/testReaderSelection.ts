@@ -2342,13 +2342,28 @@ section('AG — WHAT THE READER LOSES, NAMED BEFORE IT IS LOST');
       lines, onConfirm: () => {}, onCancel: () => {},
     }) as never);
 
+  /*
+   * A DIALOG, AND NOT A LIE ABOUT WHAT KIND.
+   *
+   * `role="dialog"` yes; `aria-modal="true"` no. This is an in-flow panel with
+   * no focus trap and no inert background — the attribute would be telling
+   * assistive technology that the rest of the page is unavailable while the
+   * keyboard walks out of it freely. `testBuildV2E2E.ts` measures that escape
+   * in a browser; this is the markup half of the same statement.
+   *
+   * Deliberately NOT «the string never appears»: this surface could become
+   * genuinely modal one day. What must not recur is the claim arriving without
+   * the behaviour.
+   */
   ok('AG: it is a real dialog, not a clickable div',
-    /role="dialog"/.test(html) && /aria-modal="true"/.test(html));
-  ok('AG: …with an accessible name and description that point at real nodes',
+    /role="dialog"/.test(html));
+  ok('AG: …named and described by nodes that exist',
     /aria-labelledby="v2-invalidation-title"/.test(html)
     && /id="v2-invalidation-title"/.test(html)
     && /aria-describedby="v2-invalidation-lead"/.test(html)
     && /id="v2-invalidation-lead"/.test(html));
+  ok('AG: …and claims no modality, because none is implemented',
+    !/aria-modal="true"/.test(html));
   ok('AG: both answers are real buttons',
     (html.match(/<button[^>]*type="button"/g) ?? []).length === 2);
   ok('AG: it names every affected PART, not just the categories',

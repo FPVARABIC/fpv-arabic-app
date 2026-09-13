@@ -1683,10 +1683,28 @@ async function main() {
         const dialog = page.locator('[data-testid="v2-invalidation-confirm"]');
         ok(`${name}: changing the VOLTAGE asks before it removes anything`,
           await dialog.count() === 1);
-        ok(`${name}: it is a real dialog with an accessible name`,
+        /*
+         * A NON-MODAL DIALOG — AND THE ATTRIBUTES MUST AGREE WITH THE BEHAVIOUR.
+         *
+         * This surface is a panel in the flow with no focus trap and no inert
+         * background, and it once declared `aria-modal="true"` anyway. That
+         * attribute tells assistive technology that everything outside is
+         * unavailable; a screen reader trusting it may confine its cursor to
+         * the dialog while the keyboard walks straight out into the page.
+         *
+         * So the check is not «the attribute is absent» — an absence proves
+         * nothing on its own. It is that the CLAIM and the MEASURED BEHAVIOUR
+         * match: focus is shown to leave the surface, and the markup is shown
+         * not to deny it. Re-adding the attribute fails here until the
+         * behaviour that would justify it is implemented too.
+         */
+        ok(`${name}: it is a real dialog, named and described`,
           await dialog.getAttribute('role') === 'dialog'
-          && await dialog.getAttribute('aria-modal') === 'true'
-          && await page.locator('[data-testid="v2-invalidation-title"]').count() === 1);
+          && await page.locator('[data-testid="v2-invalidation-title"]').count() === 1
+          && await dialog.getAttribute('aria-labelledby') === 'v2-invalidation-title'
+          && await dialog.getAttribute('aria-describedby') === 'v2-invalidation-lead');
+        ok(`${name}: it does NOT claim modality it has not implemented`,
+          await dialog.getAttribute('aria-modal') !== 'true');
         const dialogText = await dialog.innerText();
         ok(`${name}: it names the actual part — «${partName}»`,
           dialogText.includes(partName));
@@ -1698,6 +1716,38 @@ async function main() {
             document.activeElement?.getAttribute('data-testid') === 'v2-invalidation-cancel'));
         ok(`${name}: the question behind it is not still answerable`,
           await page.locator('[data-testid="v2-input-cellCount-4"]').count() === 0);
+
+        /*
+         * THE MEASUREMENT THAT MAKES THE ATTRIBUTE HONEST.
+         *
+         * Shift+Tab out of «إلغاء» reaches the preview's own link, OUTSIDE the
+         * dialog — which is correct for a panel in the flow, and is precisely
+         * what `aria-modal="true"` would have been denying. Measured rather
+         * than reasoned about, because this is the fact the markup has to
+         * agree with.
+         */
+        await page.keyboard.press('Shift+Tab');
+        await page.waitForTimeout(120);
+        const escapedDialog = await page.evaluate(() => {
+          const el = document.activeElement;
+          return {
+            inside: !!el?.closest('[data-testid="v2-invalidation-confirm"]'),
+            landedOn: el?.getAttribute('data-testid') ?? el?.tagName ?? '?',
+          };
+        });
+        ok(`${name}: focus CAN leave the surface — so it is genuinely non-modal `
+          + `(Shift+Tab landed on ${escapedDialog.landedOn})`,
+          escapedDialog.inside === false);
+
+        // …and the keyboard can still reach the confirm button from cancel.
+        await page.locator('[data-testid="v2-invalidation-cancel"]').focus();
+        await page.keyboard.press('Tab');
+        await page.waitForTimeout(100);
+        ok(`${name}: Tab from «إلغاء» reaches «متابعة بالتغيير»`,
+          await page.evaluate(() => document.activeElement?.getAttribute('data-testid'))
+            === 'v2-invalidation-confirm-button');
+        // Put focus back on the safe answer before the cancel walk below.
+        await page.locator('[data-testid="v2-invalidation-cancel"]').focus();
         ok(`${name}: no horizontal overflow while it is open`,
           await page.evaluate(() =>
             document.documentElement.scrollWidth <= document.documentElement.clientWidth));
