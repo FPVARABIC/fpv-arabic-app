@@ -21,9 +21,11 @@ import {
 import { diagnoseDeadEnd, type DeadEndDiagnosis } from './deadEndDiagnosis';
 import { InvalidationConfirm, type DroppedLine } from './InvalidationConfirm';
 import { ProposalScreen } from './ProposalScreen';
+import { ReviewScreen } from './ReviewScreen';
+import { reviewEligibility } from './reviewModel';
 import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import { PART_VOCAB } from '@/lib/build/labels';
-import { PROPOSAL } from './copy';
+import { PROPOSAL, REVIEW } from './copy';
 import { ENTRY, NAV, PREVIEW_NOTICE, SUMMARY } from './copy';
 
 /**
@@ -143,7 +145,8 @@ export const BuildV2Preview: React.FC = () => {
   const [answers, setAnswers] = useState<Answers>(emptyAnswers);
   const [trail, setTrail] = useState<Question[]>([{ id: 'goal' }]);
   const [idx, setIdx] = useState(0);
-  const [screen, setScreen] = useState<'entry' | 'questions' | 'summary' | 'proposal'>('entry');
+  const [screen, setScreen] =
+    useState<'entry' | 'questions' | 'summary' | 'proposal' | 'review'>('entry');
   /**
    * AN ANSWER THE READER HAS PRESSED BUT WE HAVE NOT ACTED ON.
    *
@@ -274,6 +277,7 @@ export const BuildV2Preview: React.FC = () => {
    * it lives exactly as long as this component does.
    */
   const goBack = () => {
+    if (screen === 'review') { setScreen('proposal'); return; }
     if (screen === 'proposal') { setScreen('summary'); return; }
     if (screen === 'summary') { setScreen('questions'); return; }
     if (idx > 0) { setIdx(idx - 1); return; }
@@ -444,6 +448,14 @@ export const BuildV2Preview: React.FC = () => {
 
   const blocked = blockedReason();
   const readiness = readinessOf(build, answers.owned);
+  /**
+   * MAY THE PHASE END YET?
+   *
+   * Derived from the engine's answer on every render, so a part changed on the
+   * proposal closes the door the moment it reopens a category — there is no
+   * cached «finished» flag to go stale against the build it was about.
+   */
+  const reviewOpen = build !== null && reviewEligibility(build).open;
 
   /**
    * WHICH ANSWER CLOSED THE DOOR — asked only when the door is shut.
@@ -647,8 +659,58 @@ export const BuildV2Preview: React.FC = () => {
         choices out of the engine's own decisions, so there is no second
         source of truth for it to disagree with.
       */}
-      {screen === 'proposal' && build && (
-        <ProposalScreen build={build} onChoose={chooseFor} onClearChoice={clearChoiceIn} />
+      {/*
+        The proposal also stands in for a review that has stopped being
+        reachable. A reader cannot change a part while ON the review — the only
+        way back to the parts is through the proposal — but rendering the
+        eligibility test as a bare `&&` would mean a blank screen if that ever
+        became possible. Falling back to the parts is the honest failure: the
+        reader lands where the work is, not on nothing.
+      */}
+      {(screen === 'proposal' || (screen === 'review' && !reviewOpen)) && build && (
+        <>
+          <ProposalScreen build={build} onChoose={chooseFor} onClearChoice={clearChoiceIn} />
+          {/*
+            THE DOOR TO THE END OF THE PHASE — AND IT IS DERIVED, NOT COUNTED.
+
+            `reviewEligibility` reads the engine's own answer: a proven path,
+            all eight required categories resolved to real parts, none still a
+            tie, none unavailable, no blockers, no malformed selection. Nothing
+            here counts screens or steps, because a step count drifts the moment
+            the journey changes shape and then opens a review of a build that
+            is not finished.
+
+            MANUAL CHECKS ARE NOT PART OF THAT TEST. «اختيار القطع مكتمل» is a
+            claim about parts; `current-headroom` is a claim about hardware that
+            no catalogue can settle, and gating the ending on it would mean the
+            phase could never end — while teaching that reaching a screen is
+            what clears a safety check.
+
+            When it is not open there is no disabled button either: the reader
+            is on the proposal, and the categories still waiting on them are
+            already named there, on their own cards.
+          */}
+          {reviewOpen && (
+            <button type="button" className="btn-primary" data-testid="v2-open-review"
+              onClick={() => setScreen('review')}
+              style={{
+                justifySelf: 'start', minHeight: 44,
+                padding: '12px 22px', fontSize: 14.5, fontWeight: 800,
+              }}>
+              {REVIEW.open}
+            </button>
+          )}
+        </>
+      )}
+
+      {/*
+        The review recomputes from `build` like every other screen, so a part
+        changed on the proposal is reflected the moment the reader returns —
+        and if that change reopens a category, `reviewEligibility` closes the
+        door behind them rather than leaving a stale summary reachable.
+      */}
+      {screen === 'review' && build && reviewOpen && (
+        <ReviewScreen build={build} onBack={() => setScreen('proposal')} />
       )}
 
       {/*
