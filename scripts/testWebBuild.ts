@@ -603,4 +603,104 @@ console.log('\n[10] The UX pass: Arabic-first vocabulary, the journey\'s arcs, t
     read('web/app/build/page.tsx').includes('الأنسب لأول بناء'));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+console.log('\n[12] V1\'s BOM did not move when Phase 2G-B took the pricing out');
+{
+  /*
+   * THE ONE QUESTION A REFACTOR HAS TO ANSWER OUT LOUD.
+   *
+   * Phase 2G-B needed the price arithmetic and the three category tiers in
+   * BUILD V2. They lived in `bom.ts`, which imports `draft.ts`, which imports
+   * `saveAssemblyProject` — so reusing them where they were would have pulled
+   * the project WRITER into a journey whose whole promise is that it writes
+   * nothing. They moved to `web/lib/build/bomPricing.ts`, a module that
+   * imports one TYPE and no behaviour, and `bom.ts` now delegates.
+   *
+   * V1 must not be able to tell. Not «looks equivalent» — IS, over every draft
+   * shape the catalogue can produce, against an answer recorded BEFORE the
+   * change from canonical 50992c2 (see scripts/snapshotBom.ts, which refuses
+   * to regenerate it).
+   */
+  const baseline = JSON.parse(read('scripts/fixtures/computeBom.pre2gb.json')) as {
+    sourceCommit: string;
+    cases: { label: string; draft: Parameters<typeof computeBom>[0]; bom: unknown }[];
+  };
+
+  ok('the baseline records the commit whose BEHAVIOUR it froze, not the tree that ran it',
+    /^[0-9a-f]{40}$/.test(baseline.sourceCommit));
+  /*
+   * A baseline of two drafts would pass anything. This is the assertion that
+   * makes the comparison below mean something: it covers every category, at
+   * three catalogue depths, with externals, with unpriced parts, and with ids
+   * that resolve to nothing.
+   */
+  ok('the baseline is broad enough to be evidence — every category, several ways',
+    baseline.cases.length >= 3 * Object.keys(PART_CATEGORY_MAP).length);
+
+  let identical = 0;
+  const drifted: string[] = [];
+  for (const c of baseline.cases) {
+    if (JSON.stringify(computeBom(c.draft)) === JSON.stringify(c.bom)) identical++;
+    else drifted.push(c.label);
+  }
+  ok(`computeBom is byte-identical to pre-2G-B on all ${baseline.cases.length} drafts`
+    + (drifted.length ? ` — drifted: ${drifted.slice(0, 5).join(', ')}` : ''),
+    identical === baseline.cases.length);
+
+  /*
+   * AND THE BASELINE IS NOT VACUOUS.
+   *
+   * Every guard here is an equality, and an equality between two things that
+   * are always empty passes forever. So: the frozen answers must actually
+   * contain lines, prices and an unpriced count, or «identical» is a statement
+   * about nothing.
+   */
+  const boms = baseline.cases.map(c => c.bom as {
+    lines: unknown[]; priceMinUSD: number; priceMaxUSD: number;
+    unpricedCount: number; missingRequiredCount: number;
+  });
+  ok('— and the frozen answers carry real lines, real money and real gaps',
+    boms.every(b => b.lines.length === Object.keys(PART_CATEGORY_MAP).length)
+    && boms.some(b => b.priceMaxUSD > 0)
+    && boms.some(b => b.unpricedCount > 0)
+    && boms.some(b => b.missingRequiredCount > 0));
+
+  /*
+   * THE TWO TRUTHS ABOUT «WHAT A BUILD NEEDS», WHICH MUST NOT DRIFT APART.
+   *
+   * The engine decides what to search for; the BOM decides what to report as
+   * missing. They are separate constants in separate layers, and Phase 2G-B's
+   * review screen reads the ENGINE's — so if these two ever disagree, the
+   * review and the BOM would be describing different builds.
+   */
+  const { REQUIRED_BUILD_CATEGORIES } =
+    await import('../src/data/assembly/recommendation/eligibility');
+  ok('the BOM\'s eight and the engine\'s eight are the same eight, in the same order',
+    JSON.stringify(REQUIRED_CATEGORIES) === JSON.stringify([...REQUIRED_BUILD_CATEGORIES]));
+
+  /*
+   * THE SHARED SEAM IS THE SMALLEST HONEST ONE.
+   *
+   * `bomPricing.ts` exists to be importable from a journey that must not
+   * acquire persistence. If it ever learns about a draft, the project store,
+   * or the network, the import it was extracted to make safe stops being safe
+   * — and nothing else in the repository would notice.
+   */
+  const pricing = read('web/lib/build/bomPricing.ts');
+  ok('the shared pricing seam imports a type and nothing else',
+    (pricing.match(/^import .*/gm) ?? []).every(l => l.startsWith('import type ')));
+  ok('— and knows nothing about drafts, storage or the network',
+    !/\b(BuildDraft|localStorage|saveAssemblyProject|loadDraft|fetch)\b/
+      .test(stripComments(pricing)));
+  /*
+   * And V1 still reaches it the way it always did: `bom.ts` re-exports the
+   * names it used to define, so no V1 caller had to change an import.
+   */
+  const bomSrc = read('web/lib/build/bom.ts');
+  ok('V1 callers still import the tiers from bom.ts — the move was invisible to them',
+    /export\s*\{[^}]*REQUIRED_CATEGORIES/.test(bomSrc)
+    && /export\s*\{[^}]*RECOMMENDED_CATEGORIES/.test(bomSrc)
+    && /export\s*\{[^}]*OPTIONAL_CATEGORIES/.test(bomSrc));
+}
+
 console.log(`\n✅ testWebBuild: ${passed} assertions passed`);

@@ -149,6 +149,26 @@ jobs:
           # compared against a snapshot taken from canonical before any of this
           # existed. `snapshot:recommendation` refuses to overwrite that file.
           npm run test:reader-selection
+          # WHERE «اختيار القطع» ENDS, AND WHAT IT IS ALLOWED TO SAY.
+          #
+          # An ending is the most dangerous screen in this product: it is the
+          # one a reader screenshots and the one they read as permission.
+          # «اكتمل اختيار القطع» is one short step from «I am done», and the
+          # other end of that step is a drone with props on it.
+          #
+          # So almost every assertion here is a REFUSAL — no «متوافق بالكامل»
+          # over an open manual check, no total that quietly drops the parts
+          # with no documented price, no accessory priced into a build nobody
+          # bought it for, no GPS turned into a missing part, and no «ابدأ
+          # التجميع» leading to a phase that does not exist. None of those
+          # fails loudly: each produces a screen that looks finished and
+          # generous, which is why they run on every commit.
+          #
+          # The screen is RENDERED with React's server renderer and the claims
+          # are made against the HTML a reader would receive. Three times in
+          # this journey a structural grep stood in for a behavioural claim and
+          # passed while the claim was false.
+          npm run test:build-v2-review
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters
