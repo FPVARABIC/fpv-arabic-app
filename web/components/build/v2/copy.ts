@@ -238,6 +238,150 @@ export const INVALIDATION = {
 } as const;
 
 /**
+ * THE END OF «اختيار القطع» — AND THE THINGS IT MUST NOT SAY
+ * ==========================================================
+ *
+ * Phase 2 had no ending. A reader resolved every tie, looked at eight settled
+ * cards, and the journey stopped: no list to take to a shop, no total, no
+ * statement of what was still unknown, and the only control at the bottom was
+ * «رجوع».
+ *
+ * This screen is that ending. Every sentence on it is about PARTS, and the
+ * discipline of the whole file is the gap between two claims that sound alike:
+ *
+ *     «اكتمل اختيار القطع الأساسية»      is true here
+ *     «الدرون جاهز»                       is not, and never is on this screen
+ *
+ * A reader who finishes choosing parts has finished choosing parts. They have
+ * not verified a solder joint, measured a motor screw, or checked that their
+ * ESC can take what their motors will pull — and the manual check that says so
+ * is still open when they arrive, because reaching an end screen is not
+ * evidence about hardware.
+ *
+ * So there is no celebration here, no tick, no «مبروك», and no live button
+ * into a phase that does not exist.
+ */
+export const REVIEW = {
+  /*
+   * The name of the state, on the door out of the proposal.
+   *
+   * There is no separate `title`: the review's own heading is `completeTitle`,
+   * which says something this does not. A second identical string sat here
+   * unrendered until the dead-copy guard caught it.
+   */
+  open: 'مراجعة البناء',
+  /*
+   * THE HEADLINE AND ITS IMMEDIATE CORRECTION, AS ONE THOUGHT.
+   *
+   * «اكتمل اختيار القطع الأساسية» on its own is the sentence a reader turns
+   * into «I am done». The second half is not a disclaimer bolted on — it is
+   * the half that makes the first half safe to read, so it is never rendered
+   * without it.
+   */
+  completeTitle: 'اكتمل اختيار القطع الأساسية',
+  completeLead:
+    'هذا يعني أن القطع الأساسية الثماني حُسمت، وليس أن الدرون أصبح جاهزًا '
+    + 'للتجميع أو التشغيل أو الطيران.',
+
+  /** The eight. */
+  partsTitle: 'القطع الأساسية',
+  /*
+   * WHO CHOSE IT — four different sentences, because they are four different
+   * facts. «اقترحناه لك» is not «اخترتها», and neither is «قطعة لديك». The
+   * domain keeps them apart with `selectionSource`; flattening them here would
+   * undo that at the last screen, which is the one a reader screenshots.
+   */
+  provenance: {
+    recommended: 'اقترحه النظام',
+    onlyCompatible: 'الخيار الوحيد المتوافق في الكتالوج',
+    selected: 'اخترتها بنفسك',
+    owned: 'قطعة لديك',
+  },
+
+  /*
+   * PRICE — A RANGE FROM THE CATALOGUE, AND A COUNT OF WHAT IS OUTSIDE IT.
+   *
+   * `priceRangeUSD` is documented or absent. There is no midpoint, no
+   * estimate, no shipping, no tax, no currency conversion. The exclusions are
+   * stated ON the screen rather than in a footnote, because a number that
+   * looks like a total and is not one is worse than no number.
+   */
+  price: {
+    title: 'النطاق السعري الموثّق',
+    lead: 'مجموع الأسعار الموثّقة في الكتالوج للقطع الأساسية المختارة فقط.',
+    /** Rendered beside the range whenever some part has no documented price. */
+    unpricedNote: 'قطع من الأساسيات بلا سعر موثّق في الكتالوج، لذلك هذا ليس '
+      + 'السعر الكامل للبناء.',
+    /** When the catalogue documents none of them, a range would be a lie. */
+    noneDocumented: 'لا يوجد سعر موثّق لأيٍّ من القطع المختارة، فلا نعرض نطاقًا.',
+    /** Said plainly, every time, priced or not. */
+    excludes: 'لا يشمل الشحن ولا الضرائب ولا القطع الموصى بها أو الاختيارية.',
+  },
+
+  /*
+   * COMPATIBILITY, IN TWO SENTENCES THAT MUST STAY SEPARATE.
+   *
+   * «لم نجد مانعًا» is a statement about what the DATA could check. «تبقى
+   * فحوص يدوية» is a statement about what it could not. Merging them into
+   * «متوافق بالكامل» is precisely the claim this journey refuses to make, and
+   * it is the easiest one to make by accident.
+   */
+  compat: {
+    title: 'التوافق',
+    noBlockers: 'لم نجد مانع توافق معروفًا في البيانات الحالية.',
+    stillManual: 'وتبقى فحوص يدوية لا يحسمها الكتالوج — تحتها مباشرة.',
+  },
+
+  /** Open, and not closed by arriving here. */
+  manual: {
+    title: 'يحتاج تأكيدًا منك قبل الانتقال للتجميع',
+    lead: 'لا يستطيع الكتالوج حسم هذه. تأكيدها الفعلي جزء من مرحلة التجميع '
+      + 'الآمن، لا من هذه الشاشة.',
+  },
+
+  /*
+   * THE RECOMMENDED TIER — NAMED, NOT CHOSEN.
+   *
+   * The engine does not rank a capacitor or a buzzer, so this screen must not
+   * pretend it picked one. It names the CATEGORY and says why the tier exists,
+   * and stops there. Rendering every accessory SKU by default is V1's step 10
+   * rebuilt at the end of the journey instead of the middle.
+   */
+  recommended: {
+    title: 'موصى بها قبل التجميع',
+    lead: 'ليست من القطع الأساسية الثماني، ولم يرشّح النظام منتجًا بعينه منها. '
+      + 'غير محسوبة في النطاق السعري أعلاه.',
+  },
+  /*
+   * AND THE OPTIONAL ONE, KEPT APART.
+   *
+   * A GPS is not a missing part and not a recommended one: it changes what the
+   * drone can do, not whether it flies. «ناقص» would be false and «موصى به
+   * للجميع» would be an editorial claim the catalogue does not make.
+   */
+  optional: {
+    title: 'اختيارية',
+    lead: 'ليست مطلوبة لاكتمال البناء، ولا تدخل في النطاق السعري أعلاه.',
+  },
+  /** Said once, for both tiers: nothing here was added for you. */
+  extrasNotChosen: 'لم تُختَر',
+
+  /*
+   * THE HANDOFF — AND WHY IT IS NOT A BUTTON.
+   *
+   * The next phase does not exist yet. A live «ابدأ التجميع» would be a door
+   * painted on a wall, and the reader who presses it learns that the product
+   * lies about what it has. So the phase is NAMED, the state is stated, and
+   * the only real action on this screen goes backwards to the parts.
+   */
+  handoff: {
+    title: 'ما بعد اختيار القطع',
+    body: 'المرحلة التالية هي التجميع الآمن. لم تُفتح في هذه المعاينة بعد.',
+  },
+  back: 'الرجوع لتعديل القطع',
+} as const;
+
+/**
  * THE PROPOSAL SCREEN — PHASE 2C.
  *
  * Every number on this screen is derived from the engine's decisions. None of

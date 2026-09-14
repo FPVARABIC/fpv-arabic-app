@@ -10,8 +10,14 @@ import { arabicNumber } from './arabicCount';
 import { compatRuleLabelAr } from './compatLabels';
 import { partFacts, partNoteTag, partWhyTag } from './partFacts';
 
-/** A product name is Latin text inside an Arabic sentence. Isolate it. */
-const Ltr: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+/**
+ * A product name is Latin text inside an Arabic sentence. Isolate it.
+ *
+ * Exported since Phase 2G-B so the review screen uses this exact contract
+ * rather than a second `<bdi>` of its own — one isolation rule for every Latin
+ * string in the journey, so a fix to it reaches all of them.
+ */
+export const Ltr: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <bdi dir="ltr" style={{ unicodeBidi: 'isolate' }}>{children}</bdi>
 );
 

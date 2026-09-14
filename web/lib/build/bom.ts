@@ -22,15 +22,28 @@ import { PART_CATEGORY_MAP } from '@core/data/project/store';
 import type { BasePart } from '@core/data/assembly/types';
 import type { BuildDraft } from './draft';
 import { draftParts } from './draft';
+import {
+  OPTIONAL_CATEGORIES, RECOMMENDED_CATEGORIES, REQUIRED_CATEGORIES, summarisePrices,
+} from './bomPricing';
 
-export const REQUIRED_CATEGORIES: readonly string[] = [
-  'frames', 'motors', 'propellers', 'escs', 'flightControllers',
-  'receivers', 'videoUnits', 'batteries',
-];
-
-export const RECOMMENDED_CATEGORIES: readonly string[] = ['capacitors', 'buzzers', 'tools'];
-
-export const OPTIONAL_CATEGORIES: readonly string[] = ['gps'];
+/*
+ * THE TIERS AND THE ARITHMETIC NOW LIVE IN `bomPricing.ts`.
+ *
+ * Re-exported here, unchanged, because this is where every caller already
+ * looks for them and there is no reason to make V1 move. They were separated
+ * for one reason: this file imports `draft.ts`, which imports the project
+ * STORE'S WRITER, and BUILD V2 needs the tiers and the price sums while
+ * promising no persistence. «We do not call it» is a weaker promise than «it
+ * is not in the bundle».
+ *
+ * Nothing about V1 changed. `computeBom` still lives here, still takes a
+ * `BuildDraft`, and `scripts/testWebBuild.ts` pins its output against a
+ * characterization taken before the extraction.
+ */
+export {
+  OPTIONAL_CATEGORIES, RECOMMENDED_CATEGORIES, REQUIRED_CATEGORIES, summarisePrices,
+};
+export type { PriceSummary } from './bomPricing';
 
 export type BomStatus = 'chosen' | 'external' | 'missing-required' | 'missing-recommended' | 'skipped-optional';
 
@@ -54,9 +67,13 @@ export interface BomSummary {
 export function computeBom(draft: BuildDraft): BomSummary {
   const parts = draftParts(draft);
   const lines: BomLine[] = [];
-  let priceMinUSD = 0;
-  let priceMaxUSD = 0;
-  let unpricedCount = 0;
+  /*
+   * Collected in the SAME ORDER the old inline accumulator ran in — required,
+   * then recommended, then optional — and summed once at the end. The
+   * categories outside those three tiers still get a line and still contribute
+   * no price, exactly as before.
+   */
+  const pricedParts: BasePart[] = [];
   let missingRequiredCount = 0;
 
   const push = (category: string, requiredness: BomStatus) => {
@@ -64,12 +81,7 @@ export function computeBom(draft: BuildDraft): BomSummary {
     const externalName = draft.externalParts[category];
     if (part) {
       lines.push({ category, status: 'chosen', part });
-      if (part.priceRangeUSD) {
-        priceMinUSD += part.priceRangeUSD[0];
-        priceMaxUSD += part.priceRangeUSD[1];
-      } else {
-        unpricedCount++;
-      }
+      pricedParts.push(part);
       return;
     }
     if (externalName) {
@@ -93,5 +105,6 @@ export function computeBom(draft: BuildDraft): BomSummary {
     }
   }
 
+  const { priceMinUSD, priceMaxUSD, unpricedCount } = summarisePrices(pricedParts);
   return { lines, priceMinUSD, priceMaxUSD, unpricedCount, missingRequiredCount };
 }
