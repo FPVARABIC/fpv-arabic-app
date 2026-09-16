@@ -298,7 +298,35 @@ section('3 — CONFIRMATIONS ARE NAMES, NOT POSITIONS');
     holdsRetired !== null
     && !ids.isKnownConfirmationId('prb-4')
     && !model.isStageSatisfied(holdsRetired, 'pre-power'));
-  ok('16b. a retired id can never be re-registered',
+  /*
+   * THE RETIREMENT RECORD ITSELF, AND WHY THESE ASSERTIONS ARE SHAPED SO.
+   *
+   * The first version of this guard was `SAFETY_CONFIRMATIONS.every(c =>
+   * !RETIRED.has(c.id))` — which passes perfectly when RETIRED is EMPTY. A
+   * mutation that deleted the whole retirement record survived it, because
+   * `prb-4` is absent from the registry too and so stays unknown either way.
+   *
+   * The mutation is inert today and dangerous tomorrow: the moment somebody
+   * re-adds `prb-4` to the registry, an empty retirement set stops being the
+   * thing that refuses it, and every device still holding that confirmation
+   * silently resurrects it.
+   *
+   * So the record is asserted to EXIST, to name a real id somebody could
+   * plausibly re-add, and to be what `isKnownConfirmationId` actually consults.
+   */
+  ok('16b. the retirement record is not empty — the mechanism is real, not decorative',
+    ids.RETIRED_CONFIRMATION_IDS.size > 0);
+  ok('16c. every retired id is a REAL shared-checklist id — retirement is about something that exists',
+    [...ids.RETIRED_CONFIRMATION_IDS].every(id =>
+      checklistsData.some(g => g.items.some(i => i.id === id))));
+  ok('16d. `prb-4` specifically is retired — it named a product, and the policy accepts a method',
+    ids.RETIRED_CONFIRMATION_IDS.has('prb-4')
+    && /Smoke Stopper/.test(checklistsData.find(g => g.id === 'pre-battery')
+      ?.items.find(i => i.id === 'prb-4')?.text ?? ''));
+  ok('16e. a retired id is refused by the registry lookup and by satisfaction, both',
+    [...ids.RETIRED_CONFIRMATION_IDS].every(id =>
+      !ids.isKnownConfirmationId(id) && ids.confirmationById(id) === undefined));
+  ok('16f. no retired id may appear in the registry',
     ids.SAFETY_CONFIRMATIONS.every(c => !ids.RETIRED_CONFIRMATION_IDS.has(c.id)));
 
   const withUnknown = model.validateSession({
