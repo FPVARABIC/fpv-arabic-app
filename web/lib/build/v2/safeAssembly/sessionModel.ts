@@ -728,7 +728,14 @@ export function validateSession(raw: unknown): BuildV2Session | null {
   const hasQuarantine = raw.quarantine !== undefined;
   if (reviewState === 'reviewed') {
     if (raw.reviewedBuildFingerprint === undefined) return null;
-    if (hasQuarantine) return null;
+    /*
+     * A reviewed record must not hold a quarantine either — but that is
+     * refused ONCE, below, by the check that quarantine is only meaningful
+     * while revalidation is pending. A second copy of the rule here looked
+     * thorough and was dead: a probe deleting it changed nothing, because the
+     * other one caught the case anyway. A guard no test can fail without is
+     * not a guard, so the duplicate is gone and the real one is probed.
+     */
   } else {
     /* A fingerprint outside `reviewed` is a claim with nothing behind it. */
     if (raw.reviewedBuildFingerprint !== undefined) return null;
