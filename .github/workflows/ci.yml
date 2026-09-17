@@ -169,6 +169,21 @@ jobs:
           # this journey a structural grep stood in for a behavioural claim and
           # passed while the claim was false.
           npm run test:build-v2-review
+          # THE RECORD THAT OUTLIVES A SESSION.
+          #
+          # «التجميع الآمن» happens over days, so it persists — and that one
+          # decision creates every hazard this suite closes. V1 stores safety
+          # confirmations as ARRAY INDICES into checklists that are edited like
+          # any other content; insert one item and a reader returns to green
+          # ticks for requirements they never read. Nothing throws, nothing is
+          # red, and the existing count guard passes.
+          #
+          # So V2 stores NAMES, reusing the stable ids `checklistsData` has
+          # carried all along, and a confirmation earned on one build can never
+          # count for another — a tick is a claim about an object on a bench,
+          # not about a plan. Both are asserted behaviourally, against the real
+          # engine and a real store round trip.
+          npm run test:safe-assembly-foundation
           # THE ASSEMBLY SUITE, WHICH USED TO RUN NOWHERE.
           #
           # It asserts the phone's build surface and — the part that matters
