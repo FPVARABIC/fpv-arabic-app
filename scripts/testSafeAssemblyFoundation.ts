@@ -405,13 +405,24 @@ section('4 — WORK BELONGS TO A BUILD, AND FOLLOWS IT NOWHERE');
     && ineligible.reason === 'no-longer-eligible'
     && Object.keys(ineligible.session.assembly.confirmations).length === 0);
 
-  const neverReviewed = model.validateSession({
+  /*
+   * PROGRESS WITH NO REVIEWED BUILD, REFUSED AT BOTH LEVELS.
+   *
+   * The validator now rejects such a record outright, so it can never come off
+   * a device. `reconcileSession` refuses it too, for a record constructed in
+   * memory that never went through storage — two independent layers, because
+   * this is the shape that would hand somebody a stranger's safety work.
+   */
+  const neverReviewedRaw = {
     ...model.createSession(INPUT as never, {}),
     assembly: { ...s.assembly },
-  })!;
-  ok('25c. progress with no reviewed build is never honoured',
-    model.reconcileSession(neverReviewed, { fingerprint: REAL_FP, reviewEligible: true })
-      .status === 'needs-build-revalidation');
+  };
+  ok('25c. a stored record with progress but no reviewed build is refused outright',
+    model.validateSession(neverReviewedRaw) === null);
+  ok('25c2. …and reconciliation refuses it too, for one built in memory',
+    model.reconcileSession(
+      neverReviewedRaw as never, { fingerprint: REAL_FP, reviewEligible: true },
+    ).status === 'needs-build-revalidation');
 
   /* Editing the sources drops the reviewed build without waiting to be told. */
   const edited = model.updatePhase1Sources(s, { ...INPUT, cellCount: 4 } as never, {});
@@ -565,6 +576,141 @@ section('4b — AN EDIT QUARANTINES, IT DOES NOT DEMOLISH');
     model.validateSession({ ...worked, reviewedBuildFingerprint: undefined }) === null);
   ok('7h. an unknown reviewState is refused',
     model.validateSession({ ...worked, reviewState: 'in-progress' }) === null);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('4c — THE VALIDATOR ENFORCES WHAT THE TRANSITIONS ENFORCE');
+{
+  /*
+   * A RECORD DOES NOT HAVE TO COME FROM THE TRANSITIONS.
+   *
+   * It comes off a device, where it can be hand-edited, half-written, or left
+   * by a version that disagreed. Proving SHAPE is not enough: every field
+   * below is well-formed and every state is one `completeAssemblyStage` would
+   * refuse to produce. A validator that accepted them would hand the reader a
+   * finished first power they never performed.
+   */
+  const full = (() => {
+    let x = throughPrePower();
+    x = model.completeAssemblyStage(x, 'pre-power');
+    for (const c of ids.confirmationsForStage('first-power')) x = model.confirmSafetyItem(x, c.id, 3);
+    return model.completeAssemblyStage(x, 'first-power');
+  })();
+  const fresh = model.createSession(INPUT as never, {});
+
+  /* ── UNREVIEWED: no build, so nothing physical can belong to one ───────── */
+  ok('1. unreviewed carrying a reviewed fingerprint is refused',
+    model.validateSession({ ...fresh, reviewedBuildFingerprint: REAL_FP }) === null);
+  ok('2. unreviewed carrying a completed stage is refused',
+    model.validateSession({
+      ...fresh,
+      assembly: { ...fresh.assembly, completedStageIds: ['workspace-frame'] },
+    }) === null);
+  ok('3. unreviewed carrying a safety confirmation is refused',
+    model.validateSession({
+      ...fresh,
+      assembly: { ...fresh.assembly, confirmations: { 'prb-1': { state: 'user-confirmed', at: 1 } } },
+    }) === null);
+  ok('3b. …and a manual review, or a first-power method, equally',
+    model.validateSession({
+      ...fresh,
+      assembly: {
+        ...fresh.assembly,
+        manualReviews: { 'current-headroom': { state: 'user-confirmed-review', at: 1 } },
+      },
+    }) === null
+    && model.validateSession({
+      ...fresh, assembly: { ...fresh.assembly, firstPowerMethod: 'smoke-stopper' },
+    }) === null);
+  ok('3c. unreviewed carrying a quarantine is refused',
+    model.validateSession({
+      ...fresh,
+      quarantine: { fingerprint: REAL_FP, assembly: full.assembly },
+    }) === null);
+
+  /* ── NEEDS-REVALIDATION: the build is in doubt, so nothing is active ───── */
+  const pending = model.updatePhase1Sources(
+    full, { ...INPUT, owned: { rcSystem: 'ExpressLRS' } } as never, REAL.selectedParts);
+  ok('4. needs-revalidation carrying ACTIVE progress is refused',
+    model.validateSession({ ...pending, assembly: full.assembly }) === null);
+  ok('5. needs-revalidation carrying a reviewed fingerprint is refused',
+    model.validateSession({ ...pending, reviewedBuildFingerprint: REAL_FP }) === null);
+
+  /* ── REVIEWED: may hold progress, and it must be one the code could reach ─ */
+  ok('6. reviewed with no fingerprint is refused',
+    model.validateSession({ ...full, reviewedBuildFingerprint: undefined }) === null);
+
+  const strip = (from: typeof full, drop: (a: typeof full.assembly) => typeof full.assembly) =>
+    model.validateSession({ ...from, assembly: drop(from.assembly) });
+
+  ok('7. reviewed claiming pre-power complete WITHOUT the headroom review is refused',
+    strip(full, a => ({ ...a, manualReviews: {} })) === null);
+  ok('8. reviewed claiming first-power complete WITHOUT pre-power is refused',
+    strip(full, a => ({
+      ...a, completedStageIds: a.completedStageIds.filter(x => x !== 'pre-power'),
+    })) === null);
+  ok('9. reviewed claiming first-power complete WITHOUT a current-limited method is refused',
+    strip(full, a => ({ ...a, firstPowerMethod: undefined })) === null);
+  ok('10. reviewed claiming a stage whose prerequisite is absent is refused',
+    strip(full, a => ({
+      ...a, completedStageIds: a.completedStageIds.filter(x => x !== 'workspace-frame'),
+    })) === null);
+  ok('10b. …and claiming a stage whose own confirmation is missing is refused',
+    strip(full, a => {
+      const confirmations = { ...a.confirmations };
+      delete confirmations['asm-video-antenna-attached'];
+      return { ...a, confirmations };
+    }) === null);
+  /* The impossible state named in the brief, exactly as written. */
+  ok('10c. the bare «first-power complete, nothing behind it» record is refused',
+    model.validateSession({
+      ...full,
+      assembly: {
+        completedStageIds: ['first-power'],
+        confirmations: {}, manualReviews: {},
+      },
+    }) === null);
+
+  ok('11. a record the REAL transitions produced is accepted, unchanged',
+    deepEqual(model.validateSession(full), full));
+  /*
+   * And the narrow claim stays narrow: §5 warns against inventing a rule that
+   * every stored confirmation must belong to a completed stage. The
+   * transitions produce that constantly.
+   */
+  ok('11b. a confirmation held for a stage not yet complete is still accepted',
+    model.validateSession(
+      model.confirmSafetyItem(throughPrePower(), 'prb-1', 1),
+    ) !== null);
+
+  /* ── QUARANTINE IS VALIDATED THE SAME WAY, BECAUSE IT CAN COME BACK ────── */
+  ok('12. a quarantine holding an impossible first-power completion is refused',
+    model.validateSession({
+      ...pending,
+      quarantine: {
+        fingerprint: REAL_FP,
+        assembly: { completedStageIds: ['first-power'], confirmations: {}, manualReviews: {} },
+      },
+    }) === null);
+  ok('12b. …and one whose held record drops the headroom review is refused too',
+    model.validateSession({
+      ...pending,
+      quarantine: { fingerprint: REAL_FP, assembly: { ...full.assembly, manualReviews: {} } },
+    }) === null);
+
+  mem.clear();
+  ok('13. a quarantine produced by the real transitions is accepted and round-trips',
+    model.validateSession(pending) !== null
+    && store.saveBuildV2Session(pending, 9)
+    && deepEqual(store.loadBuildV2Session(), pending));
+  const back = model.reconcileSession(store.loadBuildV2Session()!, {
+    fingerprint: REAL_FP, reviewEligible: true,
+  });
+  ok('14. …and that same quarantine still restores when the build returns unchanged',
+    back.status === 'valid' && back.restored === true
+    && deepEqual(back.session.assembly, full.assembly)
+    && model.validateSession(back.session) !== null);
+  mem.clear();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -365,26 +365,77 @@ export function setFirstPowerMethod(
  * «I went and read what the catalogue could not tell me». The pre-power stage
  * needs both, and treating the second as an aside is how first power became
  * reachable without anyone looking at the motor's current data.
+ *
+ * Asked of a PROGRESS RECORD rather than a session, because the validator has
+ * to ask it of a quarantined record too — one that is not the session's active
+ * assembly and may later become it. One predicate, two callers, no second
+ * definition of «satisfied» to drift.
  */
-export function isStageSatisfied(session: BuildV2Session, stageId: AssemblyStageId): boolean {
+export function progressSatisfiesStage(
+  progress: AssemblyProgress, stageId: AssemblyStageId,
+): boolean {
   const confirmed = confirmationsForStage(stageId)
-    .every(c => session.assembly.confirmations[c.id]?.state === 'user-confirmed');
+    .every(c => progress.confirmations[c.id]?.state === 'user-confirmed');
   const reviewed = manualReviewsForStage(stageId)
-    .every(r => session.assembly.manualReviews[r.id]?.state === 'user-confirmed-review');
+    .every(r => progress.manualReviews[r.id]?.state === 'user-confirmed-review');
   return confirmed && reviewed;
 }
 
-/** Its own requirements, its prerequisites, and — for first power — a method. */
-export function canCompleteStage(
+export const isStageSatisfied = (
   session: BuildV2Session, stageId: AssemblyStageId,
+): boolean => progressSatisfiesStage(session.assembly, stageId);
+
+/**
+ * Could this stage legitimately be marked complete in this record?
+ *
+ * Its own requirements, its prerequisites, and — for first power alone — a
+ * current-limited method. Progress-level for the same reason as above: this is
+ * exactly the question the validator must ask of every stage a STORED record
+ * claims to have finished.
+ */
+export function canCompleteStageIn(
+  progress: AssemblyProgress, stageId: AssemblyStageId,
 ): boolean {
-  if (!isStageSatisfied(session, stageId)) return false;
-  if (!STAGE_PREREQUISITES[stageId].every(p => session.assembly.completedStageIds.includes(p))) {
+  if (!progressSatisfiesStage(progress, stageId)) return false;
+  if (!STAGE_PREREQUISITES[stageId].every(p => progress.completedStageIds.includes(p))) {
     return false;
   }
-  if (stageId === 'first-power') return canEnterFirstPower(session);
+  if (stageId === 'first-power') {
+    return progress.firstPowerMethod !== undefined
+      && progressSatisfiesStage(progress, 'pre-power');
+  }
   return true;
 }
+
+export const canCompleteStage = (
+  session: BuildV2Session, stageId: AssemblyStageId,
+): boolean => canCompleteStageIn(session.assembly, stageId);
+
+/**
+ * IS THIS RECORD OF PHYSICAL WORK ONE THE TRANSITIONS COULD HAVE PRODUCED?
+ *
+ * The transitions refuse to mark a stage complete without its evidence. But a
+ * record does not have to come from the transitions — it comes off a device,
+ * where it can be hand-edited, half-written, or produced by a version that
+ * disagreed. A validator that proved only SHAPE would accept this:
+ *
+ *     completedStageIds: ['first-power']
+ *     firstPowerMethod:  undefined
+ *     confirmations:     {}
+ *
+ * Every field well-formed; the state impossible. And the reader would be shown
+ * a finished first power they never performed.
+ *
+ * So every CLAIMED completion is re-derived from the same registries the
+ * transitions use — the requirement lists are not restated here. Note what is
+ * deliberately NOT checked: a confirmation held for a stage that is not yet
+ * complete is perfectly normal, and the transitions produce it constantly.
+ * The claim being defended is narrower and is the one that matters — IF a
+ * stage is claimed complete, the evidence and prerequisites for that
+ * completion must be present.
+ */
+export const isProgressCoherent = (progress: AssemblyProgress): boolean =>
+  progress.completedStageIds.every(stageId => canCompleteStageIn(progress, stageId));
 
 /**
  * May the reader put current into the build?
@@ -398,7 +449,7 @@ export function canCompleteStage(
 export function canEnterFirstPower(session: BuildV2Session): boolean {
   return acceptsProgress(session)
     && session.assembly.firstPowerMethod !== undefined
-    && isStageSatisfied(session, 'pre-power')
+    && progressSatisfiesStage(session.assembly, 'pre-power')
     && session.assembly.completedStageIds.includes('pre-power');
 }
 
@@ -413,14 +464,9 @@ export function canEnterFirstPower(session: BuildV2Session): boolean {
 function pruneCompletions(session: BuildV2Session): BuildV2Session {
   let completed = session.assembly.completedStageIds;
   for (;;) {
-    const kept = completed.filter(stageId => {
-      if (!isStageSatisfied(session, stageId)) return false;
-      if (!STAGE_PREREQUISITES[stageId].every(p => completed.includes(p))) return false;
-      if (stageId === 'first-power' && session.assembly.firstPowerMethod === undefined) {
-        return false;
-      }
-      return true;
-    });
+    /* The same question the validator asks, against the record as it stands. */
+    const kept = completed.filter(stageId => canCompleteStageIn(
+      { ...session.assembly, completedStageIds: completed }, stageId));
     if (kept.length === completed.length) break;
     completed = kept;
   }
@@ -631,7 +677,17 @@ function validateProgress(raw: unknown): AssemblyProgress | null {
 
   if (raw.firstPowerMethod !== undefined && !isFirstPowerMethod(raw.firstPowerMethod)) return null;
 
-  return raw as unknown as AssemblyProgress;
+  const progress = raw as unknown as AssemblyProgress;
+  /*
+   * SHAPE IS NOT ENOUGH. A stored record must be one the transitions could
+   * have produced — see `isProgressCoherent`. This runs for the ACTIVE record
+   * and for a quarantined one alike: quarantine is not inactive forever, and a
+   * malformed one whose fingerprint later matches would be handed back as
+   * trusted progress.
+   */
+  if (!isProgressCoherent(progress)) return null;
+
+  return progress;
 }
 
 const REVIEW_STATES: ReadonlySet<string> = new Set<ReviewState>([
@@ -653,21 +709,51 @@ export function validateSession(raw: unknown): BuildV2Session | null {
   if (raw.reviewedBuildFingerprint !== undefined
     && (typeof raw.reviewedBuildFingerprint !== 'string'
       || raw.reviewedBuildFingerprint.length === 0)) return null;
-  /* A reviewed session without the build it reviewed is not a session. */
-  if (reviewState === 'reviewed' && raw.reviewedBuildFingerprint === undefined) return null;
+
+  /*
+   * THE THREE STATES, AND WHAT EACH ONE IS ALLOWED TO CONTAIN.
+   *
+   * These are the shapes the transition API actually returns. A validator that
+   * accepted anything else would let a stored record describe a session the
+   * code itself can never reach — and every consumer downstream would be
+   * reasoning about a state that has no meaning.
+   *
+   *   reviewed             — has the build it reviewed; may hold real progress
+   *                          against it; nothing in quarantine
+   *   needs-revalidation   — the build's identity is in doubt, so no active
+   *                          progress and no fingerprint; work, if any, is held
+   *                          aside
+   *   unreviewed           — no build, so nothing physical can belong to one
+   */
+  const hasQuarantine = raw.quarantine !== undefined;
+  if (reviewState === 'reviewed') {
+    if (raw.reviewedBuildFingerprint === undefined) return null;
+    if (hasQuarantine) return null;
+  } else {
+    /* A fingerprint outside `reviewed` is a claim with nothing behind it. */
+    if (raw.reviewedBuildFingerprint !== undefined) return null;
+  }
 
   const assembly = validateProgress(raw.assembly);
   if (!assembly) return null;
 
+  /*
+   * Physical work belongs to a reviewed build or to nothing. In either other
+   * state the ACTIVE record must be empty — quarantine is where held work
+   * lives, and the emptiness of `assembly` is what makes «no consumer receives
+   * doubtful progress» structural rather than a rule to remember.
+   */
+  if (reviewState !== 'reviewed' && hasProgress(assembly)) return null;
+
   let quarantine: QuarantinedProgress | undefined;
-  if (raw.quarantine !== undefined) {
+  if (hasQuarantine) {
+    /* Quarantine only means something while revalidation is pending. */
+    if (reviewState !== 'needs-revalidation') return null;
     if (!isObject(raw.quarantine)) return null;
     if (typeof raw.quarantine.fingerprint !== 'string'
       || raw.quarantine.fingerprint.length === 0) return null;
     const held = validateProgress(raw.quarantine.assembly);
     if (!held) return null;
-    /* Quarantine only means something while revalidation is pending. */
-    if (reviewState !== 'needs-revalidation') return null;
     quarantine = { fingerprint: raw.quarantine.fingerprint, assembly: held };
   }
 
