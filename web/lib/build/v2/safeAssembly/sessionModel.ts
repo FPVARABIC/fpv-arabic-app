@@ -1,7 +1,7 @@
 import type { RecommendationInput } from '@core/data/assembly/recommendation/types';
 import {
   isAssemblyStageId, isKnownConfirmationId, isManualReviewId, isFirstPowerMethod,
-  confirmationsForStage, ASSEMBLY_STAGE_IDS,
+  confirmationsForStage, manualReviewsForStage, STAGE_PREREQUISITES, ASSEMBLY_STAGE_IDS,
   type AssemblyStageId, type ManualReviewId, type FirstPowerMethod,
 } from './ids';
 
@@ -28,10 +28,6 @@ import {
  * one, and the reader would be assembling against a plan the system no longer
  * stands behind — with no way to tell, because the stored copy looks exactly
  * like a fresh one.
- *
- * Storing sources and replaying them costs one engine run on load (~4ms) and
- * buys the guarantee that what the reader sees is what the current catalogue
- * actually says.
  *
  * NOTHING HERE TOUCHES STORAGE
  * ----------------------------
@@ -71,7 +67,33 @@ export interface ManualReviewState {
   readonly at: number;
 }
 
+/**
+ * WHERE THE SESSION STANDS RELATIVE TO A REVIEWED BUILD.
+ *
+ * `needs-revalidation` is the state that keeps an edit from being destructive.
+ * A reader who changes their budget preference has probably not changed a
+ * single physical part — but this module cannot know that, because it does not
+ * run the engine. So the edit moves the session here, the physical record is
+ * set aside rather than deleted, and `reconcileSession` decides once the engine
+ * has actually answered.
+ */
+export type ReviewState = 'unreviewed' | 'reviewed' | 'needs-revalidation';
+
 /* ── THE SESSION ──────────────────────────────────────────────────────────── */
+
+/**
+ * The Phase-1 answers, WITHOUT the reader's part choices.
+ *
+ * Mechanically derived from the canonical engine type rather than retyped, so
+ * a field added to `RecommendationInput` arrives here automatically and this
+ * never becomes a parallel DTO to keep in step.
+ *
+ * `selectedParts` is subtracted because the session stores it once, beside the
+ * inputs, at `phase1.selectedParts`. Two persisted copies of one answer is two
+ * answers to the same question, and nothing decides which one is right.
+ * `recommendationInputFromSession` puts them back together for the engine.
+ */
+export type Phase1SourceInputs = Omit<RecommendationInput, 'selectedParts'>;
 
 export interface AssemblyProgress {
   readonly currentStageId?: AssemblyStageId;
@@ -81,28 +103,31 @@ export interface AssemblyProgress {
   readonly firstPowerMethod?: FirstPowerMethod;
 }
 
+/**
+ * Physical work set aside while the build is being revalidated.
+ *
+ * It is a SEPARATE FIELD rather than a flag on `assembly` so that no consumer
+ * can receive it by accident. `assembly` is always the usable record; anything
+ * in here is not progress until `reconcileSession` puts it back, and no
+ * transition in this file reads it.
+ */
+export interface QuarantinedProgress {
+  /** The build this work was done against. */
+  readonly fingerprint: string;
+  readonly assembly: AssemblyProgress;
+}
+
 export interface BuildV2Session {
   readonly version: 1;
-  /**
-   * PHASE-1 SOURCES — exactly what the engine is given, nothing beside it.
-   *
-   * `RecommendationInput` is reused rather than restated. A parallel DTO would
-   * be a second place for the question «what does the engine need?» to be
-   * answered, and the two answers would drift the first time the engine gained
-   * a field.
-   */
   readonly phase1: {
-    readonly inputs: RecommendationInput;
+    readonly inputs: Phase1SourceInputs;
     readonly selectedParts: Readonly<Record<string, string>>;
   };
-  /**
-   * The build the reader accepted at the end of «اختيار القطع».
-   *
-   * Absent until they reach the review. Present means: physical progress below
-   * belongs to THIS build and no other.
-   */
+  readonly reviewState: ReviewState;
+  /** The build the reader accepted. Present only while `reviewState` is `reviewed`. */
   readonly reviewedBuildFingerprint?: string;
   readonly assembly: AssemblyProgress;
+  readonly quarantine?: QuarantinedProgress;
 }
 
 const EMPTY_PROGRESS: AssemblyProgress = Object.freeze({
@@ -112,10 +137,29 @@ const EMPTY_PROGRESS: AssemblyProgress = Object.freeze({
 });
 
 export function createSession(
-  inputs: RecommendationInput,
+  inputs: Phase1SourceInputs,
   selectedParts: Readonly<Record<string, string>> = {},
 ): BuildV2Session {
-  return { version: 1, phase1: { inputs, selectedParts }, assembly: EMPTY_PROGRESS };
+  return {
+    version: 1,
+    phase1: { inputs, selectedParts },
+    reviewState: 'unreviewed',
+    assembly: EMPTY_PROGRESS,
+  };
+}
+
+/**
+ * THE ONE PLACE THE ENGINE'S INPUT IS REASSEMBLED.
+ *
+ * Callers rerun `proposeBuild` with this and nothing else. Hand-merging the two
+ * fields at a call site would be a second answer to «what does the engine get?»,
+ * and the first time the two disagreed the build on screen would not be the
+ * build the fingerprint describes.
+ */
+export function recommendationInputFromSession(
+  session: BuildV2Session,
+): RecommendationInput {
+  return { ...session.phase1.inputs, selectedParts: session.phase1.selectedParts };
 }
 
 /* ── TRANSITIONS ──────────────────────────────────────────────────────────── */
@@ -123,25 +167,46 @@ export function createSession(
 /**
  * The reader went back and changed an answer or a part.
  *
- * The reviewed fingerprint is dropped and physical progress is cleared, without
- * waiting to find out whether the build actually changed. That is deliberate:
- * this function does not run the engine, so it cannot know. Clearing here and
- * letting `reconcileSession` restore nothing is the fail-closed direction — the
- * alternative is carrying a fingerprint that may no longer describe the build
- * and hoping something downstream notices.
+ * QUARANTINE, NOT DEMOLITION. The first version of this function deleted the
+ * reviewed fingerprint and every confirmation immediately — before anything had
+ * established that the build actually changed. A reader who switched their
+ * budget answer from «متوازن» to «لا تفضيل» and got back the identical eight
+ * parts lost an evening of soldering confirmations for nothing.
  *
- * The sources themselves survive, because the reader is editing them.
+ * So the physical record is moved aside with the fingerprint it was earned
+ * against, and `reconcileSession` decides its fate once the engine has run. It
+ * is not usable in the meantime — `assembly` is empty and every transition
+ * below refuses while `reviewState` is not `reviewed`.
+ *
+ * Editing twice does not lose the original: a second edit while already in
+ * quarantine keeps the first quarantine, because the work being protected was
+ * done against THAT build, not against the empty record left behind.
  */
 export function updatePhase1Sources(
   session: BuildV2Session,
-  inputs: RecommendationInput,
+  inputs: Phase1SourceInputs,
   selectedParts: Readonly<Record<string, string>>,
 ): BuildV2Session {
-  return {
-    version: 1,
-    phase1: { inputs, selectedParts },
-    assembly: EMPTY_PROGRESS,
-  };
+  const phase1 = { inputs, selectedParts };
+
+  if (session.reviewState === 'needs-revalidation') {
+    return { ...session, phase1 };
+  }
+
+  if (session.reviewState === 'reviewed' && session.reviewedBuildFingerprint !== undefined) {
+    return {
+      version: 1,
+      phase1,
+      reviewState: 'needs-revalidation',
+      assembly: EMPTY_PROGRESS,
+      quarantine: hasProgress(session.assembly)
+        ? { fingerprint: session.reviewedBuildFingerprint, assembly: session.assembly }
+        : undefined,
+    };
+  }
+
+  /* Never reviewed: there is nothing earned against a build to protect. */
+  return { version: 1, phase1, reviewState: 'unreviewed', assembly: EMPTY_PROGRESS };
 }
 
 /** The reader reached the end of «اختيار القطع» with this exact build. */
@@ -152,27 +217,52 @@ export function markBuildReviewed(
    * Re-marking the SAME build is not a reset. A reader who walks back to the
    * review and forward again has not undone their soldering.
    */
-  if (session.reviewedBuildFingerprint === fingerprint) return session;
-  return { ...session, reviewedBuildFingerprint: fingerprint, assembly: EMPTY_PROGRESS };
+  if (session.reviewState === 'reviewed' && session.reviewedBuildFingerprint === fingerprint) {
+    return session;
+  }
+  return {
+    ...session,
+    reviewState: 'reviewed',
+    reviewedBuildFingerprint: fingerprint,
+    assembly: EMPTY_PROGRESS,
+    quarantine: undefined,
+  };
 }
+
+/**
+ * Every transition that records physical work asks this first.
+ *
+ * Progress may only be created against a build the reader has actually
+ * reviewed and that is currently valid. An unreviewed session has no build for
+ * a confirmation to be about; a quarantined one has a build whose identity is
+ * in doubt until the engine settles it.
+ */
+const acceptsProgress = (s: BuildV2Session): boolean => s.reviewState === 'reviewed';
 
 export function setCurrentAssemblyStage(
   session: BuildV2Session, stageId: AssemblyStageId,
 ): BuildV2Session {
+  if (!acceptsProgress(session) || !isAssemblyStageId(stageId)) return session;
   return { ...session, assembly: { ...session.assembly, currentStageId: stageId } };
 }
 
 /**
- * Mark a stage finished — but only when its confirmations are actually held.
+ * Mark a stage finished.
  *
- * The check is here rather than in a caller so there is one answer to «is this
- * stage done?». A caller that could mark a stage complete without it would be a
- * second, weaker definition of completion.
+ * Every precondition is checked HERE rather than left to a screen. A pure model
+ * that can be driven into an impossible state by a direct call has made the UI
+ * the only safety layer, and the UI is the part most likely to be rewritten.
+ *
+ * Refused unless: the session is reviewed and valid; every prerequisite stage
+ * is already complete; every safety confirmation AND manual review the stage
+ * requires is held; and — for first power alone — a current-limited method
+ * exists.
  */
 export function completeAssemblyStage(
   session: BuildV2Session, stageId: AssemblyStageId,
 ): BuildV2Session {
-  if (!isStageSatisfied(session, stageId)) return session;
+  if (!acceptsProgress(session)) return session;
+  if (!canCompleteStage(session, stageId)) return session;
   if (session.assembly.completedStageIds.includes(stageId)) return session;
   return {
     ...session,
@@ -193,7 +283,7 @@ export function completeAssemblyStage(
 export function confirmSafetyItem(
   session: BuildV2Session, id: string, at: number,
 ): BuildV2Session {
-  if (!isKnownConfirmationId(id)) return session;
+  if (!acceptsProgress(session) || !isKnownConfirmationId(id)) return session;
   return {
     ...session,
     assembly: {
@@ -207,29 +297,23 @@ export function confirmSafetyItem(
 }
 
 /**
- * Taking a confirmation back also un-completes anything that rested on it.
+ * Taking a confirmation back also un-completes everything that rested on it.
  *
  * Otherwise a stage stays «complete» while the requirement that made it
- * complete is gone — a completion record that outlives its own evidence.
+ * complete is gone — and, worse, first power stays complete while the
+ * inspection before it does not. `pruneCompletions` walks that to a fixpoint.
  */
 export function revokeSafetyItem(session: BuildV2Session, id: string): BuildV2Session {
   if (!(id in session.assembly.confirmations)) return session;
   const confirmations = { ...session.assembly.confirmations };
   delete confirmations[id];
-  const next: BuildV2Session = { ...session, assembly: { ...session.assembly, confirmations } };
-  return {
-    ...next,
-    assembly: {
-      ...next.assembly,
-      completedStageIds: next.assembly.completedStageIds.filter(s => isStageSatisfied(next, s)),
-    },
-  };
+  return pruneCompletions({ ...session, assembly: { ...session.assembly, confirmations } });
 }
 
 export function confirmManualReview(
   session: BuildV2Session, id: ManualReviewId, at: number,
 ): BuildV2Session {
-  if (!isManualReviewId(id)) return session;
+  if (!acceptsProgress(session) || !isManualReviewId(id)) return session;
   return {
     ...session,
     assembly: {
@@ -243,6 +327,21 @@ export function confirmManualReview(
 }
 
 /**
+ * The symmetric operation, and it exists because the review now GATES a stage.
+ *
+ * A reader who realises they compared the wrong prop must be able to take the
+ * statement back — and taking it back has to withdraw the pre-power completion
+ * and, through it, first power. A review that could only ever be added would be
+ * a one-way door on the most consequential claim in the phase.
+ */
+export function revokeManualReview(session: BuildV2Session, id: string): BuildV2Session {
+  if (!(id in session.assembly.manualReviews)) return session;
+  const manualReviews = { ...session.assembly.manualReviews };
+  delete manualReviews[id];
+  return pruneCompletions({ ...session, assembly: { ...session.assembly, manualReviews } });
+}
+
+/**
  * Record how the reader will limit current on first power.
  *
  * There is no way to record «none». Absence is the state that means the reader
@@ -253,28 +352,80 @@ export function confirmManualReview(
 export function setFirstPowerMethod(
   session: BuildV2Session, method: FirstPowerMethod,
 ): BuildV2Session {
-  if (!isFirstPowerMethod(method)) return session;
+  if (!acceptsProgress(session) || !isFirstPowerMethod(method)) return session;
   return { ...session, assembly: { ...session.assembly, firstPowerMethod: method } };
 }
 
 /* ── DERIVED QUESTIONS ────────────────────────────────────────────────────── */
 
-/** Every confirmation this stage needs, held. Unknown ids cannot contribute. */
+/**
+ * Every requirement this stage has, held.
+ *
+ * Both kinds count. A safety confirmation is «I did this»; a manual review is
+ * «I went and read what the catalogue could not tell me». The pre-power stage
+ * needs both, and treating the second as an aside is how first power became
+ * reachable without anyone looking at the motor's current data.
+ */
 export function isStageSatisfied(session: BuildV2Session, stageId: AssemblyStageId): boolean {
-  return confirmationsForStage(stageId)
+  const confirmed = confirmationsForStage(stageId)
     .every(c => session.assembly.confirmations[c.id]?.state === 'user-confirmed');
+  const reviewed = manualReviewsForStage(stageId)
+    .every(r => session.assembly.manualReviews[r.id]?.state === 'user-confirmed-review');
+  return confirmed && reviewed;
+}
+
+/** Its own requirements, its prerequisites, and — for first power — a method. */
+export function canCompleteStage(
+  session: BuildV2Session, stageId: AssemblyStageId,
+): boolean {
+  if (!isStageSatisfied(session, stageId)) return false;
+  if (!STAGE_PREREQUISITES[stageId].every(p => session.assembly.completedStageIds.includes(p))) {
+    return false;
+  }
+  if (stageId === 'first-power') return canEnterFirstPower(session);
+  return true;
 }
 
 /**
  * May the reader put current into the build?
  *
- * Two independent conditions, and neither is a formality: the stage before it
- * must be genuinely complete, and a current-limited path must exist. There is
- * no third branch — no override, no acknowledgement, no «continue anyway».
+ * Three independent conditions, and none is a formality: a current-limited path
+ * exists, the inspection before it is genuinely complete — every confirmation
+ * AND the current-headroom review — and the session belongs to a reviewed
+ * build. There is no fourth branch: no override, no acknowledgement, no
+ * «continue anyway».
  */
 export function canEnterFirstPower(session: BuildV2Session): boolean {
-  return session.assembly.firstPowerMethod !== undefined
-    && isStageSatisfied(session, 'pre-power');
+  return acceptsProgress(session)
+    && session.assembly.firstPowerMethod !== undefined
+    && isStageSatisfied(session, 'pre-power')
+    && session.assembly.completedStageIds.includes('pre-power');
+}
+
+/**
+ * Withdraw every completion that no longer stands, repeatedly.
+ *
+ * One pass is not enough: revoking a pre-power confirmation invalidates
+ * pre-power, which invalidates first power, whose own confirmations are
+ * untouched and would otherwise keep it looking finished. The loop runs to a
+ * fixpoint — at most eight rounds, since each round removes at least one stage.
+ */
+function pruneCompletions(session: BuildV2Session): BuildV2Session {
+  let completed = session.assembly.completedStageIds;
+  for (;;) {
+    const kept = completed.filter(stageId => {
+      if (!isStageSatisfied(session, stageId)) return false;
+      if (!STAGE_PREREQUISITES[stageId].every(p => completed.includes(p))) return false;
+      if (stageId === 'first-power' && session.assembly.firstPowerMethod === undefined) {
+        return false;
+      }
+      return true;
+    });
+    if (kept.length === completed.length) break;
+    completed = kept;
+  }
+  if (completed === session.assembly.completedStageIds) return session;
+  return { ...session, assembly: { ...session.assembly, completedStageIds: completed } };
 }
 
 /* ── RECONCILIATION — THE CONTRACT THIS WHOLE MODULE EXISTS FOR ───────────── */
@@ -300,6 +451,8 @@ export interface ReconcileResult {
    */
   readonly discarded?: AssemblyProgress;
   readonly reason?: 'fingerprint-changed' | 'never-reviewed' | 'no-longer-eligible';
+  /** True when quarantined work was handed back because the build is the same. */
+  readonly restored?: boolean;
 }
 
 /**
@@ -310,48 +463,72 @@ export interface ReconcileResult {
  * testable against constructed worlds rather than only against whatever the
  * current catalogue happens to produce.
  *
- * FAIL-CLOSED, AND NOT CLEVER ABOUT IT.
+ * THE ONE CASE WORTH PRESERVING, AND THE THREE THAT FAIL CLOSED.
  *
- * When the fingerprint has moved, everything physical goes: confirmations,
- * manual reviews, completed stages, the current position, and the first-power
- * method — that last one because it was chosen for a first power that no longer
- * applies to this build.
+ * A session awaiting revalidation whose build comes back IDENTICAL gets its
+ * work returned exactly as it was — that is the whole reason quarantine exists,
+ * and it is the common case: most edits to a Phase-1 answer do not move a
+ * single part.
  *
- * A partial-survival rule («the workspace stage cannot depend on the parts»)
- * is tempting and is deliberately not written yet. It would be a second set of
- * rules about which physical work depends on which part, maintained alongside
- * the first, and wrong in exactly the cases nobody thought of. Physical
- * progress belonging to a different eight-part build is more dangerous than
- * asking a reader to re-confirm.
+ * Everything else clears: a fingerprint that moved, a build that stopped
+ * qualifying, or progress recorded against no reviewed build at all. No
+ * partial-survival rule («the workspace stage cannot depend on the parts») is
+ * written yet, and deliberately: it would be a second set of rules about which
+ * physical work depends on which part, maintained alongside the first, and
+ * wrong in exactly the cases nobody thought of.
  */
 export function reconcileSession(
   session: BuildV2Session,
   fresh: { fingerprint: string; reviewEligible: boolean },
 ): ReconcileResult {
-  const cleared: BuildV2Session = { ...session, assembly: EMPTY_PROGRESS };
-  const had = hasProgress(session.assembly);
+  const clearedBase: BuildV2Session = {
+    version: 1,
+    phase1: session.phase1,
+    reviewState: 'unreviewed',
+    assembly: EMPTY_PROGRESS,
+  };
 
-  if (session.reviewedBuildFingerprint === undefined) {
+  if (session.reviewState === 'needs-revalidation') {
+    const held = session.quarantine;
+    if (fresh.reviewEligible && held !== undefined && held.fingerprint === fresh.fingerprint) {
+      return {
+        status: 'valid',
+        restored: true,
+        session: {
+          version: 1,
+          phase1: session.phase1,
+          reviewState: 'reviewed',
+          reviewedBuildFingerprint: fresh.fingerprint,
+          assembly: held.assembly,
+        },
+      };
+    }
+    return {
+      status: 'needs-build-revalidation',
+      session: clearedBase,
+      discarded: held?.assembly,
+      reason: fresh.reviewEligible ? 'fingerprint-changed' : 'no-longer-eligible',
+    };
+  }
+
+  if (session.reviewState === 'unreviewed' || session.reviewedBuildFingerprint === undefined) {
     /*
      * Progress without a reviewed build should not exist — but a hand-edited
      * or half-written record can contain it, and it must not be honoured.
      */
-    return had
-      ? { status: 'needs-build-revalidation', session: cleared,
-        discarded: session.assembly, reason: 'never-reviewed' }
+    return hasProgress(session.assembly)
+      ? {
+        status: 'needs-build-revalidation', session: clearedBase,
+        discarded: session.assembly, reason: 'never-reviewed',
+      }
       : { status: 'valid', session };
   }
 
   if (!fresh.reviewEligible) {
-    /*
-     * The reader's own build stopped qualifying — a part went out of the
-     * catalogue, or a choice reopened. Their sources are still theirs to edit;
-     * their physical progress is no longer attached to anything reviewed.
-     */
     return {
       status: 'needs-build-revalidation',
-      session: { ...cleared, reviewedBuildFingerprint: undefined },
-      discarded: had ? session.assembly : undefined,
+      session: clearedBase,
+      discarded: hasProgress(session.assembly) ? session.assembly : undefined,
       reason: 'no-longer-eligible',
     };
   }
@@ -359,8 +536,8 @@ export function reconcileSession(
   if (session.reviewedBuildFingerprint !== fresh.fingerprint) {
     return {
       status: 'needs-build-revalidation',
-      session: { ...cleared, reviewedBuildFingerprint: undefined },
-      discarded: had ? session.assembly : undefined,
+      session: clearedBase,
+      discarded: hasProgress(session.assembly) ? session.assembly : undefined,
       reason: 'fingerprint-changed',
     };
   }
@@ -390,7 +567,7 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 const isStringMap = (v: unknown): v is Record<string, string> =>
   isObject(v) && Object.values(v).every(x => typeof x === 'string');
 
-function validateInputs(raw: unknown): RecommendationInput | null {
+function validateInputs(raw: unknown): Phase1SourceInputs | null {
   if (!isObject(raw)) return null;
   if (typeof raw.droneTypeId !== 'string' || raw.droneTypeId.length === 0) return null;
   for (const k of ['sizeInch', 'cellCount'] as const) {
@@ -410,8 +587,17 @@ function validateInputs(raw: unknown): RecommendationInput | null {
      */
     if (raw.owned.parts !== undefined) return null;
   }
-  if (raw.selectedParts !== undefined && !isStringMap(raw.selectedParts)) return null;
-  return raw as unknown as RecommendationInput;
+  /*
+   * TWO AUTHORITIES FOR ONE ANSWER IS NO AUTHORITY.
+   *
+   * `selectedParts` lives at `phase1.selectedParts` and nowhere else. A record
+   * carrying it inside `inputs` as well has two answers to «what did the reader
+   * choose?», and nothing in the system decides which one wins — so the build
+   * the engine produces could differ from the build the fingerprint describes.
+   * Refused rather than preferred one way or the other.
+   */
+  if ('selectedParts' in raw) return null;
+  return raw as unknown as Phase1SourceInputs;
 }
 
 function validateProgress(raw: unknown): AssemblyProgress | null {
@@ -448,6 +634,10 @@ function validateProgress(raw: unknown): AssemblyProgress | null {
   return raw as unknown as AssemblyProgress;
 }
 
+const REVIEW_STATES: ReadonlySet<string> = new Set<ReviewState>([
+  'unreviewed', 'reviewed', 'needs-revalidation',
+]);
+
 export function validateSession(raw: unknown): BuildV2Session | null {
   if (!isObject(raw)) return null;
   if (raw.version !== 1) return null;
@@ -457,18 +647,37 @@ export function validateSession(raw: unknown): BuildV2Session | null {
   if (!inputs) return null;
   if (!isStringMap(raw.phase1.selectedParts)) return null;
 
+  if (typeof raw.reviewState !== 'string' || !REVIEW_STATES.has(raw.reviewState)) return null;
+  const reviewState = raw.reviewState as ReviewState;
+
   if (raw.reviewedBuildFingerprint !== undefined
     && (typeof raw.reviewedBuildFingerprint !== 'string'
       || raw.reviewedBuildFingerprint.length === 0)) return null;
+  /* A reviewed session without the build it reviewed is not a session. */
+  if (reviewState === 'reviewed' && raw.reviewedBuildFingerprint === undefined) return null;
 
   const assembly = validateProgress(raw.assembly);
   if (!assembly) return null;
 
+  let quarantine: QuarantinedProgress | undefined;
+  if (raw.quarantine !== undefined) {
+    if (!isObject(raw.quarantine)) return null;
+    if (typeof raw.quarantine.fingerprint !== 'string'
+      || raw.quarantine.fingerprint.length === 0) return null;
+    const held = validateProgress(raw.quarantine.assembly);
+    if (!held) return null;
+    /* Quarantine only means something while revalidation is pending. */
+    if (reviewState !== 'needs-revalidation') return null;
+    quarantine = { fingerprint: raw.quarantine.fingerprint, assembly: held };
+  }
+
   return {
     version: 1,
     phase1: { inputs, selectedParts: raw.phase1.selectedParts },
+    reviewState,
     reviewedBuildFingerprint: raw.reviewedBuildFingerprint as string | undefined,
     assembly,
+    quarantine,
   };
 }
 
@@ -483,5 +692,5 @@ export function validateSession(raw: unknown): BuildV2Session | null {
 export const unknownConfirmationIds = (session: BuildV2Session): readonly string[] =>
   Object.keys(session.assembly.confirmations).filter(id => !isKnownConfirmationId(id));
 
-/** The stages, in build order, with what each still needs. For a future UI. */
+/** The stages, in build order. For a future UI. */
 export const stageOrder = (): readonly AssemblyStageId[] => ASSEMBLY_STAGE_IDS;

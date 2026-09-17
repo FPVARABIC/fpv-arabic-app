@@ -105,8 +105,24 @@ const inProgress = () => {
   s = model.confirmSafetyItem(s, 'prb-2', 1002);
   s = model.confirmManualReview(s, 'current-headroom', 1003);
   s = model.setFirstPowerMethod(s, 'smoke-stopper');
-  s = model.setCurrentAssemblyStage(s, 'motors');
+  s = model.setCurrentAssemblyStage(s, 'workspace-frame');
+  s = model.completeAssemblyStage(s, 'workspace-frame');
   s = model.completeAssemblyStage(s, 'motors');
+  return s;
+};
+
+/** Walk a reviewed session all the way to a complete pre-power inspection. */
+const throughPrePower = (opts: { headroom?: boolean; method?: boolean } = {}) => {
+  let s = model.createSession(INPUT as never, REAL.selectedParts);
+  s = model.markBuildReviewed(s, REAL_FP);
+  for (const stage of ids.ASSEMBLY_STAGE_IDS) {
+    if (stage === 'pre-power' || stage === 'first-power') continue;
+    for (const c of ids.confirmationsForStage(stage)) s = model.confirmSafetyItem(s, c.id, 1);
+    s = model.completeAssemblyStage(s, stage);
+  }
+  for (const c of ids.confirmationsForStage('pre-power')) s = model.confirmSafetyItem(s, c.id, 1);
+  if (opts.headroom !== false) s = model.confirmManualReview(s, 'current-headroom', 1);
+  if (opts.method !== false) s = model.setFirstPowerMethod(s, 'smoke-stopper');
   return s;
 };
 
@@ -422,6 +438,136 @@ section('4 — WORK BELONGS TO A BUILD, AND FOLLOWS IT NOWHERE');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+section('4b — AN EDIT QUARANTINES, IT DOES NOT DEMOLISH');
+{
+  /*
+   * THE SECOND CORRECTION THIS SECTION EXISTS FOR.
+   *
+   * `updatePhase1Sources` used to delete the reviewed fingerprint and every
+   * confirmation the moment an answer changed — before anything had
+   * established that the build actually moved. A reader who switched their
+   * budget answer from «متوازن» to «لا تفضيل», and got back the identical
+   * eight parts, lost an evening of soldering confirmations for nothing.
+   *
+   * This module cannot know whether the build changed: it does not run the
+   * engine. So the work is set aside with the fingerprint it was earned
+   * against, and `reconcileSession` decides once the engine has answered.
+   */
+  const worked = model.completeAssemblyStage(throughPrePower(), 'pre-power');
+  /*
+   * A REAL EDIT THAT CHANGES NOTHING PHYSICAL.
+   *
+   * The reader remembers they already own an ExpressLRS radio and goes back to
+   * say so. The engine had already chosen an ELRS receiver, so all eight parts
+   * come back identical — measured below, not assumed. This is precisely the
+   * case the old destructive behaviour punished: an evening of confirmations
+   * lost for volunteering a fact that changed nothing.
+   */
+  const EDIT = { ...INPUT, owned: { rcSystem: 'ExpressLRS' } };
+  const edited = model.updatePhase1Sources(worked, EDIT as never, REAL.selectedParts);
+
+  ok('4a. the edit moves the session to needs-revalidation, not to empty',
+    edited.reviewState === 'needs-revalidation'
+    && edited.reviewedBuildFingerprint === undefined);
+  ok('4b. the physical work is set aside with the build it was earned against',
+    edited.quarantine?.fingerprint === REAL_FP
+    && edited.quarantine.assembly.completedStageIds.includes('pre-power')
+    && edited.quarantine.assembly.manualReviews['current-headroom']?.state === 'user-confirmed-review');
+  ok('4c. …and is NOT usable in the meantime — `assembly` is empty',
+    Object.keys(edited.assembly.confirmations).length === 0
+    && edited.assembly.completedStageIds.length === 0
+    && edited.assembly.firstPowerMethod === undefined
+    && !model.canEnterFirstPower(edited));
+  ok('4d. the reader\'s new answer is stored, so they are editing not restarting',
+    edited.phase1.inputs.owned?.rcSystem === 'ExpressLRS'
+    && deepEqual(edited.phase1.selectedParts, REAL.selectedParts));
+
+  /*
+   * THE CASE THE WHOLE MECHANISM EXISTS FOR: the budget answer moved, the
+   * eight physical parts did not. Proved with the REAL engine rather than a
+   * constructed fingerprint.
+   */
+  const afterEdit = proposeBuild(
+    model.recommendationInputFromSession(edited) as never);
+  const freshFingerprint = fp.fingerprintOfBuild(afterEdit);
+  ok('4e0. the engine really does return the identical eight parts for this edit',
+    freshFingerprint === REAL_FP);
+  const restored = model.reconcileSession(edited, {
+    fingerprint: freshFingerprint,
+    reviewEligible: reviewEligibility(afterEdit).open,
+  });
+  ok('4e. an unchanged build hands the work straight back, exactly as it was',
+    restored.status === 'valid' && restored.restored === true
+    && restored.session.reviewState === 'reviewed'
+    && restored.session.reviewedBuildFingerprint === REAL_FP
+    && deepEqual(restored.session.assembly, worked.assembly));
+  ok('4f. …including the completed pre-power stage and the headroom review',
+    restored.session.assembly.completedStageIds.includes('pre-power')
+    && restored.session.assembly.manualReviews['current-headroom']?.state === 'user-confirmed-review'
+    && model.canEnterFirstPower(restored.session));
+  ok('4g. and the quarantine is emptied once the work is back where it belongs',
+    restored.session.quarantine === undefined);
+  console.log('      ·· «I own an ExpressLRS radio» after the fact: eight parts UNCHANGED, '
+    + 'work returned');
+
+  /* A build that genuinely moved still fails closed. */
+  const moved = model.reconcileSession(edited, {
+    fingerprint: `${REAL_FP}|different`, reviewEligible: true,
+  });
+  ok('5. a changed build discards the quarantined work and demands a new review',
+    moved.status === 'needs-build-revalidation'
+    && moved.reason === 'fingerprint-changed'
+    && moved.session.reviewState === 'unreviewed'
+    && Object.keys(moved.session.assembly.confirmations).length === 0
+    && moved.session.quarantine === undefined
+    && moved.discarded?.completedStageIds.includes('pre-power'));
+
+  const gone = model.reconcileSession(edited, { fingerprint: REAL_FP, reviewEligible: false });
+  ok('6. a build that stopped qualifying discards it too',
+    gone.status === 'needs-build-revalidation' && gone.reason === 'no-longer-eligible'
+    && Object.keys(gone.session.assembly.confirmations).length === 0);
+
+  /*
+   * IT MUST SURVIVE A REFRESH. Quarantine is a persisted field, not a variable
+   * held in memory while the tab is open — so the round trip is the proof.
+   */
+  mem.clear();
+  store.saveBuildV2Session(edited, 7);
+  const reloaded = store.loadBuildV2Session()!;
+  ok('7a. the quarantined session round-trips through storage intact',
+    reloaded.reviewState === 'needs-revalidation'
+    && reloaded.quarantine?.fingerprint === REAL_FP
+    && deepEqual(reloaded.quarantine.assembly, worked.assembly));
+  ok('7b. …and after a refresh the work is still NOT exposed as usable',
+    Object.keys(reloaded.assembly.confirmations).length === 0
+    && reloaded.assembly.completedStageIds.length === 0
+    && !model.canEnterFirstPower(reloaded));
+  ok('7c. …and no transition can act on it until the engine has spoken',
+    model.confirmSafetyItem(reloaded, 'prb-1', 1) === reloaded
+    && model.completeAssemblyStage(reloaded, 'pre-power') === reloaded
+    && model.setFirstPowerMethod(reloaded, 'smoke-stopper') === reloaded);
+  ok('7d. …and only a fresh engine result restores it',
+    model.reconcileSession(reloaded, { fingerprint: REAL_FP, reviewEligible: true })
+      .session.assembly.completedStageIds.includes('pre-power'));
+  mem.clear();
+
+  /* Editing twice must not lose the original quarantine. */
+  const twice = model.updatePhase1Sources(
+    edited, { ...INPUT, cellCount: 4 } as never, REAL.selectedParts);
+  ok('7e. a second edit keeps the FIRST quarantine — the work was earned there',
+    twice.quarantine?.fingerprint === REAL_FP
+    && twice.quarantine.assembly.completedStageIds.includes('pre-power'));
+
+  /* A quarantine is only meaningful while revalidation is pending. */
+  ok('7f. a record holding quarantine while claiming to be reviewed is refused',
+    model.validateSession({ ...worked, quarantine: edited.quarantine }) === null);
+  ok('7g. a reviewed record with no fingerprint is refused',
+    model.validateSession({ ...worked, reviewedBuildFingerprint: undefined }) === null);
+  ok('7h. an unknown reviewState is refused',
+    model.validateSession({ ...worked, reviewState: 'in-progress' }) === null);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 section('5 — A CLICK IS NEVER A VERDICT');
 {
   const s = inProgress();
@@ -441,45 +587,41 @@ section('5 — A CLICK IS NEVER A VERDICT');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-section('6 — FIRST POWER IS LIMITED, OR IT DOES NOT HAPPEN');
+section('6 — FIRST POWER IS LIMITED, COMPLETE, AND REVIEWED — OR IT DOES NOT HAPPEN');
 {
-  let s = model.createSession(INPUT as never, REAL.selectedParts);
-  s = model.markBuildReviewed(s, REAL_FP);
-  for (const c of ids.confirmationsForStage('pre-power')) {
-    s = model.confirmSafetyItem(s, c.id, 1);
-  }
+  const ready = throughPrePower();
   ok('27. a smoke stopper is accepted as a current-limited method',
-    model.canEnterFirstPower(model.setFirstPowerMethod(s, 'smoke-stopper')));
+    model.canEnterFirstPower(
+      model.completeAssemblyStage(model.setFirstPowerMethod(ready, 'smoke-stopper'), 'pre-power')));
   ok('28. a current-limited bench supply is equally accepted',
-    model.canEnterFirstPower(model.setFirstPowerMethod(s, 'current-limited-bench-supply')));
+    model.canEnterFirstPower(model.completeAssemblyStage(
+      model.setFirstPowerMethod(ready, 'current-limited-bench-supply'), 'pre-power')));
 
   /*
    * A multimeter answers «is the circuit wrong?», not «is the first current
    * through it limited?». Continuity and polarity are their own confirmations
    * and holding them is not a substitute.
    */
+  const noMethod = model.completeAssemblyStage(throughPrePower({ method: false }), 'pre-power');
   ok('29. a multimeter cannot satisfy the first-power method requirement',
     !ids.isFirstPowerMethod('multimeter')
-    && model.setFirstPowerMethod(s, 'multimeter' as never) === s
-    && s.assembly.confirmations['prb-2']?.state === 'user-confirmed'
-    && s.assembly.confirmations['prb-3']?.state === 'user-confirmed'
-    && !model.canEnterFirstPower(s));
+    && model.setFirstPowerMethod(noMethod, 'multimeter' as never) === noMethod
+    && noMethod.assembly.confirmations['prb-2']?.state === 'user-confirmed'
+    && noMethod.assembly.confirmations['prb-3']?.state === 'user-confirmed'
+    && !model.canEnterFirstPower(noMethod));
 
   ok('30. there is no skip, none, or acknowledgement state — absence is the state',
     ids.FIRST_POWER_METHODS.length === 2
     && !['none', 'skip', 'i-understand', 'bypass'].some(ids.isFirstPowerMethod)
-    && !model.canEnterFirstPower(s));
+    && !model.canEnterFirstPower(noMethod));
 
-  /* And the stage before it is a real precondition, not a formality. */
-  const noInspection = model.setFirstPowerMethod(
+  /* The inspection is a real precondition, not a formality. */
+  const methodOnly = model.setFirstPowerMethod(
     model.markBuildReviewed(model.createSession(INPUT as never, {}), REAL_FP), 'smoke-stopper');
   ok('30b. a limited method alone is not enough — the pre-power stage must be complete',
-    !model.canEnterFirstPower(noInspection));
+    !model.canEnterFirstPower(methodOnly));
 
-  /* Revoking a confirmation withdraws any completion that rested on it. */
-  let done = s;
-  done = model.setFirstPowerMethod(done, 'smoke-stopper');
-  done = model.completeAssemblyStage(done, 'pre-power');
+  const done = model.completeAssemblyStage(ready, 'pre-power');
   const revoked = model.revokeSafetyItem(done, 'prb-1');
   ok('30c. taking a confirmation back un-completes the stage it supported',
     done.assembly.completedStageIds.includes('pre-power')
@@ -488,6 +630,167 @@ section('6 — FIRST POWER IS LIMITED, OR IT DOES NOT HAPPEN');
   ok('30d. a stage cannot be marked complete while a confirmation is missing',
     !model.completeAssemblyStage(model.createSession(INPUT as never, {}), 'pre-power')
       .assembly.completedStageIds.includes('pre-power'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6b — CURRENT-HEADROOM IS A PRE-POWER REQUIREMENT, NOT AN ASIDE');
+{
+  /*
+   * THE CORRECTION THIS SECTION EXISTS FOR.
+   *
+   * `current-headroom` used to live only in `manualReviews`, attached to
+   * nothing. So a reader could tick every pre-power checkbox, name a
+   * current-limited method, and reach first power having never looked at what
+   * the motor actually draws — the one fact standing between «this ESC is
+   * rated for 55A» and «this ESC is rated for THIS motor on THIS prop at THIS
+   * voltage», which no catalogue can supply.
+   */
+  const withoutReview = throughPrePower({ headroom: false });
+  ok('8a. every pre-power checkbox and a smoke stopper, but NO headroom review…',
+    ids.confirmationsForStage('pre-power')
+      .every(c => withoutReview.assembly.confirmations[c.id]?.state === 'user-confirmed')
+    && withoutReview.assembly.firstPowerMethod === 'smoke-stopper'
+    && withoutReview.assembly.manualReviews['current-headroom'] === undefined);
+  ok('8b. …leaves the pre-power stage unsatisfied',
+    !model.isStageSatisfied(withoutReview, 'pre-power')
+    && !model.completeAssemblyStage(withoutReview, 'pre-power')
+      .assembly.completedStageIds.includes('pre-power'));
+  ok('8c. …and first power stays shut',
+    model.canEnterFirstPower(withoutReview) === false);
+
+  const reviewed = model.confirmManualReview(withoutReview, 'current-headroom', 2);
+  ok('9a. confirming the review satisfies the stage — it was the only thing missing',
+    model.isStageSatisfied(reviewed, 'pre-power'));
+  ok('9b. …and first power opens once the stage is actually completed',
+    model.canEnterFirstPower(model.completeAssemblyStage(reviewed, 'pre-power')) === true);
+
+  ok('10a. the review never becomes a compatibility PASS',
+    reviewed.assembly.manualReviews['current-headroom']?.state === 'user-confirmed-review');
+  ok('10b. the requirement reuses the ENGINE\'s finding id, not a second copy',
+    ids.MANUAL_REVIEW_REQUIREMENTS.some(r => r.id === 'current-headroom' && r.stageId === 'pre-power')
+    && ids.MANUAL_REVIEW_REQUIREMENTS.every(r => ids.MANUAL_REVIEW_IDS.includes(r.id))
+    && REAL.build.manualChecks.includes('current-headroom'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6c — FIRST POWER CANNOT BE COMPLETED OUT OF ORDER, BY ANY CALLER');
+{
+  /*
+   * The domain refuses these itself. A pure model that a direct call can drive
+   * into an impossible state has made a future screen the only safety layer —
+   * and the screen is the part most likely to be rewritten.
+   */
+  const confirmFirstPower = (base: typeof s0) => {
+    let x = base;
+    for (const c of ids.confirmationsForStage('first-power')) {
+      x = model.confirmSafetyItem(x, c.id, 3);
+    }
+    return model.completeAssemblyStage(x, 'first-power');
+  };
+  const s0 = throughPrePower();
+
+  const noPrePower = confirmFirstPower(throughPrePower());
+  ok('11. first power cannot complete while pre-power is not completed',
+    !noPrePower.assembly.completedStageIds.includes('first-power'));
+
+  const noMethodDone = confirmFirstPower(
+    model.completeAssemblyStage(throughPrePower({ method: false }), 'pre-power'));
+  ok('12. first power cannot complete without a current-limited method',
+    !noMethodDone.assembly.completedStageIds.includes('first-power'));
+
+  const unreviewed = confirmFirstPower(model.createSession(INPUT as never, {}));
+  ok('13. first power cannot complete on an unreviewed session',
+    unreviewed.reviewState === 'unreviewed'
+    && unreviewed.assembly.completedStageIds.length === 0);
+
+  const quarantined = model.updatePhase1Sources(
+    model.completeAssemblyStage(s0, 'pre-power'),
+    { ...INPUT, budgetTier: 'budget' } as never, REAL.selectedParts);
+  const duringRevalidation = confirmFirstPower(quarantined);
+  ok('14. first power cannot complete while the session awaits revalidation',
+    quarantined.reviewState === 'needs-revalidation'
+    && duringRevalidation.assembly.completedStageIds.length === 0
+    && Object.keys(duringRevalidation.assembly.confirmations).length === 0);
+
+  const proper = confirmFirstPower(model.completeAssemblyStage(s0, 'pre-power'));
+  ok('15. with every condition met, the direct call is accepted — the guard is not a wall',
+    proper.assembly.completedStageIds.includes('first-power'));
+
+  /* And no transition records anything on a session that is not reviewed. */
+  const fresh = model.createSession(INPUT as never, {});
+  ok('15b. no progress of any kind can be recorded on an unreviewed session',
+    model.confirmSafetyItem(fresh, 'prb-1', 1) === fresh
+    && model.confirmManualReview(fresh, 'current-headroom', 1) === fresh
+    && model.setFirstPowerMethod(fresh, 'smoke-stopper') === fresh
+    && model.setCurrentAssemblyStage(fresh, 'motors') === fresh);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6d — REVOCATION CASCADES AS FAR AS IT HAS TO');
+{
+  let full = throughPrePower();
+  full = model.completeAssemblyStage(full, 'pre-power');
+  for (const c of ids.confirmationsForStage('first-power')) {
+    full = model.confirmSafetyItem(full, c.id, 3);
+  }
+  full = model.completeAssemblyStage(full, 'first-power');
+  ok('16a. the fixture really does reach a completed first power',
+    full.assembly.completedStageIds.includes('pre-power')
+    && full.assembly.completedStageIds.includes('first-power'));
+
+  /*
+   * One pass would not be enough here: revoking the review invalidates
+   * pre-power, and first power's OWN confirmations are untouched — it would
+   * keep looking finished. The prune runs to a fixpoint.
+   */
+  const noReview = model.revokeManualReview(full, 'current-headroom');
+  ok('16. revoking the headroom review withdraws pre-power AND first power',
+    !noReview.assembly.completedStageIds.includes('pre-power')
+    && !noReview.assembly.completedStageIds.includes('first-power')
+    && !model.canEnterFirstPower(noReview));
+
+  const noItem = model.revokeSafetyItem(full, 'prb-3');
+  ok('17. revoking a pre-power safety item does the same',
+    !noItem.assembly.completedStageIds.includes('pre-power')
+    && !noItem.assembly.completedStageIds.includes('first-power'));
+  ok('17b. it never leaves pre-power incomplete while first power stays complete',
+    [noReview, noItem].every(x =>
+      !(x.assembly.completedStageIds.includes('first-power')
+        && !x.assembly.completedStageIds.includes('pre-power'))));
+  ok('17c. revoking something nothing depended on leaves the rest standing',
+    model.revokeSafetyItem(full, 'asm-motors-screw-length')
+      .assembly.completedStageIds.includes('video'));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+section('6e — ONE ANSWER TO «WHAT DID THE READER CHOOSE?»');
+{
+  const s = inProgress();
+  ok('1. the persisted session holds exactly one selectedParts map',
+    !('selectedParts' in (s.phase1.inputs as Record<string, unknown>))
+    && typeof s.phase1.selectedParts === 'object');
+
+  /*
+   * Two authorities for one answer is no authority: nothing decides which wins,
+   * so the build the engine produces could differ from the build the
+   * fingerprint describes. Refused rather than resolved by preference.
+   */
+  ok('2. a record carrying BOTH is refused rather than silently preferring one',
+    model.validateSession({
+      ...s,
+      phase1: {
+        inputs: { ...s.phase1.inputs, selectedParts: { frames: 'A' } },
+        selectedParts: { frames: 'B' },
+      },
+    }) === null);
+
+  const rebuilt = model.recommendationInputFromSession(s);
+  ok('3a. the engine input is reassembled from the persisted map, exactly',
+    deepEqual(rebuilt.selectedParts, REAL.selectedParts));
+  ok('3b. …and running the engine on it reproduces the reviewed build',
+    fp.fingerprintOfBuild(proposeBuild(rebuilt as never)) === REAL_FP);
+  ok('3c. the type subtracts the field rather than re-listing the engine\'s own',
+    /Omit<RecommendationInput, 'selectedParts'>/.test(read(`${DIR}/sessionModel.ts`)));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

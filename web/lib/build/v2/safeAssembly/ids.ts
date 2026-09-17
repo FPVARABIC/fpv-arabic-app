@@ -230,6 +230,70 @@ const MANUAL_ID_SET: ReadonlySet<string> = new Set(MANUAL_REVIEW_IDS);
 export const isManualReviewId = (v: unknown): v is ManualReviewId =>
   typeof v === 'string' && MANUAL_ID_SET.has(v);
 
+/**
+ * WHICH STAGE A MANUAL REVIEW BLOCKS — AND WHY IT HAS TO BLOCK ONE.
+ *
+ * A manual review that lives in its own corner of the record is a note, not a
+ * requirement. The first version of this module kept `current-headroom` in
+ * `manualReviews` and nowhere else, which meant a reader could tick every
+ * pre-power checkbox, name a current-limited method, and reach first power
+ * having never looked at the motor's current data.
+ *
+ * That is the one check standing between «the ESC is rated for this» and «the
+ * ESC is rated for THIS MOTOR at THIS voltage on THIS prop», and the catalogue
+ * cannot answer it — no motor documents current draw, because draw is not a
+ * property of a motor. So it is attached to the stage before power, and that
+ * stage does not complete without it.
+ *
+ * The id is the ENGINE's own finding id, taken from `MANUAL_REVIEW_IDS` above
+ * rather than written again here, so the two cannot drift.
+ */
+export interface ManualReviewRequirement {
+  readonly id: ManualReviewId;
+  readonly stageId: AssemblyStageId;
+}
+
+export const MANUAL_REVIEW_REQUIREMENTS: readonly ManualReviewRequirement[] = [
+  { id: MANUAL_REVIEW_IDS[0], stageId: 'pre-power' },
+];
+
+export const manualReviewsForStage = (
+  stageId: AssemblyStageId,
+): readonly ManualReviewRequirement[] =>
+  MANUAL_REVIEW_REQUIREMENTS.filter(r => r.stageId === stageId);
+
+/**
+ * WHAT MUST PHYSICALLY EXIST BEFORE A STAGE CAN BE FINISHED.
+ *
+ * Only relations that are true with a soldering iron in hand. Motors and the
+ * stack both need a frame to be mounted to; nothing can be soldered into the
+ * power path until both are mounted; the receiver and the video unit each need
+ * the stack, but NOT each other — either order works, so neither is listed
+ * against the other. Inventing an order there would be the model asserting a
+ * constraint the world does not have.
+ *
+ * The pre-power inspection is the one place everything converges: it is an
+ * inspection OF the built craft, so every building stage precedes it. And first
+ * power follows the inspection, because that is the whole point of the
+ * inspection.
+ *
+ * This is deliberately a small fixed table rather than a workflow engine. The
+ * eight stages are known, the relations are physical, and a generic dependency
+ * system would be a second thing to get right.
+ */
+export const STAGE_PREREQUISITES: Readonly<Record<AssemblyStageId, readonly AssemblyStageId[]>> = {
+  'workspace-frame': [],
+  motors: ['workspace-frame'],
+  'stack-mount': ['workspace-frame'],
+  'power-soldering': ['motors', 'stack-mount'],
+  receiver: ['stack-mount'],
+  video: ['stack-mount'],
+  'pre-power': [
+    'workspace-frame', 'motors', 'stack-mount', 'power-soldering', 'receiver', 'video',
+  ],
+  'first-power': ['pre-power'],
+};
+
 /* ── FIRST POWER ──────────────────────────────────────────────────────────
  *
  * The two accepted ways to put current into a build for the first time.
